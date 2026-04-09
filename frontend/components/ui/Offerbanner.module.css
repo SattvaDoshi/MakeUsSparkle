@@ -1,0 +1,156 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+/* Primary combo offer */
+.primary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1.5px solid var(--olive-muted);
+  background: linear-gradient(135deg, var(--olive-fog) 0%, var(--white) 100%);
+  padding: 1rem 1.25rem;
+  border-radius: 2px;
+}
+
+.primaryLeft {
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+}
+
+.primaryIcon {
+  width: 34px;
+  height: 34px;
+  background: var(--olive-primary);
+  color: var(--gold-pale);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.getAtPrice {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--olive-darkest);
+  margin-bottom: 0.2rem;
+}
+
+.getAtPrice strong { color: var(--olive-primary); }
+
+.primaryLabel {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--charcoal-light);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.useCode {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--warm-gray);
+}
+
+.code {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--olive-primary);
+  letter-spacing: 0.08em;
+  background: var(--olive-cream);
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+}
+
+.copyBtn {
+  background: transparent;
+  border: 1px solid var(--olive-muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--warm-gray);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.copyBtn:hover, .copied {
+  background: var(--olive-primary);
+  color: var(--white);
+  border-color: var(--olive-primary);
+}
+
+.viewLink {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--olive-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.viewLink:hover { text-decoration: underline; }
+
+/* Threshold offers */
+.thresholds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1.5px solid rgba(201, 168, 76, 0.2);
+  border-radius: 2px;
+  padding: 0.875rem 1rem;
+  background: var(--white);
+}
+
+.thresholdItem {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--olive-fog);
+}
+
+.thresholdItem:last-child { border-bottom: none; }
+
+.thresholdIcon {
+  width: 30px;
+  height: 30px;
+  background: rgba(201, 168, 76, 0.12);
+  color: var(--gold-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.thresholdLabel {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--charcoal-light);
+  line-height: 1.4;
+}

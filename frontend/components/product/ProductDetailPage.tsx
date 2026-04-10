@@ -1,10 +1,47 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { ALL_PRODUCTS } from './ProductPage'; // adjust path if needed
 import { useCart } from '@/lib/cartContext';
   import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
+
+interface AccordionData {
+  id: string;
+  emoji: string;
+  label: string;
+  content: string;
+}
+
+interface ProductColor {
+  label: string;
+  hex: string;
+}
+
+interface UploadItem {
+  id: number;
+  file: File;
+  preview: string;
+  note: string;
+}
+
+interface ProductDetailsProduct {
+  id: number;
+  name: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  description: string;
+  price: number;
+  originalPrice?: number | null;
+  offer: string;
+  sku: string;
+  stock: number;
+  images: string[] | Record<string, string[]>;
+  colors: ProductColor[];
+  href: string;
+  badge?: string | null;
+}
 // ─── Categories that support customisation ────────────────────────────────────
 const CUSTOMISABLE_CATEGORIES = ['Gift Boxes', 'Fan Box', 'Key Chain/Charm'];
 
@@ -29,7 +66,7 @@ const TRUST_BADGES = [
 ];
 
 // ─── Accordion data ───────────────────────────────────────────────────────────
-const ACCORDION_ITEMS = [
+const ACCORDION_ITEMS: AccordionData[] = [
   { id: 'about',    emoji: '💎', label: 'About the Product',    content: `This necklace is crafted from high-quality brass with an 18k gold plating for long-lasting shine. The delicate layered design features three chains at lengths 16", 18" and 20", each finishing with a hand-set micro-charm. Hypoallergenic and nickel-free. Suitable for daily wear.` },
   { id: 'desc',     emoji: '📄', label: 'Product Description',  content: `• Material: Brass with 18k gold / rhodium / rose-gold plating\n• Chain lengths: 16" · 18" · 20"\n• Clasp: Lobster claw\n• Width: 1–1.5 mm per strand\n• Weight: ~4.2 g\n• Finish: Tarnish-resistant coating\n• Packaging: Premium gift box included` },
   { id: 'cancel',   emoji: '↩️', label: 'Cancellation Policy',  content: `Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once the order is dispatched. For damaged or wrong items received, contact us within 48 hours of delivery for a hassle-free replacement or full refund.` },
@@ -38,7 +75,7 @@ const ACCORDION_ITEMS = [
 ];
 
 // ─── Sparkles ─────────────────────────────────────────────────────────────────
-function Sparkles({ active }) {
+function Sparkles({ active }: { active: boolean }) {
   if (!active) return null;
   const pts = Array.from({ length: 10 }, (_, i) => {
     const angle = (i / 10) * 360;
@@ -60,8 +97,8 @@ function Sparkles({ active }) {
 }
 
 // ─── Accordion item ───────────────────────────────────────────────────────────
-function AccordionItem({ item, open, onToggle }) {
-  const bodyRef = useRef(null);
+function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const [height, setHeight] = useState(0);
   useEffect(() => { if (bodyRef.current) setHeight(open ? bodyRef.current.scrollHeight : 0); }, [open]);
   return (
@@ -72,7 +109,7 @@ function AccordionItem({ item, open, onToggle }) {
       </button>
       <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
         <div ref={bodyRef} className="acc-body">
-          {item.content.split('\n').map((line, i) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)}
+          {item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)}
         </div>
       </div>
     </div>
@@ -80,28 +117,28 @@ function AccordionItem({ item, open, onToggle }) {
 }
 
 // ─── ✨ Customisation Panel ───────────────────────────────────────────────────
-function CustomisationPanel({ category }) {
-  const [wantCustom, setWantCustom] = useState(null); // null | true | false
-  const [uploads, setUploads]       = useState([]);
+function CustomisationPanel({ category }: { category: string }) {
+  const [wantCustom, setWantCustom] = useState<boolean | null>(null); // null | true | false
+  const [uploads, setUploads]       = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
   const [dragOver, setDragOver]     = useState(false);
-  const fileInputRef                = useRef(null);
+  const fileInputRef                = useRef<HTMLInputElement | null>(null);
   const MAX_FILES = 5;
 
-  const addFiles = useCallback((files) => {
-    const valid = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const valid = Array.from(files).filter((f: File) => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
     valid.forEach(file => {
       const reader = new FileReader();
-      reader.onload = (e) => setUploads(prev => [...prev, { id: Date.now() + Math.random(), file, preview: e.target.result, note: '' }]);
+      reader.onload = (e) => setUploads(prev => [...prev, { id: Date.now() + Math.random(), file, preview: (e.target?.result as string) || '', note: '' }]);
       reader.readAsDataURL(file);
     });
   }, [uploads.length]);
 
-  const removeUpload = (id) => setUploads(prev => prev.filter(u => u.id !== id));
-  const updateNote   = (id, note) => setUploads(prev => prev.map(u => u.id === id ? { ...u, note } : u));
+  const removeUpload = (id: number) => setUploads(prev => prev.filter(u => u.id !== id));
+  const updateNote   = (id: number, note: string) => setUploads(prev => prev.map(u => u.id === id ? { ...u, note } : u));
 
-  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); };
-  const handleToggle = (val) => { setWantCustom(val); if (!val) { setUploads([]); setGlobalNote(''); } };
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); };
+  const handleToggle = (val: boolean) => { setWantCustom(val); if (!val) { setUploads([]); setGlobalNote(''); } };
 
   const catLabel = category === 'Key Chain/Charm' ? 'key chain / charm' : category === 'Fan Box' ? 'fan box' : 'gift box';
 
@@ -155,7 +192,7 @@ function CustomisationPanel({ category }) {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => addFiles(e.target.files)} />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e: ChangeEvent<HTMLInputElement>) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); }} />
               <div style={{ width: 44, height: 44, margin: '0 auto 10px', color: 'var(--olive-400)' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}>
                   <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
@@ -198,9 +235,9 @@ function CustomisationPanel({ category }) {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function ProductDetailPage({ slug }) {
+export default function ProductDetailPage({ slug }: { slug: string }) {
    const router = useRouter();
-  const product = ALL_PRODUCTS.find(p => p.href === `/products/${slug}`);
+  const product = ALL_PRODUCTS.find(p => p.href === `/products/${slug}`) as ProductDetailsProduct | undefined;
   if (!product) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Product not found</div>;
   const { addItem } = useCart();
   const { name, category, rating, reviewCount, description, price, originalPrice, offer, sku, stock, images, colors } = product;
@@ -214,8 +251,8 @@ export default function ProductDetailPage({ slug }) {
 const wished = isWished(product.id);
   const [cartAnim,      setCartAnim]      = useState(false);
   const [sparkleAnim,   setSparkleAnim]   = useState(false);
-  const [openAccordion, setOpenAccordion] = useState('about');
-  const cartBtnRef = useRef(null);
+  const [openAccordion, setOpenAccordion] = useState<string | null>('about');
+  const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Is this category customisable?
   const isCustomisable = CUSTOMISABLE_CATEGORIES.some(c => category?.toLowerCase().includes(c.toLowerCase()));
@@ -301,7 +338,7 @@ const handleAddToCart = useCallback(() => {
 
 }, [addItem, product, displayImg, colors, activeColor, qty]);
 
-  const handleColorChange = useCallback((i) => { setActiveColor(i); setActiveImg(0); }, []);
+  const handleColorChange = useCallback((i: number) => { setActiveColor(i); setActiveImg(0); }, []);
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
 

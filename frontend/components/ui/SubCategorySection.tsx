@@ -1,10 +1,31 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, type MouseEvent } from 'react';
 import Link from 'next/link';
 
+interface SubcategoryItem {
+  name: string;
+  sub: string;
+  tag: string;
+  img: string;
+  href: string;
+  wide: boolean;
+}
+
+interface SubcategorySectionData {
+  label: string;
+  eyebrow: string;
+  heading: string;
+  tagline: string;
+  desc: string;
+  backHref: string;
+  items: SubcategoryItem[];
+}
+
+type SubcategoryType = 'necklace' | 'earrings' | 'bracelets';
+
 // ─── Unsplash images — jewellery / editorial ────────────────────────────────
-const SUBCATEGORY_DATA = {
+const SUBCATEGORY_DATA: Record<SubcategoryType, SubcategorySectionData> = {
   necklace: {
     label: 'Necklaces',
     eyebrow: 'Women · Jewellery',
@@ -174,10 +195,10 @@ function Marquee() {
 }
 
 // ─── Single Card ──────────────────────────────────────────────────────────────
-function ItemCard({ item, index }) {
-  const shimmerRef = useRef(null);
+function ItemCard({ item, index }: { item: SubcategoryItem; index: number }) {
+  const shimmerRef = useRef<HTMLDivElement | null>(null);
 
-  const onMove = useCallback((e) => {
+  const onMove = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     if (!shimmerRef.current) return;
     const r = e.currentTarget.getBoundingClientRect();
     shimmerRef.current.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
@@ -222,10 +243,10 @@ function ItemCard({ item, index }) {
 }
 
 // ─── Filter Pills ─────────────────────────────────────────────────────────────
-function FilterPills({ active, onChange }) {
+function FilterPills({ active, onChange, className = '' }: { active: string; onChange: (pill: string) => void; className?: string }) {
   const pills = ['All', 'New', 'Trending', 'Bestseller', 'Essential', 'Popular'];
   return (
-    <div className="filters">
+    <div className={`filters ${className}`}>
       <span className="filters__label">Filter</span>
       {pills.map(p => (
         <button
@@ -241,11 +262,12 @@ function FilterPills({ active, onChange }) {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function SubcategoryPage({ type = 'necklace' }) {
-  const data = SUBCATEGORY_DATA[type] ?? SUBCATEGORY_DATA.necklace;
+export default function SubcategoryPage({ type = 'necklace' }: { type?: string }) {
+  const resolvedType = (type in SUBCATEGORY_DATA ? type : 'necklace') as SubcategoryType;
+  const data = SUBCATEGORY_DATA[resolvedType] ?? SUBCATEGORY_DATA.necklace;
   const [filter, setFilter] = useState('All');
   const [visible, setVisible] = useState(false);
-  const pageRef = useRef(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);

@@ -668,7 +668,9 @@ const SORT_OPTIONS = [
   { label: 'Newest First',   value: 'newest' },
 ];
 
-function sortProducts(products, sortBy) {
+type Product = (typeof ALL_PRODUCTS)[number] & { tags?: string[] };
+
+function sortProducts(products: Product[], sortBy: string): Product[] {
   const arr = [...products];
   if (sortBy === 'price_asc')  return arr.sort((a, b) => a.price - b.price);
   if (sortBy === 'price_desc') return arr.sort((a, b) => b.price - a.price);
@@ -677,14 +679,14 @@ function sortProducts(products, sortBy) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function ProductsPage({type, subtype}) {
+export default function ProductsPage({type, subtype}: {type: string; subtype?: string}) {
   const [activeTag,  setActiveTag]  = useState('All');
   const [sortBy,     setSortBy]     = useState('featured');
   const [search,     setSearch]     = useState('');
   const [sortOpen,   setSortOpen]   = useState(false);
 
   const filtered = useMemo(() => {
-    let list = ALL_PRODUCTS;
+    let list: Product[] = ALL_PRODUCTS as Product[];
 
 // CASE 1: with subtype
 if (type && subtype) {

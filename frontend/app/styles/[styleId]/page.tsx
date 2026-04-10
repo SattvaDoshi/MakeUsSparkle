@@ -1,14 +1,23 @@
 import StyleProductPage from '@/components/product/StyleProductPage';
 import { STYLE_THEMES } from '@/lib/styleThemes';
 
+type StyleId = keyof typeof STYLE_THEMES;
+
+function getTheme(styleId: string) {
+  if (styleId in STYLE_THEMES) {
+    return STYLE_THEMES[styleId as StyleId];
+  }
+  return null;
+}
+
 export function generateStaticParams() {
   return Object.keys(STYLE_THEMES).map(id => ({ styleId: id }));
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params }: { params: Promise<{ styleId: string }> }) {
   const { styleId } = await params;
 
-  const theme = STYLE_THEMES[styleId];
+  const theme = getTheme(styleId);
   if (!theme) return { title: 'Style Not Found' };
 
   return {
@@ -17,10 +26,10 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function StylePage({ params }) {
+export default async function StylePage({ params }: { params: Promise<{ styleId: string }> }) {
   const { styleId } = await params;
 
-  const theme = STYLE_THEMES[styleId];
+  const theme = getTheme(styleId);
 
   if (!theme) {
     return (

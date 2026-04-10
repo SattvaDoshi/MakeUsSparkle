@@ -1,7 +1,22 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const banners = [
+type PatternKey = "circles" | "dots" | "lines";
+
+interface BannerItem {
+  id: number;
+  tag: string;
+  title: string;
+  subtitle: string;
+  cta: string;
+  bg: string;
+  accent: string;
+  textDark: boolean;
+  imageSlot: "left" | "right";
+  pattern: PatternKey;
+}
+
+const banners: BannerItem[] = [
   {
     id: 1,
     tag: "New Launch",
@@ -54,7 +69,7 @@ const banners = [
 
 // SVG pattern backgrounds
 const Patterns = {
-  circles: ({ color }) => (
+  circles: ({ color }: { color: string }) => (
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", inset: 0, opacity: 0.07 }}>
       <defs>
         <pattern id="pc" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -66,7 +81,7 @@ const Patterns = {
       <rect width="100%" height="100%" fill="url(#pc)" />
     </svg>
   ),
-  dots: ({ color }) => (
+  dots: ({ color }: { color: string }) => (
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", inset: 0, opacity: 0.09 }}>
       <defs>
         <pattern id="pd" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
@@ -76,7 +91,7 @@ const Patterns = {
       <rect width="100%" height="100%" fill="url(#pd)" />
     </svg>
   ),
-  lines: ({ color }) => (
+  lines: ({ color }: { color: string }) => (
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", inset: 0, opacity: 0.06 }}>
       <defs>
         <pattern id="pl" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -90,7 +105,7 @@ const Patterns = {
 };
 
 // Abstract jewellery illustration per banner
-function BannerIllustration({ id, accent }) {
+function BannerIllustration({ id, accent }: { id: number; accent: string }) {
   if (id === 1) return (
     <svg viewBox="0 0 220 340" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", maxWidth: 220 }}>
       {/* Necklace chains */}
@@ -178,12 +193,12 @@ const TRANSITION = 650;
 
 export default function BannerSlider() {
   const [current, setCurrent] = useState(0);
-  const [prev, setPrev] = useState(null);
+  const [prev, setPrev] = useState<number | null>(null);
   const [animating, setAnimating] = useState(false);
   const [paused, setPaused] = useState(false);
-  const timerRef = useRef(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const goTo = useCallback((idx) => {
+  const goTo = useCallback((idx: number) => {
     if (animating) return;
     setAnimating(true);
     setPrev(current);
@@ -202,7 +217,9 @@ export default function BannerSlider() {
   useEffect(() => {
     if (paused) return;
     timerRef.current = setInterval(next, INTERVAL);
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [next, paused]);
 
   const b = banners[current];

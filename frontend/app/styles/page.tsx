@@ -2,20 +2,22 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { STYLE_THEMES } from '@/lib/styleThemes';
-import { ALL_PRODUCTS, STYLE_PRODUCT_FILTER } from '@/lib/products';
+import { STYLE_THEMES, STYLE_PRODUCT_FILTER } from '@/lib/styleThemes';
+import { ALL_PRODUCTS } from '@/lib/products';
+
+type StyleId = keyof typeof STYLE_PRODUCT_FILTER;
 
 const styles = Object.values(STYLE_THEMES);
 
-function countProducts(styleId) {
+function countProducts(styleId: StyleId) {
   const fn = STYLE_PRODUCT_FILTER[styleId] || (() => true);
   return ALL_PRODUCTS.filter(fn).length;
 }
 
 export default function ShopByStylePage() {
   const [visible, setVisible] = useState(false);
-  const [hoveredId, setHoveredId] = useState(null);
-  const sectionRef = useRef(null);
+  const [hoveredId, setHoveredId] = useState<StyleId | null>(null);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -355,7 +357,7 @@ export default function ShopByStylePage() {
               >
                 <div
                   className="sbs-card"
-                  onMouseEnter={() => setHoveredId(s.id)}
+                  onMouseEnter={() => setHoveredId(s.id as StyleId)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
                   <div className="card-base"/>
@@ -368,7 +370,7 @@ export default function ShopByStylePage() {
                   <div className="card-corner cc-br"/>
 
                   <span className="card-badge">{s.tag}</span>
-                  <span className="card-count">{countProducts(s.id)} pieces</span>
+                  <span className="card-count">{countProducts(s.id as StyleId)} pieces</span>
 
                   <div className="card-content">
                     <span className="card-emoji">{s.emoji}</span>

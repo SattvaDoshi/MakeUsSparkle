@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
@@ -21,7 +21,29 @@ import { useWishlist } from '@/lib/wishlistContext';
  *  - style / className — forwarded to wrapper
  */
 
-export default function ProductCard({ product, style, className = '' }) {
+interface ProductColor {
+  label: string;
+  hex: string;
+  images?: string[];
+}
+
+interface ProductCardProduct {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  originalPrice?: number | null;
+  badge?: string | null;
+  images: string[];
+  colors: ProductColor[];
+  href: string;
+  sku?: string;
+  rating?: number;
+  reviewCount?: number;
+  type?: string;
+}
+
+export default function ProductCard({ product, style, className = '' }: { product: ProductCardProduct; style?: CSSProperties; className?: string }) {
   const {
     name, category, price, originalPrice,
     badge, images, colors, href = '#',
@@ -32,13 +54,13 @@ export default function ProductCard({ product, style, className = '' }) {
   const { toggleItem, isWished } = useWishlist();
   const wished = isWished(product.id);
   const [addedAnim, setAddedAnim]       = useState(false);
-  const imgRef = useRef(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   const { addItem } = useCart();
   const btnRef = useRef<HTMLButtonElement | null>(null);   // add: import useRef from 'react'
   const [added, setAdded] = useState(false);      
 
-    function handleQuickAdd(e: React.MouseEvent) {
+    function handleQuickAdd(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();   // ← IMPORTANT: stops the <Link> from navigating
     e.stopPropagation();
     addItem({
@@ -78,7 +100,7 @@ const wishlistItem = {
 
   const displayImage = currentImages[activeImage] ?? currentImages[0];
   
-  const handleViewDetails = (e) => {
+  const handleViewDetails = (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
 
   const slug = href.split('/').pop();
@@ -97,18 +119,18 @@ const wishlistItem = {
   router.push(href);
 };
 
-  const handleColorClick = useCallback((i) => {
+  const handleColorClick = useCallback((i: number) => {
     setActiveColor(i);
     setActiveImage(0);
   }, []);
 
-  const handleAddToCart = useCallback((e) => {
+  const handleAddToCart = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setAddedAnim(true);
     setTimeout(() => setAddedAnim(false), 1600);
   }, []);
 
-  const handleWish = useCallback((e) => {
+  const handleWish = useCallback((e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   toggleItem(wishlistItem);
 }, [toggleItem, wishlistItem]);
@@ -360,7 +382,7 @@ const wishlistItem = {
           {/* Image dots (only if >1 image) */}
           {currentImages.length > 1 && (
             <div className="pc-dots">
-              {currentImages.map((_, i) => (
+              {currentImages.map((_: string, i: number) => (
                 <button
                   key={i}
                   className={`pc-dot${activeImage === i ? ' active' : ''}`}
@@ -383,7 +405,7 @@ const wishlistItem = {
           {/* Colour swatches */}
           {visibleColors.length > 0 && (
             <div className="pc-colors">
-              {visibleColors.map((c, i) => (
+              {visibleColors.map((c: ProductColor, i: number) => (
                 <button
                   key={i}
                   title={c.label}

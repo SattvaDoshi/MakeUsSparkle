@@ -1,14 +1,23 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
 import { ALL_PRODUCTS, FILTER_TABS } from '@/lib/products';
 import { STYLE_THEMES, STYLE_PRODUCT_FILTER } from '@/lib/styleThemes';
 import { useCart } from '@/lib/cartContext';
   import { fireConfetti } from '@/components/cart/ConfettiManager';
 import Link from "next/link";
 
+type StyleId = keyof typeof STYLE_THEMES;
+type StyleTheme = (typeof STYLE_THEMES)[StyleId];
+type Product = (typeof ALL_PRODUCTS)[number];
+type ProductColor = Product['colors'][number];
+
+function resolveStyleId(styleId: string): StyleId {
+  return (styleId in STYLE_THEMES ? styleId : 'soft-girl') as StyleId;
+}
+
 // ─── Star Rating ───────────────────────────────────────────────────────────────
-function StarRating({ rating, theme }) {
+function StarRating({ rating, theme }: { rating: number; theme: StyleTheme }) {
   return (
     <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
       {[1,2,3,4,5].map(i => (
@@ -21,9 +30,9 @@ function StarRating({ rating, theme }) {
 }
 
 // ─── Product Card — adapts to theme ───────────────────────────────────────────
-function StyleProductCard({ product, theme, index }) {
+function StyleProductCard({ product, theme, index }: { product: Product; theme: StyleTheme; index: number }) {
   const { addItem } = useCart();
-const btnRef = useRef(null);
+const btnRef = useRef<HTMLButtonElement | null>(null);
 const [btnAdded, setBtnAdded] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
@@ -33,7 +42,7 @@ const [btnAdded, setBtnAdded] = useState(false);
 
   const isDark = ['glam-look', 'maximalist'].includes(theme.id);
 
- function handleQuickAdd(e) {
+ function handleQuickAdd(e: MouseEvent<HTMLButtonElement>) {
   e.preventDefault();   // stops navigation
   e.stopPropagation();
 
@@ -55,27 +64,29 @@ const [btnAdded, setBtnAdded] = useState(false);
   setTimeout(() => setBtnAdded(false), 1500);
 }
 
+const cardStyle = {
+  animationDelay: `${index * 0.07}s`,
+  '--card-bg': theme.cardBg,
+  '--card-border': theme.border,
+  '--card-text': theme.text,
+  '--card-muted': theme.textMuted,
+  '--card-gold': theme.gold,
+  '--card-accent': theme.accent,
+  '--card-shadow': isDark
+    ? `0 20px 60px rgba(0,0,0,0.5)`
+    : `0 8px 40px rgba(0,0,0,0.08)`,
+  '--card-hover-shadow': isDark
+    ? `0 28px 80px rgba(0,0,0,0.65)`
+    : `0 16px 60px rgba(0,0,0,0.14)`,
+} as CSSProperties & Record<'--card-bg' | '--card-border' | '--card-text' | '--card-muted' | '--card-gold' | '--card-accent' | '--card-shadow' | '--card-hover-shadow', string>;
+
 return (
   <Link href={product.href}>
     <div
       className="sp-card"
       onMouseEnter={() => { setHovered(true); if (product.images[1]) setImgIdx(1); }}
       onMouseLeave={() => { setHovered(false); setImgIdx(0); }}
-      style={{
-        animationDelay: `${index * 0.07}s`,
-        '--card-bg': theme.cardBg,
-        '--card-border': theme.border,
-        '--card-text': theme.text,
-        '--card-muted': theme.textMuted,
-        '--card-gold': theme.gold,
-        '--card-accent': theme.accent,
-        '--card-shadow': isDark
-          ? `0 20px 60px rgba(0,0,0,0.5)`
-          : `0 8px 40px rgba(0,0,0,0.08)`,
-        '--card-hover-shadow': isDark
-          ? `0 28px 80px rgba(0,0,0,0.65)`
-          : `0 16px 60px rgba(0,0,0,0.14)`,
-      }}
+      style={cardStyle}
     >
         
       {/* Image */}
@@ -115,7 +126,7 @@ return (
 
         {/* Colors */}
         <div className="sp-card-colors">
-          {product.colors.slice(0, 4).map((c, i) => (
+          {product.colors.slice(0, 4).map((c: ProductColor, i: number) => (
             <span
               key={i}
               className="sp-card-color-dot"
@@ -290,10 +301,11 @@ const HERO_DECORATIONS = {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function StyleProductPage({ styleId = 'soft-girl' }) {
-  const theme = STYLE_THEMES[styleId] || STYLE_THEMES['soft-girl'];
+  const resolvedStyleId = resolveStyleId(styleId);
+  const theme = STYLE_THEMES[resolvedStyleId];
   const [activeFilter, setActiveFilter] = useState('all');
   const [mounted, setMounted] = useState(false);
-  const heroRef = useRef(null);
+  const heroRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     setMounted(true);
@@ -301,21 +313,21 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
 
   // Filter products: first by style suitability, then by type tab
   const products = useMemo(() => {
-    const styleFn = STYLE_PRODUCT_FILTER[styleId] || (() => true);
+    const styleFn = STYLE_PRODUCT_FILTER[resolvedStyleId] || (() => true);
     let list = ALL_PRODUCTS.filter(styleFn);
     if (activeFilter !== 'all') {
       list = list.filter(p => p.type === activeFilter);
     }
     return list;
-  }, [styleId, activeFilter]);
+  }, [resolvedStyleId, activeFilter]);
 
   const isDark = ['glam-look', 'maximalist'].includes(theme.id);
-  const HeroDecoration = HERO_DECORATIONS[theme.id] || (() => null);
+  const HeroDecoration = HERO_DECORATIONS[theme.id as StyleId] || (() => null);
 
   // Count per type for filter tabs
-  const styleFn = STYLE_PRODUCT_FILTER[styleId] || (() => true);
+  const styleFn = STYLE_PRODUCT_FILTER[resolvedStyleId] || (() => true);
   const styleProducts = ALL_PRODUCTS.filter(styleFn);
-  const countByType = (type) => type === 'all'
+  const countByType = (type: string) => type === 'all'
     ? styleProducts.length
     : styleProducts.filter(p => p.type === type).length;
 

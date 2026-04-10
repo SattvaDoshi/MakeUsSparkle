@@ -1,9 +1,35 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
+
+interface KeychainBase {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  color: string;
+}
+
+interface CharmItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  emoji: string;
+  customisable?: boolean;
+  hasPhotoUpload?: boolean;
+}
+
+interface CharmCategory {
+  id: string;
+  label: string;
+  icon: string;
+  charms: CharmItem[];
+}
 
 // ─── Charm & Keychain product data (images come from backend) ─────────────────
-const KEYCHAIN_BASES = [
+const KEYCHAIN_BASES: KeychainBase[] = [
   {
     id: 'kb-1',
     name: 'Classic Ring Base',
@@ -30,7 +56,7 @@ const KEYCHAIN_BASES = [
   },
 ];
 
-const CHARM_CATEGORIES = [
+const CHARM_CATEGORIES: CharmCategory[] = [
   {
     id: 'initials',
     label: 'Initial Letters',
@@ -87,7 +113,7 @@ const CHARM_CATEGORIES = [
 const MAX_CHARMS = 6;
 
 // ─── Charm ring on the visualiser ────────────────────────────────────────────
-function CharmRing({ charm, index, total, onRemove }) {
+function CharmRing({ charm, index, total, onRemove }: { charm: CharmItem; index: number; total: number; onRemove: (charmId: string) => void }) {
   const angle = (index / Math.max(total, 1)) * 360 - 90;
   const radius = total <= 3 ? 68 : total <= 5 ? 76 : 84;
   const x = 50 + radius * Math.cos((angle * Math.PI) / 180);
@@ -125,7 +151,7 @@ function CharmRing({ charm, index, total, onRemove }) {
 }
 
 // ─── Keychain Visualiser ──────────────────────────────────────────────────────
-function KeychainVisualiser({ base, charms }) {
+function KeychainVisualiser({ base, charms }: { base: KeychainBase | null; charms: CharmItem[] }) {
   return (
     <div className="kc-vis-wrap">
       <div className="kc-vis-scene">
@@ -174,16 +200,16 @@ function KeychainVisualiser({ base, charms }) {
 }
 
 // ─── Charm card ───────────────────────────────────────────────────────────────
-function CharmCard({ charm, added, onToggle, disabled }) {
+function CharmCard({ charm, added, onToggle, disabled }: { charm: CharmItem; added: boolean; onToggle: () => void; disabled: boolean }) {
   const [customText, setCustomText] = useState('');
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const fileRef = useRef(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const handlePhoto = (e) => {
-    const f = e.target.files[0];
+  const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.currentTarget.files?.[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = (ev) => setPhotoPreview(ev.target.result);
+    r.onload = (ev) => setPhotoPreview((ev.target?.result as string) || null);
     r.readAsDataURL(f);
   };
 
@@ -244,11 +270,11 @@ function CharmCard({ charm, added, onToggle, disabled }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function KeychainsCharmsPage() {
-  const [selectedBase, setSelectedBase] = useState(null);
-  const [selectedCharms, setSelectedCharms] = useState([]);
+  const [selectedBase, setSelectedBase] = useState<KeychainBase | null>(null);
+  const [selectedCharms, setSelectedCharms] = useState<CharmItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('initials');
 
-  const toggleCharm = (charm) => {
+  const toggleCharm = (charm: CharmItem) => {
     setSelectedCharms(prev => {
       const exists = prev.find(c => c.id === charm.id);
       if (exists) return prev.filter(c => c.id !== charm.id);
@@ -257,7 +283,7 @@ export default function KeychainsCharmsPage() {
     });
   };
 
-  const removeCharm = (charmId) => {
+  const removeCharm = (charmId: string) => {
     setSelectedCharms(prev => prev.filter(c => c.id !== charmId));
   };
 

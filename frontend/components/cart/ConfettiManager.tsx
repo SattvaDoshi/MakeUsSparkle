@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export function fireConfetti(btnEl?: HTMLElement | null) {
 interface Burst { id: number; x: number; y: number; }
 
 export function ConfettiManager() {
-  const [bursts, setBursts] = useStateRef<Burst[]>([]);
+  const [bursts, setBursts] = useState<Burst[]>([]);
 
   useEffect(() => {
     const fire: FireFn = (x, y) => {
@@ -181,10 +181,4 @@ export function ConfettiManager() {
     </>,
     document.body,
   );
-}
-
-// tiny helper — useState with ref so the effect closure stays fresh
-function useStateRef<T>(initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const { useState } = require('react');
-  return useState<T>(initial);
 }

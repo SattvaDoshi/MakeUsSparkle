@@ -1,8 +1,23 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
-import SubcategoryPage from '../ui/SubCategorySection';
+
+type Gender = 'women' | 'men';
+
+interface SubCategoryItem {
+  name: string;
+  img: string;
+  href: string;
+}
+
+interface CategoryItem {
+  name: string;
+  icon: string;
+  img: string;
+  href: string;
+  sub: SubCategoryItem[];
+}
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const JEWELLERY_IMAGES = {
@@ -25,7 +40,7 @@ const JEWELLERY_IMAGES = {
 // so they render <SubcategoryPage type="necklace|earrings|bracelets" />.
 // Rings, Waist Chains, Couple Sets keep their original deep-link hrefs.
 // ─────────────────────────────────────────────────────────────────────────────
-const womenJewellery = [
+const womenJewellery: SubCategoryItem[] = [
   { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'  },   // ← SubcategoryPage
   { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'  },   // ← SubcategoryPage
   { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/categories/women/jewellery/rings'       },
@@ -34,7 +49,7 @@ const womenJewellery = [
   { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/categories/women/jewellery/couple'       },
 ];
 
-const menJewellery = [
+const menJewellery: SubCategoryItem[] = [
   { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'  },
   { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'  },
   { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/categories/men/jewellery/rings'         },
@@ -43,7 +58,7 @@ const menJewellery = [
   { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/categories/men/jewellery/couple'         },
 ];
 
-const buildCategories = (gender) => [
+const buildCategories = (gender: Gender): CategoryItem[] => [
   { name: 'Jewellery',          icon: '◈', img: JEWELLERY_IMAGES.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
   { name: 'Gift Boxes',         icon: '⊡', img: JEWELLERY_IMAGES.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
   { name: 'Fan Combos',         icon: '✦', img: JEWELLERY_IMAGES.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
@@ -54,11 +69,12 @@ const buildCategories = (gender) => [
 ];
 
 // ─── Sub Card with mouse-tracking shine ──────────────────────────────────────
-function ShineCard({ sub, index }) {
-  const cardRef = useRef(null);
+function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
+  const cardRef = useRef<HTMLAnchorElement | null>(null);
   const [shine, setShine] = useState({ x: 50, y: 50, active: false });
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -67,6 +83,12 @@ function ShineCard({ sub, index }) {
 
   const handleMouseLeave = () => setShine(s => ({ ...s, active: false }));
 
+  const cardStyle = {
+    '--sx': `${shine.x}%`,
+    '--sy': `${shine.y}%`,
+    animationDelay: `${index * 0.07}s`,
+  } as CSSProperties & Record<'--sx' | '--sy', string>;
+
   return (
     <Link
       ref={cardRef}
@@ -74,7 +96,7 @@ function ShineCard({ sub, index }) {
       className="sc-card"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ '--sx': `${shine.x}%`, '--sy': `${shine.y}%`, animationDelay: `${index * 0.07}s` }}
+      style={cardStyle}
     >
       <div className="sc-img-wrap">
         <img src={sub.img} alt={sub.name} loading="lazy" />
@@ -98,10 +120,10 @@ function ShineCard({ sub, index }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CategorySection() {
-  const [tab, setTab]             = useState('women');
+  const [tab, setTab]             = useState<Gender>('women');
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(false);
-  const sectionRef                = useRef(null);
+  const sectionRef                = useRef<HTMLElement | null>(null);
 
   const categories = buildCategories(tab);
   const active     = categories[activeIdx];

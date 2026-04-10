@@ -1,9 +1,31 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+
+type CategoryKey = 'necklace' | 'earrings' | 'bracelets' | 'rings' | 'gift-boxes' | 'keychains' | 'hair-accessories';
+
+interface ComboProduct {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  customisable: boolean;
+}
+
+interface PresetCombo {
+  id: string;
+  name: string;
+  tagline: string;
+  price: number;
+  originalPrice: number;
+  image: string;
+  badge: string;
+  includedCategories: CategoryKey[];
+  defaultSelections: Partial<Record<CategoryKey, number>>;
+}
 
 // ─── All available products by category ──────────────────────────────────────
-const PRODUCTS_BY_CATEGORY = {
+const PRODUCTS_BY_CATEGORY: Record<CategoryKey, ComboProduct[]> = {
   necklace: [
     { id: 1, name: 'Dainty Layered Necklace', price: 1299, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80', customisable: false },
     { id: 2, name: 'Pearl Pendant Necklace',  price: 2499, image: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=400&q=80', customisable: false },
@@ -39,7 +61,7 @@ const PRODUCTS_BY_CATEGORY = {
   ],
 };
 
-const PRESET_COMBOS = [
+const PRESET_COMBOS: PresetCombo[] = [
   {
     id: 'festive',
     name: 'Festive Glow',
@@ -86,7 +108,7 @@ const PRESET_COMBOS = [
   },
 ];
 
-const CATEGORY_LABELS = {
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
   necklace: 'Necklace',
   earrings: 'Earrings',
   bracelets: 'Bracelet',
@@ -97,15 +119,15 @@ const CATEGORY_LABELS = {
 };
 
 // ─── Customisation mini-panel ─────────────────────────────────────────────────
-function MiniCustomPanel({ productName }) {
+function MiniCustomPanel({ productName }: { productName: string }) {
   const [text, setText] = useState('');
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
-  const handleFile = (e) => {
-    const f = e.target.files[0];
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.currentTarget.files?.[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = (ev) => setPreview(ev.target.result);
+    r.onload = (ev) => setPreview((ev.target?.result as string) || null);
     r.readAsDataURL(f);
   };
 
@@ -135,7 +157,7 @@ function MiniCustomPanel({ productName }) {
 }
 
 // ─── Product selector card (single-select, used in preset mode) ───────────────
-function ProductSelectCard({ product, selected, onSelect }) {
+function ProductSelectCard({ product, selected, onSelect }: { product: ComboProduct; selected: boolean; onSelect: (id: number) => void }) {
   return (
     <button
       className={`cc-prod-card${selected ? ' selected' : ''}`}
@@ -159,7 +181,7 @@ function ProductSelectCard({ product, selected, onSelect }) {
 }
 
 // ─── Product selector card (multi-select, used in custom mode) ────────────────
-function ProductMultiSelectCard({ product, selected, onToggle }) {
+function ProductMultiSelectCard({ product, selected, onToggle }: { product: ComboProduct; selected: boolean; onToggle: (id: number) => void }) {
   return (
     <button
       className={`cc-prod-card${selected ? ' selected' : ''}`}
@@ -183,7 +205,13 @@ function ProductMultiSelectCard({ product, selected, onToggle }) {
 }
 
 // ─── Category row (single-select, preset mode) ────────────────────────────────
-function CategoryRow({ catKey, products, selectedId, onSelect, label }) {
+function CategoryRow({ catKey, products, selectedId, onSelect, label }: {
+  catKey: CategoryKey;
+  products: ComboProduct[];
+  selectedId?: number;
+  onSelect: (catKey: CategoryKey, id: number) => void;
+  label: string;
+}) {
   const selectedProduct = products.find(p => p.id === selectedId);
   const [expanded, setExpanded] = useState(false);
 
@@ -228,7 +256,13 @@ function CategoryRow({ catKey, products, selectedId, onSelect, label }) {
 }
 
 // ─── Category row (multi-select, custom mode) ─────────────────────────────────
-function CategoryRowMulti({ catKey, products, selectedIds, onToggle, label }) {
+function CategoryRowMulti({ catKey, products, selectedIds, onToggle, label }: {
+  catKey: CategoryKey;
+  products: ComboProduct[];
+  selectedIds: number[];
+  onToggle: (catKey: CategoryKey, id: number) => void;
+  label: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const count = selectedIds.length;
   const anyCustomisable = selectedIds.some(id => {
@@ -276,7 +310,7 @@ function CategoryRowMulti({ catKey, products, selectedIds, onToggle, label }) {
 }
 
 // ─── Preset combo card ────────────────────────────────────────────────────────
-function PresetComboCard({ combo, selected, onSelect }) {
+function PresetComboCard({ combo, selected, onSelect }: { combo: PresetCombo; selected: boolean; onSelect: (id: string) => void }) {
   const discount = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
   return (
     <button className={`cc-preset-card${selected ? ' selected' : ''}`} onClick={() => onSelect(combo.id)}>
@@ -307,32 +341,33 @@ function PresetComboCard({ combo, selected, onSelect }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function CuratedCombosPage() {
-  const [mode, setMode] = useState('preset');
+  const [mode, setMode] = useState<'preset' | 'custom'>('preset');
 
   const [selectedComboId, setSelectedComboId] = useState('festive');
-  const [comboSelections, setComboSelections] = useState(() => {
+  const [comboSelections, setComboSelections] = useState<Partial<Record<CategoryKey, number>>>(() => {
     const combo = PRESET_COMBOS.find(c => c.id === 'festive');
-    return { ...combo.defaultSelections };
+    return combo ? { ...combo.defaultSelections } : {};
   });
 
   // custom mode: selectedIds is an object of catKey -> array of selected product ids
-  const [customSelectedIds, setCustomSelectedIds] = useState({});
-  const [customCategories, setCustomCategories] = useState(['necklace', 'earrings']);
+  const [customSelectedIds, setCustomSelectedIds] = useState<Partial<Record<CategoryKey, number[]>>>({});
+  const [customCategories, setCustomCategories] = useState<CategoryKey[]>(['necklace', 'earrings']);
 
   const selectedCombo = PRESET_COMBOS.find(c => c.id === selectedComboId);
 
-  const handleComboSelect = useCallback((id) => {
+  const handleComboSelect = useCallback((id: string) => {
     setSelectedComboId(id);
     const combo = PRESET_COMBOS.find(c => c.id === id);
+    if (!combo) return;
     setComboSelections({ ...combo.defaultSelections });
   }, []);
 
-  const handlePresetSelection = useCallback((catKey, productId) => {
+  const handlePresetSelection = useCallback((catKey: CategoryKey, productId: number) => {
     setComboSelections(prev => ({ ...prev, [catKey]: productId }));
   }, []);
 
   // Toggle a product id in/out of the multi-select array for a category
-  const handleCustomToggle = useCallback((catKey, productId) => {
+  const handleCustomToggle = useCallback((catKey: CategoryKey, productId: number) => {
     setCustomSelectedIds(prev => {
       const current = prev[catKey] || [];
       const already = current.includes(productId);
@@ -354,11 +389,11 @@ export default function CuratedCombosPage() {
   }, [customSelectedIds, customCategories]);
 
   const presetTotal = selectedCombo?.price || 0;
-  const ALL_CATEGORIES = Object.keys(PRODUCTS_BY_CATEGORY);
+  const ALL_CATEGORIES = Object.keys(PRODUCTS_BY_CATEGORY) as CategoryKey[];
 
   // Flatten all selected custom items for the summary panel
   const customSummaryItems = useMemo(() => {
-    const items = [];
+    const items: Array<{ catKey: CategoryKey; prod: ComboProduct }> = [];
     customCategories.forEach(cat => {
       const ids = customSelectedIds[cat] || [];
       ids.forEach(id => {

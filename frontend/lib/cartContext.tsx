@@ -37,7 +37,7 @@ type Action =
   | { type: 'ADD_ITEM'; payload: Omit<CartItem, 'qty'>; openDrawer?: boolean }
   | { type: 'REMOVE_ITEM';  payload: { id: number; colorHex: string } }
   | { type: 'UPDATE_QTY';   payload: { id: number; colorHex: string; qty: number } }
-  | { type: 'OPEN_DRAWER' }
+  | { type: 'OPEN_DRAWER'; openDrawer?: boolean }
   | { type: 'CLOSE_DRAWER' }
   | { type: 'TOGGLE_GIFT';  payload?: boolean }
   | { type: 'SET_GIFT_MSG'; payload: string }
@@ -212,7 +212,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
 const addItem = useCallback(
-  (item, openDrawer = true) =>
+  (item: Omit<CartItem, 'qty'>, openDrawer = true) =>
     dispatch({ type: 'ADD_ITEM', payload: item, openDrawer }),
   []
 );

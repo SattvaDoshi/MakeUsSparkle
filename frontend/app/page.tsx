@@ -14,12 +14,11 @@ export default function HomePage() {
     <main>
       <TopNav/>
       <HeroVideo />
+      <PromoSection/>
       <BannerSection />
-      <BottomNav/>
+    <Style/>
       <CategorySection />
       {/* <TrustBadges /> */}
-      <PromoSection/>
-      <Style/>
       <TestimonialsSection />
       <Footer />
       <BottomNav/>

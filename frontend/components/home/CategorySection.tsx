@@ -36,36 +36,35 @@ const JEWELLERY_IMAGES = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UPDATED: Necklaces, Earrings, Bracelets now link to /subcategory/<type>
-// so they render <SubcategoryPage type="necklace|earrings|bracelets" />.
-// Rings, Waist Chains, Couple Sets keep their original deep-link hrefs.
+// ALL six jewellery types now point to /subcategory/<type>
+// so SubcategoryPage handles circles + products for every one of them.
 // ─────────────────────────────────────────────────────────────────────────────
 const womenJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'  },   // ← SubcategoryPage
-  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'  },   // ← SubcategoryPage
-  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/categories/women/jewellery/rings'       },
-  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets' },   // ← SubcategoryPage
-  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/categories/women/jewellery/waist-chains' },
-  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/categories/women/jewellery/couple'       },
+  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'     },
+  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'     },
+  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/subcategory/rings'        }, // ← FIXED
+  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets'    },
+  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/subcategory/waist-chains' }, // ← FIXED
+  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/subcategory/couple-sets'  }, // ← FIXED
 ];
 
 const menJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'  },
-  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'  },
-  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/categories/men/jewellery/rings'         },
-  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets' },
-  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/categories/men/jewellery/waist-chains'  },
-  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/categories/men/jewellery/couple'         },
+  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'     },
+  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'     },
+  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/subcategory/rings'        }, // ← FIXED
+  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets'    },
+  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/subcategory/waist-chains' }, // ← FIXED
+  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/subcategory/couple-sets'  }, // ← FIXED
 ];
 
 const buildCategories = (gender: Gender): CategoryItem[] => [
-  { name: 'Jewellery',          icon: '◈', img: JEWELLERY_IMAGES.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
-  { name: 'Gift Boxes',         icon: '⊡', img: JEWELLERY_IMAGES.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
-  { name: 'Fan Combos',         icon: '✦', img: JEWELLERY_IMAGES.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
-  { name: 'Custom Charm Jewellery',       icon: '◎', img: JEWELLERY_IMAGES.charm,     href: `/categories/${gender}/custom-charm`,     sub: [] },
-  { name: 'Hair Accessories',   icon: '⟡', img: JEWELLERY_IMAGES.hair,      href: `/categories/${gender}/hair-accessories`, sub: [] },
-  { name: 'Keychains', icon: '⌖', img: JEWELLERY_IMAGES.keychain,  href: `/categories/${gender}/keychains`,        sub: [] },
-  { name: 'Curated Combos',     icon: '⊞', img: JEWELLERY_IMAGES.combo,     href: `/categories/${gender}/curated-combos`,  sub: [] },
+  { name: 'Jewellery',             icon: '◈', img: JEWELLERY_IMAGES.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
+  { name: 'Gift Boxes',            icon: '⊡', img: JEWELLERY_IMAGES.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
+  { name: 'Fan Combos',            icon: '✦', img: JEWELLERY_IMAGES.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
+  { name: 'Custom Charm Jewellery',icon: '◎', img: JEWELLERY_IMAGES.charm,     href: `/categories/${gender}/custom-charm`,     sub: [] },
+  { name: 'Hair Accessories',      icon: '⟡', img: JEWELLERY_IMAGES.hair,      href: `/categories/${gender}/hair-accessories`, sub: [] },
+  { name: 'Keychains',             icon: '⌖', img: JEWELLERY_IMAGES.keychain,  href: `/categories/${gender}/keychains`,        sub: [] },
+  { name: 'Curated Combos',        icon: '⊞', img: JEWELLERY_IMAGES.combo,     href: `/categories/${gender}/curated-combos`,  sub: [] },
 ];
 
 // ─── Sub Card with mouse-tracking shine ──────────────────────────────────────
@@ -531,7 +530,6 @@ export default function CategorySection() {
                 </Link>
               </div>
 
-              {/* Sub-grid */}
               {active.sub.length > 0 && (
                 <div className="cs-grid">
                   {active.sub.map((sub, i) => (
@@ -540,7 +538,6 @@ export default function CategorySection() {
                 </div>
               )}
 
-              {/* Solo */}
               {active.sub.length === 0 && (
                 <Link href={active.href} className="cs-solo">
                   <img src={active.img} alt={active.name} className="cs-solo-img" />

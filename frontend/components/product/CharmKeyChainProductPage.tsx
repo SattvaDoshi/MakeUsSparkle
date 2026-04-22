@@ -826,19 +826,19 @@ const MAX_CHARMS = 6;
 /* ─────────────────────────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────────────────────────── */
-function buildCartItem(charm: CharmItem) {
-  return {
-    id: `charm-${charm.id}-${Date.now()}`,
-    name: charm.name,
-    price: charm.price,
-    originalPrice: null,
-    image: charm.image,
-    color: 'Gold',
-    colorHex: '#c9a84c',
-    sku: `CHARM-${charm.id.toUpperCase()}`,
-    href: `/keychains-charms`,
-  };
-}
+  function buildCartItem(charm: CharmItem) {
+    return {
+      id: `charm-${charm.id}-${Date.now()}`,
+      name: charm.name,
+      price: charm.price,
+      originalPrice: null,
+      image: charm.image,
+      color: 'Gold',
+      colorHex: '#c9a84c',
+      sku: `CHARM-${charm.id.toUpperCase()}`,
+      href: `/keychains-charms`,
+    };
+  }
 
 /* ─────────────────────────────────────────────────────────────
    CHARM CARD

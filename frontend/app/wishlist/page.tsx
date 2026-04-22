@@ -99,7 +99,7 @@ export default function WishlistPage() {
                     <button
                       className="wl-btn-cart"
                       onClick={() => addItem({
-                        id: item.id,
+                        id: String(item.id),
                         name: item.name,
                         price: item.price,
                         originalPrice: item.originalPrice ?? null,

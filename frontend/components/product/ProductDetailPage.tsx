@@ -985,7 +985,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleBuyNow = useCallback(() => {
     const cartItem = {
-      id: product.id,
+      id: String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
@@ -1001,7 +1001,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleAddToCart = useCallback(() => {
     const cartItem = {
-      id: product.id,
+      id: String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,

@@ -100,7 +100,7 @@ export default function ProductCard({
     e.preventDefault();
     e.stopPropagation();
     addItem({
-      id: product.id,
+      id: String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,

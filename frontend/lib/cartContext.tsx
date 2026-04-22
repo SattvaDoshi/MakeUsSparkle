@@ -11,7 +11,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number | null;
@@ -35,8 +35,8 @@ export interface CartState {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 type Action =
   | { type: 'ADD_ITEM'; payload: Omit<CartItem, 'qty'>; openDrawer?: boolean }
-  | { type: 'REMOVE_ITEM';  payload: { id: number; colorHex: string } }
-  | { type: 'UPDATE_QTY';   payload: { id: number; colorHex: string; qty: number } }
+  | { type: 'REMOVE_ITEM';  payload: { id: string; colorHex: string } }
+  | { type: 'UPDATE_QTY';   payload: { id: string; colorHex: string; qty: number } }
   | { type: 'OPEN_DRAWER'; openDrawer?: boolean }
   | { type: 'CLOSE_DRAWER' }
   | { type: 'TOGGLE_GIFT';  payload?: boolean }
@@ -82,7 +82,7 @@ const INITIAL: CartState = {
   discountAmount: 0,
 };
 
-function key(id: number, colorHex: string) {
+function key(id: string, colorHex: string) {
   return `${id}__${colorHex}`;
 }
 
@@ -168,8 +168,8 @@ function reducer(state: CartState, action: Action): CartState {
 interface CartContextValue {
   state:          CartState;
   addItem: (item: Omit<CartItem, 'qty'>, openDrawer?: boolean) => void;
-  removeItem:     (id: number, colorHex: string) => void;
-  updateQty:      (id: number, colorHex: string, qty: number) => void;
+  removeItem:     (id: string, colorHex: string) => void;
+  updateQty:      (id: string, colorHex: string, qty: number) => void;
   openDrawer:     () => void;
   closeDrawer:    () => void;
   toggleGift:     (val?: boolean) => void;
@@ -216,8 +216,8 @@ const addItem = useCallback(
     dispatch({ type: 'ADD_ITEM', payload: item, openDrawer }),
   []
 );
-  const removeItem     = useCallback((id: number, colorHex: string) => dispatch({ type: 'REMOVE_ITEM', payload: { id, colorHex } }), []);
-  const updateQty      = useCallback((id: number, colorHex: string, qty: number) => dispatch({ type: 'UPDATE_QTY', payload: { id, colorHex, qty } }), []);
+  const removeItem     = useCallback((id: string, colorHex: string) => dispatch({ type: 'REMOVE_ITEM', payload: { id, colorHex } }), []);
+  const updateQty      = useCallback((id: string, colorHex: string, qty: number) => dispatch({ type: 'UPDATE_QTY', payload: { id, colorHex, qty } }), []);
   const openDrawer     = useCallback(() => dispatch({ type: 'OPEN_DRAWER' }), []);
   const closeDrawer    = useCallback(() => dispatch({ type: 'CLOSE_DRAWER' }), []);
   const toggleGift     = useCallback((val?: boolean) => dispatch({ type: 'TOGGLE_GIFT', payload: val }), []);

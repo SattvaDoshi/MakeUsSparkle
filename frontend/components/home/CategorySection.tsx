@@ -1,6 +1,53 @@
 'use client';
 
-import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  IMAGE SIZE GUIDE
+ * ═══════════════════════════════════════════════════════════════
+ *
+ *  DESKTOP
+ *  ┌──────────────────────────────────────────────────────────┐
+ *  │  Sidebar preview image (bottom of sidebar)               │
+ *  │  → Ratio : 3 : 2  (landscape)                           │
+ *  │  → Example size : 210 × 140 px                          │
+ *  │                                                          │
+ *  │  Subcategory grid cards (content area)                   │
+ *  │  → Ratio : 4 : 3  (landscape)                           │
+ *  │  → Example size : 320 × 240 px                          │
+ *  │                                                          │
+ *  │  Solo / banner card (when no subcategories)              │
+ *  │  → Ratio : 16 : 9  or wider                             │
+ *  │  → Example size : 800 × 450 px, min-height 350px        │
+ *  └──────────────────────────────────────────────────────────┘
+ *
+ *  MOBILE  (split-pane layout)
+ *  ┌──────────────────────────────────────────────────────────┐
+ *  │  Left sidebar row thumbnails                             │
+ *  │  → Ratio : 1 : 1  (square)                              │
+ *  │  → Example size : 48 × 48 px                            │
+ *  │                                                          │
+ *  │  Right content – subcategory grid cards                  │
+ *  │  → Ratio : 1 : 1  (square) — matches reference image    │
+ *  │  → Example size : 120 × 120 px                          │
+ *  │                                                          │
+ *  │  Right content – solo banner                             │
+ *  │  → Ratio : 16 : 7  (wide landscape)                     │
+ *  │  → Example size : 300 × 131 px, height ~150 px          │
+ *  └──────────────────────────────────────────────────────────┘
+ *
+ *  TABLET  (661 – 960 px)
+ *  → Same as desktop but sidebar shrinks to 165px
+ *  → Grid drops to 2 columns
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+import {
+  useState,
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type MouseEvent,
+} from 'react';
 import Link from 'next/link';
 
 type Gender = 'women' | 'men';
@@ -19,110 +66,216 @@ interface CategoryItem {
   sub: SubCategoryItem[];
 }
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-const JEWELLERY_IMAGES = {
-  necklace:  'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
-  earrings:  'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&q=90',
-  rings:     'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=90',
-  bracelets: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=90',
-  waistChain:'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=90',
-  couple:    'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=800&q=90',
-  giftBox:   'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=90',
-  fanCombo:  'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=90',
-  hair:      'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=800&q=90',
-  keychain:  'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=800&q=90',
-  combo:     'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=90',
-  charm:     'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=800&q=90',
+/* ─── Images ─────────────────────────────────────────────────────────────── */
+const IMG = {
+  necklace:   'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
+  earrings:   'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&q=90',
+  rings:      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=90',
+  bracelets:  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=90',
+  waistChain: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=90',
+  couple:     'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=800&q=90',
+  giftBox:    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=90',
+  fanCombo:   'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=90',
+  hair:       'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=800&q=90',
+  keychain:   'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=800&q=90',
+  combo:      'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=90',
+  charm:      'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=800&q=90',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ALL six jewellery types now point to /subcategory/<type>
-// so SubcategoryPage handles circles + products for every one of them.
-// ─────────────────────────────────────────────────────────────────────────────
+/* ─── Data ───────────────────────────────────────────────────────────────── */
 const womenJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'     },
-  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'     },
-  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/subcategory/rings'        }, // ← FIXED
-  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets'    },
-  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/subcategory/waist-chains' }, // ← FIXED
-  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/subcategory/couple-sets'  }, // ← FIXED
+  { name: 'Necklaces',    img: IMG.necklace,   href: '/subcategory/necklace'     },
+  { name: 'Earrings',     img: IMG.earrings,   href: '/subcategory/earrings'     },
+  { name: 'Rings',        img: IMG.rings,      href: '/subcategory/rings'        },
+  { name: 'Bracelets',    img: IMG.bracelets,  href: '/subcategory/bracelets'    },
+  { name: 'Waist Chains', img: IMG.waistChain, href: '/subcategory/waist-chains' },
+  { name: 'Couple Sets',  img: IMG.couple,     href: '/subcategory/couple-sets'  },
 ];
 
 const menJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces',    img: JEWELLERY_IMAGES.necklace,   href: '/subcategory/necklace'     },
-  { name: 'Earrings',     img: JEWELLERY_IMAGES.earrings,   href: '/subcategory/earrings'     },
-  { name: 'Rings',        img: JEWELLERY_IMAGES.rings,      href: '/subcategory/rings'        }, // ← FIXED
-  { name: 'Bracelets',    img: JEWELLERY_IMAGES.bracelets,  href: '/subcategory/bracelets'    },
-  { name: 'Waist Chains', img: JEWELLERY_IMAGES.waistChain, href: '/subcategory/waist-chains' }, // ← FIXED
-  { name: 'Couple Sets',  img: JEWELLERY_IMAGES.couple,     href: '/subcategory/couple-sets'  }, // ← FIXED
+  { name: 'Necklaces',    img: IMG.necklace,   href: '/subcategory/necklace'     },
+  { name: 'Earrings',     img: IMG.earrings,   href: '/subcategory/earrings'     },
+  { name: 'Rings',        img: IMG.rings,      href: '/subcategory/rings'        },
+  { name: 'Bracelets',    img: IMG.bracelets,  href: '/subcategory/bracelets'    },
+  { name: 'Waist Chains', img: IMG.waistChain, href: '/subcategory/waist-chains' },
+  { name: 'Couple Sets',  img: IMG.couple,     href: '/subcategory/couple-sets'  },
 ];
 
 const buildCategories = (gender: Gender): CategoryItem[] => [
-  { name: 'Jewellery',             icon: '◈', img: JEWELLERY_IMAGES.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
-  { name: 'Gift Boxes',            icon: '⊡', img: JEWELLERY_IMAGES.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
-  { name: 'Fan Combos',            icon: '✦', img: JEWELLERY_IMAGES.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
-  { name: 'Custom Charm Jewellery',icon: '◎', img: JEWELLERY_IMAGES.charm,     href: `/categories/${gender}/custom-charm`,     sub: [] },
-  { name: 'Hair Accessories',      icon: '⟡', img: JEWELLERY_IMAGES.hair,      href: `/categories/${gender}/hair-accessories`, sub: [] },
-  { name: 'Keychains',             icon: '⌖', img: JEWELLERY_IMAGES.keychain,  href: `/categories/${gender}/keychains`,        sub: [] },
-  { name: 'Curated Combos',        icon: '⊞', img: JEWELLERY_IMAGES.combo,     href: `/categories/${gender}/curated-combos`,  sub: [] },
+  { name: 'Jewellery',              icon: '◈', img: IMG.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
+  { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
+  { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
+  { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/${gender}/custom-charm`,     sub: [] },
+  { name: 'Hair Accessories',       icon: '⟡', img: IMG.hair,      href: `/categories/${gender}/hair-accessories`, sub: [] },
+  { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/${gender}/keychains`,        sub: [] },
+  { name: 'Curated Combos',         icon: '⊞', img: IMG.combo,     href: `/categories/${gender}/curated-combos`,  sub: [] },
 ];
 
-// ─── Sub Card with mouse-tracking shine ──────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP SUB-CARD  (4:3 image ratio — use 320×240px images)
+═══════════════════════════════════════════════════════════════ */
 function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
-  const cardRef = useRef<HTMLAnchorElement | null>(null);
-  const [shine, setShine] = useState({ x: 50, y: 50, active: false });
+  const ref = useRef<HTMLAnchorElement>(null);
+  const [shine, setShine] = useState({ x: 50, y: 50, on: false });
 
-  const handleMouseMove = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setShine({ x, y, active: true });
+  const move = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setShine({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100, on: true });
   };
-
-  const handleMouseLeave = () => setShine(s => ({ ...s, active: false }));
-
-  const cardStyle = {
-    '--sx': `${shine.x}%`,
-    '--sy': `${shine.y}%`,
-    animationDelay: `${index * 0.07}s`,
-  } as CSSProperties & Record<'--sx' | '--sy', string>;
 
   return (
     <Link
-      ref={cardRef}
+      ref={ref}
       href={sub.href}
       className="sc-card"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={cardStyle}
+      onMouseMove={move}
+      onMouseLeave={() => setShine(s => ({ ...s, on: false }))}
+      style={{ '--sx': `${shine.x}%`, '--sy': `${shine.y}%`, animationDelay: `${index * 0.065}s` } as CSSProperties & Record<string, string>}
     >
-      <div className="sc-img-wrap">
+      <div className="sc-img">
         <img src={sub.img} alt={sub.name} loading="lazy" />
         <div className="sc-grad" />
-        <div className={`sc-shine ${shine.active ? 'active' : ''}`} />
-        <div className="sc-vignette" />
+        <div className={`sc-shine${shine.on ? ' on' : ''}`} />
       </div>
-
-      <div className="sc-bottom">
-        <span className="sc-idx">0{index + 1}</span>
+      <div className="sc-foot">
         <span className="sc-name">{sub.name}</span>
-        <span className="sc-arrow">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span className="sc-arr">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
         </span>
       </div>
-
-      <div className="sc-line" />
+      <div className="sc-bar" />
     </Link>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE SPLIT-PANE
+   Left sidebar  : narrow, dark-green, thumbnail + label
+   Right content : subcategory 2-col grid OR solo banner
+═══════════════════════════════════════════════════════════════ */
+function MobileSplit({
+  categories,
+  tab,
+  setTab,
+}: {
+  categories: CategoryItem[];
+  tab: Gender;
+  setTab: (g: Gender) => void;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  useEffect(() => { setActiveIdx(0); }, [tab]);
+  const active = categories[activeIdx];
+
+  return (
+    <div className="ms-root">
+
+      {/* ── Header row ───────────────────────────── */}
+      <div className="ms-top">
+        <div className="ms-top-left">
+          <p className="ms-eyebrow">Discover</p>
+          <h2 className="ms-title">Shop by <em>Category</em></h2>
+        </div>
+        {/* Gender toggle */}
+        <div className="ms-toggle">
+          <div className={`ms-pill${tab === 'men' ? ' right' : ''}`} />
+          <button
+            className={`ms-tbtn${tab === 'women' ? ' on' : ''}`}
+            onClick={() => setTab('women')}
+          >Women</button>
+          <button
+            className={`ms-tbtn${tab === 'men' ? ' on' : ''}`}
+            onClick={() => setTab('men')}
+          >Men</button>
+        </div>
+      </div>
+
+      {/* ── Split pane ───────────────────────────── */}
+      <div className="ms-pane">
+
+        {/* LEFT: sidebar nav
+            Thumbnail: 1:1 square — 48×48px images recommended */}
+        <nav className="ms-sb" aria-label="Category navigation">
+          {categories.map((cat, i) => (
+            <button
+              key={cat.name}
+              className={`ms-sbbtn${activeIdx === i ? ' on' : ''}`}
+              onClick={() => setActiveIdx(i)}
+              aria-current={activeIdx === i ? 'page' : undefined}
+            >
+              {/* 1:1 thumbnail */}
+              <div className="ms-sb-thumb">
+                <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+              </div>
+              <span className="ms-sb-label">{cat.name}</span>
+              {activeIdx === i && <span className="ms-sb-dot" aria-hidden="true" />}
+            </button>
+          ))}
+        </nav>
+
+        {/* RIGHT: content area */}
+        <div className="ms-ct">
+          {/* Content header */}
+          <div className="ms-ct-hd">
+            <span className="ms-ct-title">
+              {active.name.split(' ').length > 1
+                ? <>{active.name.split(' ')[0]} <em>{active.name.split(' ').slice(1).join(' ')}</em></>
+                : <em>{active.name}</em>
+              }
+            </span>
+            <Link href={active.href} className="ms-showall" aria-label={`Show all ${active.name}`}>
+              Show all
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Sub-category grid: 1:1 ratio — 120×120px images recommended */}
+          {active.sub.length > 0 ? (
+            <div className="ms-subgrid">
+              {active.sub.map(sub => (
+                <Link key={sub.name} href={sub.href} className="ms-subcard">
+                  <div className="ms-subcard-img">
+                    <img src={sub.img} alt={sub.name} loading="lazy" />
+                    <div className="ms-subcard-ov" />
+                  </div>
+                  <span className="ms-subcard-name">{sub.name}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            /* Solo banner: 16:7 ratio — ~300×131px, displayed at height 150px */
+            <Link href={active.href} className="ms-solo">
+              <img src={active.img} alt={active.name} className="ms-solo-img" />
+              <div className="ms-solo-ov" />
+              <div className="ms-solo-body">
+                <span className="ms-solo-ttl">{active.name}</span>
+                <span className="ms-solo-cta">
+                  Explore
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════════════════════ */
 export default function CategorySection() {
   const [tab, setTab]             = useState<Gender>('women');
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(false);
-  const sectionRef                = useRef<HTMLElement | null>(null);
+  const sectionRef                = useRef<HTMLElement>(null);
 
   const categories = buildCategories(tab);
   const active     = categories[activeIdx];
@@ -130,7 +283,7 @@ export default function CategorySection() {
   useEffect(() => {
     const obs = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
+      { threshold: 0.06 },
     );
     if (sectionRef.current) obs.observe(sectionRef.current);
     return () => obs.disconnect();
@@ -138,353 +291,11 @@ export default function CategorySection() {
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Jost:wght@200;300;400;500;600&display=swap');
-
-        :root {
-          --bg:          #1a2010;
-          --bg2:         #141a0c;
-          --panel:       rgba(16,22,9,0.72);
-          --sidebar-bg:  rgba(10,14,6,0.55);
-          --gold:        #d4a843;
-          --gold2:       #b8902b;
-          --gold3:       #f0c96a;
-          --gold-glow:   rgba(212,168,67,.18);
-          --cream:       #f2ead8;
-          --cream2:      #d6cab0;
-          --muted:       rgba(242,234,216,.45);
-          --muted2:      rgba(242,234,216,.65);
-          --border:      rgba(212,168,67,.12);
-          --border2:     rgba(212,168,67,.32);
-          --olive-light: #7a8e5c;
-        }
-
-        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-
-        .cs {
-          background: var(--bg);
-          background-image:
-            radial-gradient(ellipse 110% 55% at 50% -8%, rgba(212,168,67,.07) 0%, transparent 65%),
-            radial-gradient(ellipse 40% 40% at 92% 88%, rgba(61,79,42,.4) 0%, transparent 58%);
-          padding: 44px 0 56px;
-          font-family: 'Jost', sans-serif;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .cs::before {
-          content:'';
-          position:absolute; inset:0; pointer-events:none; z-index:0;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
-          mix-blend-mode: overlay; opacity:.5;
-        }
-
-        .cs-hd {
-          display: flex; align-items: center;
-          justify-content: space-between;
-          padding: 0 40px; margin-bottom: 22px;
-          position: relative; z-index:1;
-          opacity: 0; transform: translateY(16px);
-          transition: opacity .6s ease, transform .6s ease;
-        }
-        .cs-hd.in { opacity:1; transform:translateY(0); }
-
-        .cs-hd-left { display:flex; align-items:baseline; gap:14px; }
-
-        .cs-eyebrow {
-          font-size:8.5px; letter-spacing:.46em; text-transform:uppercase;
-          color:var(--gold); font-weight:500; opacity:.85;
-        }
-
-        .cs-title {
-          font-family:'Playfair Display',serif;
-          font-size: clamp(1.3rem, 2.2vw, 1.9rem);
-          font-weight:400; color:var(--cream);
-          letter-spacing:.01em; line-height:1;
-        }
-        .cs-title em { font-style:italic; color:var(--gold); }
-
-        .cs-toggle {
-          display:flex; align-items:center;
-          background:rgba(0,0,0,.32);
-          border:1px solid var(--border);
-          padding:3px; position:relative;
-          backdrop-filter:blur(10px);
-        }
-        .cs-pill {
-          position:absolute; top:3px; bottom:3px;
-          width:calc(50% - 3px); left:3px;
-          background:linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
-          transition:transform .42s cubic-bezier(.77,0,.18,1);
-        }
-        .cs-pill.right { transform:translateX(100%); }
-        .cs-tbtn {
-          position:relative; z-index:1; padding:8px 24px;
-          font-family:'Jost',sans-serif; font-size:9.5px;
-          font-weight:600; letter-spacing:.28em; text-transform:uppercase;
-          background:transparent; border:none; cursor:pointer;
-          color:var(--muted); transition:color .3s;
-        }
-        .cs-tbtn.on { color:var(--bg2); }
-
-        .cs-wrap {
-          padding:0 40px; position:relative; z-index:1;
-          opacity:0; transform:translateY(22px);
-          transition:opacity .7s ease .15s, transform .7s ease .15s;
-        }
-        .cs-wrap.in { opacity:1; transform:translateY(0); }
-
-        .cs-panel {
-          display:grid;
-          grid-template-columns: 200px 1fr;
-          border:1px solid var(--border);
-          background:var(--panel);
-          backdrop-filter:blur(28px);
-          position:relative; overflow:hidden;
-          box-shadow: 0 28px 90px rgba(0,0,0,.45), inset 0 1px 0 rgba(212,168,67,.05);
-        }
-
-        .cs-panel::before,
-        .cs-panel::after {
-          content:''; position:absolute;
-          width:30px; height:30px;
-          border-color:var(--gold); border-style:solid; z-index:10; opacity:.5;
-        }
-        .cs-panel::before { top:-1px; left:-1px; border-width:1.5px 0 0 1.5px; }
-        .cs-panel::after  { bottom:-1px; right:-1px; border-width:0 1.5px 1.5px 0; }
-
-        .cs-sb {
-          border-right:1px solid var(--border);
-          padding:4px 0 20px;
-          background:var(--sidebar-bg);
-        }
-        .cs-sb-lbl {
-          font-size:7.5px; letter-spacing:.46em; text-transform:uppercase;
-          color:var(--olive-light); padding:18px 18px 10px;
-          display:block; opacity:.45;
-        }
-        .cs-sbbtn {
-          display:flex; align-items:center; gap:10px;
-          width:100%; padding:11px 16px;
-          background:transparent; border:none;
-          border-left:2px solid transparent;
-          cursor:pointer; text-align:left;
-          color:var(--muted); position:relative; overflow:hidden;
-          transition:color .22s, border-color .22s;
-        }
-        .cs-sbbtn::after {
-          content:''; position:absolute; inset:0;
-          background:linear-gradient(90deg, var(--gold-glow), transparent);
-          opacity:0; transition:opacity .25s;
-        }
-        .cs-sbbtn:hover { color:var(--cream2); border-left-color:rgba(212,168,67,.28); }
-        .cs-sbbtn:hover::after { opacity:.55; }
-        .cs-sbbtn.on { color:var(--gold); border-left-color:var(--gold); }
-        .cs-sbbtn.on::after { opacity:1; }
-        .cs-sb-glyph { font-size:12px; color:var(--gold2); opacity:.5; transition:opacity .22s; position:relative;z-index:1; }
-        .cs-sbbtn:hover .cs-sb-glyph,
-        .cs-sbbtn.on   .cs-sb-glyph { opacity:1; }
-        .cs-sb-txt  { font-size:11px; font-weight:400; letter-spacing:.05em; flex:1; position:relative;z-index:1; }
-        .cs-sb-cnt  { font-size:7.5px; color:var(--olive-light); opacity:.4; transition:opacity .22s; position:relative;z-index:1; }
-        .cs-sbbtn.on .cs-sb-cnt { opacity:.7; color:var(--gold2); }
-
-        .cs-ct { padding:22px 24px 26px; min-height:420px; position:relative; }
-
-        .cs-ct-hd {
-          display:flex; align-items:center; justify-content:space-between;
-          margin-bottom:18px; padding-bottom:13px;
-          border-bottom:1px solid var(--border); position:relative;
-        }
-        .cs-ct-hd::after {
-          content:''; position:absolute; bottom:-1px; left:0;
-          width:60px; height:1px;
-          background:linear-gradient(90deg, var(--gold), transparent);
-        }
-        .cs-ct-title {
-          font-family:'Playfair Display',serif;
-          font-size:1.35rem; font-weight:400;
-          color:var(--cream); letter-spacing:.02em;
-        }
-        .cs-ct-title em { font-style:italic; color:var(--gold); }
-        .cs-va {
-          display:flex; align-items:center; gap:6px;
-          font-size:9px; font-weight:600; letter-spacing:.24em; text-transform:uppercase;
-          color:var(--gold2); text-decoration:none; opacity:.75;
-          transition:color .2s, gap .22s, opacity .2s;
-        }
-        .cs-va:hover { color:var(--gold); gap:10px; opacity:1; }
-
-        .cs-grid {
-          display:grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap:14px;
-        }
-
-        .sc-card {
-          display:block; text-decoration:none;
-          position:relative; overflow:hidden;
-          border:1px solid var(--border);
-          transition:border-color .35s, box-shadow .35s;
-          cursor:pointer;
-          animation: cardIn .55s ease both;
-        }
-        @keyframes cardIn {
-          from { opacity:0; transform:translateY(18px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        .sc-card:hover {
-          border-color:var(--border2);
-          box-shadow:0 10px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(212,168,67,.07) inset;
-        }
-
-        .sc-img-wrap {
-          position:relative;
-          aspect-ratio: 4 / 3;
-          overflow:hidden;
-          background:var(--bg2);
-        }
-        .sc-img-wrap img {
-          width:100%; height:100%; object-fit:cover;
-          filter:brightness(.72) saturate(.82) sepia(.08);
-          transition:transform .75s cubic-bezier(.25,.46,.45,.94), filter .45s;
-          display:block;
-        }
-        .sc-card:hover .sc-img-wrap img {
-          transform:scale(1.08);
-          filter:brightness(.88) saturate(1.0) sepia(.04);
-        }
-
-        .sc-grad {
-          position:absolute; inset:0;
-          background:linear-gradient(to top, rgba(16,22,9,.92) 0%, rgba(16,22,9,.28) 52%, transparent 72%);
-        }
-        .sc-shine {
-          position:absolute; inset:0; pointer-events:none;
-          background:radial-gradient(circle at var(--sx,50%) var(--sy,50%), rgba(212,168,67,.14) 0%, transparent 60%);
-          opacity:0; transition:opacity .3s;
-        }
-        .sc-shine.active { opacity:1; }
-        .sc-vignette {
-          position:absolute; inset:0;
-          background:linear-gradient(135deg, rgba(212,168,67,.06) 0%, transparent 55%);
-          opacity:0; transition:opacity .4s;
-        }
-        .sc-card:hover .sc-vignette { opacity:1; }
-
-        .sc-bottom {
-          position:absolute; bottom:0; left:0; right:0;
-          padding:14px 14px 13px;
-          display:flex; align-items:center; gap:8px;
-        }
-        .sc-idx {
-          font-size:7.5px; font-weight:600; letter-spacing:.1em;
-          color:var(--gold); opacity:0; transform:translateY(4px);
-          transition:opacity .28s, transform .28s;
-        }
-        .sc-card:hover .sc-idx { opacity:.6; transform:translateY(0); }
-        .sc-name {
-          font-size:10.5px; font-weight:600;
-          letter-spacing:.2em; text-transform:uppercase;
-          color:var(--cream); flex:1;
-        }
-        .sc-arrow {
-          color:var(--gold);
-          opacity:0; transform:translateX(-5px);
-          transition:opacity .28s ease .04s, transform .28s ease .04s;
-          display:flex; align-items:center;
-        }
-        .sc-card:hover .sc-arrow { opacity:1; transform:translateX(0); }
-
-        .sc-line {
-          position:absolute; bottom:0; left:0; right:0;
-          height:2px;
-          background:linear-gradient(90deg, var(--gold2), var(--gold), var(--gold2));
-          transform:scaleX(0); transform-origin:left;
-          transition:transform .42s cubic-bezier(.25,.46,.45,.94);
-        }
-        .sc-card:hover .sc-line { transform:scaleX(1); }
-
-        .cs-solo {
-          display:block; text-decoration:none;
-          position:relative; overflow:hidden;
-          height:100%; min-height:360px;
-          border:1px solid var(--border);
-          transition:border-color .35s;
-        }
-        .cs-solo:hover { border-color:var(--border2); }
-        .cs-solo-img {
-          width:100%; height:100%; object-fit:cover;
-          filter:brightness(.42) saturate(.65) sepia(.12);
-          position:absolute; inset:0;
-          transition:transform .85s cubic-bezier(.25,.46,.45,.94), filter .45s;
-        }
-        .cs-solo:hover .cs-solo-img { transform:scale(1.05); filter:brightness(.52) saturate(.8) sepia(.07); }
-        .cs-solo-ov {
-          position:absolute; inset:0;
-          background:
-            linear-gradient(135deg, rgba(16,22,9,.78) 0%, transparent 55%),
-            linear-gradient(to top, rgba(16,22,9,.9) 0%, transparent 55%);
-        }
-        .cs-solo-inset {
-          position:absolute; inset:14px;
-          border:1px solid transparent;
-          transition:border-color .45s; pointer-events:none;
-        }
-        .cs-solo:hover .cs-solo-inset { border-color:rgba(212,168,67,.18); }
-        .cs-solo-body { position:absolute; bottom:0; left:0; right:0; padding:30px 28px; }
-        .cs-solo-ey {
-          display:flex; align-items:center; gap:9px;
-          font-size:7.5px; letter-spacing:.46em; text-transform:uppercase;
-          color:var(--gold); margin-bottom:10px; opacity:.8;
-        }
-        .cs-solo-ey::before { content:''; width:20px; height:1px; background:currentColor; opacity:.55; }
-        .cs-solo-ttl {
-          font-family:'Playfair Display',serif;
-          font-size:clamp(1.7rem,3.5vw,2.6rem);
-          font-weight:400; font-style:italic;
-          color:var(--cream); display:block; margin-bottom:18px; line-height:1.1;
-        }
-        .cs-solo-cta {
-          display:inline-flex; align-items:center; gap:10px;
-          font-size:8.5px; font-weight:600; letter-spacing:.28em; text-transform:uppercase;
-          color:var(--gold); padding:9px 18px;
-          border:1px solid rgba(212,168,67,.35);
-          background:rgba(212,168,67,.05);
-          backdrop-filter:blur(4px);
-          transition:background .3s, border-color .3s, gap .25s;
-        }
-        .cs-solo:hover .cs-solo-cta { background:rgba(212,168,67,.11); border-color:rgba(212,168,67,.65); gap:14px; }
-
-        @media (max-width:960px) {
-          .cs-panel { grid-template-columns:170px 1fr; }
-          .cs-grid   { grid-template-columns:repeat(2,1fr); }
-        }
-        @media (max-width:660px) {
-          .cs-panel  { grid-template-columns:1fr; }
-          .cs-sb {
-            border-right:none; border-bottom:1px solid var(--border);
-            display:flex; overflow-x:auto; padding:10px; gap:6px; scrollbar-width:none;
-          }
-          .cs-sb::-webkit-scrollbar { display:none; }
-          .cs-sb-lbl { display:none; }
-          .cs-sbbtn  {
-            flex-direction:column; align-items:center; gap:4px;
-            padding:8px 11px; border-left:none; border-bottom:2px solid transparent;
-            white-space:nowrap; flex-shrink:0;
-          }
-          .cs-sbbtn.on { border-bottom-color:var(--gold); }
-          .cs-sb-cnt { display:none; }
-          .cs-wrap   { padding:0 16px; }
-          .cs-hd     { padding:0 16px; flex-wrap:wrap; gap:12px; }
-          .cs-grid   { grid-template-columns:repeat(2,1fr); gap:10px; }
-          .cs-ct     { padding:16px 13px 18px; }
-        }
-      `}</style>
-
+      <style>{CSS}</style>
       <section className="cs" id="categories" ref={sectionRef}>
 
-        {/* ── Header + Toggle ── */}
-        <div className={`cs-hd ${visible ? 'in' : ''}`}>
+        {/* ══════════ DESKTOP + TABLET (> 660px) ══════════ */}
+        <div className={`cs-hd${visible ? ' in' : ''}`}>
           <div className="cs-hd-left">
             <span className="cs-eyebrow">Discover</span>
             <h2 className="cs-title">Shop by <em>Category</em></h2>
@@ -496,24 +307,35 @@ export default function CategorySection() {
           </div>
         </div>
 
-        {/* ── Panel ── */}
-        <div className={`cs-wrap ${visible ? 'in' : ''}`}>
+        <div className={`cs-wrap${visible ? ' in' : ''}`}>
           <div className="cs-panel">
 
-            {/* Sidebar */}
-            <nav className="cs-sb">
-              <span className="cs-sb-lbl">Categories</span>
+            {/* Sidebar — dark forest green, styled */}
+            <nav className="cs-sb" aria-label="Product categories">
+              <div className="cs-sb-hd">
+                <span className="cs-sb-eyebrow">Browse</span>
+                <span className="cs-sb-heading">Collections</span>
+              </div>
+
               {categories.map((cat, i) => (
                 <button
                   key={cat.name}
                   className={`cs-sbbtn${activeIdx === i ? ' on' : ''}`}
                   onClick={() => setActiveIdx(i)}
+                  aria-current={activeIdx === i ? 'page' : undefined}
                 >
-                  <span className="cs-sb-glyph">{cat.icon}</span>
+                  <span className="cs-sb-icon" aria-hidden="true">{cat.icon}</span>
                   <span className="cs-sb-txt">{cat.name}</span>
-                  <span className="cs-sb-cnt">{cat.sub.length > 0 ? `${cat.sub.length}` : '→'}</span>
+                  <span className="cs-sb-badge">{cat.sub.length > 0 ? cat.sub.length : '→'}</span>
                 </button>
               ))}
+
+              {/* Active preview — 3:2 ratio, use ~210×140px images */}
+              <div className="cs-sb-preview">
+                <img src={active.img} alt={active.name} />
+                <div className="cs-sb-preview-ov" />
+                <span className="cs-sb-preview-lbl">{active.name}</span>
+              </div>
             </nav>
 
             {/* Content */}
@@ -526,19 +348,17 @@ export default function CategorySection() {
                 </h3>
                 <Link href={active.href} className="cs-va">
                   View all
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
                 </Link>
               </div>
 
-              {active.sub.length > 0 && (
+              {active.sub.length > 0 ? (
                 <div className="cs-grid">
-                  {active.sub.map((sub, i) => (
-                    <ShineCard key={sub.name} sub={sub} index={i} />
-                  ))}
+                  {active.sub.map((sub, i) => <ShineCard key={sub.name} sub={sub} index={i} />)}
                 </div>
-              )}
-
-              {active.sub.length === 0 && (
+              ) : (
                 <Link href={active.href} className="cs-solo">
                   <img src={active.img} alt={active.name} className="cs-solo-img" />
                   <div className="cs-solo-ov" />
@@ -548,7 +368,9 @@ export default function CategorySection() {
                     <span className="cs-solo-ttl">{active.name}</span>
                     <span className="cs-solo-cta">
                       Explore the edit
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
                     </span>
                   </div>
                 </Link>
@@ -556,7 +378,720 @@ export default function CategorySection() {
             </div>
           </div>
         </div>
+
+        {/* ══════════ MOBILE (≤ 660px) ══════════ */}
+        <MobileSplit categories={categories} tab={tab} setTab={setTab} />
+
       </section>
     </>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   STYLES
+═══════════════════════════════════════════════════════════════ */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap');
+
+/* ── Tokens ──────────────────────────────────────────────── */
+:root {
+  --white:     #ffffff;
+  --cream:     #faf8f3;
+  --cream2:    #f3ede1;
+  --cream3:    #e8dfc8;
+  --gd:        #253d18;   /* deep green  */
+  --gm:        #365928;   /* mid green   */
+  --gs:        #527a3e;   /* soft green  */
+  --gl:        #7aaa5c;   /* light green */
+  --gp:        #ddecd1;   /* pale green  */
+  --gt:        #eff6ea;   /* tint green  */
+  --gold:      #a07820;
+  --gold-l:    #c8992e;
+  --t1:        #1c1c17;
+  --t2:        #484840;
+  --t3:        #828278;
+  --t4:        #b4b4a4;
+  --bs:        rgba(60,90,35,0.09);
+  --bm:        rgba(60,90,35,0.18);
+  --bst:       rgba(60,90,35,0.30);
+  --sxs:       0 1px 4px rgba(35,60,18,0.07);
+  --ssm:       0 2px 12px rgba(35,60,18,0.09);
+  --smd:       0 6px 26px rgba(35,60,18,0.11);
+  --slg:       0 18px 54px rgba(35,60,18,0.14);
+  --r8:        8px;
+  --r12:       12px;
+  --r16:       16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Section ─────────────────────────────────────────────── */
+.cs {
+  background: var(--cream);
+  padding: 56px 0 72px;
+  font-family: 'Nunito', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+/* top accent line */
+.cs::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2.5px;
+  background: linear-gradient(90deg, transparent 4%, var(--gs) 32%, var(--gold-l) 62%, transparent 96%);
+  opacity: .42;
+}
+/* ambient bg wash */
+.cs::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 65% 44% at 96% 4%,  rgba(82,122,62,.055) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 55% at 4%  96%, rgba(160,120,32,.04) 0%, transparent 56%);
+}
+
+/* ── Desktop header ──────────────────────────────────────── */
+.cs-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px 32px;
+  position: relative; z-index: 1;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .52s ease, transform .52s ease;
+}
+.cs-hd.in { opacity: 1; transform: translateY(0); }
+
+.cs-hd-left { display: flex; flex-direction: column; gap: 5px; }
+
+.cs-eyebrow {
+  font-size: 9px; font-weight: 700; letter-spacing: .46em; text-transform: uppercase;
+  color: var(--gs);
+  display: flex; align-items: center; gap: 8px;
+}
+.cs-eyebrow::before {
+  content: '';
+  width: 20px; height: 1.5px;
+  background: var(--gs); border-radius: 2px; opacity: .65;
+}
+
+.cs-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.7rem, 2.6vw, 2.5rem);
+  font-weight: 400; color: var(--t1);
+  letter-spacing: -.016em; line-height: 1;
+}
+.cs-title em { font-style: italic; color: var(--gd); }
+
+/* Desktop gender toggle */
+.cs-toggle {
+  display: flex; align-items: center;
+  background: var(--white);
+  border: 1.5px solid var(--bm);
+  border-radius: 100px;
+  padding: 4px;
+  position: relative;
+  box-shadow: var(--sxs);
+}
+.cs-pill {
+  position: absolute; top: 4px; bottom: 4px;
+  width: calc(50% - 4px); left: 4px;
+  background: var(--gd);
+  border-radius: 100px;
+  transition: transform .36s cubic-bezier(.77,0,.18,1);
+  box-shadow: 0 2px 8px rgba(37,61,24,.3);
+}
+.cs-pill.right { transform: translateX(100%); }
+.cs-tbtn {
+  position: relative; z-index: 1;
+  padding: 9px 26px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
+  background: transparent; border: none; cursor: pointer; border-radius: 100px;
+  color: var(--t3); transition: color .26s;
+}
+.cs-tbtn.on { color: #fff; }
+
+/* ── Desktop wrapper + panel ─────────────────────────────── */
+.cs-wrap {
+  padding: 0 48px;
+  position: relative; z-index: 1;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .62s ease .1s, transform .62s ease .1s;
+}
+.cs-wrap.in { opacity: 1; transform: translateY(0); }
+
+/* Grid: sidebar takes 175px, content gets the rest */
+.cs-panel {
+  display: grid;
+  grid-template-columns: 175px 1fr;
+  background: var(--white);
+  border: 1px solid var(--bs);
+  border-radius: var(--r16);
+  overflow: hidden;
+  box-shadow: var(--smd);
+}
+
+/* ── Desktop sidebar ─────────────────────────────────────── */
+.cs-sb {
+  display: flex; flex-direction: column;
+  background: linear-gradient(168deg, #253d18 0%, #172710 100%);
+  border-right: 1px solid rgba(255,255,255,.06);
+  position: relative; overflow: hidden;
+}
+
+/* inner ambient glow */
+.cs-sb::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 130% 55% at 50% -2%, rgba(82,122,62,.38) 0%, transparent 62%),
+    radial-gradient(ellipse 80%  80% at 100% 100%, rgba(160,120,32,.1) 0%, transparent 55%);
+}
+
+.cs-sb-hd {
+  padding: 20px 16px 14px;
+  position: relative; z-index: 1;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  margin-bottom: 4px;
+}
+.cs-sb-eyebrow {
+  display: block;
+  font-size: 7.5px; font-weight: 700; letter-spacing: .52em; text-transform: uppercase;
+  color: rgba(255,255,255,.35); margin-bottom: 3px;
+}
+.cs-sb-heading {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: .95rem; font-style: italic; font-weight: 300;
+  color: rgba(255,255,255,.7); letter-spacing: .02em;
+}
+
+.cs-sbbtn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 10px 14px 10px 15px;
+  background: transparent; border: none;
+  border-left: 2.5px solid transparent;
+  cursor: pointer; text-align: left;
+  color: rgba(255,255,255,.48);
+  position: relative; z-index: 1;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.cs-sbbtn:hover {
+  color: rgba(255,255,255,.82);
+  background: rgba(255,255,255,.06);
+  border-left-color: rgba(255,255,255,.22);
+}
+.cs-sbbtn.on {
+  color: #fff;
+  border-left-color: var(--gold-l);
+  background: rgba(255,255,255,.09);
+}
+
+.cs-sb-icon {
+  font-size: 10px; color: var(--gold-l);
+  opacity: .45; flex-shrink: 0;
+  transition: opacity .2s;
+}
+.cs-sbbtn:hover .cs-sb-icon { opacity: .75; }
+.cs-sbbtn.on   .cs-sb-icon { opacity: 1; }
+
+.cs-sb-txt {
+  font-size: 11px; font-weight: 400;
+  letter-spacing: .025em; flex: 1;
+  line-height: 1.3;
+}
+.cs-sbbtn.on .cs-sb-txt { font-weight: 600; }
+
+.cs-sb-badge {
+  font-size: 8px; font-weight: 700; letter-spacing: .04em;
+  color: var(--gold-l);
+  background: rgba(200,153,46,.14);
+  border: 1px solid rgba(200,153,46,.22);
+  padding: 1px 6px; border-radius: 100px;
+  transition: background .2s;
+}
+.cs-sbbtn.on .cs-sb-badge { background: rgba(200,153,46,.26); }
+
+/* Active preview at bottom of sidebar — 3:2 ratio (210×140px) */
+.cs-sb-preview {
+  margin-top: auto;
+  position: relative; z-index: 1;
+  aspect-ratio: 3/2;
+  overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.cs-sb-preview img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: brightness(.42) saturate(.7);
+  transition: transform .6s ease, filter .4s;
+}
+.cs-sb-preview:hover img { transform: scale(1.05); filter: brightness(.52) saturate(.82); }
+.cs-sb-preview-ov {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(15,30,8,.88) 0%, rgba(15,30,8,.16) 60%, transparent 100%);
+}
+.cs-sb-preview-lbl {
+  position: absolute; bottom: 11px; left: 13px; right: 13px;
+  font-size: 9px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,.65);
+}
+
+/* ── Desktop content area ────────────────────────────────── */
+.cs-ct {
+  padding: 28px 30px 32px;
+  min-height: 440px;
+  background: var(--white);
+}
+
+.cs-ct-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--bs);
+  position: relative;
+}
+.cs-ct-hd::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 0;
+  width: 52px; height: 2px;
+  background: linear-gradient(90deg, var(--gd), transparent);
+  border-radius: 2px;
+}
+.cs-ct-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.52rem; font-weight: 400; color: var(--t1); letter-spacing: .01em;
+}
+.cs-ct-title em { font-style: italic; color: var(--gd); }
+
+.cs-va {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 9px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase;
+  color: var(--gs); text-decoration: none;
+  padding: 8px 16px;
+  border: 1.5px solid var(--bm); border-radius: 100px;
+  background: var(--gt);
+  transition: background .22s, border-color .22s, color .22s, gap .22s;
+}
+.cs-va:hover { background: var(--gp); border-color: var(--gs); color: var(--gd); gap: 10px; }
+
+/* ── Desktop sub-category grid ───────────────────────────── */
+/* Card image: 4:3 ratio — use 320×240px images */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.sc-card {
+  display: block; text-decoration: none;
+  position: relative; overflow: hidden;
+  border-radius: var(--r8);
+  border: 1px solid var(--bs);
+  background: var(--cream);
+  cursor: pointer;
+  animation: cardIn .48s ease both;
+  transition: border-color .28s, box-shadow .28s, transform .28s;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sc-card:hover {
+  border-color: var(--bm);
+  box-shadow: var(--smd);
+  transform: translateY(-3px);
+}
+
+/* 4:3 image */
+.sc-img {
+  position: relative; aspect-ratio: 4/3;
+  overflow: hidden; background: var(--cream2);
+}
+.sc-img img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform .68s cubic-bezier(.25,.46,.45,.94);
+}
+.sc-card:hover .sc-img img { transform: scale(1.07); }
+
+.sc-grad {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(28,46,16,.55) 0%, rgba(28,46,16,.04) 55%, transparent 72%);
+}
+.sc-shine {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at var(--sx,50%) var(--sy,50%), rgba(255,255,255,.13) 0%, transparent 54%);
+  opacity: 0; transition: opacity .28s;
+}
+.sc-shine.on { opacity: 1; }
+
+.sc-foot {
+  display: flex; align-items: center; gap: 6px;
+  padding: 11px 13px;
+}
+.sc-name {
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: .13em; text-transform: uppercase;
+  color: var(--t1); flex: 1;
+}
+.sc-arr {
+  color: var(--gs);
+  opacity: 0; transform: translateX(-5px);
+  display: flex; align-items: center;
+  transition: opacity .22s, transform .22s;
+}
+.sc-card:hover .sc-arr { opacity: 1; transform: translateX(0); }
+
+.sc-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gd), var(--gl));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .36s cubic-bezier(.25,.46,.45,.94);
+}
+.sc-card:hover .sc-bar { transform: scaleX(1); }
+
+/* ── Desktop solo banner ─────────────────────────────────── */
+/* Image: 16:9 — use 800×450px, min-height 350px */
+.cs-solo {
+  display: block; text-decoration: none;
+  position: relative; overflow: hidden;
+  height: 100%; min-height: 360px;
+  border-radius: var(--r12);
+  border: 1px solid var(--bs);
+  transition: box-shadow .34s, border-color .34s;
+}
+.cs-solo:hover { box-shadow: var(--slg); border-color: var(--bm); }
+
+.cs-solo-img {
+  width: 100%; height: 100%; object-fit: cover;
+  position: absolute; inset: 0;
+  filter: brightness(.5) saturate(.75);
+  transition: transform .84s cubic-bezier(.25,.46,.45,.94), filter .44s;
+}
+.cs-solo:hover .cs-solo-img { transform: scale(1.04); filter: brightness(.62) saturate(.88); }
+
+.cs-solo-ov {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to top, rgba(18,36,10,.92) 0%, rgba(18,36,10,.28) 50%, transparent 70%),
+    linear-gradient(135deg, rgba(37,61,24,.22) 0%, transparent 50%);
+}
+.cs-solo-inset {
+  position: absolute; inset: 16px;
+  border: 1px solid transparent; border-radius: 8px;
+  transition: border-color .4s; pointer-events: none;
+}
+.cs-solo:hover .cs-solo-inset { border-color: rgba(255,255,255,.1); }
+
+.cs-solo-body { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 28px; }
+.cs-solo-ey {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 8px; font-weight: 700; letter-spacing: .44em; text-transform: uppercase;
+  color: rgba(255,255,255,.52); margin-bottom: 10px;
+}
+.cs-solo-ey::before { content: ''; width: 18px; height: 1px; background: currentColor; }
+.cs-solo-ttl {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 400; font-style: italic;
+  color: #fff; display: block; margin-bottom: 18px; line-height: 1.08;
+}
+.cs-solo-cta {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 9px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase;
+  color: #fff; padding: 10px 20px;
+  background: rgba(37,61,24,.6); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 100px; backdrop-filter: blur(8px);
+  transition: background .3s, border-color .3s, gap .24s;
+}
+.cs-solo:hover .cs-solo-cta { background: rgba(37,61,24,.82); border-color: rgba(255,255,255,.35); gap: 13px; }
+
+/* ═══════════════════════════════════════════════════════════
+   TABLET  661–960px
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 960px) and (min-width: 661px) {
+  .cs-wrap  { padding: 0 28px; }
+  .cs-hd    { padding: 0 28px 28px; }
+  .cs-panel { grid-template-columns: 165px 1fr; }
+  .cs-ct    { padding: 22px 22px 26px; }
+  .cs-grid  { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE  ≤ 660px — split-pane layout
+═══════════════════════════════════════════════════════════ */
+.ms-root { display: none; }
+
+@media (max-width: 660px) {
+  .cs { padding: 28px 0 44px; }
+
+  /* Hide desktop elements */
+  .cs-hd  { display: none !important; }
+  .cs-wrap { display: none !important; }
+
+  /* Show mobile */
+  .ms-root { display: block; padding: 0 14px; position: relative; z-index: 1; }
+
+  /* ── Top header row ── */
+  .ms-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .ms-top-left { display: flex; flex-direction: column; gap: 4px; }
+
+  .ms-eyebrow {
+    font-size: 8.5px; font-weight: 700; letter-spacing: .42em; text-transform: uppercase;
+    color: var(--gs);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ms-eyebrow::before {
+    content: '';
+    width: 13px; height: 1.5px;
+    background: var(--gs); border-radius: 2px; opacity: .6;
+  }
+
+  .ms-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem; font-weight: 400; color: var(--t1); line-height: 1;
+  }
+  .ms-title em { font-style: italic; color: var(--gd); }
+
+  /* ── Gender toggle (compact) ── */
+  .ms-toggle {
+    flex-shrink: 0;
+    display: flex; align-items: center;
+    background: var(--white);
+    border: 1.5px solid var(--bm); border-radius: 100px;
+    padding: 3px; position: relative;
+    box-shadow: var(--sxs);
+    align-self: flex-start; margin-top: 3px;
+  }
+  .ms-pill {
+    position: absolute; top: 3px; bottom: 3px;
+    width: calc(50% - 3px); left: 3px;
+    background: var(--gd); border-radius: 100px;
+    transition: transform .34s cubic-bezier(.77,0,.18,1);
+    box-shadow: 0 2px 6px rgba(37,61,24,.28);
+  }
+  .ms-pill.right { transform: translateX(100%); }
+  .ms-tbtn {
+    position: relative; z-index: 1;
+    padding: 7px 16px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    background: transparent; border: none; cursor: pointer; border-radius: 100px;
+    color: var(--t3); transition: color .26s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ms-tbtn.on { color: #fff; }
+
+  /* ── Split pane container ── */
+  .ms-pane {
+    display: grid;
+    grid-template-columns: 90px 1fr;   /* narrow sidebar, wide content */
+    background: var(--white);
+    border: 1px solid var(--bs);
+    border-radius: var(--r12);
+    overflow: hidden;
+    box-shadow: var(--ssm);
+    min-height: 430px;
+  }
+
+  /* ── Left sidebar ── */
+  .ms-sb {
+    background: linear-gradient(175deg, #253d18 0%, #446c35bd 100%);
+    display: flex; flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,.06);
+    overflow-y: auto; scrollbar-width: none;
+    position: relative;
+  }
+  .ms-sb::before {
+    content: '';
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 160% 65% at 50% -5%, rgba(82,122,62,.32) 0%, transparent 56%);
+  }
+  .ms-sb::-webkit-scrollbar { display: none; }
+
+  /* Each sidebar button */
+  .ms-sbbtn {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 100%; padding: 13px 6px 11px;
+    background: transparent; border: none;
+    border-left: 2.5px solid transparent;
+    cursor: pointer; text-align: center;
+    color: rgba(255,255,255,.45);
+    position: relative; z-index: 1;
+    transition: color .2s, background .2s, border-color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ms-sbbtn:active { background: rgba(255,255,255,.08); }
+  .ms-sbbtn.on {
+    color: #fff;
+    background: rgba(255,255,255,.1);
+    border-left-color: var(--gold-l);
+  }
+
+  /* Thumbnail — 1:1 square, 48×48px images */
+  .ms-sb-thumb {
+    width: 60px; height: 60px;
+    border-radius: 9px; overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,.1);
+    transition: border-color .22s;
+    flex-shrink: 0;
+  }
+  .ms-sbbtn.on .ms-sb-thumb { border-color: rgba(200,153,46,.5); }
+  .ms-sb-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: brightness(.52) saturate(.68);
+    transition: filter .28s;
+  }
+  .ms-sbbtn.on .ms-sb-thumb img { filter: brightness(.72) saturate(.85); }
+
+  .ms-sb-label {
+    font-size: 8.5px; font-weight: 600; letter-spacing: .02em;
+    color: inherit; line-height: 1.3; text-align: center;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; width: 100%;
+    padding: 0 2px;
+  }
+
+  /* Active dot indicator */
+  .ms-sb-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--gold-l); flex-shrink: 0;
+  }
+
+  /* ── Right content area ── */
+  .ms-ct {
+    display: flex; flex-direction: column;
+    padding: 14px 12px 14px 12px;
+    background: var(--cream);
+    overflow: hidden;
+  }
+
+  /* Content header */
+  .ms-ct-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--bs);
+    position: relative; gap: 8px;
+  }
+  .ms-ct-hd::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0;
+    width: 38px; height: 2px;
+    background: linear-gradient(90deg, var(--gd), transparent);
+    border-radius: 2px;
+  }
+
+  .ms-ct-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem; font-weight: 400; color: var(--t1);
+    line-height: 1.2; flex: 1; min-width: 0;
+  }
+  .ms-ct-title em { font-style: italic; color: var(--gd); }
+
+  .ms-showall {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 8px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--gs); text-decoration: none;
+    padding: 5px 10px;
+    border: 1.5px solid var(--bm); border-radius: 100px;
+    background: var(--gt);
+    transition: background .2s, color .2s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+  .ms-showall:active { background: var(--gp); color: var(--gd); }
+
+  /* ── Subcategory 2-col grid ──
+     Image: 1:1 square — use 120×120px images */
+  .ms-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .ms-subcard {
+    display: block; text-decoration: none;
+    border-radius: var(--r8); overflow: hidden;
+    border: 1px solid var(--bs);
+    background: var(--white);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .14s;
+  }
+  .ms-subcard:active { transform: scale(.97); }
+
+  /* 1:1 square image */
+  .ms-subcard-img {
+    position: relative; aspect-ratio: 1/1;
+    overflow: hidden; background: var(--cream2);
+  }
+  .ms-subcard-img img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .ms-subcard-ov {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(18,36,10,.48) 0%, transparent 52%);
+  }
+  .ms-subcard-name {
+    display: block;
+    padding: 7px 9px 8px;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--t1); line-height: 1.3;
+  }
+
+  /* ── Solo banner (categories with no subs) ──
+     Ratio: 16:7, height ~150px */
+  .ms-solo {
+    display: block; text-decoration: none;
+    position: relative; overflow: hidden;
+    border-radius: var(--r8);
+    height: 150px;
+    flex: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ms-solo-img {
+    width: 100%; height: 100%; object-fit: cover;
+    position: absolute; inset: 0;
+    filter: brightness(.46);
+    transition: filter .3s;
+  }
+  .ms-solo:active .ms-solo-img { filter: brightness(.54); }
+  .ms-solo-ov {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(12,26,6,.9) 0%, transparent 55%);
+  }
+  .ms-solo-body {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 14px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+  }
+  .ms-solo-ttl {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem; font-weight: 400; font-style: italic;
+    color: #fff; line-height: 1.2; flex: 1;
+  }
+  .ms-solo-cta {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 8px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+    color: #fff; padding: 7px 12px;
+    background: rgba(37,61,24,.72);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+}
+
+/* very small screens */
+@media (max-width: 380px) {
+  .ms-pane { grid-template-columns: 78px 1fr; }
+  .ms-sb-thumb { width: 38px; height: 38px; }
+  .ms-sb-label { font-size: 7.5px; }
+}
+`;

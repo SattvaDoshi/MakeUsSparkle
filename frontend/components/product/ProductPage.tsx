@@ -23,7 +23,7 @@ export const ALL_PRODUCTS = [
     href: '/products/dainty-layered-necklace',
     images: [
       'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=85',
-      'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=85',
+      // 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=85',
     ],
     colors: [
       { label: 'Gold', hex: '#c9a84c' },
@@ -49,7 +49,7 @@ export const ALL_PRODUCTS = [
     href: '/products/pearl-pendant-necklace',
     images: [
       'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=600&q=85',
-      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=85',
+      // 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=85',
     ],
     colors: [
       { label: 'White Pearl', hex: '#f0ece0' },
@@ -1077,6 +1077,8 @@ export default function ProductsPage({
         )} */}
 
         {/* Sticky toolbar */}
+        {!embedded && <div style={{ height: '18px', background: 'var(--beige-bg)' }} />}
+
         <div className={`pp-toolbar${scrolled ? ' pp-toolbar--scrolled' : ''}`}>
 
           {/* Search */}

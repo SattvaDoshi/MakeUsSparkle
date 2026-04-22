@@ -986,7 +986,7 @@ export default function Hero() {
           letter-spacing: -0.01em;
           color: rgba(255, 255, 255, 0.13);
           position: absolute;
-          top: 8%;
+          top: 20%;
           left: 30%;
           transform: translate(-50%);
           width: 95%;
@@ -1186,7 +1186,7 @@ export default function Hero() {
           .hero-heading {
             left: 50%;
             transform: translateX(-50%);
-            top: 6%;
+            top: 10%;
             width: 100%;
             font-size: clamp(3rem, 9vw, 6rem);
           }
@@ -1236,7 +1236,7 @@ export default function Hero() {
           .hero-root { min-height: 660px; }
 
           .hero-heading {
-            top: 5%;
+            top: 12%;
             font-size: clamp(2.8rem, 10vw, 5rem);
           }
 
@@ -1279,7 +1279,7 @@ export default function Hero() {
 
           /* heading sits at the very top, full-width, smaller */
           .hero-heading {
-            top: 4%;
+            top: 12%;
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
@@ -1342,7 +1342,7 @@ export default function Hero() {
         @media (max-width: 390px) {
           .hero-heading {
             font-size: clamp(2rem, 13vw, 3rem);
-            top: 3%;
+            top: 6%;
           }
           .hero-content-right {
             bottom: 4%;

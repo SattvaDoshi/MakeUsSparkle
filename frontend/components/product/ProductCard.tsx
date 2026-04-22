@@ -366,32 +366,40 @@ export default function ProductCard({
         }
 
         /* ─── Responsive breakpoints ─── */
-        @media (max-width: 479px) {
-          .pc2 {
-            --card-w: 100%;
-            --info-h: 56px;
-            max-width: 100%;
-            border-radius: 14px;
-          }
-          .pc2-info { padding: 0 12px; }
-        }
-        @media (min-width: 480px) and (max-width: 1023px) {
-          .pc2 {
-            --card-w: 260px;
-            --info-h: 58px;
-            max-width: 260px;
-          }
-        }
-        @media (min-width: 1024px) {
-          .pc2 {
-            --card-w: 300px;
-            --info-h: 60px;
-            max-width: 300px;
-          }
-          .pc2-info { padding: 0 15px; }
-          .pc2-name  { font-size: 14px; }
-          .pc2-price { font-size: 15px; }
-        }
+/* ─── Responsive breakpoints ─── */
+
+/* Mobile-first: card fills its grid cell completely */
+@media (max-width: 479px) {
+  .pc2 {
+    --info-h: 54px;
+    width: 100%;
+    max-width: 100%;   /* ← KEY: must fill the grid cell, not constrain to 300px */
+    border-radius: 10px;
+  }
+  .pc2-info { padding: 0 10px; }
+  .pc2-name  { font-size: 11px; }
+  .pc2-price { font-size: 12px; }
+  .pc2-original { font-size: 9px; }
+}
+
+@media (min-width: 480px) and (max-width: 1023px) {
+  .pc2 {
+    --card-w: 260px;
+    --info-h: 58px;
+    max-width: 260px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pc2 {
+    --card-w: 300px;
+    --info-h: 60px;
+    max-width: 300px;
+  }
+  .pc2-info  { padding: 0 15px; }
+  .pc2-name  { font-size: 14px; }
+  .pc2-price { font-size: 15px; }
+}
       `}</style>
 
       <div className={`pc2 ${className}`} style={style}>

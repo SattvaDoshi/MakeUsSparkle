@@ -1968,7 +1968,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         /* ── Products section ── */
 /* ── Products section ── */
 .products-section {
-  padding: 0 16px;   /* ← was 12px, bumped slightly for visual balance */
+  padding: 0;   /* ← was 12px, bumped slightly for visual balance */
   opacity: 0; transform: translateY(10px);
   transition: opacity .6s ease .26s, transform .6s ease .26s;
 }
@@ -2057,7 +2057,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
           /* Products — tight padding on mobile, 2 cols stay */
           /* Products — mobile */
-.products-section { padding: 0 10px; }   /* ← tighter on mobile */
+.products-section { padding: 0 ; }   /* ← tighter on mobile */
 
 .products-section :global(.products-grid),
 .products-section :global(.product-grid),

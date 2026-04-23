@@ -608,22 +608,22 @@ export const ALL_PRODUCTS = [
 ];
 
 const FILTER_TAGS = ['All', 'New', 'Trending', 'Sale', 'Best Seller'];
-const SORT_OPTIONS = [
-  { label: 'Featured', value: 'featured' },
-  { label: 'Price: Low–High', value: 'price_asc' },
-  { label: 'Price: High–Low', value: 'price_desc' },
-  { label: 'Newest First', value: 'newest' },
-];
+// const SORT_OPTIONS = [
+//   { label: 'Featured', value: 'featured' },
+//   { label: 'Price: Low–High', value: 'price_asc' },
+//   { label: 'Price: High–Low', value: 'price_desc' },
+//   { label: 'Newest First', value: 'newest' },
+// ];
 
 type Product = (typeof ALL_PRODUCTS)[number] & { tags?: string[] };
 
-function sortProducts(products: Product[], sortBy: string): Product[] {
-  const arr = [...products];
-  if (sortBy === 'price_asc') return arr.sort((a, b) => a.price - b.price);
-  if (sortBy === 'price_desc') return arr.sort((a, b) => b.price - a.price);
-  if (sortBy === 'newest') return arr.sort((a, b) => b.id - a.id);
-  return arr;
-}
+// function sortProducts(products: Product[], sortBy: string): Product[] {
+//   const arr = [...products];
+//   if (sortBy === 'price_asc') return arr.sort((a, b) => a.price - b.price);
+//   if (sortBy === 'price_desc') return arr.sort((a, b) => b.price - a.price);
+//   if (sortBy === 'newest') return arr.sort((a, b) => b.id - a.id);
+//   return arr;
+// }
 
 export default function ProductsPage({
   type,
@@ -635,11 +635,11 @@ export default function ProductsPage({
   embedded?: boolean;
 }) {
   const [activeTag, setActiveTag] = useState('All');
-  const [sortBy, setSortBy] = useState('featured');
+  // const [sortBy, setSortBy] = useState('featured');
   const [search, setSearch] = useState('');
-  const [sortOpen, setSortOpen] = useState(false);
+  // const [sortOpen, setSortOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
+  // const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -647,15 +647,15 @@ export default function ProductsPage({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setSortOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // useEffect(() => {
+  //   const handleClickOutside = (e: MouseEvent) => {
+  //     if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+  //       setSortOpen(false);
+  //     }
+  //   };
+  //   document.addEventListener('mousedown', handleClickOutside);
+  //   return () => document.removeEventListener('mousedown', handleClickOutside);
+  // }, []);
 
   const filtered = useMemo(() => {
     let list: Product[] = ALL_PRODUCTS as Product[];
@@ -675,10 +675,10 @@ export default function ProductsPage({
     if (activeTag !== 'All') {
       list = list.filter((p) => p.badge === activeTag || (p as any).tags?.includes(activeTag));
     }
-    return sortProducts(list, sortBy);
-  }, [activeTag, sortBy, search, type, subtype]);
+    return list;
+  }, [activeTag, search, type, subtype]);
 
-  const activeSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Featured';
+  // const activeSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Featured';
   const displayType = type ? type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
   const displaySubtype = subtype
     ? subtype.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -952,7 +952,16 @@ export default function ProductsPage({
 
         /* ── PAGE BODY ── */
         .pp-body { padding: 0 48px 96px; }
-
+/* When embedded inside SubcategoryPage, body has no horizontal padding
+   — the parent SubcategoryPage wrapper controls it */
+.pp-root--embedded .pp-body {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.pp-root--embedded .pp-toolbar {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
         /* ── PRODUCT GRID ── */
         .pp-grid {
           display: grid;
@@ -1006,32 +1015,93 @@ export default function ProductsPage({
           .pp-hero { padding: 18px 20px 16px; }
           .pp-search input { width: 155px; }
         }
-        @media (max-width: 640px) {
-          /* always 2 columns on mobile */
-          .pp-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-          .pp-toolbar {
-            padding: 8px 12px;
-            flex-wrap: nowrap; overflow-x: auto; gap: 6px;
-          }
-          .pp-toolbar::-webkit-scrollbar { display: none; }
-          .pp-body { padding: 0 12px 64px; }
-          .pp-hero { padding: 16px 12px 14px; }
-          .pp-hero-right { display: none; }
-          .pp-pills { flex-wrap: nowrap; overflow-x: auto; }
-          .pp-pills::-webkit-scrollbar { display: none; }
-          .pp-divider { display: none; }
-          .pp-search input { width: 128px; font-size: 12px; }
-          .pp-title { font-size: 1.25rem; }
-        }
-        @media (max-width: 360px) {
-          .pp-grid { gap: 8px; }
-          .pp-hero { padding: 14px 10px 12px; }
-          .pp-body { padding: 0 10px 56px; }
-          .pp-toolbar { padding: 8px 10px; }
-        }
+@media (max-width: 640px) {
+  /* Grid — smaller cards with proper margins */
+  .pp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  /* Body — generous side padding = smaller cards */
+  .pp-body { padding: 0 20px 64px; }
+
+  /* Toolbar — side padding so search/pills breathe from screen edges */
+  .pp-toolbar {
+    padding: 10px 16px 8px;
+    flex-wrap: wrap;
+    gap: 0;
+    row-gap: 8px;
+    overflow-x: visible;
+  }
+
+  /* Row 1 left: search with left breathing room */
+  .pp-search {
+    order: 1;
+    flex: 0 1 auto;
+    max-width: 100%;
+    margin-left: 8px;
+  }
+  .pp-search input {
+    width: 100%;
+    font-size: 11.5px;
+    padding: 6px 12px 6px 28px;
+  }
+  .pp-search svg {
+    left: 9px;
+    width: 12px; height: 12px;
+  }
+
+  /* Row 1 right: count chip with right breathing room */
+  .pp-toolbar-right {
+    order: 2;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-right: 2px;
+    margin-right: 8px;
+  }
+
+  /* Row 2: pills — left padding matches toolbar, horizontal scroll */
+  .pp-pills {
+    order: 3;
+    flex: 0 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-left: 2px;   /* aligns ALL pill with search bar above */
+    padding-bottom: 3px;
+  }
+  .pp-pills::-webkit-scrollbar { display: none; }
+
+  /* Pill size — compact */
+  .pp-pill {
+    font-size: 9.5px;
+    padding: 5px 13px;
+    letter-spacing: .06em;
+  }
+
+  .pp-divider { display: none; }
+
+  .pp-count-chip {
+    font-size: 9px;
+    letter-spacing: .07em;
+  }
+
+  .pp-hero { padding: 16px 16px 14px; }
+  .pp-hero-right { display: none; }
+  .pp-title { font-size: 1.25rem; }
+}
+
+@media (max-width: 360px) {
+  .pp-grid { gap: 10px; }
+  .pp-body { padding: 0 14px 56px; }
+  .pp-toolbar { padding: 8px 12px 6px; }
+  .pp-search { max-width: 52%; }
+}
+    
       `}</style>
 
-      <div className="pp-root">
+      <div className={`pp-root${embedded ? ' pp-root--embedded' : ''}`}>
 
         {/* Nav — wrapped in sage-dark so transparent nav is visible */}
         {!embedded && (
@@ -1119,7 +1189,7 @@ export default function ProductsPage({
               </>
             )}
 
-            <div className="pp-sort" ref={sortRef}>
+            {/* <div className="pp-sort" ref={sortRef}>
               <button
                 className="pp-sort-btn"
                 onClick={() => setSortOpen((o) => !o)}
@@ -1147,9 +1217,9 @@ export default function ProductsPage({
                       {o.label}
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
+                </div> */}
+              {/* )} */}
+            {/* </div> */}
           </div>
         </div>
 

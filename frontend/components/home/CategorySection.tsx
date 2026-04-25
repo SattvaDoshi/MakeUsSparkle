@@ -12,6 +12,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { useGender } from '@/lib/genderContext';
+import { fetchCatalogCategories, fetchCatalogSubCategories } from '@/lib/catalogApi';
 
 type Gender = 'women' | 'men';
 
@@ -143,8 +144,13 @@ function MobileSplit({
   setTab: (g: Gender) => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  useEffect(() => { setActiveIdx(0); }, [tab]);
-  const active = categories[activeIdx];
+  const active = categories[activeIdx] || categories[0] || {
+    name: 'Loading',
+    icon: '◈',
+    img: IMG.combo,
+    href: '#',
+    sub: [],
+  };
 
   return (
     <div className="ms-root">
@@ -234,24 +240,91 @@ function MobileSplit({
 /* ─── Main Component ─── */
 export default function CategorySection() {
   const { gender: globalGender, setGender: setGlobalGender } = useGender();
-  const [tab, setTabLocal] = useState<Gender>(globalGender);
+  const tab = globalGender;
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [dynamicCategories, setDynamicCategories] = useState<CategoryItem[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    setTabLocal(globalGender);
-    setActiveIdx(0);
-  }, [globalGender]);
-
   const setTab = (g: Gender) => {
-    setTabLocal(g);
     setGlobalGender(g);
     setActiveIdx(0);
   };
 
-  const categories = buildCategories(tab);
-  const active = categories[activeIdx];
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([fetchCatalogCategories(), fetchCatalogSubCategories()])
+      .then(([categories, subcategories]) => {
+        if (!mounted) {
+          return;
+        }
+
+        const templateBySlug = new Map(
+          buildCategories(tab).map((item) => [item.href.split('/').pop() || '', item])
+        );
+
+        const iconMap: Record<string, string> = {
+          jewellery: '◈',
+          'gift-boxes': '⊡',
+          'fan-combos': '✦',
+          'custom-charm-jewellery': '◎',
+          'hair-accessories': '⟡',
+          keychains: '⌖',
+          'watch-straps': '⊞',
+          'curated-combos': '⊟',
+        };
+
+        const imageMap: Record<string, string> = {
+          jewellery: tab === 'men' ? IMG.menChain : IMG.necklace,
+          'gift-boxes': IMG.giftBox,
+          'fan-combos': IMG.fanCombo,
+          'custom-charm-jewellery': IMG.charm,
+          'hair-accessories': IMG.hair,
+          keychains: IMG.keychain,
+          'watch-straps': IMG.menWatch,
+          'curated-combos': IMG.combo,
+        };
+
+        const jewelleryCategory = categories.find((category) => category.slug === 'jewellery');
+        const jewellerySub = subcategories
+          .filter((sub) => sub.categoryId && sub.categoryId === jewelleryCategory?.id)
+          .map((sub) => ({
+            name: sub.name,
+            img: sub.image || IMG.necklace,
+            href: `/subcategory/${sub.slug}`,
+          }));
+
+        const mapped: CategoryItem[] = categories.map((category) => ({
+          name: category.name,
+          icon: templateBySlug.get(category.slug)?.icon || iconMap[category.slug] || '◈',
+          img: category.image || templateBySlug.get(category.slug)?.img || imageMap[category.slug] || IMG.combo,
+          href: `/categories/${tab}/${category.slug}`,
+          sub: category.slug === 'jewellery' ? jewellerySub : [],
+        }));
+
+        setDynamicCategories(mapped);
+        setActiveIdx(0);
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicCategories([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [tab]);
+
+  const categories = dynamicCategories;
+  const active = categories[activeIdx] || categories[0] || {
+    name: 'Loading',
+    icon: '◈',
+    img: IMG.combo,
+    href: '#',
+    sub: [],
+  };
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -349,7 +422,7 @@ export default function CategorySection() {
         </div>
 
         {/* MOBILE */}
-        <MobileSplit categories={categories} tab={tab} setTab={setTab} />
+        <MobileSplit key={tab} categories={categories} tab={tab} setTab={setTab} />
 
       </section>
     </>

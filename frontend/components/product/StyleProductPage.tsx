@@ -6,8 +6,9 @@ import {
   useState, useMemo, useEffect, useRef,
   type CSSProperties, type MouseEvent
 } from 'react';
-import { ALL_PRODUCTS, FILTER_TABS } from '@/lib/products';
+import { FILTER_TABS } from '@/lib/products';
 import { STYLE_THEMES, STYLE_PRODUCT_FILTER } from '@/lib/styleThemes';
+import { fetchCatalogProducts, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import UpperNav from '@/components/ui/UpperNav';
@@ -15,7 +16,7 @@ import Link from 'next/link';
 
 type StyleId = keyof typeof STYLE_THEMES;
 type StyleTheme = (typeof STYLE_THEMES)[StyleId];
-type Product = (typeof ALL_PRODUCTS)[number];
+type Product = CatalogProduct;
 
 function resolveStyleId(id: string): StyleId {
   return (id in STYLE_THEMES ? id : 'soft-girl') as StyleId;
@@ -136,6 +137,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
   const [mounted, setMounted] = useState(false);
   const [navH, setNavH] = useState(64); // fallback height
   const navRef = useRef<HTMLDivElement>(null);
+  const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -147,8 +149,33 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    fetchCatalogProducts()
+      .then((products) => {
+        if (mounted) {
+          setDynamicProducts(products);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicProducts([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const sourceProducts = dynamicProducts;
   const styleFn = STYLE_PRODUCT_FILTER[sid] || (() => true);
-  const allStyle = ALL_PRODUCTS.filter(styleFn);
+  const allStyle = sourceProducts.filter((product) => {
+    const styleSlug = 'styleSlug' in product ? product.styleSlug : '';
+    const styleName = 'style' in product ? product.style : '';
+    return styleSlug === sid || slugifyCatalog(styleName || '') === sid || styleFn(product);
+  });
 
   const products = useMemo(() => {
     let list = [...allStyle];

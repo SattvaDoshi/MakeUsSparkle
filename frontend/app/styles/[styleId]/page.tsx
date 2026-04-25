@@ -7,7 +7,7 @@ function getTheme(styleId: string) {
   if (styleId in STYLE_THEMES) {
     return STYLE_THEMES[styleId as StyleId];
   }
-  return null;
+  return STYLE_THEMES['soft-girl'];
 }
 
 export function generateStaticParams() {
@@ -18,7 +18,6 @@ export async function generateMetadata({ params }: { params: Promise<{ styleId: 
   const { styleId } = await params;
 
   const theme = getTheme(styleId);
-  if (!theme) return { title: 'Style Not Found' };
 
   return {
     title: `${theme.name} · ${theme.sub} | Maison Jewellery`,
@@ -28,16 +27,6 @@ export async function generateMetadata({ params }: { params: Promise<{ styleId: 
 
 export default async function StylePage({ params }: { params: Promise<{ styleId: string }> }) {
   const { styleId } = await params;
-
-  const theme = getTheme(styleId);
-
-  if (!theme) {
-    return (
-      <div style={{ padding: '80px', textAlign: 'center', fontFamily: 'serif' }}>
-        <h1>Style not found</h1>
-      </div>
-    );
-  }
 
   return <StyleProductPage styleId={styleId} />;
 }

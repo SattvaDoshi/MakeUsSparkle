@@ -3,7 +3,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
-import { ALL_PRODUCTS } from './ProductPage'; // adjust path if needed
+import { fetchCatalogProducts, slugifyCatalog } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
@@ -499,7 +499,37 @@ function GoesWellWithSection() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
-  const product = ALL_PRODUCTS.find(p => p.href === `/products/${slug}`) as ProductDetailsProduct | undefined;
+  const [remoteProducts, setRemoteProducts] = useState<ProductDetailsProduct[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    fetchCatalogProducts()
+      .then((products) => {
+        if (mounted) {
+          setRemoteProducts(products as unknown as ProductDetailsProduct[]);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setRemoteProducts([]);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const sourceProducts = remoteProducts ?? [];
+  const product = sourceProducts.find(
+    (p) => p.href === `/products/${slug}` || slugifyCatalog(p.name) === slug
+  );
+
+  if (loading) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Loading product...</div>;
   if (!product) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Product not found</div>;
   const { addItem } = useCart();
   const { name, category, rating, reviewCount, description, price, originalPrice, offer, sku, stock, images, colors } = product;

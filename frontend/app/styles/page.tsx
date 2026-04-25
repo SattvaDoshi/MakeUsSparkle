@@ -2,22 +2,65 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { STYLE_THEMES, STYLE_PRODUCT_FILTER } from '@/lib/styleThemes';
-import { ALL_PRODUCTS } from '@/lib/products';
+import { STYLE_THEMES } from '@/lib/styleThemes';
+import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog } from '@/lib/catalogApi';
 
-type StyleId = keyof typeof STYLE_PRODUCT_FILTER;
+type ThemeId = keyof typeof STYLE_THEMES;
+type StyleCard = (typeof STYLE_THEMES)[ThemeId] & { id: string };
 
-const styles = Object.values(STYLE_THEMES);
+const FALLBACK_THEME = STYLE_THEMES['soft-girl'];
 
-function countProducts(styleId: StyleId) {
-  const fn = STYLE_PRODUCT_FILTER[styleId] || (() => true);
-  return ALL_PRODUCTS.filter(fn).length;
+function getThemeBySlug(slug: string) {
+  return STYLE_THEMES[slug as ThemeId] || FALLBACK_THEME;
 }
 
 export default function ShopByStylePage() {
   const [visible, setVisible] = useState(false);
-  const [hoveredId, setHoveredId] = useState<StyleId | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [styles, setStyles] = useState<StyleCard[]>([]);
+  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
   const sectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([fetchCatalogStyles(), fetchCatalogProducts()])
+      .then(([stylesFromApi, products]) => {
+        if (!mounted) {
+          return;
+        }
+
+        const counts: Record<string, number> = {};
+        products.forEach((product) => {
+          if (product.styleSlug) {
+            counts[product.styleSlug] = (counts[product.styleSlug] || 0) + 1;
+          }
+        });
+
+        const mapped = stylesFromApi.map((style, index) => {
+          const slug = style.slug || slugifyCatalog(style.name);
+          const theme = getThemeBySlug(slug);
+          return {
+            ...theme,
+            id: slug,
+            name: style.name,
+          };
+        });
+
+        setStyles(mapped);
+        setProductCounts(counts);
+      })
+      .catch(() => {
+        if (mounted) {
+          setStyles([]);
+          setProductCounts({});
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -357,7 +400,7 @@ export default function ShopByStylePage() {
               >
                 <div
                   className="sbs-card"
-                  onMouseEnter={() => setHoveredId(s.id as StyleId)}
+                  onMouseEnter={() => setHoveredId(s.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
                   <div className="card-base"/>
@@ -370,7 +413,7 @@ export default function ShopByStylePage() {
                   <div className="card-corner cc-br"/>
 
                   <span className="card-badge">{s.tag}</span>
-                  <span className="card-count">{countProducts(s.id as StyleId)} pieces</span>
+                  <span className="card-count">{productCounts[s.id] || 0} pieces</span>
 
                   <div className="card-content">
                     <span className="card-emoji">{s.emoji}</span>

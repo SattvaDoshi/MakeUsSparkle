@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "seed:catalog": "node src/seed/catalog.seed.js --reset",
     "test": "echo \"No tests configured\" && exit 0"
   },
   "keywords": [],

@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import UpperNav from '@/components/ui/UpperNav';
 import ProductsPage from '@/components/product/ProductPage';
+import { fetchCatalogProducts } from '@/lib/catalogApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubcategoryItem {
@@ -173,16 +174,78 @@ function CircleFilter({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SubcategoryPage({ type = 'necklace' }: { type?: string }) {
-  const resolvedType = (
-    Object.keys(SUBCATEGORY_DATA).includes(type) ? type : 'necklace'
-  ) as SubcategoryType;
+  const resolvedType = (type || 'necklace').toLowerCase();
+  const [dynamicItems, setDynamicItems] = useState<SubcategoryItem[]>([]);
 
-  const data = SUBCATEGORY_DATA[resolvedType];
+  const displayLabel = resolvedType
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const data: SubcategorySectionData = {
+    label: displayLabel,
+    eyebrow: 'Jewellery',
+    heading: displayLabel.split(' ')[0] || 'Subcategory',
+    tagline: 'Edit',
+    desc: 'Curated live from the latest catalog data.',
+    backHref: '/categories/women/jewellery',
+    items: dynamicItems,
+  };
 
   const [activeSubtype, setActiveSubtype] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => { setActiveSubtype(null); }, [resolvedType]);
+  useEffect(() => {
+    let mounted = true;
+
+    fetchCatalogProducts()
+      .then((products) => {
+        if (!mounted) {
+          return;
+        }
+
+        const scoped = products.filter((product) => product.type === resolvedType);
+        const tagMap = new Map<string, { count: number; img: string }>();
+
+        scoped.forEach((product) => {
+          const tags = product.tags.length > 0 ? product.tags : [product.name];
+          tags.slice(0, 2).forEach((tag) => {
+            const key = tag.trim();
+            if (!key) {
+              return;
+            }
+            const prev = tagMap.get(key);
+            tagMap.set(key, {
+              count: (prev?.count || 0) + 1,
+              img: prev?.img || product.images[0],
+            });
+          });
+        });
+
+        const items = Array.from(tagMap.entries())
+          .sort((a, b) => b[1].count - a[1].count)
+          .slice(0, 6)
+          .map(([name, info]) => ({
+            name: name.replace(/\b\w/g, (char) => char.toUpperCase()),
+            sub: `${info.count} pieces`,
+            tag: 'Live',
+            img: info.img,
+            wide: false,
+          }));
+
+        setDynamicItems(items);
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicItems([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [resolvedType]);
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);

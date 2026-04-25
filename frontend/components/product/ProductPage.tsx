@@ -754,6 +754,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import ProductCard from '@/components/product/ProductCard';
 import UpperNav from '@/components/ui/UpperNav';
+import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 
 export const ALL_PRODUCTS = [
   {
@@ -1111,7 +1112,10 @@ export const ALL_PRODUCTS = [
 
 const FILTER_TAGS = ['All', 'New', 'Trending', 'Sale', 'Best Seller'];
 
-type Product = (typeof ALL_PRODUCTS)[number] & { tags?: string[] };
+type Product = ((typeof ALL_PRODUCTS)[number] | CatalogProduct) & {
+  tags?: string[];
+  categorySlug?: string;
+};
 
 export default function ProductsPage({
   type,
@@ -1125,6 +1129,7 @@ export default function ProductsPage({
   const [activeTag, setActiveTag] = useState('All');
   const [search, setSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -1132,14 +1137,41 @@ export default function ProductsPage({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    fetchCatalogProducts()
+      .then((products) => {
+        if (mounted) {
+          setDynamicProducts(products as Product[]);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicProducts([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filtered = useMemo(() => {
-    let list: Product[] = ALL_PRODUCTS as Product[];
+    let list: Product[] = [...dynamicProducts];
+    if (type) {
+      list = list.filter((p) => p.type === type || p.categorySlug === type);
+    }
     if (type && subtype) {
-      list = list.filter(
-        (p) => p.type === type && (p as any).subtype?.toLowerCase() === subtype.toLowerCase()
-      );
-    } else if (type) {
-      list = list.filter((p) => p.type === type);
+      const refined = list.filter((p) => {
+        const productSubtype = ((p as any).subtype || '').toLowerCase();
+        const tags = Array.isArray((p as any).tags) ? (p as any).tags.map((tag: string) => tag.toLowerCase()) : [];
+        return productSubtype === subtype.toLowerCase() || tags.includes(subtype.toLowerCase());
+      });
+
+      if (refined.length > 0) {
+        list = refined;
+      }
     }
     if (search.trim()) {
       const q = search.toLowerCase();

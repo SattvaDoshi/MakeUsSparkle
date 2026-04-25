@@ -1,0 +1,100 @@
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminStyle.routes.js:3
+	createStyle,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/category.controller.js' does not provide an export named 'createStyle'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+file:///D:/Web%20development/Internship/MakeUsSparkle/backend/src/routes/admin/adminCombo.routes.js:3
+	createCombo,
+	^^^^^^^^^^^
+SyntaxError: The requested module '../../controllers/combo.controller.js' does not provide an export named 'createCombo'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:647:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.18.0
+^C

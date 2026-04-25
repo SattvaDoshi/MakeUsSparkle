@@ -1424,16 +1424,20 @@
 
 "use client";
 import { useCart } from "@/lib/cartContext";
+import { useAuth } from "@/lib/authContext";
 import { useGender } from "@/lib/genderContext";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export default function TopNav() {
   const { itemCount } = useCart();
+  const { isAuthenticated, signOut } = useAuth();
   const { gender, setGender } = useGender();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const navRef = useRef<HTMLElement | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     type RGBA = { r: number; g: number; b: number; a: number };
@@ -1673,6 +1677,30 @@ export default function TopNav() {
           background: rgba(201,168,76,0.15);
           color: #c9a84c !important;
           text-shadow: none !important;
+        }
+        .k-auth-btn {
+          height: 30px;
+          padding: 0 12px;
+          border-radius: 999px;
+          border: 1px solid rgba(201,168,76,0.42);
+          background: rgba(201,168,76,0.12);
+          color: inherit;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 0.55rem;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.2s, border-color 0.2s, color 0.2s;
+          white-space: nowrap;
+        }
+        .k-auth-btn:hover {
+          background: rgba(201,168,76,0.22);
+          border-color: rgba(201,168,76,0.65);
+          color: #c9a84c !important;
         }
 
         /* ── SEARCH ── */
@@ -1915,6 +1943,23 @@ export default function TopNav() {
 
           {/* ── RIGHT: search, profile, cart ── */}
           <div className="k-nav-right">
+            <button
+              className="k-auth-btn"
+              type="button"
+              onClick={() => {
+                if (isAuthenticated) {
+                  signOut();
+                  router.push("/");
+                  return;
+                }
+
+                window.dispatchEvent(new CustomEvent("makeussparkle:auth-open", { detail: { tab: "register" } }));
+              }}
+              aria-label={isAuthenticated ? "Log out" : "Login or sign up"}
+            >
+              {isAuthenticated ? "Logout" : "Login / Signup"}
+            </button>
+
             <div className="k-search-wrap">
               <div className={`k-search-box${searchOpen ? " open" : ""}`}>
                 <input type="text" placeholder="Search jewels…" autoFocus={searchOpen} />

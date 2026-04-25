@@ -120,7 +120,7 @@ class ProductService {
 			}
 
 			// Update product
-			const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
+			const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { returnDocument: "after" });
 
 			return { success: true, product: updatedProduct };
 		} catch (error) {

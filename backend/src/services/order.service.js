@@ -45,7 +45,7 @@ class OrderService {
 
 	async updateOrder(orderId, updateData, userId) {
 		try {
-			const order = await Order.findOneAndUpdate({ _id: orderId, user: userId }, updateData, { new: true });
+			const order = await Order.findOneAndUpdate({ _id: orderId, user: userId }, updateData, { returnDocument: "after" });
 
 			if (!order) {
 				throw new Error("Order not found");
@@ -60,7 +60,7 @@ class OrderService {
 
 	async updateOrderStatus(orderId, status) {
 		try {
-			const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+			const order = await Order.findByIdAndUpdate(orderId, { status }, { returnDocument: "after" });
 
 			if (!order) {
 				throw new Error("Order not found");
@@ -97,7 +97,7 @@ class OrderService {
 
 	async sendShipmentNotification(orderId, trackingNumber, carrier) {
 		try {
-			const order = await Order.findByIdAndUpdate(orderId, { status: "shipped", trackingNumber, carrier }, { new: true });
+			const order = await Order.findByIdAndUpdate(orderId, { status: "shipped", trackingNumber, carrier }, { returnDocument: "after" });
 
 			if (!order) {
 				throw new Error("Order not found");

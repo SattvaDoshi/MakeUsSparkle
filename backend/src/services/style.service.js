@@ -31,7 +31,7 @@ class StyleService {
 
 	async updateStyle(styleId, updateData) {
 		try {
-			const style = await Style.findByIdAndUpdate(styleId, updateData, { new: true });
+			const style = await Style.findByIdAndUpdate(styleId, updateData, { returnDocument: "after" });
 			if (!style) throw new Error("Style not found");
 			return { success: true, style };
 		} catch (error) {

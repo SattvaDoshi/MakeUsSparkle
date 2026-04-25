@@ -37,7 +37,7 @@ class CategoryService {
 
 	async updateCategory(categoryId, updateData) {
 		try {
-			const category = await Category.findByIdAndUpdate(categoryId, updateData, { new: true });
+			const category = await Category.findByIdAndUpdate(categoryId, updateData, { returnDocument: "after" });
 			if (!category) {
 				throw new Error("Category not found");
 			}
@@ -81,7 +81,7 @@ class CategoryService {
 
 	async updateSubCategory(subCategoryId, updateData) {
 		try {
-			const subCategory = await SubCategory.findByIdAndUpdate(subCategoryId, updateData, { new: true });
+			const subCategory = await SubCategory.findByIdAndUpdate(subCategoryId, updateData, { returnDocument: "after" });
 			if (!subCategory) {
 				throw new Error("Subcategory not found");
 			}

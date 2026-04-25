@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import emailService from "./email.service.js";
+import couponService from "./coupon.service.js";
 
 class AuthService {
 	signToken(user) {
@@ -18,6 +19,10 @@ class AuthService {
 
 	async register(userData) {
 		try {
+			if (!userData.password) {
+				throw new Error("Password is required");
+			}
+
 			// Check if user already exists
 			const existingUser = await User.findOne({ email: userData.email });
 			if (existingUser) {
@@ -33,12 +38,28 @@ class AuthService {
 				password: hashedPassword,
 			});
 
+			const welcomeCouponResult = await couponService.createWelcomeCoupon(user);
+			const welcomeCoupon = welcomeCouponResult.coupon;
+
 			// Generate token
 			const token = this.signToken(user);
 
 			// Send welcome email
 			const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-			await emailService.sendWelcomeEmail(user.email, user.name || "User", verificationLink);
+			let welcomeEmailSent = true;
+
+			try {
+				await emailService.sendWelcomeEmail(
+					user.email,
+					user.name || "User",
+					verificationLink,
+					welcomeCoupon.code,
+					welcomeCoupon.discountValue
+				);
+			} catch (emailError) {
+				welcomeEmailSent = false;
+				console.warn("Welcome email could not be sent:", emailError.message);
+			}
 
 			return {
 				success: true,
@@ -49,6 +70,13 @@ class AuthService {
 					role: user.role,
 				},
 				token,
+				welcomeEmailSent,
+				welcomeCoupon: {
+					code: welcomeCoupon.code,
+					discountType: welcomeCoupon.discountType,
+					discountValue: welcomeCoupon.discountValue,
+					expiryDate: welcomeCoupon.expiryDate,
+				},
 			};
 		} catch (error) {
 			console.error("Registration error:", error);
@@ -160,7 +188,7 @@ class AuthService {
 	async verifyEmail(token) {
 		try {
 			const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-			const user = await User.findByIdAndUpdate(decoded.sub, { emailVerified: true }, { new: true });
+			const user = await User.findByIdAndUpdate(decoded.sub, { emailVerified: true }, { returnDocument: "after" });
 
 			return {
 				success: true,

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-	createCombo,
+	createCuratedCombo,
 	deleteCombo,
 	updateCombo,
 } from "../../controllers/combo.controller.js";
@@ -10,7 +10,7 @@ const router = Router();
 
 router.use(requireAuth, requireAdmin);
 
-router.post("/", createCombo);
+router.post("/", createCuratedCombo);
 router.put("/:id", updateCombo);
 router.delete("/:id", deleteCombo);
 

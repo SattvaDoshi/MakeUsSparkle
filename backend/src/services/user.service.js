@@ -19,7 +19,7 @@ class UserService {
 			// Don't allow updating password through this endpoint
 			delete updateData.password;
 
-			const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
+			const user = await User.findByIdAndUpdate(userId, updateData, { returnDocument: "after" }).select("-password");
 
 			if (!user) {
 				throw new Error("User not found");
@@ -34,7 +34,7 @@ class UserService {
 
 	async addToWishlist(userId, productId) {
 		try {
-			const user = await User.findByIdAndUpdate(userId, { $addToSet: { wishlist: productId } }, { new: true });
+			const user = await User.findByIdAndUpdate(userId, { $addToSet: { wishlist: productId } }, { returnDocument: "after" });
 
 			if (!user) {
 				throw new Error("User not found");
@@ -49,7 +49,7 @@ class UserService {
 
 	async removeFromWishlist(userId, productId) {
 		try {
-			const user = await User.findByIdAndUpdate(userId, { $pull: { wishlist: productId } }, { new: true });
+			const user = await User.findByIdAndUpdate(userId, { $pull: { wishlist: productId } }, { returnDocument: "after" });
 
 			if (!user) {
 				throw new Error("User not found");
@@ -79,7 +79,7 @@ class UserService {
 
 	async addAddress(userId, addressData) {
 		try {
-			const user = await User.findByIdAndUpdate(userId, { $push: { addresses: addressData } }, { new: true });
+			const user = await User.findByIdAndUpdate(userId, { $push: { addresses: addressData } }, { returnDocument: "after" });
 
 			if (!user) {
 				throw new Error("User not found");
@@ -95,7 +95,7 @@ class UserService {
 	async updateAddress(userId, addressId, updateData) {
 		try {
 			const user = await User.findByIdAndUpdate(userId, { $set: { "addresses.$[addr]": updateData } }, 
-				{ arrayFilters: [{ "addr._id": addressId }], new: true }
+				{ arrayFilters: [{ "addr._id": addressId }], returnDocument: "after" }
 			);
 
 			if (!user) {
@@ -111,7 +111,7 @@ class UserService {
 
 	async deleteAddress(userId, addressId) {
 		try {
-			const user = await User.findByIdAndUpdate(userId, { $pull: { addresses: { _id: addressId } } }, { new: true });
+			const user = await User.findByIdAndUpdate(userId, { $pull: { addresses: { _id: addressId } } }, { returnDocument: "after" });
 
 			if (!user) {
 				throw new Error("User not found");

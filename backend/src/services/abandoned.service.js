@@ -78,7 +78,7 @@ class AbandonedCartService {
 
 	async markAsRecovered(cartId) {
 		try {
-			const abandoned = await AbandonedCart.findByIdAndUpdate(cartId, { status: "recovered" }, { new: true });
+			const abandoned = await AbandonedCart.findByIdAndUpdate(cartId, { status: "recovered" }, { returnDocument: "after" });
 
 			if (!abandoned) {
 				throw new Error("Abandoned cart not found");

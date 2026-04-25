@@ -250,3 +250,17 @@
 }
 
 .terms a:hover { text-decoration: underline; }
+
+.feedback {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--olive-dark);
+  text-align: center;
+  margin-top: 0.75rem;
+  line-height: 1.4;
+}
+
+.submitBtn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}

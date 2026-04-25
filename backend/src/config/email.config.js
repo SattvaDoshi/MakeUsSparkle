@@ -3,26 +3,35 @@ import nodemailer from "nodemailer";
 // Create transporter for sending emails
 export const createEmailTransporter = () => {
 	return nodemailer.createTransport({
-		service: process.env.EMAIL_SERVICE || "gmail",
+    host: process.env.EMAIL_HOST || "smtp.gmail.com",
+    port: Number(process.env.EMAIL_PORT || 465),
+    secure: String(process.env.EMAIL_SECURE || "true") === "true",
 		auth: {
-			user: process.env.EMAIL_USER,
-			pass: process.env.EMAIL_PASSWORD,
+      user: (process.env.EMAIL_USER || "").trim(),
+      pass: (process.env.EMAIL_PASSWORD || "").replace(/\s+/g, "").trim(),
 		},
 	});
 };
 
 // Email templates
 export const emailTemplates = {
-	welcomeEmail: (userName, verificationLink) => ({
-		subject: "Welcome to MakeUsSparkle! Verify Your Email",
+	welcomeEmail: (userName, verificationLink, couponCode, discountValue = 10) => ({
+		subject: "Welcome to MakeUsSparkle! Your 10% coupon is here",
 		html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Welcome to MakeUsSparkle, ${userName}!</h2>
-        <p>Thank you for joining us. Please verify your email address by clicking the link below:</p>
+        <p>Thank you for joining us. Your welcome offer has been created and is valid for a single use on your first order.</p>
+        <div style="margin: 24px 0; padding: 18px; border: 1px solid #eee; border-radius: 12px; background: #faf7ef; text-align: center;">
+          <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6b55;">Your 1st order coupon</p>
+          <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 0.08em; color: #2f3a25;">${couponCode}</p>
+          <p style="margin: 8px 0 0; color: #4f5a44;">${discountValue}% off your first order</p>
+        </div>
+        <p>Please verify your email address by clicking the link below:</p>
         <a href="${verificationLink}" style="background-color: #FF69B4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
           Verify Email
         </a>
         <p style="color: #999; font-size: 12px;">This link will expire in 24 hours.</p>
+        <p style="color: #999; font-size: 12px;">Coupon is for one-time use only and may expire soon, so please use it on your first order.</p>
       </div>
     `,
 	}),

@@ -88,7 +88,7 @@ class ComboService {
 				updateData.imagePublicId = uploadedImage.publicId;
 			}
 
-			const updatedCombo = await Combo.findByIdAndUpdate(comboId, updateData, { new: true }).populate("products");
+			const updatedCombo = await Combo.findByIdAndUpdate(comboId, updateData, { returnDocument: "after" }).populate("products");
 
 			return { success: true, combo: updatedCombo };
 		} catch (error) {

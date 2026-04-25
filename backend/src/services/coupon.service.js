@@ -1,6 +1,39 @@
 import Coupon from "../models/coupon.model.js";
+import crypto from "crypto";
 
 class CouponService {
+	generateWelcomeCouponCode() {
+		return `WELCOME10-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+	}
+
+	async createWelcomeCoupon(user) {
+		try {
+			const expiryDate = new Date();
+			expiryDate.setDate(expiryDate.getDate() + 30);
+
+			const coupon = await Coupon.create({
+				code: this.generateWelcomeCouponCode(),
+				name: "Welcome 10% Off",
+				description: "One-time welcome coupon for a new signup",
+				discountType: "percentage",
+				discountValue: 10,
+				maxDiscount: 500,
+				expiryDate,
+				isActive: true,
+				usageLimit: 1,
+				usedCount: 0,
+				issuedForEmail: user.email,
+				issuedForUserId: user._id,
+				isWelcomeOffer: true,
+			});
+
+			return { success: true, coupon };
+		} catch (error) {
+			console.error("Error creating welcome coupon:", error);
+			throw error;
+		}
+	}
+
 	async getCoupons() {
 		try {
 			const coupons = await Coupon.find().sort({ createdAt: -1 });
@@ -29,6 +62,10 @@ class CouponService {
 				return { success: false, valid: false, message: "Coupon is not active" };
 			}
 
+			if (typeof coupon.usageLimit === "number" && coupon.usedCount >= coupon.usageLimit) {
+				return { success: false, valid: false, message: "Coupon usage limit reached" };
+			}
+
 			return { success: true, valid: true, coupon };
 		} catch (error) {
 			console.error("Error validating coupon:", error);
@@ -48,7 +85,7 @@ class CouponService {
 
 	async updateCoupon(couponId, updateData) {
 		try {
-			const coupon = await Coupon.findByIdAndUpdate(couponId, updateData, { new: true });
+			const coupon = await Coupon.findByIdAndUpdate(couponId, updateData, { returnDocument: "after" });
 			if (!coupon) {
 				throw new Error("Coupon not found");
 			}
@@ -85,6 +122,10 @@ class CouponService {
 
 			if (!coupon.isActive) {
 				throw new Error("Coupon is not active");
+			}
+
+			if (typeof coupon.usageLimit === "number" && coupon.usedCount >= coupon.usageLimit) {
+				throw new Error("Coupon usage limit reached");
 			}
 
 			// Calculate discount

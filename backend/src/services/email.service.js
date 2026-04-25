@@ -2,13 +2,21 @@ import { createEmailTransporter, emailTemplates } from "../config/email.config.j
 
 class EmailService {
 	constructor() {
-		this.transporter = createEmailTransporter();
+		this.transporter = null;
 	}
 
-	async sendWelcomeEmail(userEmail, userName, verificationLink) {
+	getTransporter() {
+		if (!this.transporter) {
+			this.transporter = createEmailTransporter();
+		}
+
+		return this.transporter;
+	}
+
+	async sendWelcomeEmail(userEmail, userName, verificationLink, couponCode, discountValue = 10) {
 		try {
-			const template = emailTemplates.welcomeEmail(userName, verificationLink);
-			await this.transporter.sendMail({
+			const template = emailTemplates.welcomeEmail(userName, verificationLink, couponCode, discountValue);
+			await this.getTransporter().sendMail({
 				from: process.env.EMAIL_USER,
 				to: userEmail,
 				...template,
@@ -24,7 +32,7 @@ class EmailService {
 	async sendPasswordResetEmail(userEmail, resetLink) {
 		try {
 			const template = emailTemplates.resetPasswordEmail(resetLink);
-			await this.transporter.sendMail({
+			await this.getTransporter().sendMail({
 				from: process.env.EMAIL_USER,
 				to: userEmail,
 				...template,
@@ -40,7 +48,7 @@ class EmailService {
 	async sendOrderConfirmationEmail(userEmail, orderNumber, items, total) {
 		try {
 			const template = emailTemplates.orderConfirmationEmail(orderNumber, items, total);
-			await this.transporter.sendMail({
+			await this.getTransporter().sendMail({
 				from: process.env.EMAIL_USER,
 				to: userEmail,
 				...template,
@@ -56,7 +64,7 @@ class EmailService {
 	async sendShipmentNotificationEmail(userEmail, trackingNumber, carrier) {
 		try {
 			const template = emailTemplates.shipmentNotificationEmail(trackingNumber, carrier);
-			await this.transporter.sendMail({
+			await this.getTransporter().sendMail({
 				from: process.env.EMAIL_USER,
 				to: userEmail,
 				...template,
@@ -71,7 +79,7 @@ class EmailService {
 
 	async sendCustomEmail(userEmail, subject, htmlContent) {
 		try {
-			await this.transporter.sendMail({
+			await this.getTransporter().sendMail({
 				from: process.env.EMAIL_USER,
 				to: userEmail,
 				subject,

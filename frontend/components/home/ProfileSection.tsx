@@ -266,7 +266,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiRequest } from '@/lib/api';
+import { useAuth } from '@/lib/authContext';
 
 type View = 'main' | 'orders' | 'address' | 'password';
 
@@ -376,7 +379,7 @@ function ReviewModal({ itemName, onClose, onSubmit }: ReviewModalProps) {
   );
 }
 
-export default function ProfileSection() {
+function LegacyProfileSection() {
   const [view, setView] = useState<View>('main');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
@@ -729,6 +732,477 @@ export default function ProfileSection() {
   );
 }
 
+type BackendOrder = {
+  _id: string;
+  items: Array<{
+    product?: { name?: string } | string;
+    quantity?: number;
+    price?: number;
+  }>;
+  totalAmount?: number;
+  status?: string;
+  createdAt?: string;
+};
+
+export default function ProfileSection() {
+  const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading, signOut, refreshUser } = useAuth();
+  const [view, setView] = useState<View>('main');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressBusy, setAddressBusy] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
+  const [addressForm, setAddressForm] = useState({
+    fullAddress: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAccount = async () => {
+      if (!isAuthenticated) {
+        if (active) {
+          setOrders([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const result = await apiRequest<{ success: boolean; orders: BackendOrder[] }>('/orders/my-orders');
+        if (!active) {
+          return;
+        }
+
+        setOrders((result.orders || []).map((order) => ({
+          id: order._id,
+          date: order.createdAt
+            ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            : 'Recently',
+          items: (order.items || []).map((item) => ({
+            name: typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item',
+            reviewed: false,
+            rating: 0,
+            reviewText: '',
+          })),
+          amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`,
+          status: (order.status || 'placed').charAt(0).toUpperCase() + (order.status || 'placed').slice(1),
+        })));
+      } catch (requestError) {
+        if (active) {
+          setError(requestError instanceof Error ? requestError.message : 'Failed to load your account.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadAccount();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  const addresses = user?.addresses ?? [];
+  const rewardPoints = useMemo(() => Math.max(120, orders.length * 40 + addresses.length * 10), [orders.length, addresses.length]);
+  const totalReviewed = 0;
+  const pendingReviews = orders.reduce((count, order) => count + order.items.length, 0);
+
+  const tier =
+    rewardPoints >= 500 ? { name: 'Gold', color: '#c8992e', next: null, nextAt: 500 } :
+    rewardPoints >= 250 ? { name: 'Silver', color: '#8a9ba8', next: 'Gold', nextAt: 500 } :
+    { name: 'Bronze', color: '#a97c50', next: 'Silver', nextAt: 250 };
+
+  const progress = tier.nextAt ? Math.min((rewardPoints / tier.nextAt) * 100, 100) : 100;
+
+  const heroName = user?.name || 'Guest';
+  const heroEmail = user?.email || 'Sign in to see your account details';
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'Recently joined';
+
+  const formatAddress = (address: NonNullable<typeof addresses>[number]) => {
+    const parts = [address.fullAddress, address.city, address.state, address.pincode].filter(Boolean);
+    return parts.join(', ');
+  };
+
+  const resetAddressForm = () => {
+    setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+    setEditingAddressId(null);
+    setIsAddressFormOpen(false);
+  };
+
+  const openAddAddressForm = () => {
+    setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+    setEditingAddressId(null);
+    setIsAddressFormOpen(true);
+  };
+
+  const startEditAddress = (address: NonNullable<typeof addresses>[number]) => {
+    setAddressForm({
+      fullAddress: address.fullAddress || '',
+      city: address.city || '',
+      state: address.state || '',
+      pincode: address.pincode || '',
+    });
+    setEditingAddressId(address._id || null);
+    setIsAddressFormOpen(true);
+  };
+
+  const submitAddressForm = async () => {
+    const payload = {
+      fullAddress: addressForm.fullAddress.trim(),
+      city: addressForm.city.trim(),
+      state: addressForm.state.trim(),
+      pincode: addressForm.pincode.trim(),
+    };
+
+    if (!payload.fullAddress || !payload.city || !payload.state || !payload.pincode) {
+      setError('Please fill all address fields.');
+      return;
+    }
+
+    try {
+      setAddressBusy(true);
+      setError('');
+
+      if (editingAddressId) {
+        await apiRequest(`/users/address/${editingAddressId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiRequest('/users/address', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+
+      await refreshUser();
+      resetAddressForm();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save address.');
+    } finally {
+      setAddressBusy(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId?: string) => {
+    if (!addressId) {
+      return;
+    }
+
+    const confirmDelete = window.confirm('Delete this address?');
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      setDeletingAddressId(addressId);
+      setError('');
+      await apiRequest(`/users/address/${addressId}`, {
+        method: 'DELETE',
+      });
+      await refreshUser();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to delete address.');
+    } finally {
+      setDeletingAddressId(null);
+    }
+  };
+
+  const handleLogout = () => {
+    signOut();
+    router.push('/');
+  };
+
+  if (authLoading || loading) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <section className="pf">
+          <div className="pf-hero">
+            <div className="pf-avatar"><span className="pf-avatar-init">…</span></div>
+            <div className="pf-hero-info">
+              <h1 className="pf-name">Loading account</h1>
+              <p className="pf-email">Fetching your profile details...</p>
+              <span className="pf-badge">Please wait</span>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <section className="pf">
+          <div className="pf-hero">
+            <div className="pf-avatar"><span className="pf-avatar-init">?</span></div>
+            <div className="pf-hero-info">
+              <h1 className="pf-name">Welcome back</h1>
+              <p className="pf-email">Sign in to view your saved details.</p>
+              <span className="pf-badge">Account locked</span>
+            </div>
+          </div>
+          <div className="pf-body">
+            <button className="pf-item" onClick={() => window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } }))}>
+              <span className="pf-item-txt">
+                <span className="pf-item-name">Login / Signup</span>
+                <span className="pf-item-sub">Open the sign in form to access your account.</span>
+              </span>
+              <span className="pf-chevron">›</span>
+            </button>
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <section className="pf">
+        <div className="pf-hero">
+          <div className="pf-avatar">
+            <span className="pf-avatar-init">{heroName.charAt(0).toUpperCase()}</span>
+          </div>
+          <div className="pf-hero-info">
+            <h1 className="pf-name">{heroName}</h1>
+            <p className="pf-email">{heroEmail}</p>
+            <span className="pf-badge">Member since {memberSince}</span>
+          </div>
+        </div>
+
+        {view === 'main' && (
+          <div className="pf-body">
+            <div className="pf-reward-card">
+              <div className="pf-reward-card-top">
+                <div>
+                  <p className="pf-reward-label">Sparkle Points</p>
+                  <p className="pf-reward-pts">{rewardPoints}<span className="pf-reward-pts-unit"> pts</span></p>
+                </div>
+                <div className="pf-reward-tier-badge" style={{ background: `${tier.color}22`, color: tier.color, borderColor: `${tier.color}55` }}>
+                  ✦ {tier.name}
+                </div>
+              </div>
+              {tier.next && (
+                <>
+                  <div className="pf-reward-bar-track">
+                    <div className="pf-reward-bar-fill" style={{ width: `${progress}%`, background: tier.color }} />
+                  </div>
+                  <p className="pf-reward-bar-hint">{tier.nextAt! - rewardPoints} pts to {tier.next}</p>
+                </>
+              )}
+              <button className="pf-reward-cta" onClick={() => setView('orders')}>
+                View {orders.length} order{orders.length === 1 ? '' : 's'}
+              </button>
+            </div>
+
+            <div className="pf-section-label" style={{ marginTop: 24 }}>Account</div>
+            <div className="pf-list">
+              <button className="pf-item" onClick={() => setView('orders')}>
+                <span className="pf-item-icon">⌁</span>
+                <span className="pf-item-txt">
+                  <span className="pf-item-name">Order History</span>
+                  <span className="pf-item-sub">{orders.length} past orders{pendingReviews > 0 ? ` · ${pendingReviews} items` : ''}</span>
+                </span>
+                <span className="pf-chevron">›</span>
+              </button>
+
+              <button className="pf-item" onClick={() => setView('address')}>
+                <span className="pf-item-icon">⌂</span>
+                <span className="pf-item-txt">
+                  <span className="pf-item-name">Saved Addresses</span>
+                  <span className="pf-item-sub">{addresses.length > 0 ? `${addresses.length} saved address${addresses.length > 1 ? 'es' : ''}` : 'Manage delivery addresses'}</span>
+                </span>
+                <span className="pf-chevron">›</span>
+              </button>
+
+              <button className="pf-item" onClick={() => setView('password')}>
+                <span className="pf-item-icon">⌘</span>
+                <span className="pf-item-txt">
+                  <span className="pf-item-name">Change Password</span>
+                  <span className="pf-item-sub">Update your account password</span>
+                </span>
+                <span className="pf-chevron">›</span>
+              </button>
+            </div>
+
+            <div className="pf-section-label" style={{ marginTop: 24 }}>Support</div>
+            <div className="pf-list">
+              <a href="mailto:support@makeussparkle.com" className="pf-item">
+                <span className="pf-item-icon">✉</span>
+                <span className="pf-item-txt">
+                  <span className="pf-item-name">Contact Support</span>
+                  <span className="pf-item-sub">support@makeussparkle.com</span>
+                </span>
+                <span className="pf-chevron">›</span>
+              </a>
+            </div>
+
+            <button className="pf-logout" onClick={() => setShowLogoutConfirm(true)}>Log out</button>
+          </div>
+        )}
+
+        {view === 'orders' && (
+          <div className="pf-body">
+            <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+            <div className="pf-section-label">Order History</div>
+            <div className="pf-orders">
+              {orders.length > 0 ? orders.map((order) => (
+                <div key={order.id} className="pf-order">
+                  <div className="pf-order-top">
+                    <span className="pf-order-id">#{order.id}</span>
+                    <span className={`pf-order-status ${order.status.toLowerCase()}`}>{order.status}</span>
+                  </div>
+                  <div className="pf-order-date-row">
+                    <span className="pf-order-date">{order.date}</span>
+                    <span className="pf-order-amt">{order.amount}</span>
+                  </div>
+                  <div className="pf-order-products">
+                    {order.items.map((item, index) => (
+                      <div key={index} className="pf-product-row">
+                        <div className="pf-product-info">
+                          <span className="pf-product-name">{item.name}</span>
+                          <span className="pf-item-sub">Purchased item</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )) : (
+                <div className="pf-address-card"><p className="pf-address-txt">No orders yet.</p></div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {view === 'address' && (
+          <div className="pf-body">
+            <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+            <div className="pf-section-label">Saved Addresses</div>
+            {addresses.length > 0 ? addresses.map((address, index) => (
+              <div className="pf-address-card" key={address._id || index}>
+                <div className="pf-address-top">
+                  <span className="pf-address-tag">Address {index + 1}</span>
+                  <div className="pf-address-actions">
+                    <button className="pf-address-edit" onClick={() => startEditAddress(address)}>Edit</button>
+                    <button
+                      className="pf-address-delete"
+                      onClick={() => handleDeleteAddress(address._id)}
+                      disabled={deletingAddressId === address._id}
+                    >
+                      {deletingAddressId === address._id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+                <p className="pf-address-txt">{formatAddress(address)}</p>
+              </div>
+            )) : (
+              <div className="pf-address-card"><p className="pf-address-txt">No saved addresses yet.</p></div>
+            )}
+
+            {!isAddressFormOpen && (
+              <button className="pf-add-address" onClick={openAddAddressForm}>+ Add New Address</button>
+            )}
+
+            {isAddressFormOpen && (
+              <div className="pf-address-card">
+                <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
+                <div className="pf-form">
+                  <label className="pf-label">Full Address
+                    <input
+                      className="pf-input"
+                      value={addressForm.fullAddress}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, fullAddress: event.target.value }))}
+                      placeholder="House no, street, area"
+                    />
+                  </label>
+                  <label className="pf-label">City
+                    <input
+                      className="pf-input"
+                      value={addressForm.city}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, city: event.target.value }))}
+                      placeholder="City"
+                    />
+                  </label>
+                  <label className="pf-label">State
+                    <input
+                      className="pf-input"
+                      value={addressForm.state}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, state: event.target.value }))}
+                      placeholder="State"
+                    />
+                  </label>
+                  <label className="pf-label">Pincode
+                    <input
+                      className="pf-input"
+                      value={addressForm.pincode}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, pincode: event.target.value }))}
+                      placeholder="Pincode"
+                    />
+                  </label>
+                  <div className="pf-dialog-actions">
+                    <button className="pf-dialog-cancel" onClick={resetAddressForm} disabled={addressBusy}>Cancel</button>
+                    <button className="pf-submit" onClick={submitAddressForm} disabled={addressBusy}>
+                      {addressBusy ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {view === 'password' && (
+          <div className="pf-body">
+            <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+            <div className="pf-section-label">Change Password</div>
+            <div className="pf-form">
+              <label className="pf-label">Current Password<input type="password" className="pf-input" placeholder="••••••••" /></label>
+              <label className="pf-label">New Password<input type="password" className="pf-input" placeholder="••••••••" /></label>
+              <label className="pf-label">Confirm New Password<input type="password" className="pf-input" placeholder="••••••••" /></label>
+              <button className="pf-submit">Update Password</button>
+            </div>
+          </div>
+        )}
+
+        {showLogoutConfirm && (
+          <div className="pf-overlay" onClick={() => setShowLogoutConfirm(false)}>
+            <div className="pf-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="pf-dialog-handle" />
+              <h3 className="pf-dialog-title">Log out?</h3>
+              <p className="pf-dialog-sub">You&apos;ll need to sign in again to access your account.</p>
+              <div className="pf-dialog-actions">
+                <button className="pf-dialog-cancel" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                <button className="pf-dialog-confirm" onClick={handleLogout}>Log out</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && <div className="pf-toast">{error}</div>}
+      </section>
+    </>
+  );
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Nunito:wght@300;400;500;600;700&display=swap');
 
@@ -1020,6 +1494,11 @@ const CSS = `
 .pf-address-top {
   display: flex; justify-content: space-between; margin-bottom: 10px;
 }
+.pf-address-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .pf-address-tag {
   font-size: 9px; font-weight: 700; letter-spacing: .2em;
   text-transform: uppercase; background: #eff6ea; color: #3b6d11;
@@ -1029,8 +1508,17 @@ const CSS = `
   font-size: 10px; font-weight: 700; color: #527a3e;
   background: none; border: none; cursor: pointer;
 }
+.pf-address-delete {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c04040;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
 .pf-address-txt { font-size: 12px; color: #484840; line-height: 1.7; }
 .pf-add-address {
+  margin-top: 10px;
   width: 100%; padding: 14px; border: 1.5px dashed #c0dd97;
   border-radius: 12px; background: #eff6ea; color: #3b6d11;
   font-size: 11px; font-weight: 700; cursor: pointer;
@@ -1057,6 +1545,12 @@ const CSS = `
   font-size: 11px; font-weight: 700; letter-spacing: .16em;
   text-transform: uppercase; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.pf-submit:disabled,
+.pf-dialog-cancel:disabled,
+.pf-address-delete:disabled {
+  opacity: .65;
+  cursor: not-allowed;
 }
 
 /* ── OVERLAYS & DIALOGS ── */

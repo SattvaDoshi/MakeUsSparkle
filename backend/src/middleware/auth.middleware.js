@@ -10,8 +10,15 @@ export function requireAuth(req, res, next) {
 
 	try {
 		const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+		const userId = payload.sub || payload.id || payload._id || payload.userId;
+
+		if (!userId) {
+			return res.status(401).json({ success: false, message: "Invalid token payload" });
+		}
+
 		req.user = {
-			id: payload.sub,
+			_id: String(userId),
+			id: String(userId),
 			role: payload.role,
 			email: payload.email,
 		};
@@ -19,11 +26,11 @@ export function requireAuth(req, res, next) {
 	} catch {
 		return res.status(401).json({ success: false, message: "Invalid or expired token" });
 	}
-	
-	return undefined;
-	}
 
-	export function requireAdmin(req, res, next) {
+	return undefined;
+}
+
+export function requireAdmin(req, res, next) {
 	const role = req.user?.role;
 
 	if (role !== "admin") {
@@ -31,4 +38,4 @@ export function requireAuth(req, res, next) {
 	}
 
 	next();
-	}
+}

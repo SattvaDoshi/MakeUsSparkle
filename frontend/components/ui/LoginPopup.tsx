@@ -2,11 +2,35 @@
 
 import { useEffect, useState } from 'react';
 import styles from './LoginPopup.module.css';
+import { apiRequest } from '@/lib/api';
+import { useAuth } from '@/lib/authContext';
+
+type AuthResponse = {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: {
+    _id: string;
+    name?: string;
+    email?: string;
+    role?: string;
+  };
+  welcomeEmailSent?: boolean;
+  welcomeCoupon?: {
+    code: string;
+    discountType: string;
+    discountValue: number;
+    expiryDate?: string;
+  };
+};
 
 export default function LoginPopup() {
+  const { signIn } = useAuth();
   const [visible, setVisible] = useState(false);
   const [closed, setClosed] = useState(false);
   const [tab, setTab] = useState<'login' | 'register'>('register');
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const [form, setForm] = useState({
     name: '', email: '', phone: '', gender: '',
     day: '', month: '', year: '', password: '',
@@ -21,16 +45,83 @@ export default function LoginPopup() {
     return () => clearTimeout(timer);
   }, [closed]);
 
+  useEffect(() => {
+    const openAuthPopup = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tab?: 'login' | 'register' }>;
+      setTab(customEvent.detail?.tab || 'register');
+      setVisible(true);
+      setClosed(false);
+    };
+
+    window.addEventListener('makeussparkle:auth-open', openAuthPopup);
+    return () => window.removeEventListener('makeussparkle:auth-open', openAuthPopup);
+  }, []);
+
   const handleClose = () => {
     setVisible(false);
     setClosed(true);
     sessionStorage.setItem('loginPopupDismissed', '1');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const buildDob = () => {
+    const { day, month, year } = form;
+    if (!day || !month || !year) return undefined;
+
+    const normalizedDay = day.padStart(2, '0');
+    const normalizedMonth = month.padStart(2, '0');
+    return `${year}-${normalizedMonth}-${normalizedDay}`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire up to backend auth
-    handleClose();
+    setLoading(true);
+    setFeedback('');
+
+    try {
+      if (tab === 'register') {
+        const result = await apiRequest<AuthResponse>('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            gender: form.gender || undefined,
+            dob: buildDob(),
+            password: form.password,
+          }),
+        });
+
+        if (result.token) {
+          await signIn(result.token, result.user ?? null);
+        }
+
+        const couponText = result.welcomeCoupon?.code
+          ? ` Your 10% code is ${result.welcomeCoupon.code}.`
+          : '';
+        setFeedback(`Signup successful.${couponText} Check your email for the welcome offer.`);
+        handleClose();
+        return;
+      }
+
+      const result = await apiRequest<AuthResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      if (result.token) {
+        await signIn(result.token, result.user ?? null);
+      }
+
+      setFeedback(result.message || 'Login successful.');
+      handleClose();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!visible) return null;
@@ -117,19 +208,43 @@ export default function LoginPopup() {
                 <option value="male">Male</option>
                 <option value="other">Prefer not to say</option>
               </select>
+              <input
+                className={styles.input}
+                type="password"
+                placeholder="Create Password"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                required
+              />
             </>
           ) : (
             <>
-              <input className={styles.input} type="email" placeholder="Email or Phone" required />
-              <input className={styles.input} type="password" placeholder="Password" required />
+              <input
+                className={styles.input}
+                type="email"
+                placeholder="Email Address"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                required
+              />
+              <input
+                className={styles.input}
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                required
+              />
               <a href="/forgot-password" className={styles.forgotLink}>Forgot password?</a>
             </>
           )}
 
-          <button type="submit" className={styles.submitBtn}>
-            {tab === 'register' ? '✦ Unlock My 10% Reward' : 'Sign In'}
+          <button type="submit" className={styles.submitBtn} disabled={loading}>
+            {loading ? 'Please wait…' : tab === 'register' ? '✦ Unlock My 10% Reward' : 'Sign In'}
           </button>
         </form>
+
+        {feedback && <p className={styles.feedback}>{feedback}</p>}
 
         <p className={styles.terms}>
           By continuing, you agree to our{' '}

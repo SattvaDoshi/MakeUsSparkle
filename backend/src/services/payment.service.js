@@ -54,7 +54,7 @@ class PaymentService {
 					razorpayPaymentId: paymentId,
 					status: "confirmed",
 				},
-				{ new: true }
+				{ returnDocument: "after" }
 			);
 
 			if (!order) {

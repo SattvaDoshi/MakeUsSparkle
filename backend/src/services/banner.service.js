@@ -55,7 +55,7 @@ class BannerService {
 				updateData.imagePublicId = uploadedImage.publicId;
 			}
 
-			const updatedBanner = await Banner.findByIdAndUpdate(bannerId, updateData, { new: true });
+			const updatedBanner = await Banner.findByIdAndUpdate(bannerId, updateData, { returnDocument: "after" });
 
 			return { success: true, banner: updatedBanner };
 		} catch (error) {

@@ -92,7 +92,7 @@ export async function deleteSubCategory(req, res) {
 }
 
 export async function updateStyle(req, res) {
-	const style = await Style.findByIdAndUpdate(req.params.id, req.body, { new: true });
+	const style = await Style.findByIdAndUpdate(req.params.id, req.body, { returnDocument: "after" });
 	res.json({ success: true, style });
 }
 

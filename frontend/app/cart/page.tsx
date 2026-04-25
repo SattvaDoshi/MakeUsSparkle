@@ -1,22 +1,18 @@
+
+
 'use client';
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useCart, GIFT_CHARGE } from '@/lib/cartContext';
 import ExitIntent from '@/components/cart/ExitIntent';
+import UpperNav from '@/components/ui/UpperNav'; // Replaced absolute D:\ path with standard Next.js alias
 
 // ─── Offer milestones ─────────────────────────────────────────────────────────
 const OFFERS = [
   { label: 'Free Shipping',  threshold: 598,  emoji: '🚚', short: 'Shipping' },
   { label: 'Free Gift',      threshold: 999,  emoji: '🎁', short: 'Free Gift' },
   { label: 'Free Organiser', threshold: 1199, emoji: '🛍️', short: 'Organiser' },
-];
-
-// ─── "You may also like" (static — swap with your actual products) ─────────────
-const ALSO_LIKE = [
-  { id: 101, name: 'Minimal Stud Earrings', price: 549, original: 799, emoji: '💎', href: '/products/minimal-studs' },
-  { id: 102, name: 'Gold Hoop Earrings',    price: 899, original: null, emoji: '⭕', href: '/products/gold-hoop-earrings' },
-  { id: 103, name: 'Beaded Charm Bracelet', price: 749, original: null, emoji: '📿', href: '/products/beaded-bracelet' },
 ];
 
 const COUPON_MAP: Record<string, number> = {
@@ -79,30 +75,6 @@ export default function CartPage() {
         .cp-root {
           min-height: 100vh; background: var(--beige);
           font-family: 'Jost', sans-serif; color: var(--ink);
-        }
-
-        /* ── Header ── */
-        .cp-header {
-          display: flex; align-items: center; gap: 14px;
-          padding: 18px 52px;
-          border-bottom: 1px solid rgba(61,74,34,.09);
-          background: rgba(245,240,232,.85); backdrop-filter: blur(14px);
-          position: sticky; top: 0; z-index: 100;
-        }
-        .cp-back {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 9.5px; letter-spacing: .28em; text-transform: uppercase;
-          color: var(--mist); text-decoration: none; transition: color .2s;
-        }
-        .cp-back:hover { color: var(--olive-600); }
-        .cp-header-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 22px; font-weight: 300; letter-spacing: .06em;
-          color: var(--olive-900);
-        }
-        .cp-header-count {
-          font-size: 11px; color: var(--mist); letter-spacing: .16em;
-          margin-left: 4px;
         }
 
         /* ── Layout ── */
@@ -254,42 +226,13 @@ export default function CartPage() {
 
         /* ── Savings strip ── */
         .cp-savings-strip {
-          margin: 0 22px 16px;
+          margin: 10px 22px 16px;
           background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
           border: 1px solid #c8e6c9; border-radius: 10px;
           padding: 11px 16px;
           font-size: 12.5px; color: var(--green); font-weight: 600;
           display: flex; align-items: center; gap: 8px;
         }
-
-        /* ── You may also like ── */
-        .cp-also-like { padding: 18px 22px; }
-        .cp-also-title {
-          font-size: 10px; letter-spacing: .36em; text-transform: uppercase;
-          color: var(--mist); margin-bottom: 14px; font-weight: 500;
-        }
-        .cp-also-scroll {
-          display: flex; gap: 12px; overflow-x: auto;
-          scrollbar-width: none; padding-bottom: 2px;
-        }
-        .cp-also-scroll::-webkit-scrollbar { display: none; }
-        .cp-also-card {
-          min-width: 140px; background: var(--beige);
-          border-radius: 14px; padding: 12px;
-          border: 1px solid rgba(61,74,34,.08);
-          display: flex; flex-direction: column; gap: 6px;
-          text-decoration: none; color: inherit;
-          transition: transform .2s, box-shadow .2s;
-        }
-        .cp-also-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(61,74,34,.1); }
-        .cp-also-emoji {
-          font-size: 32px; height: 72px;
-          display: flex; align-items: center; justify-content: center;
-          background: white; border-radius: 10px;
-        }
-        .cp-also-name { font-size: 11px; font-weight: 600; color: var(--olive-900); line-height: 1.3; }
-        .cp-also-price { font-size: 13px; font-weight: 600; color: var(--olive-600); }
-        .cp-also-orig { font-size: 10px; color: var(--mist); text-decoration: line-through; }
 
         /* ── RIGHT PANEL ── */
 
@@ -422,33 +365,43 @@ export default function CartPage() {
         }
         .cp-empty-link:hover { background: var(--olive-600); }
 
-        @media (max-width: 900px) {
-          .cp-layout { grid-template-columns: 1fr; padding: 24px; }
-          .cp-right { position: static; }
-          .cp-header { padding: 16px 24px; }
+        /* ── Responsiveness ── */
+        @media (max-width: 1024px) {
+          .cp-layout { padding: 32px 24px 72px; }
         }
+        
+        @media (max-width: 900px) {
+          .cp-layout { grid-template-columns: 1fr; padding: 24px; gap: 24px; }
+          .cp-right { position: static; }
+        }
+        
         @media (max-width: 540px) {
-          .cp-layout { padding: 16px; gap: 14px; }
-          .cp-header { padding: 14px 16px; }
+          .cp-layout { padding: 16px; gap: 16px; margin-top: 45px}
+          .cp-panel-head { padding: 14px 16px; }
+          
+          /* Adjust Progress Section */
+          .cp-progress { padding: 14px 16px; }
+          .cp-dots { padding: 0 16px 14px; }
+          .cp-dot-circle { width: 28px; height: 28px; font-size: 13px; }
+          
+          /* Adjust Item Layout */
+          .cp-item { padding: 14px 16px; gap: 10px; }
+          .cp-item-img { width: 72px; height: 72px; }
+          .cp-item-name { font-size: 13px; }
+          .cp-item-price { font-size: 15px; }
+          .cp-qty-btn { width: 28px; height: 28px; font-size: 16px; }
+          .cp-qty-val { min-width: 28px; font-size: 12px; }
+          
+          /* Adjust Gift/Coupon/Summary panels */
+          .cp-gift { padding: 14px; }
+          .cp-panel[style] { padding: 16px !important; }
         }
       `}</style>
 
       <div className="cp-root">
+        {/* Navbar replacing the old custom header */}
+        <UpperNav />
         <ExitIntent />
-
-        {/* Header */}
-        <header className="cp-header">
-          <Link href="/shop" className="cp-back">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-            Shop
-          </Link>
-          <span className="cp-header-title">
-            Cart
-            {itemCount > 0 && <span className="cp-header-count">({itemCount})</span>}
-          </span>
-        </header>
 
         <div className="cp-layout">
 
@@ -457,7 +410,7 @@ export default function CartPage() {
             <div className="cp-empty">
               <div className="cp-empty-icon">◇</div>
               <p className="cp-empty-text">Your cart is empty — add something beautiful.</p>
-              <Link href="/shop" className="cp-empty-link">
+              <Link href="/" className="cp-empty-link">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
@@ -544,25 +497,6 @@ export default function CartPage() {
                       </div>
                     </div>
                   ))}
-                </div>
-
-                {/* You may also like */}
-                <div className="cp-panel">
-                  <div className="cp-also-like">
-                    <p className="cp-also-title">You may also like</p>
-                    <div className="cp-also-scroll">
-                      {ALSO_LIKE.map(a => (
-                        <Link key={a.id} href={a.href} className="cp-also-card">
-                          <div className="cp-also-emoji">{a.emoji}</div>
-                          <div className="cp-also-name">{a.name}</div>
-                          <div>
-                            <span className="cp-also-price">₹{a.price}</span>
-                            {a.original && <span className="cp-also-orig"> ₹{a.original}</span>}
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
 

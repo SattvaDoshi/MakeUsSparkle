@@ -1,3 +1,5 @@
+
+
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
@@ -48,23 +50,262 @@ interface ProductDetailsProduct {
 // ─── Categories that support customisation ────────────────────────────────────
 const CUSTOMISABLE_CATEGORIES = ['Gift Boxes', 'Fan Box', 'Key Chain/Charm'];
 
-// ─── Trust badges ─────────────────────────────────────────────────────────────
+// ─── CHANGE 3: Updated trust badges ──────────────────────────────────────────
 const TRUST_BADGES = [
   {
-    icon: (<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="14" width="28" height="22" rx="2"/><path d="M16 14v-3a8 8 0 0116 0v3"/><path d="M20 25l3 3 6-6"/><circle cx="36" cy="34" r="7" fill="var(--beige)" stroke="currentColor"/><path d="M33 34l2 2 4-4"/></svg>),
-    title: 'Easy Return', sub: '& Exchange',
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="18" width="28" height="18" rx="2"/>
+        <path d="M32 22h4l6 8v6h-10V22z"/>
+        <circle cx="14" cy="38" r="3"/>
+        <circle cx="36" cy="38" r="3"/>
+        <path d="M4 26h28"/>
+        <path d="M10 14h4M16 11v6"/>
+      </svg>
+    ),
+    title: 'Free Shipping',
+    sub: 'On orders above ₹999',
   },
   {
-    icon: (<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="18" width="28" height="18" rx="2"/><path d="M32 22h4l6 8v6h-10V22z"/><circle cx="14" cy="38" r="3"/><circle cx="36" cy="38" r="3"/><path d="M8 14l4-4M14 10l4 4"/></svg>),
-    title: 'Free Shipping', sub: 'On orders above ₹599',
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/>
+        <path d="M20 22l3 3 6-6"/>
+      </svg>
+    ),
+    title: 'COD Available',
+    sub: 'On all orders',
   },
   {
-    icon: (<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/><path d="M20 22l3 3 6-6"/></svg>),
-    title: 'COD Available', sub: 'On all orders',
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 24h26M24 14l12 10-12 10"/>
+        <circle cx="38" cy="24" r="6"/>
+        <path d="M6 16v16"/>
+      </svg>
+    ),
+    title: 'Express Delivery',
+    sub: '2–3 business days',
+  },
+];
+// ─── Reviews Data ─────────────────────────────────────────────────────────────
+const REVIEWS_DATA = [
+  {
+    id: 1,
+    name: 'Priya Sharma',
+    initials: 'PS',
+    rating: 5,
+    date: '12 Apr 2025',
+    title: 'Absolutely stunning piece!',
+    body: 'I gifted this to my sister and she was in tears. The quality is exceptional — it looks far more expensive than it actually is. The packaging was gorgeous too. Will definitely be ordering again.',
+    verified: true,
+    helpful: 24,
+    colorHex: '#c9a84c',
   },
   {
-    icon: (<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M24 4l4 8 9 1-6.5 6.4 1.5 9L24 24l-8 4.4 1.5-9L11 13l9-1 4-8z"/><path d="M8 36h32M12 42h24"/></svg>),
-    title: '100% Authentic', sub: 'Certified jewellery',
+    id: 2,
+    name: 'Anika Reddy',
+    initials: 'AR',
+    rating: 5,
+    date: '3 Apr 2025',
+    title: 'Perfect everyday necklace',
+    body: 'Wore it every day for a month and it still looks brand new. The layered design is so elegant and gets so many compliments. Highly recommend for anyone looking for something that looks luxe but is affordable.',
+    verified: true,
+    helpful: 18,
+    colorHex: '#5a6b2e',
+  },
+  {
+    id: 3,
+    name: 'Meera Joshi',
+    initials: 'MJ',
+    rating: 4,
+    date: '28 Mar 2025',
+    title: 'Beautiful but clasp is slightly fiddly',
+    body: 'The necklace itself is gorgeous — love the delicate layered look. My only minor complaint is the lobster clasp is a tiny bit tricky to fasten solo. Once on though, it stays perfectly and looks stunning.',
+    verified: true,
+    helpful: 11,
+    colorHex: '#3d4a22',
+  },
+  {
+    id: 4,
+    name: 'Divya Nair',
+    initials: 'DN',
+    rating: 5,
+    date: '19 Mar 2025',
+    title: 'Fast delivery, premium quality',
+    body: 'Ordered on a whim and received it in 2 days. The moment I opened the box I knew it was worth every rupee. The gold plating is even and the chains lay perfectly. Zero tarnishing so far.',
+    verified: false,
+    helpful: 8,
+    colorHex: '#c9a84c',
+  },
+  {
+    id: 5,
+    name: 'Roshni Kapoor',
+    initials: 'RK',
+    rating: 5,
+    date: '10 Mar 2025',
+    title: 'My go-to jewellery shop now',
+    body: 'Third order from Maison and they never disappoint. This layered necklace is my favourite so far. It transitions effortlessly from casual daywear to evenings. The rose gold variant I got is dreamy.',
+    verified: true,
+    helpful: 31,
+    colorHex: '#7a8e3c',
+  },
+];
+
+const RATING_DISTRIBUTION = [
+  { stars: 5, count: 148, pct: 74 },
+  { stars: 4, count: 32, pct: 16 },
+  { stars: 3, count: 12, pct: 6 },
+  { stars: 2, count: 4, pct: 2 },
+  { stars: 1, count: 4, pct: 2 },
+];
+
+const OVERALL_RATING = 4.8;
+const TOTAL_REVIEWS = 200;
+
+// ─── Reviews Section ──────────────────────────────────────────────────────────
+function ReviewsSection() {
+const [visibleCount, setVisibleCount] = useState(3);
+const [filterStar, setFilterStar] = useState<number | null>(null);
+
+const filtered = REVIEWS_DATA.filter(r => filterStar === null || r.rating === filterStar);
+const visible = filtered.slice(0, visibleCount);
+const hasMore = visibleCount < filtered.length; 
+
+  return (
+    <div className="rev-section">
+      {/* Header */}
+      <div className="rev-header">
+        <div className="rev-header-line" />
+        <div className="rev-header-text">
+          <span className="rev-eyebrow">Customer Stories</span>
+          <h2 className="rev-title">What people are saying</h2>
+        </div>
+        <div className="rev-header-line" />
+      </div>
+
+      {/* Summary */}
+      <div className="rev-summary">
+        <div className="rev-summary-score">
+          <span className="rev-big-num">{OVERALL_RATING}</span>
+          <div className="rev-big-stars">
+            {'★'.repeat(Math.round(OVERALL_RATING))}{'☆'.repeat(5 - Math.round(OVERALL_RATING))}
+          </div>
+          <span className="rev-total-cnt">Based on {TOTAL_REVIEWS} reviews</span>
+        </div>
+        <div className="rev-bars">
+          {RATING_DISTRIBUTION.map(d => (
+            <button
+              key={d.stars}
+              className={`rev-bar-row${filterStar === d.stars ? ' rev-bar-row--active' : ''}`}
+              onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}
+            >
+              <span className="rev-bar-label">{d.stars}★</span>
+              <div className="rev-bar-track">
+                <div className="rev-bar-fill" style={{ width: `${d.pct}%` }} />
+              </div>
+              <span className="rev-bar-count">{d.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="rev-controls">
+        {filterStar !== null && (
+          <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>
+            Showing {filterStar}★ only &nbsp;×
+          </button>
+        )}
+     
+      </div>
+
+      {/* No results */}
+      {visible.length === 0 && (
+        <p className="rev-empty">No reviews match this filter. <button className="rev-clear-link" onClick={() => setFilterStar(null)}>Clear filter</button></p>
+      )}
+
+      {/* Review cards */}
+      <div className="rev-list">
+        {visible.map((r, i) => (
+          <div key={r.id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
+            <div className="rev-card-top">
+              <div className="rev-avatar" style={{ background: r.colorHex + '22', color: r.colorHex }}>
+                {r.initials}
+              </div>
+              <div className="rev-meta">
+                <div className="rev-meta-row">
+                  <span className="rev-name">{r.name}</span>
+                  {r.verified && (
+                    <span className="rev-verified">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      Verified purchase
+                    </span>
+                  )}
+                </div>
+                <div className="rev-meta-row" style={{ marginTop: 3 }}>
+                  <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                  <span className="rev-date">{r.date}</span>
+                </div>
+              </div>
+            </div>
+            <p className="rev-card-title">{r.title}</p>
+            <p className="rev-card-body">{r.body}</p>
+            <div className="rev-card-foot">
+              <span className="rev-helpful-label">Helpful?</span>
+              <button className="rev-helpful-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                {r.helpful}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="rev-load-wrap">
+          <button className="rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>
+            Show more reviews
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+// ─── CHANGE 2: "Goes Well With" recommendation data ───────────────────────────
+const GOES_WELL_WITH = [
+  {
+    id: 1,
+    name: 'Pearl Drop Earrings',
+    price: 899,
+    originalPrice: 1299,
+    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&q=80',
+    href: '/products/pearl-drop-earrings',
+  },
+  {
+    id: 2,
+    name: 'Delicate Gold Bracelet',
+    price: 1199,
+    originalPrice: 1699,
+    image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&q=80',
+    href: '/products/gold-bracelet',
+  },
+  {
+    id: 3,
+    name: 'Twisted Ring Set',
+    price: 749,
+    originalPrice: 999,
+    image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80',
+    href: '/products/twisted-ring-set',
+  },
+  {
+    id: 4,
+    name: 'Charm Anklet',
+    price: 649,
+    originalPrice: 849,
+    image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=400&q=80',
+    href: '/products/charm-anklet',
   },
 ];
 
@@ -73,7 +314,7 @@ const ACCORDION_ITEMS: AccordionData[] = [
   { id: 'about',    emoji: '💎', label: 'About the Product',    content: `This necklace is crafted from high-quality brass with an 18k gold plating for long-lasting shine. The delicate layered design features three chains at lengths 16", 18" and 20", each finishing with a hand-set micro-charm. Hypoallergenic and nickel-free. Suitable for daily wear.` },
   { id: 'desc',     emoji: '📄', label: 'Product Description',  content: `• Material: Brass with 18k gold / rhodium / rose-gold plating\n• Chain lengths: 16" · 18" · 20"\n• Clasp: Lobster claw\n• Width: 1–1.5 mm per strand\n• Weight: ~4.2 g\n• Finish: Tarnish-resistant coating\n• Packaging: Premium gift box included` },
   { id: 'cancel',   emoji: '↩️', label: 'Cancellation Policy',  content: `Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once the order is dispatched. For damaged or wrong items received, contact us within 48 hours of delivery for a hassle-free replacement or full refund.` },
-  { id: 'shipping', emoji: '🚚', label: 'Shipping & Returns',   content: `STANDARD DELIVERY (3–5 business days) — ₹60 delivery charge. Free on orders above ₹599.\nEXPRESS DELIVERY (1–2 business days) — ₹120 delivery charge. No COD available on express orders.\n\nReturns accepted within 7 days of delivery. Item must be unused, unworn, and in original packaging. Reverse pickup is free for damaged/wrong items.` },
+  { id: 'shipping', emoji: '🚚', label: 'Shipping & Returns',   content: `STANDARD DELIVERY (3–5 business days) — ₹60 delivery charge. Free on orders above ₹999.\nEXPRESS DELIVERY (2–3 business days) — ₹120 delivery charge. No COD available on express orders.\n\nReturns accepted within 7 days of delivery. Item must be unused, unworn, and in original packaging. Reverse pickup is free for damaged/wrong items.` },
   { id: 'faq',      emoji: '❓', label: 'FAQs',                 content: `Q: Will the gold plating fade?\nA: With proper care (avoid water, perfume, sweat) plating lasts 12–18 months.\n\nQ: Is it suitable for sensitive skin?\nA: Yes — nickel-free and hypoallergenic.\n\nQ: Can I resize the necklace?\nA: The lobster clasp allows 2" of length adjustment.\n\nQ: How do I clean it?\nA: Wipe gently with a dry microfibre cloth. Store in the provided box.` },
 ];
 
@@ -218,6 +459,43 @@ function CustomisationPanel({ category }: { category: string }) {
   );
 }
 
+// ─── CHANGE 2: Goes Well With Section ────────────────────────────────────────
+function GoesWellWithSection() {
+  return (
+    <div className="gww-section">
+      <div className="gww-header">
+        <div className="gww-header-line" />
+        <div className="gww-header-text">
+          <span className="gww-eyebrow">Complete the Look</span>
+          <h2 className="gww-title">Pairs beautifully with</h2>
+        </div>
+        <div className="gww-header-line" />
+      </div>
+      <div className="gww-grid">
+        {GOES_WELL_WITH.map((item, i) => {
+          const disc = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
+          return (
+            <a key={item.id} href={item.href} className="gww-card" style={{ animationDelay: `${i * 0.08}s` }}>
+              <div className="gww-img-wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.image} alt={item.name} className="gww-img" />
+                <span className="gww-disc-badge">{disc}% off</span>
+              </div>
+              <div className="gww-card-info">
+                <p className="gww-card-name">{item.name}</p>
+                <div className="gww-card-price-row">
+                  <span className="gww-card-price">₹{item.price.toLocaleString('en-IN')}</span>
+                  <span className="gww-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
@@ -245,7 +523,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const displayImg      = currentImages?.[activeImg] || currentImages?.[0] || '';
   const discount        = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
-  const deliveryCharge  = shipping === 'express' ? 120 : (price >= 599 ? 0 : 60);
+  const deliveryCharge  = shipping === 'express' ? 120 : (price >= 999 ? 0 : 60);
   const codCharge       = payment === 'cod' && shipping !== 'express' ? 70 : 0;
   const totalPrice      = (price + deliveryCharge + codCharge) * qty;
 
@@ -329,15 +607,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
         .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink)}
 
-        /* ── Topbar (placeholder — replace with UpperNav) ── */
-        // .pdp-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 52px;background:rgba(245,240,232,.85);backdrop-filter:blur(14px);border-bottom:1px solid rgba(61,74,34,.09);position:sticky;top:0;z-index:200}
-        // .pdp-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;letter-spacing:.15em;color:var(--olive-600);text-decoration:none}
-        // .pdp-logo em{font-style:italic;color:var(--gold)}
-        // .pdp-crumb{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--mist)}
-        // .pdp-crumb a{color:var(--mist);text-decoration:none;transition:color .2s}
-        // .pdp-crumb a:hover{color:var(--olive-600)}
-        // .pdp-crumb-sep{opacity:.35}
-
         /* ── Layout ── */
         .pdp-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1280px;margin:0 auto}
 
@@ -347,12 +616,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           padding:32px 28px 32px 52px;
           display:flex;flex-direction:column;gap:14px;
           animation:fadeUp .6s ease both;
-          /* prevent gallery overflow on any screen */
           min-width:0;overflow:hidden;
         }
         .pdp-main-img-wrap{
           flex:1;
-          min-height:0; /* critical — lets flex child shrink */
+          min-height:0;
           background:var(--beige-dk);border-radius:24px;overflow:hidden;position:relative;
         }
         .pdp-main-img{width:100%;height:100%;object-fit:cover;animation:imgIn .4s ease both}
@@ -374,8 +642,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
         /* ── Info panel ── */
         .pdp-info{padding:32px 52px 40px 28px;animation:fadeUp .6s ease .1s both;overflow-y:auto}
-        .pdp-eyebrow{font-size:9px;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:10px}
-        .pdp-eyebrow::before{content:'';width:28px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)}
+
+        /* CHANGE 1: Removed pdp-eyebrow styles that showed category — kept for potential reuse */
         .pdp-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;letter-spacing:-.01em;color:var(--olive-900);margin-bottom:10px}
         .pdp-name em{font-style:italic;color:var(--olive-600)}
         .pdp-rating{display:flex;align-items:center;gap:6px;margin-bottom:14px}
@@ -462,8 +730,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         .pdp-btn-buy:hover{background:#b8902b}
         .pdp-btn-buy:active{transform:scale(.98)}
 
-        /* ── Trust badges — 4 col on desktop, 4 in ONE row on mobile ── */
-        .pdp-trust{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+        /* ── Trust badges — 3 col on desktop ── */
+        .pdp-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px}
         .pdp-trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:white;border:1px solid rgba(61,74,34,.07);border-radius:14px;transition:transform .2s,box-shadow .2s}
         .pdp-trust-item:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(61,74,34,.1)}
         .pdp-trust-icon{width:40px;height:40px;color:var(--olive-500);margin-bottom:7px}
@@ -514,6 +782,55 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         .cust-preview-note{width:100%;border:none;border-top:1px solid var(--beige-dkr);padding:6px 8px;font-family:'Jost',sans-serif;font-size:10px;color:var(--ink);background:white;outline:none;resize:none}
         .cust-preview-note::placeholder{color:rgba(30,35,16,.3)}
 
+        /* ── CHANGE 2: Goes Well With styles ── */
+        .gww-section{
+          max-width:1280px;margin:0 auto;
+          padding:48px 52px 56px;
+          background:var(--beige);
+          border-top:1px solid rgba(61,74,34,.08);
+        }
+        .gww-header{
+          display:flex;align-items:center;gap:20px;
+          margin-bottom:32px;
+        }
+        .gww-header-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}
+        .gww-header-text{text-align:center;flex-shrink:0}
+        .gww-eyebrow{display:block;font-size:9px;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+        .gww-title{font-family:'Cormorant Garamond',serif;font-size:clamp(1.4rem,2.5vw,2rem);font-weight:300;color:var(--olive-900);letter-spacing:.02em;font-style:italic}
+        .gww-grid{
+          display:grid;
+          grid-template-columns:repeat(4,1fr);
+          gap:16px;
+        }
+        .gww-card{
+          text-decoration:none;color:inherit;
+          display:flex;flex-direction:column;
+          border-radius:20px;overflow:hidden;
+          background:white;
+          border:1px solid rgba(61,74,34,.07);
+          transition:transform .25s,box-shadow .25s;
+          animation:fadeUp .5s ease both;
+        }
+        .gww-card:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(61,74,34,.12)}
+        .gww-img-wrap{position:relative;aspect-ratio:1;overflow:hidden;background:var(--beige-dk)}
+        .gww-img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+        .gww-card:hover .gww-img{transform:scale(1.06)}
+        .gww-disc-badge{
+          position:absolute;top:10px;right:10px;
+          font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+          color:var(--beige);background:var(--olive-500);
+          padding:3px 9px;border-radius:50px;
+        }
+        .gww-card-info{padding:14px 14px 16px}
+        .gww-card-name{
+          font-size:12px;font-weight:500;letter-spacing:.03em;
+          color:var(--ink);margin-bottom:7px;
+          line-height:1.4;
+        }
+        .gww-card-price-row{display:flex;align-items:baseline;gap:8px}
+        .gww-card-price{font-size:14px;font-weight:700;color:var(--olive-900)}
+        .gww-card-original{font-size:11px;color:var(--mist);text-decoration:line-through}
+
         /* ════════════════════════════════════════════
            TABLET  (≤ 960px)
         ════════════════════════════════════════════ */
@@ -523,41 +840,39 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             position:static;height:auto;
             padding:24px 24px 0;
           }
-          /* Main image: fixed sensible height, never overflow */
           .pdp-main-img-wrap{
             height:420px;
             flex:none;
           }
           .pdp-info{padding:24px 24px 48px}
-          .pdp-topbar{padding:14px 24px}
-          /* Trust badges stay 4-col on tablet */
-          .pdp-trust{grid-template-columns:repeat(4,1fr)}
+          /* Trust badges stay 3-col on tablet */
+          .pdp-trust{grid-template-columns:repeat(3,1fr)}
+          /* Goes well with — 2 cols on tablet */
+          .gww-section{padding:40px 24px 48px}
+          .gww-grid{grid-template-columns:repeat(2,1fr);gap:12px}
         }
 
         /* ════════════════════════════════════════════
            MOBILE  (≤ 600px)
         ════════════════════════════════════════════ */
         @media(max-width:600px){
-          .pdp-topbar{padding:12px 16px}
           .pdp-gallery{padding:16px 16px 0}
           .pdp-info{padding:20px 16px 40px}
 
-          /* ── Main image: controlled height, no overflow ── */
           .pdp-main-img-wrap{
             height:300px;
             flex:none;
           }
 
           /* ── Offer chip: show BELOW price on mobile ── */
-          /* We reorder the info panel children with a flex column approach */
           .pdp-info-top{display:flex;flex-direction:column}
           .pdp-offer{order:5;margin-top:10px;margin-bottom:0}
           .pdp-price-row{order:3;margin-bottom:4px}
           .pdp-tax{order:4;margin-bottom:12px}
 
-          /* ── Trust badges: 4 in ONE horizontal scrollable row ── */
+          /* ── Trust badges: 3-col scrollable on mobile ── */
           .pdp-trust{
-            grid-template-columns:repeat(4,minmax(72px,1fr));
+            grid-template-columns:repeat(3,minmax(80px,1fr));
             gap:7px;
             overflow-x:auto;
             padding-bottom:4px;
@@ -568,7 +883,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           .pdp-trust-item{
             padding:10px 6px;
             border-radius:12px;
-            min-width:72px;
+            min-width:80px;
           }
           .pdp-trust-icon{width:28px;height:28px;margin-bottom:5px}
           .pdp-trust-title{font-size:8.5px;letter-spacing:.03em}
@@ -586,6 +901,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
           /* ── Accordion body indentation ── */
           .acc-body{padding:2px 4px 14px 26px}
+
+          /* ── Goes Well With: 2-col on mobile ── */
+          .gww-section{padding:32px 16px 40px}
+          .gww-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+          .gww-header{gap:12px}
+          .gww-title{font-size:1.3rem}
         }
 
         /* ════════════════════════════════════════════
@@ -596,28 +917,156 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           .pdp-name{font-size:1.7rem}
           .pdp-cta-row{grid-template-columns:1fr}
           .pdp-btn-buy{grid-column:unset}
+          .gww-grid{grid-template-columns:repeat(2,1fr);gap:8px}
         }
-      `}</style>
+          /* ── Reviews Section ── */
+.rev-section{
+  max-width:1280px;margin:0 auto;
+  padding:48px 52px 56px;
+  background:var(--beige);
+  border-top:1px solid rgba(61,74,34,.08);
+}
+.rev-header{
+  display:flex;align-items:center;gap:20px;
+  margin-bottom:36px;
+}
+.rev-header-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}
+.rev-header-text{text-align:center;flex-shrink:0}
+.rev-eyebrow{display:block;font-size:9px;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.rev-title{font-family:'Cormorant Garamond',serif;font-size:clamp(1.4rem,2.5vw,2rem);font-weight:300;color:var(--olive-900);letter-spacing:.02em;font-style:italic}
 
+/* Summary */
+/* Summary */
+.rev-summary{
+  display:grid;grid-template-columns:220px 1fr;gap:0;
+  background:white;
+  border:1px solid rgba(61,74,34,.09);border-radius:18px;
+  overflow:hidden;margin-bottom:24px;
+}
+.rev-summary-score{
+  background:linear-gradient(160deg,var(--olive-900),var(--olive-600));
+  padding:28px 24px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;
+}
+.rev-big-num{
+  font-family:'Cormorant Garamond',serif;
+  font-size:4.2rem;font-weight:600;color:#f5f0e8;line-height:1;
+  letter-spacing:-.02em;
+}
+.rev-big-stars{font-size:16px;color:var(--gold);letter-spacing:3px}
+.rev-total-cnt{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(245,240,232,.5);margin-top:2px}
+.rev-bars{display:flex;flex-direction:column;gap:6px;padding:20px 24px;justify-content:center}
+.rev-bar-row{
+  display:flex;align-items:center;gap:10px;
+  background:none;border:none;cursor:pointer;padding:3px 6px;
+  border-radius:8px;transition:background .15s;text-align:left;
+}
+.rev-bar-row:hover{background:rgba(61,74,34,.05)}
+.rev-bar-row--active{background:rgba(201,168,76,.1)}
+.rev-bar-label{font-size:11px;font-weight:600;color:var(--olive-600);min-width:22px;text-align:right}
+.rev-bar-track{flex:1;height:6px;background:var(--beige-dkr);border-radius:50px;overflow:hidden}
+.rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive-400));border-radius:50px;transition:width .4s ease}
+.rev-bar-count{font-size:10px;color:var(--mist);min-width:24px}
+
+/* Controls — filter chip only, sort tabs removed */
+.rev-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.rev-clear-filter{
+  font-size:11px;font-weight:600;letter-spacing:.06em;
+  color:var(--gold);background:rgba(201,168,76,.1);
+  border:1px solid rgba(201,168,76,.3);border-radius:50px;
+  padding:6px 14px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif;
+}
+.rev-clear-filter:hover{background:rgba(201,168,76,.2)}
+
+
+
+.rev-sort-tabs{display:flex;background:var(--beige-dk);border-radius:50px;padding:3px;gap:3px}
+.rev-sort-tab{
+  font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--mist);
+  background:none;border:none;border-radius:50px;padding:7px 16px;cursor:pointer;
+  transition:all .2s;font-family:'Jost',sans-serif;
+}
+.rev-sort-tab.active{background:white;color:var(--olive-600);font-weight:600;box-shadow:0 1px 4px rgba(61,74,34,.1)}
+
+/* Empty */
+.rev-empty{font-size:13px;color:var(--mist);text-align:center;padding:32px 0}
+.rev-clear-link{background:none;border:none;color:var(--gold);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Jost',sans-serif}
+
+/* Cards */
+.rev-list{display:flex;flex-direction:column;gap:16px}
+.rev-card{
+  background:white;border:1px solid rgba(61,74,34,.07);border-radius:18px;
+  padding:22px 24px;animation:fadeUp .45s ease both;
+  transition:box-shadow .2s;
+}
+.rev-card:hover{box-shadow:0 8px 28px rgba(61,74,34,.09)}
+.rev-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.rev-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;letter-spacing:.05em;
+}
+.rev-meta{flex:1}
+.rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.rev-name{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+.rev-verified{
+  display:flex;align-items:center;gap:4px;
+  font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--olive-500);
+}
+.rev-stars-sm{font-size:12px;color:var(--gold);letter-spacing:1px}
+.rev-date{font-size:10.5px;color:var(--mist)}
+.rev-card-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px;letter-spacing:.02em}
+.rev-card-body{font-size:12.5px;font-weight:300;color:var(--mist);line-height:1.85;letter-spacing:.03em;margin-bottom:16px}
+.rev-card-foot{display:flex;align-items:center;gap:10px;border-top:1px solid rgba(61,74,34,.07);padding-top:12px}
+.rev-helpful-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist)}
+.rev-helpful-btn{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;color:var(--olive-600);
+  background:var(--olive-50);border:1px solid rgba(61,74,34,.12);border-radius:50px;
+  padding:5px 12px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif;
+}
+.rev-helpful-btn:hover{background:var(--olive-100);border-color:var(--olive-400)}
+
+/* Load more */
+.rev-load-wrap{display:flex;justify-content:center;margin-top:28px}
+.rev-load-btn{
+  font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--olive-600);background:white;
+  border:1.5px solid var(--beige-dkr);border-radius:50px;
+  padding:14px 36px;cursor:pointer;transition:all .22s;
+}
+.rev-load-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
+
+/* Tablet */
+@media(max-width:960px){
+  .rev-section{padding:40px 24px 48px}
+  .rev-summary{grid-template-columns:180px 1fr}
+  .rev-big-num{font-size:3.6rem}
+}
+
+/* Mobile */
+@media(max-width:600px){
+  .rev-section{padding:32px 16px 40px}
+  .rev-summary{grid-template-columns:1fr;border-radius:16px}
+  .rev-summary-score{padding:22px 24px;flex-direction:row;justify-content:center;gap:16px;border-radius:0}
+  .rev-big-num{font-size:3rem}
+  .rev-bars{padding:16px 18px}
+  .rev-header{gap:12px}
+  .rev-title{font-size:1.3rem}
+  .rev-card{padding:18px 16px}
+  .rev-controls{flex-direction:column;align-items:flex-start}
+}
+
+@media(max-width:380px){
+  .rev-big-num{font-size:2.6rem}
+  .rev-card{padding:14px 12px}
+}
+      `}</style>
+  
       <div className="pdp">
-        {/*
-          ── TOPBAR ──────────────────────────────────────────────────────────────
-          TODO: Replace this entire <nav> block with <UpperNav /> once the file
-          is imported:
-              import UpperNav from '@/components/ui/UpperNav';
-              ...
-              <UpperNav />
-          ──────────────────────────────────────────────────────────────────────── */}
-        {/* <nav className="pdp-topbar">
-          <a href="/" className="pdp-logo">Mai<em>son</em></a>
-          <div className="pdp-crumb">
-            <a href="/">Home</a><span className="pdp-crumb-sep"> · </span>
-            <a href="/shop">Jewellery</a><span className="pdp-crumb-sep"> · </span>
-            <span style={{ color: 'var(--olive-600)', opacity: .7 }}>{name}</span>
-          </div>
-        </nav> */}
-<UpperNav />
-        <div className="pdp-layout" style={{ paddingTop: '24px' }}>
+        <UpperNav />
+        <div className="pdp-layout" style={{ paddingTop: '45px' }}>
           {/* ── Gallery ──────────────────────────────────────────────────────── */}
           <div className="pdp-gallery">
             <div className="pdp-main-img-wrap">
@@ -642,7 +1091,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
           {/* ── Info ─────────────────────────────────────────────────────────── */}
           <div className="pdp-info">
-            <div className="pdp-eyebrow">{category}</div>
+            {/* CHANGE 1: Removed pdp-eyebrow / category line — was showing "Women Jewellery" */}
             <h1 className="pdp-name">
               {name.split(' ').map((w, i) => i === 1 ? <em key={i}>{w} </em> : w + ' ')}
             </h1>
@@ -653,7 +1102,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <span className="pdp-review-cnt">({reviewCount} reviews)</span>
             </div>
 
-            {/* Price row — offer chip moves below on mobile via CSS order */}
+            {/* Price row */}
             <div className="pdp-info-top">
               <div className="pdp-price-row">
                 <span className="pdp-price">₹{price.toLocaleString('en-IN')}</span>
@@ -664,8 +1113,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   </>
                 )}
               </div>
-              {/* <p className="pdp-tax">Inclusive of all taxes · SKU: {sku}</p> */}
-              {/* Offer — sits here in DOM but moves below price on mobile via order:5 */}
               <div className="pdp-offer">
                 <span className="pdp-offer-icon">🏷️</span>
                 <span className="pdp-offer-text">{offer}</span>
@@ -722,30 +1169,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             </div>
             <div className="pdp-divider" />
 
-            {/* Payment Mode */}
-            <p className="pdp-section-label" style={{ marginBottom: 10 }}>Payment Mode</p>
-            <div className="pdp-pay-row">
-              <button className={`pdp-pay-opt${payment === 'prepaid' ? ' active' : ''}`} onClick={() => setPayment('prepaid')}>
-                <div className="pdp-pay-head">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  Prepaid
-                </div>
-                <div className="pdp-pay-sub">UPI · Card · Net Banking · Wallets</div>
-              </button>
-              <button
-                className={`pdp-pay-opt${payment === 'cod' ? ' active' : ''}${shipping === 'express' ? ' disabled' : ''}`}
-                onClick={() => shipping !== 'express' && setPayment('cod')}
-              >
-                <div className="pdp-pay-head">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>
-                  Cash on Delivery
-                </div>
-                <div className="pdp-pay-sub">Pay at your door</div>
-                {shipping !== 'express' && <div className="pdp-pay-extra">+₹70 COD charge</div>}
-                {shipping === 'express'  && <div className="pdp-pay-extra">Not available for Express</div>}
-              </button>
-            </div>
-
             {/* Order Summary */}
             <div className="pdp-summary">
               <div className="pdp-summary-row"><span>Item price × {qty}</span><span>₹{(price * qty).toLocaleString('en-IN')}</span></div>
@@ -778,7 +1201,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               </button>
             </div>
 
-            {/* Trust badges */}
+            {/* CHANGE 3: Updated trust badges — 3 icons */}
             <div className="pdp-trust">
               {TRUST_BADGES.map((b, i) => (
                 <div key={i} className="pdp-trust-item">
@@ -790,7 +1213,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             </div>
             <div className="pdp-divider" />
 
-            {/* Accordion — no extra padding/margin after last item */}
+            {/* Accordion */}
             <div className="pdp-accordion">
               {ACCORDION_ITEMS.map(item => (
                 <AccordionItem
@@ -801,10 +1224,17 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 />
               ))}
             </div>
-            {/* ↑ No elements below — this removes the trailing whitespace */}
           </div>
         </div>
+
+        {/* CHANGE 2: Goes Well With section — full width below the 2-col layout */}
+        <GoesWellWithSection />
+
+         <ReviewsSection />
       </div>
     </>
   );
 }
+
+
+

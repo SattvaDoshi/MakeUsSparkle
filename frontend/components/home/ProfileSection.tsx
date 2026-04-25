@@ -1,25 +1,435 @@
+// 'use client';
+
+// import { useState } from 'react';
+
+// type View = 'main' | 'orders' | 'address' | 'password';
+
+// const MOCK_ORDERS = [
+//   { id: 'MUS2401', date: '12 Apr 2025', items: 'Pearl Necklace, Stud Earrings', amount: '₹1,299', status: 'Delivered' },
+//   { id: 'MUS2389', date: '28 Mar 2025', items: 'Custom Charm Bracelet', amount: '₹849', status: 'Delivered' },
+//   { id: 'MUS2401', date: '10 Mar 2025', items: 'Gift Box — Couple Set', amount: '₹1,999', status: 'Delivered' },
+// ];
+
+// export default function ProfileSection() {
+//   const [view, setView] = useState<View>('main');
+//   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+//   return (
+//     <>
+//       <style>{CSS}</style>
+//       <section className="pf">
+
+//         {/* Top hero card */}
+//         <div className="pf-hero">
+//           <div className="pf-avatar">
+//             <span className="pf-avatar-init">P</span>
+//           </div>
+//           <div className="pf-hero-info">
+//             <h1 className="pf-name">Priya Sharma</h1>
+//             <p className="pf-email">priya.sharma@email.com</p>
+//             <span className="pf-badge">Member since Jan 2024</span>
+//           </div>
+//         </div>
+
+//         {/* Main view */}
+//         {view === 'main' && (
+//           <div className="pf-body">
+//             <div className="pf-section-label">Account</div>
+//             <div className="pf-list">
+//               <button className="pf-item" onClick={() => setView('orders')}>
+//                 <span className="pf-item-icon">
+//                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+//                 </span>
+//                 <span className="pf-item-txt">
+//                   <span className="pf-item-name">Order History</span>
+//                   <span className="pf-item-sub">{MOCK_ORDERS.length} past orders</span>
+//                 </span>
+//                 <span className="pf-chevron">›</span>
+//               </button>
+
+//               <button className="pf-item" onClick={() => setView('address')}>
+//                 <span className="pf-item-icon">
+//                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+//                 </span>
+//                 <span className="pf-item-txt">
+//                   <span className="pf-item-name">Saved Addresses</span>
+//                   <span className="pf-item-sub">Manage delivery addresses</span>
+//                 </span>
+//                 <span className="pf-chevron">›</span>
+//               </button>
+
+//               <button className="pf-item" onClick={() => setView('password')}>
+//                 <span className="pf-item-icon">
+//                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+//                 </span>
+//                 <span className="pf-item-txt">
+//                   <span className="pf-item-name">Change Password</span>
+//                   <span className="pf-item-sub">Update your account password</span>
+//                 </span>
+//                 <span className="pf-chevron">›</span>
+//               </button>
+//             </div>
+
+//             <div className="pf-section-label" style={{ marginTop: 24 }}>Support</div>
+//             <div className="pf-list">
+//               <a href="mailto:support@makeussparkle.com" className="pf-item">
+//                 <span className="pf-item-icon">
+//                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+//                 </span>
+//                 <span className="pf-item-txt">
+//                   <span className="pf-item-name">Contact Support</span>
+//                   <span className="pf-item-sub">support@makeussparkle.com</span>
+//                 </span>
+//                 <span className="pf-chevron">›</span>
+//               </a>
+//             </div>
+
+//             <button
+//               className="pf-logout"
+//               onClick={() => setShowLogoutConfirm(true)}
+//             >
+//               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+//               Log out
+//             </button>
+//           </div>
+//         )}
+
+//         {/* Order history */}
+//         {view === 'orders' && (
+//           <div className="pf-body">
+//             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+//             <div className="pf-section-label">Order History</div>
+//             <div className="pf-orders">
+//               {MOCK_ORDERS.map((o, i) => (
+//                 <div key={i} className="pf-order">
+//                   <div className="pf-order-top">
+//                     <span className="pf-order-id">#{o.id}</span>
+//                     <span className={`pf-order-status ${o.status.toLowerCase()}`}>{o.status}</span>
+//                   </div>
+//                   <p className="pf-order-items">{o.items}</p>
+//                   <div className="pf-order-bot">
+//                     <span className="pf-order-date">{o.date}</span>
+//                     <span className="pf-order-amt">{o.amount}</span>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Address */}
+//         {view === 'address' && (
+//           <div className="pf-body">
+//             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+//             <div className="pf-section-label">Saved Addresses</div>
+//             <div className="pf-address-card">
+//               <div className="pf-address-top">
+//                 <span className="pf-address-tag">Home</span>
+//                 <button className="pf-address-edit">Edit</button>
+//               </div>
+//               <p className="pf-address-txt">Priya Sharma<br/>42, Rose Garden Society<br/>Andheri West, Mumbai – 400053<br/>Maharashtra, India</p>
+//             </div>
+//             <button className="pf-add-address">+ Add New Address</button>
+//           </div>
+//         )}
+
+//         {/* Change password */}
+//         {view === 'password' && (
+//           <div className="pf-body">
+//             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
+//             <div className="pf-section-label">Change Password</div>
+//             <div className="pf-form">
+//               <label className="pf-label">Current Password
+//                 <input type="password" className="pf-input" placeholder="••••••••" />
+//               </label>
+//               <label className="pf-label">New Password
+//                 <input type="password" className="pf-input" placeholder="••••••••" />
+//               </label>
+//               <label className="pf-label">Confirm New Password
+//                 <input type="password" className="pf-input" placeholder="••••••••" />
+//               </label>
+//               <button className="pf-submit">Update Password</button>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Logout confirm overlay */}
+//         {showLogoutConfirm && (
+//           <div className="pf-overlay" onClick={() => setShowLogoutConfirm(false)}>
+//             <div className="pf-dialog" onClick={e => e.stopPropagation()}>
+//               <h3 className="pf-dialog-title">Log out?</h3>
+//               <p className="pf-dialog-sub">You'll need to sign in again to access your account.</p>
+//               <div className="pf-dialog-actions">
+//                 <button className="pf-dialog-cancel" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+//                 <button className="pf-dialog-confirm">Log out</button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+//       </section>
+//     </>
+//   );
+// }
+
+// const CSS = `
+// @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Nunito:wght@300;400;500;600;700&display=swap');
+
+// .pf { background: #faf8f3; min-height: 100vh; font-family: 'Nunito', sans-serif; padding-bottom: 90px; position: relative; }
+
+// .pf-hero {
+//     background: linear-gradient(160deg, #446c35bd 100%, #365928 0%);
+//   padding: 64px 20px 32px;
+//   display: flex; align-items: center; gap: 18px;
+// }
+// .pf-avatar {
+//   width: 64px; height: 64px; border-radius: 50%;
+//   background: rgba(200,153,46,.22); border: 2px solid rgba(200,153,46,.4);
+//   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+// }
+// .pf-avatar-init { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-style: italic; color: #c8992e; }
+// .pf-name { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 400; color: #fff; margin-bottom: 2px; }
+// .pf-email { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+// .pf-badge { font-size: 8.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; background: rgba(200,153,46,.18); color: #c8992e; border: 1px solid rgba(200,153,46,.3); padding: 3px 10px; border-radius: 100px; }
+
+// .pf-body { padding: 20px 14px; }
+// @media (min-width: 600px) { .pf-body { max-width: 540px; margin: 0 auto; padding: 28px 0; } }
+
+// .pf-section-label { font-size: 8.5px; font-weight: 700; letter-spacing: .36em; text-transform: uppercase; color: #828278; margin-bottom: 8px; padding-left: 2px; }
+
+// .pf-list { background: #fff; border: 1px solid #e8dfc8; border-radius: 14px; overflow: hidden; }
+// .pf-item {
+//   width: 100%; display: flex; align-items: center; gap: 14px;
+//   padding: 16px 16px; text-decoration: none;
+//   background: transparent; border: none; border-bottom: 1px solid #f0e8d8; cursor: pointer;
+//   text-align: left; transition: background .16s;
+//   -webkit-tap-highlight-color: transparent;
+// }
+// .pf-item:last-child { border-bottom: none; }
+// .pf-item:active { background: #faf8f3; }
+// .pf-item-icon { color: #527a3e; flex-shrink: 0; display: flex; align-items: center; }
+// .pf-item-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+// .pf-item-name { font-size: 13px; font-weight: 600; color: #1c1c17; }
+// .pf-item-sub { font-size: 10.5px; color: #828278; }
+// .pf-chevron { color: #b4b4a4; font-size: 18px; line-height: 1; }
+
+// .pf-logout {
+//   display: flex; align-items: center; gap: 8px;
+//   margin-top: 28px; width: 100%;
+//   padding: 14px 16px;
+//   background: #fff; border: 1.5px solid #f0c8c8; border-radius: 12px;
+//   font-size: 12px; font-weight: 700; letter-spacing: .1em;
+//   color: #c04040; cursor: pointer;
+//   -webkit-tap-highlight-color: transparent;
+// }
+
+// .pf-back {
+//   font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+//   color: #527a3e; background: none; border: none; cursor: pointer;
+//   margin-bottom: 16px; padding: 0;
+//   -webkit-tap-highlight-color: transparent;
+// }
+
+// .pf-orders { display: flex; flex-direction: column; gap: 10px; }
+// .pf-order { background: #fff; border: 1px solid #e8dfc8; border-radius: 12px; padding: 16px; }
+// .pf-order-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+// .pf-order-id { font-size: 11px; font-weight: 700; color: #484840; }
+// .pf-order-status { font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; }
+// .pf-order-status.delivered { background: #eff6ea; color: #3b6d11; }
+// .pf-order-status.processing { background: #faeeda; color: #633806; }
+// .pf-order-items { font-size: 11.5px; color: #484840; margin-bottom: 10px; line-height: 1.45; }
+// .pf-order-bot { display: flex; justify-content: space-between; }
+// .pf-order-date { font-size: 10px; color: #828278; }
+// .pf-order-amt { font-size: 12px; font-weight: 700; color: #253d18; }
+
+// .pf-address-card { background: #fff; border: 1px solid #e8dfc8; border-radius: 14px; padding: 18px; margin-bottom: 12px; }
+// .pf-address-top { display: flex; justify-content: space-between; margin-bottom: 10px; }
+// .pf-address-tag { font-size: 9px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; background: #eff6ea; color: #3b6d11; border: 1px solid #c0dd97; padding: 3px 10px; border-radius: 100px; }
+// .pf-address-edit { font-size: 10px; font-weight: 700; color: #527a3e; background: none; border: none; cursor: pointer; }
+// .pf-address-txt { font-size: 12px; color: #484840; line-height: 1.7; }
+// .pf-add-address { width: 100%; padding: 14px; border: 1.5px dashed #c0dd97; border-radius: 12px; background: #eff6ea; color: #3b6d11; font-size: 11px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+// .pf-form { display: flex; flex-direction: column; gap: 14px; }
+// .pf-label { display: flex; flex-direction: column; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #828278; }
+// .pf-input { padding: 12px 14px; border: 1.5px solid #e8dfc8; border-radius: 10px; font-size: 13px; font-family: 'Nunito', sans-serif; background: #fff; color: #1c1c17; outline: none; transition: border-color .2s; }
+// .pf-input:focus { border-color: #527a3e; }
+// .pf-submit { margin-top: 4px; padding: 14px; background: #253d18; color: #fff; border: none; border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+// .pf-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 80px; }
+// .pf-dialog { background: #fff; border-radius: 18px 18px 0 0; padding: 28px 24px 24px; width: 100%; max-width: 480px; }
+// .pf-dialog-title { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 400; color: #1c1c17; margin-bottom: 6px; }
+// .pf-dialog-sub { font-size: 12px; color: #828278; margin-bottom: 20px; }
+// .pf-dialog-actions { display: flex; gap: 10px; }
+// .pf-dialog-cancel { flex: 1; padding: 13px; border: 1.5px solid #e8dfc8; border-radius: 10px; background: #fff; font-size: 11px; font-weight: 700; color: #484840; cursor: pointer; }
+// .pf-dialog-confirm { flex: 1; padding: 13px; background: #c04040; border: none; border-radius: 10px; font-size: 11px; font-weight: 700; color: #fff; cursor: pointer; }
+// `;
+
+
 'use client';
 
 import { useState } from 'react';
 
 type View = 'main' | 'orders' | 'address' | 'password';
 
-const MOCK_ORDERS = [
-  { id: 'MUS2401', date: '12 Apr 2025', items: 'Pearl Necklace, Stud Earrings', amount: '₹1,299', status: 'Delivered' },
-  { id: 'MUS2389', date: '28 Mar 2025', items: 'Custom Charm Bracelet', amount: '₹849', status: 'Delivered' },
-  { id: 'MUS2401', date: '10 Mar 2025', items: 'Gift Box — Couple Set', amount: '₹1,999', status: 'Delivered' },
+interface OrderItem {
+  name: string;
+  reviewed: boolean;
+  rating: number;
+  reviewText: string;
+}
+
+interface Order {
+  id: string;
+  date: string;
+  items: OrderItem[];
+  amount: string;
+  status: string;
+}
+
+const INITIAL_ORDERS: Order[] = [
+  {
+    id: 'MUS2401',
+    date: '12 Apr 2025',
+    items: [
+      { name: 'Pearl Necklace', reviewed: false, rating: 0, reviewText: '' },
+      { name: 'Stud Earrings', reviewed: false, rating: 0, reviewText: '' },
+    ],
+    amount: '₹1,299',
+    status: 'Delivered',
+  },
+  {
+    id: 'MUS2389',
+    date: '28 Mar 2025',
+    items: [
+      { name: 'Custom Charm Bracelet', reviewed: false, rating: 0, reviewText: '' },
+    ],
+    amount: '₹849',
+    status: 'Delivered',
+  },
+  {
+    id: 'MUS2378',
+    date: '10 Mar 2025',
+    items: [
+      { name: 'Gift Box — Couple Set', reviewed: false, rating: 0, reviewText: '' },
+    ],
+    amount: '₹1,999',
+    status: 'Delivered',
+  },
 ];
+
+const POINTS_PER_REVIEW = 50;
+
+interface ReviewModalProps {
+  itemName: string;
+  onClose: () => void;
+  onSubmit: (rating: number, text: string) => void;
+}
+
+function ReviewModal({ itemName, onClose, onSubmit }: ReviewModalProps) {
+  const [rating, setRating] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const [text, setText] = useState('');
+
+  return (
+    <div className="pf-overlay" onClick={onClose}>
+      <div className="pf-dialog pf-review-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="pf-dialog-handle" />
+        <p className="pf-review-item-name">{itemName}</p>
+        <h3 className="pf-dialog-title">How was it?</h3>
+        <div className="pf-stars-row">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button
+              key={s}
+              className={`pf-star ${s <= (hovered || rating) ? 'active' : ''}`}
+              onMouseEnter={() => setHovered(s)}
+              onMouseLeave={() => setHovered(0)}
+              onClick={() => setRating(s)}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="pf-review-textarea"
+          placeholder="Share your experience… (optional)"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+        />
+        <div className="pf-reward-hint">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Earn <strong>{POINTS_PER_REVIEW} Sparkle Points</strong> for this review
+        </div>
+        <div className="pf-dialog-actions">
+          <button className="pf-dialog-cancel" onClick={onClose}>Cancel</button>
+          <button
+            className="pf-dialog-confirm pf-review-submit"
+            disabled={rating === 0}
+            onClick={() => rating > 0 && onSubmit(rating, text)}
+          >
+            Submit & Earn
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfileSection() {
   const [view, setView] = useState<View>('main');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [reviewTarget, setReviewTarget] = useState<{ orderId: string; itemIndex: number } | null>(null);
+  const [rewardPoints, setRewardPoints] = useState(120); // existing points
+  const [justEarned, setJustEarned] = useState<number | null>(null);
+
+  const totalReviewed = orders.flatMap((o) => o.items).filter((i) => i.reviewed).length;
+  const pendingReviews = orders
+    .filter((o) => o.status === 'Delivered')
+    .flatMap((o) => o.items)
+    .filter((i) => !i.reviewed).length;
+
+  function handleSubmitReview(rating: number, text: string) {
+    if (!reviewTarget) return;
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === reviewTarget.orderId
+          ? {
+              ...o,
+              items: o.items.map((item, idx) =>
+                idx === reviewTarget.itemIndex
+                  ? { ...item, reviewed: true, rating, reviewText: text }
+                  : item
+              ),
+            }
+          : o
+      )
+    );
+    setRewardPoints((p) => p + POINTS_PER_REVIEW);
+    setJustEarned(POINTS_PER_REVIEW);
+    setTimeout(() => setJustEarned(null), 3000);
+    setReviewTarget(null);
+  }
+
+  const reviewingItem = reviewTarget
+    ? orders.find((o) => o.id === reviewTarget.orderId)?.items[reviewTarget.itemIndex]
+    : null;
+
+  // Reward tier
+  const tier =
+    rewardPoints >= 500 ? { name: 'Gold', color: '#c8992e', next: null, nextAt: 500 } :
+    rewardPoints >= 250 ? { name: 'Silver', color: '#8a9ba8', next: 'Gold', nextAt: 500 } :
+    { name: 'Bronze', color: '#a97c50', next: 'Silver', nextAt: 250 };
+
+  const progress = tier.nextAt ? Math.min((rewardPoints / tier.nextAt) * 100, 100) : 100;
 
   return (
     <>
       <style>{CSS}</style>
       <section className="pf">
 
-        {/* Top hero card */}
+        {/* Hero */}
         <div className="pf-hero">
           <div className="pf-avatar">
             <span className="pf-avatar-init">P</span>
@@ -31,10 +441,43 @@ export default function ProfileSection() {
           </div>
         </div>
 
-        {/* Main view */}
+        {/* ── MAIN VIEW ── */}
         {view === 'main' && (
           <div className="pf-body">
-            <div className="pf-section-label">Account</div>
+
+            {/* Reward Summary Card */}
+            <div className="pf-reward-card">
+              <div className="pf-reward-card-top">
+                <div>
+                  <p className="pf-reward-label">Sparkle Points</p>
+                  <p className="pf-reward-pts">
+                    {rewardPoints}
+                    <span className="pf-reward-pts-unit"> pts</span>
+                  </p>
+                </div>
+                <div className="pf-reward-tier-badge" style={{ background: tier.color + '22', color: tier.color, borderColor: tier.color + '55' }}>
+                  ✦ {tier.name}
+                </div>
+              </div>
+              {tier.next && (
+                <>
+                  <div className="pf-reward-bar-track">
+                    <div className="pf-reward-bar-fill" style={{ width: `${progress}%`, background: tier.color }} />
+                  </div>
+                  <p className="pf-reward-bar-hint">
+                    {tier.nextAt! - rewardPoints} pts to {tier.next}
+                  </p>
+                </>
+              )}
+              {pendingReviews > 0 && (
+                <button className="pf-reward-cta" onClick={() => setView('orders')}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  Review {pendingReviews} item{pendingReviews > 1 ? 's' : ''} · Earn {pendingReviews * POINTS_PER_REVIEW} pts
+                </button>
+              )}
+            </div>
+
+            <div className="pf-section-label" style={{ marginTop: 24 }}>Account</div>
             <div className="pf-list">
               <button className="pf-item" onClick={() => setView('orders')}>
                 <span className="pf-item-icon">
@@ -42,8 +485,9 @@ export default function ProfileSection() {
                 </span>
                 <span className="pf-item-txt">
                   <span className="pf-item-name">Order History</span>
-                  <span className="pf-item-sub">{MOCK_ORDERS.length} past orders</span>
+                  <span className="pf-item-sub">{orders.length} past orders{pendingReviews > 0 ? ` · ${pendingReviews} awaiting review` : ''}</span>
                 </span>
+                {pendingReviews > 0 && <span className="pf-item-dot" />}
                 <span className="pf-chevron">›</span>
               </button>
 
@@ -84,40 +528,137 @@ export default function ProfileSection() {
               </a>
             </div>
 
-            <button
-              className="pf-logout"
-              onClick={() => setShowLogoutConfirm(true)}
-            >
+            <button className="pf-logout" onClick={() => setShowLogoutConfirm(true)}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               Log out
             </button>
           </div>
         )}
 
-        {/* Order history */}
+        {/* ── ORDER HISTORY VIEW ── */}
         {view === 'orders' && (
           <div className="pf-body">
             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
             <div className="pf-section-label">Order History</div>
+
+            {pendingReviews > 0 && (
+              <div className="pf-review-banner">
+                <div className="pf-review-banner-icon">✦</div>
+                <div>
+                  <p className="pf-review-banner-title">Review & Earn</p>
+                  <p className="pf-review-banner-sub">Earn {POINTS_PER_REVIEW} Sparkle Points per review. {pendingReviews} item{pendingReviews > 1 ? 's' : ''} waiting!</p>
+                </div>
+              </div>
+            )}
+
             <div className="pf-orders">
-              {MOCK_ORDERS.map((o, i) => (
-                <div key={i} className="pf-order">
+              {orders.map((o) => (
+                <div key={o.id} className="pf-order">
                   <div className="pf-order-top">
                     <span className="pf-order-id">#{o.id}</span>
                     <span className={`pf-order-status ${o.status.toLowerCase()}`}>{o.status}</span>
                   </div>
-                  <p className="pf-order-items">{o.items}</p>
-                  <div className="pf-order-bot">
+                  <div className="pf-order-date-row">
                     <span className="pf-order-date">{o.date}</span>
                     <span className="pf-order-amt">{o.amount}</span>
+                  </div>
+
+                  {/* Per-product rows */}
+                  <div className="pf-order-products">
+                    {o.items.map((item, idx) => (
+                      <div key={idx} className="pf-product-row">
+                        <div className="pf-product-info">
+                          <span className="pf-product-name">{item.name}</span>
+                          {item.reviewed && (
+                            <span className="pf-product-stars">
+                              {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
+                            </span>
+                          )}
+                        </div>
+                        {o.status === 'Delivered' && (
+                          item.reviewed ? (
+                            <span className="pf-reviewed-badge">✓ Reviewed</span>
+                          ) : (
+                            <button
+                              className="pf-review-btn"
+                              onClick={() => setReviewTarget({ orderId: o.id, itemIndex: idx })}
+                            >
+                              Review &amp; Earn
+                            </button>
+                          )
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Reward Points Section */}
+            <div className="pf-section-label" style={{ marginTop: 28 }}>Your Rewards</div>
+            <div className="pf-reward-full-card">
+              <div className="pf-reward-full-top">
+                <div>
+                  <p className="pf-reward-full-label">Total Sparkle Points</p>
+                  <p className="pf-reward-full-pts">
+                    {rewardPoints}<span className="pf-reward-full-unit"> pts</span>
+                  </p>
+                </div>
+                <div className="pf-reward-full-tier" style={{ color: tier.color }}>
+                  <div className="pf-reward-full-tier-icon" style={{ background: tier.color + '22', border: `1px solid ${tier.color}55` }}>✦</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' }}>{tier.name}</span>
+                </div>
+              </div>
+
+              {tier.next && (
+                <div className="pf-reward-progress-wrap">
+                  <div className="pf-reward-bar-track">
+                    <div className="pf-reward-bar-fill" style={{ width: `${progress}%`, background: tier.color }} />
+                  </div>
+                  <p className="pf-reward-bar-hint">{tier.nextAt! - rewardPoints} more pts to reach {tier.next}</p>
+                </div>
+              )}
+
+              <div className="pf-reward-breakdown">
+                <div className="pf-reward-stat">
+                  <span className="pf-reward-stat-val">{totalReviewed}</span>
+                  <span className="pf-reward-stat-lbl">Reviews</span>
+                </div>
+                <div className="pf-reward-divider" />
+                <div className="pf-reward-stat">
+                  <span className="pf-reward-stat-val">{totalReviewed * POINTS_PER_REVIEW}</span>
+                  <span className="pf-reward-stat-lbl">Pts Earned</span>
+                </div>
+                <div className="pf-reward-divider" />
+                <div className="pf-reward-stat">
+                  <span className="pf-reward-stat-val">{pendingReviews}</span>
+                  <span className="pf-reward-stat-lbl">Pending</span>
+                </div>
+              </div>
+
+              {/* <div className="pf-reward-how">
+                <p className="pf-reward-how-title">How to earn</p>
+                <div className="pf-reward-how-row">
+                  <span className="pf-reward-how-icon">✍</span>
+                  <span>Write a product review</span>
+                  <span className="pf-reward-how-pts">+{POINTS_PER_REVIEW} pts</span>
+                </div>
+                <div className="pf-reward-how-row">
+                  <span className="pf-reward-how-icon">🛍</span>
+                  <span>Every purchase</span>
+                  <span className="pf-reward-how-pts">+10 pts</span>
+                </div>
+                <div className="pf-reward-how-row">
+                  <span className="pf-reward-how-icon">🎂</span>
+                  <span>Birthday bonus</span>
+                  <span className="pf-reward-how-pts">+100 pts</span>
+                </div>
+              </div> */}
+            </div>
           </div>
         )}
 
-        {/* Address */}
+        {/* ── ADDRESS VIEW ── */}
         {view === 'address' && (
           <div className="pf-body">
             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
@@ -127,13 +668,13 @@ export default function ProfileSection() {
                 <span className="pf-address-tag">Home</span>
                 <button className="pf-address-edit">Edit</button>
               </div>
-              <p className="pf-address-txt">Priya Sharma<br/>42, Rose Garden Society<br/>Andheri West, Mumbai – 400053<br/>Maharashtra, India</p>
+              <p className="pf-address-txt">Priya Sharma<br />42, Rose Garden Society<br />Andheri West, Mumbai – 400053<br />Maharashtra, India</p>
             </div>
             <button className="pf-add-address">+ Add New Address</button>
           </div>
         )}
 
-        {/* Change password */}
+        {/* ── PASSWORD VIEW ── */}
         {view === 'password' && (
           <div className="pf-body">
             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
@@ -153,17 +694,34 @@ export default function ProfileSection() {
           </div>
         )}
 
-        {/* Logout confirm overlay */}
+        {/* ── LOGOUT CONFIRM ── */}
         {showLogoutConfirm && (
           <div className="pf-overlay" onClick={() => setShowLogoutConfirm(false)}>
-            <div className="pf-dialog" onClick={e => e.stopPropagation()}>
+            <div className="pf-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="pf-dialog-handle" />
               <h3 className="pf-dialog-title">Log out?</h3>
-              <p className="pf-dialog-sub">You'll need to sign in again to access your account.</p>
+              <p className="pf-dialog-sub">You&apos;ll need to sign in again to access your account.</p>
               <div className="pf-dialog-actions">
                 <button className="pf-dialog-cancel" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
                 <button className="pf-dialog-confirm">Log out</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── REVIEW MODAL ── */}
+        {reviewTarget && reviewingItem && (
+          <ReviewModal
+            itemName={reviewingItem.name}
+            onClose={() => setReviewTarget(null)}
+            onSubmit={handleSubmitReview}
+          />
+        )}
+
+        {/* ── TOAST ── */}
+        {justEarned !== null && (
+          <div className="pf-toast">
+            ✦ +{justEarned} Sparkle Points earned!
           </div>
         )}
       </section>
@@ -174,91 +732,425 @@ export default function ProfileSection() {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Nunito:wght@300;400;500;600;700&display=swap');
 
-.pf { background: #faf8f3; min-height: 100vh; font-family: 'Nunito', sans-serif; padding-bottom: 90px; position: relative; }
+*, *::before, *::after { box-sizing: border-box; }
 
+.pf {
+  background: #faf8f3;
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  padding-bottom: 90px;
+  position: relative;
+}
+
+/* ── HERO ── */
 .pf-hero {
-    background: linear-gradient(160deg, #446c35bd 100%, #365928 0%);
+  background: linear-gradient(160deg, #446c35bd 100%, #365928 0%);
   padding: 64px 20px 32px;
-  display: flex; align-items: center; gap: 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 .pf-avatar {
   width: 64px; height: 64px; border-radius: 50%;
-  background: rgba(200,153,46,.22); border: 2px solid rgba(200,153,46,.4);
+  background: rgba(200,153,46,.22);
+  border: 2px solid rgba(200,153,46,.4);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.pf-avatar-init { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-style: italic; color: #c8992e; }
-.pf-name { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 400; color: #fff; margin-bottom: 2px; }
+.pf-avatar-init {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem; font-style: italic; color: #c8992e;
+}
+.pf-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem; font-weight: 400; color: #fff; margin-bottom: 2px;
+}
 .pf-email { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 6px; }
-.pf-badge { font-size: 8.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; background: rgba(200,153,46,.18); color: #c8992e; border: 1px solid rgba(200,153,46,.3); padding: 3px 10px; border-radius: 100px; }
+.pf-badge {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  background: rgba(200,153,46,.18); color: #c8992e;
+  border: 1px solid rgba(200,153,46,.3);
+  padding: 3px 10px; border-radius: 100px;
+}
 
+/* ── BODY ── */
 .pf-body { padding: 20px 14px; }
-@media (min-width: 600px) { .pf-body { max-width: 540px; margin: 0 auto; padding: 28px 0; } }
 
-.pf-section-label { font-size: 8.5px; font-weight: 700; letter-spacing: .36em; text-transform: uppercase; color: #828278; margin-bottom: 8px; padding-left: 2px; }
+@media (min-width: 600px) {
+  .pf-body { max-width: 600px; margin: 0 auto; padding: 28px 0; }
+  .pf-hero { padding-left: calc(50% - 286px); padding-right: calc(50% - 286px); }
+}
+@media (min-width: 1024px) {
+  .pf-body { max-width: 720px; }
+  .pf-hero { padding-left: calc(50% - 346px); padding-right: calc(50% - 346px); }
+}
 
-.pf-list { background: #fff; border: 1px solid #e8dfc8; border-radius: 14px; overflow: hidden; }
+.pf-section-label {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .36em;
+  text-transform: uppercase; color: #828278;
+  margin-bottom: 8px; padding-left: 2px;
+}
+
+/* ── LIST ── */
+.pf-list {
+  background: #fff;
+  border: 1px solid #e8dfc8;
+  border-radius: 14px;
+  overflow: hidden;
+}
 .pf-item {
   width: 100%; display: flex; align-items: center; gap: 14px;
-  padding: 16px 16px; text-decoration: none;
-  background: transparent; border: none; border-bottom: 1px solid #f0e8d8; cursor: pointer;
-  text-align: left; transition: background .16s;
+  padding: 16px; text-decoration: none;
+  background: transparent; border: none;
+  border-bottom: 1px solid #f0e8d8;
+  cursor: pointer; text-align: left;
+  transition: background .16s;
   -webkit-tap-highlight-color: transparent;
 }
 .pf-item:last-child { border-bottom: none; }
-.pf-item:active { background: #faf8f3; }
+.pf-item:active, .pf-item:hover { background: #faf8f3; }
 .pf-item-icon { color: #527a3e; flex-shrink: 0; display: flex; align-items: center; }
 .pf-item-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .pf-item-name { font-size: 13px; font-weight: 600; color: #1c1c17; }
 .pf-item-sub { font-size: 10.5px; color: #828278; }
 .pf-chevron { color: #b4b4a4; font-size: 18px; line-height: 1; }
+.pf-item-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #c8992e; flex-shrink: 0;
+}
 
+/* ── LOGOUT ── */
 .pf-logout {
   display: flex; align-items: center; gap: 8px;
-  margin-top: 28px; width: 100%;
-  padding: 14px 16px;
-  background: #fff; border: 1.5px solid #f0c8c8; border-radius: 12px;
-  font-size: 12px; font-weight: 700; letter-spacing: .1em;
-  color: #c04040; cursor: pointer;
+  margin-top: 28px; width: 100%; padding: 14px 16px;
+  background: #fff; border: 1.5px solid #f0c8c8;
+  border-radius: 12px; font-size: 12px; font-weight: 700;
+  letter-spacing: .1em; color: #c04040; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── REWARD CARD (main view) ── */
+.pf-reward-card {
+  background: linear-gradient(135deg, #253d18 0%, #3b6228 100%);
+  border-radius: 16px; padding: 20px 18px; margin-bottom: 6px;
+}
+.pf-reward-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 12px;
+}
+.pf-reward-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 4px;
+}
+.pf-reward-pts {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.4rem; color: #fff; line-height: 1;
+}
+.pf-reward-pts-unit { font-size: 1rem; color: rgba(255,255,255,.6); }
+.pf-reward-tier-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; padding: 5px 12px; border-radius: 100px;
+  border: 1px solid;
+}
+.pf-reward-bar-track {
+  background: rgba(255,255,255,.15); border-radius: 100px;
+  height: 5px; overflow: hidden; margin-bottom: 5px;
+}
+.pf-reward-bar-fill {
+  height: 100%; border-radius: 100px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+.pf-reward-bar-hint { font-size: 9.5px; color: rgba(255,255,255,.5); }
+.pf-reward-cta {
+  display: flex; align-items: center; gap: 7px; margin-top: 14px;
+  background: rgba(200,153,46,.18); border: 1px solid rgba(200,153,46,.4);
+  color: #f0d080; border-radius: 10px; padding: 10px 14px;
+  font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── BACK ── */
 .pf-back {
-  font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
-  color: #527a3e; background: none; border: none; cursor: pointer;
+  font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: #527a3e;
+  background: none; border: none; cursor: pointer;
   margin-bottom: 16px; padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── REVIEW BANNER ── */
+.pf-review-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: linear-gradient(135deg, #fdf6e3, #fbefd0);
+  border: 1px solid #e8d48a; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 14px;
+}
+.pf-review-banner-icon {
+  font-size: 18px; color: #c8992e; flex-shrink: 0; line-height: 1.4;
+}
+.pf-review-banner-title {
+  font-size: 12px; font-weight: 700; color: #7a5a0a; margin-bottom: 2px;
+}
+.pf-review-banner-sub { font-size: 10.5px; color: #a07832; }
+
+/* ── ORDERS ── */
 .pf-orders { display: flex; flex-direction: column; gap: 10px; }
-.pf-order { background: #fff; border: 1px solid #e8dfc8; border-radius: 12px; padding: 16px; }
-.pf-order-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.pf-order {
+  background: #fff; border: 1px solid #e8dfc8;
+  border-radius: 14px; padding: 16px;
+}
+.pf-order-top {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 6px;
+}
 .pf-order-id { font-size: 11px; font-weight: 700; color: #484840; }
-.pf-order-status { font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; }
+.pf-order-status {
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 100px;
+}
 .pf-order-status.delivered { background: #eff6ea; color: #3b6d11; }
 .pf-order-status.processing { background: #faeeda; color: #633806; }
-.pf-order-items { font-size: 11.5px; color: #484840; margin-bottom: 10px; line-height: 1.45; }
-.pf-order-bot { display: flex; justify-content: space-between; }
+.pf-order-date-row {
+  display: flex; justify-content: space-between;
+  margin-bottom: 12px;
+}
 .pf-order-date { font-size: 10px; color: #828278; }
 .pf-order-amt { font-size: 12px; font-weight: 700; color: #253d18; }
 
-.pf-address-card { background: #fff; border: 1px solid #e8dfc8; border-radius: 14px; padding: 18px; margin-bottom: 12px; }
-.pf-address-top { display: flex; justify-content: space-between; margin-bottom: 10px; }
-.pf-address-tag { font-size: 9px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; background: #eff6ea; color: #3b6d11; border: 1px solid #c0dd97; padding: 3px 10px; border-radius: 100px; }
-.pf-address-edit { font-size: 10px; font-weight: 700; color: #527a3e; background: none; border: none; cursor: pointer; }
+/* ── PRODUCT ROWS ── */
+.pf-order-products {
+  display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid #f0e8d8; padding-top: 10px;
+}
+.pf-product-row {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.pf-product-info {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
+}
+.pf-product-name {
+  font-size: 11.5px; font-weight: 600; color: #484840;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pf-product-stars { font-size: 10px; color: #c8992e; letter-spacing: 1px; }
+.pf-review-btn {
+  flex-shrink: 0;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .08em;
+  background: #f0f7eb; border: 1.5px solid #b4d97a;
+  color: #3b6d11; padding: 5px 10px; border-radius: 8px;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-review-btn:hover { background: #e2f0d0; }
+.pf-reviewed-badge {
+  flex-shrink: 0; font-size: 9.5px; font-weight: 700;
+  color: #527a3e; background: #eff6ea;
+  padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+}
+
+/* ── REWARD FULL CARD (orders view) ── */
+.pf-reward-full-card {
+  background: #fff; border: 1px solid #e8dfc8;
+  border-radius: 16px; padding: 20px; overflow: hidden;
+}
+.pf-reward-full-top {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 14px;
+}
+.pf-reward-full-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: #828278; margin-bottom: 4px;
+}
+.pf-reward-full-pts {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem; color: #253d18; line-height: 1;
+}
+.pf-reward-full-unit { font-size: .9rem; color: #828278; }
+.pf-reward-full-tier {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.pf-reward-full-tier-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.pf-reward-progress-wrap { margin-bottom: 16px; }
+.pf-reward-breakdown {
+  display: flex; align-items: center;
+  background: #faf8f3; border-radius: 10px;
+  padding: 14px; margin-bottom: 16px; gap: 0;
+}
+.pf-reward-stat {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+}
+.pf-reward-stat-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem; color: #253d18;
+}
+.pf-reward-stat-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: #828278;
+}
+.pf-reward-divider {
+  width: 1px; height: 32px; background: #e8dfc8;
+}
+.pf-reward-how { display: flex; flex-direction: column; gap: 8px; }
+.pf-reward-how-title {
+  font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: #828278; margin-bottom: 2px;
+}
+.pf-reward-how-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11.5px; color: #484840;
+}
+.pf-reward-how-icon { font-size: 14px; flex-shrink: 0; }
+.pf-reward-how-pts {
+  margin-left: auto; font-size: 11px; font-weight: 700;
+  color: #3b6d11; background: #eff6ea;
+  padding: 2px 8px; border-radius: 100px;
+}
+
+/* ── ADDRESS ── */
+.pf-address-card {
+  background: #fff; border: 1px solid #e8dfc8;
+  border-radius: 14px; padding: 18px; margin-bottom: 12px;
+}
+.pf-address-top {
+  display: flex; justify-content: space-between; margin-bottom: 10px;
+}
+.pf-address-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: .2em;
+  text-transform: uppercase; background: #eff6ea; color: #3b6d11;
+  border: 1px solid #c0dd97; padding: 3px 10px; border-radius: 100px;
+}
+.pf-address-edit {
+  font-size: 10px; font-weight: 700; color: #527a3e;
+  background: none; border: none; cursor: pointer;
+}
 .pf-address-txt { font-size: 12px; color: #484840; line-height: 1.7; }
-.pf-add-address { width: 100%; padding: 14px; border: 1.5px dashed #c0dd97; border-radius: 12px; background: #eff6ea; color: #3b6d11; font-size: 11px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pf-add-address {
+  width: 100%; padding: 14px; border: 1.5px dashed #c0dd97;
+  border-radius: 12px; background: #eff6ea; color: #3b6d11;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 
+/* ── PASSWORD FORM ── */
 .pf-form { display: flex; flex-direction: column; gap: 14px; }
-.pf-label { display: flex; flex-direction: column; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #828278; }
-.pf-input { padding: 12px 14px; border: 1.5px solid #e8dfc8; border-radius: 10px; font-size: 13px; font-family: 'Nunito', sans-serif; background: #fff; color: #1c1c17; outline: none; transition: border-color .2s; }
+.pf-label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: #828278;
+}
+.pf-input {
+  padding: 12px 14px; border: 1.5px solid #e8dfc8;
+  border-radius: 10px; font-size: 13px;
+  font-family: 'Nunito', sans-serif; background: #fff;
+  color: #1c1c17; outline: none; transition: border-color .2s;
+}
 .pf-input:focus { border-color: #527a3e; }
-.pf-submit { margin-top: 4px; padding: 14px; background: #253d18; color: #fff; border: none; border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pf-submit {
+  margin-top: 4px; padding: 14px; background: #253d18;
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 
-.pf-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 80px; }
-.pf-dialog { background: #fff; border-radius: 18px 18px 0 0; padding: 28px 24px 24px; width: 100%; max-width: 480px; }
-.pf-dialog-title { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 400; color: #1c1c17; margin-bottom: 6px; }
+/* ── OVERLAYS & DIALOGS ── */
+.pf-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.48);
+  z-index: 1000; display: flex; align-items: flex-end;
+  justify-content: center;
+}
+.pf-dialog {
+  background: #fff; border-radius: 18px 18px 0 0;
+  padding: 16px 24px 32px; width: 100%; max-width: 520px;
+}
+.pf-review-dialog { padding-bottom: 36px; }
+.pf-dialog-handle {
+  width: 36px; height: 4px; border-radius: 100px;
+  background: #e0d8c8; margin: 0 auto 20px;
+}
+.pf-dialog-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem; font-weight: 400; color: #1c1c17; margin-bottom: 6px;
+}
 .pf-dialog-sub { font-size: 12px; color: #828278; margin-bottom: 20px; }
 .pf-dialog-actions { display: flex; gap: 10px; }
-.pf-dialog-cancel { flex: 1; padding: 13px; border: 1.5px solid #e8dfc8; border-radius: 10px; background: #fff; font-size: 11px; font-weight: 700; color: #484840; cursor: pointer; }
-.pf-dialog-confirm { flex: 1; padding: 13px; background: #c04040; border: none; border-radius: 10px; font-size: 11px; font-weight: 700; color: #fff; cursor: pointer; }
+.pf-dialog-cancel {
+  flex: 1; padding: 13px; border: 1.5px solid #e8dfc8;
+  border-radius: 10px; background: #fff; font-size: 11px;
+  font-weight: 700; color: #484840; cursor: pointer;
+}
+.pf-dialog-confirm {
+  flex: 1; padding: 13px; background: #c04040;
+  border: none; border-radius: 10px; font-size: 11px;
+  font-weight: 700; color: #fff; cursor: pointer;
+}
+
+/* ── REVIEW MODAL ── */
+.pf-review-item-name {
+  font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: #828278; margin-bottom: 2px;
+}
+.pf-stars-row {
+  display: flex; gap: 6px; margin: 12px 0 16px;
+}
+.pf-star {
+  font-size: 28px; background: none; border: none;
+  cursor: pointer; color: #ddd; transition: color .12s, transform .12s;
+  padding: 0; line-height: 1;
+}
+.pf-star.active { color: #c8992e; }
+.pf-star:hover { transform: scale(1.15); }
+.pf-review-textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid #e8dfc8; border-radius: 10px;
+  font-size: 12.5px; font-family: 'Nunito', sans-serif;
+  color: #1c1c17; background: #faf8f3;
+  outline: none; resize: none; margin-bottom: 12px;
+  transition: border-color .2s;
+}
+.pf-review-textarea:focus { border-color: #527a3e; }
+.pf-reward-hint {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: #7a5a0a;
+  background: #fdf6e3; border: 1px solid #e8d48a;
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 18px;
+}
+.pf-review-submit {
+  background: #253d18 !important;
+}
+.pf-review-submit:disabled {
+  background: #ccc !important; cursor: not-allowed;
+}
+
+/* ── TOAST ── */
+.pf-toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  background: #253d18; color: #f0d080;
+  font-size: 12px; font-weight: 700; letter-spacing: .1em;
+  padding: 12px 20px; border-radius: 100px;
+  z-index: 2000; white-space: nowrap;
+  animation: toastIn .3s ease, toastOut .3s ease 2.7s forwards;
+  pointer-events: none;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@media (min-width: 768px) {
+  .pf-overlay { align-items: center; padding: 0; }
+  .pf-dialog { border-radius: 18px; max-width: 440px; }
+  .pf-toast { bottom: 32px; }
+}
 `;

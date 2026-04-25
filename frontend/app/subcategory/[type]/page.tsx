@@ -1,11 +1,27 @@
+// app/subcategory/[type]/page.tsx
 import SubcategoryPage from '@/components/ui/SubCategorySection';
 
-export default async function Page({
-  params,
-}: {
+interface Props {
   params: Promise<{ type: string }>;
-}) {
-  const { type } = await params;
+}
 
+export default async function SubcategoryRoute({ params }: Props) {
+  const { type } = await params;
   return <SubcategoryPage type={type} />;
+}
+
+export function generateStaticParams() {
+  return [
+    { type: 'necklace' },
+    { type: 'earrings' },
+    { type: 'bracelets' },
+    { type: 'rings' },
+    { type: 'waist-chains' },
+    { type: 'couple-sets' },
+    { type: 'men-chains' },
+    { type: 'men-bracelets' },
+    { type: 'men-rings' },
+    { type: 'men-earrings' },
+    { type: 'men-pendants' },
+  ];
 }

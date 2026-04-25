@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useGender } from "@/lib/genderContext";
 
-const styles = [
+const womenStyles = [
   {
     id: 1,
     name: "Soft Girl",
@@ -83,8 +84,92 @@ const styles = [
   },
 ];
 
+const menStyles = [
+  {
+    id: 1,
+    name: "Street Edge",
+    sub: "Bold & Raw",
+    slug: "men-street-edge",
+    emoji: "⛓️",
+    desc: "Chunky chains and attitude — wear it loud",
+    tag: "Trending",
+    img: "/images/men-street.jpg",
+    fallback: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=600&q=80&auto=format&fit=crop",
+    accent: "#8a8a8a",
+    tint: "rgba(100,100,100,0.18)",
+  },
+  {
+    id: 2,
+    name: "Corporate Sharp",
+    sub: "Refined & Sleek",
+    slug: "men-corporate",
+    emoji: "💼",
+    desc: "Subtle accents that command respect in any boardroom",
+    tag: "Essential",
+    img: "/images/men-corporate.jpg",
+    fallback: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80&auto=format&fit=crop",
+    accent: "#c9a96e",
+    tint: "rgba(201,169,110,0.18)",
+  },
+  {
+    id: 3,
+    name: "Island King",
+    sub: "Free & Laid-Back",
+    slug: "men-island",
+    emoji: "🌊",
+    desc: "Rope, shells, and gold for the free-spirited man",
+    tag: "New",
+    img: "/images/men-island.jpg",
+    fallback: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&auto=format&fit=crop",
+    accent: "#a8c5a0",
+    tint: "rgba(140,190,160,0.18)",
+  },
+  {
+    id: 4,
+    name: "Minimal Stack",
+    sub: "Clean & Intentional",
+    slug: "men-minimal",
+    emoji: "◈",
+    desc: "Less noise, more meaning — one perfect piece",
+    tag: "Bestseller",
+    img: "/images/men-minimal.jpg",
+    fallback: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80&auto=format&fit=crop",
+    accent: "#d4af37",
+    tint: "rgba(212,175,55,0.15)",
+  },
+  {
+    id: 5,
+    name: "Rocker Noir",
+    sub: "Dark & Rebellious",
+    slug: "men-rocker",
+    emoji: "🤘",
+    desc: "Black, silver, and no apologies",
+    tag: "Fan Fav",
+    img: "/images/men-rocker.jpg",
+    fallback: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80&auto=format&fit=crop",
+    accent: "#6a6a6a",
+    tint: "rgba(80,80,80,0.2)",
+  },
+  {
+    id: 6,
+    name: "Gold Royalty",
+    sub: "Rich & Statement",
+    slug: "men-gold",
+    emoji: "👑",
+    desc: "Heavy gold, thick links — for the man who leads",
+    tag: "Luxury",
+    img: "/images/men-gold.jpg",
+    fallback: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80&auto=format&fit=crop",
+    accent: "#d4af37",
+    tint: "rgba(212,175,55,0.22)",
+  },
+];
+
 export default function ShopByStyle() {
   const router = useRouter();
+  const { gender } = useGender();
+  const styles = gender === "men" ? menStyles : womenStyles;
+
   const [visible, setVisible] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -100,6 +185,14 @@ export default function ShopByStyle() {
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
+
+  // Reset scroll on gender change
+  useEffect(() => {
+    const el = trackRef.current;
+    if (el) el.scrollLeft = 0;
+    setCanScrollLeft(false);
+    setCanScrollRight(true);
+  }, [gender]);
 
   const updateScrollState = () => {
     const el = trackRef.current;
@@ -122,6 +215,10 @@ export default function ShopByStyle() {
     el.scrollBy({ left: dir === "right" ? 320 : -320, behavior: "smooth" });
   };
 
+  const sectionTitle = gender === "men"
+    ? (<>Shop by <em>His</em> Style</>)
+    : (<>Shop by <em>Your</em> Style</>);
+
   return (
     <>
       <style>{`
@@ -135,7 +232,6 @@ export default function ShopByStyle() {
           font-family: 'Jost', sans-serif;
         }
 
-        /* Soft ambient orbs */
         .sbs-wrap::before {
           content: '';
           position: absolute;
@@ -157,7 +253,6 @@ export default function ShopByStyle() {
           z-index: 0;
         }
 
-        /* ── Header ── */
         .sbs-head {
           display: flex;
           align-items: center;
@@ -181,8 +276,8 @@ export default function ShopByStyle() {
           font-weight: 500;
           letter-spacing: 0.28em;
           text-transform: uppercase;
-          color: #c9a86c;
-          background: rgba(201,168,108,0.10);
+          color: #3b1f0f;
+          background: #be9568;;
           border: 1px solid rgba(201,168,108,0.22);
           padding: 5px 12px 4px;
           border-radius: 100px;
@@ -195,7 +290,7 @@ export default function ShopByStyle() {
         .sbs-pill-dot {
           width: 4px; height: 4px;
           border-radius: 50%;
-          background: #c9a86c;
+          background:  #3b1f0f;
           box-shadow: 0 0 5px rgba(201,168,108,0.7);
         }
 
@@ -204,7 +299,7 @@ export default function ShopByStyle() {
           font-size: clamp(28px, 3.5vw, 46px);
           font-weight: 300;
           line-height: 1.08;
-          color: #f5edd8;
+          color: #3b1f0f;
           margin: 0;
           letter-spacing: -0.01em;
           opacity: 0;
@@ -214,10 +309,9 @@ export default function ShopByStyle() {
         .sbs-title.on { opacity: 1; transform: translateY(0); }
         .sbs-title em {
           font-style: italic;
-          color: #c9a86c;
+          color: #f9b302;
         }
 
-        /* Nav arrows */
         .sbs-arrows {
           display: flex;
           gap: 8px;
@@ -254,7 +348,6 @@ export default function ShopByStyle() {
           cursor: not-allowed;
         }
 
-        /* ── Scroll track ── */
         .sbs-track {
           display: flex;
           gap: 14px;
@@ -270,7 +363,6 @@ export default function ShopByStyle() {
         }
         .sbs-track::-webkit-scrollbar { display: none; }
 
-        /* ── Card ── */
         .sbs-card {
           flex: 0 0 220px;
           position: relative;
@@ -303,7 +395,6 @@ export default function ShopByStyle() {
           .sbs-card { flex: 0 0 260px; }
         }
 
-        /* Photo */
         .card-photo {
           position: absolute;
           inset: 0;
@@ -318,7 +409,6 @@ export default function ShopByStyle() {
         }
         .sbs-card:hover .card-photo img { transform: scale(1.09); }
 
-        /* Overlays */
         .card-vignette {
           position: absolute;
           inset: 0;
@@ -351,7 +441,6 @@ export default function ShopByStyle() {
         }
         .sbs-card:hover .card-tint { opacity: 1; }
 
-        /* Shimmer */
         .card-shimmer {
           position: absolute;
           inset: 0;
@@ -363,7 +452,6 @@ export default function ShopByStyle() {
         .sbs-card:hover .card-shimmer { animation: shimmerSweep 0.6s ease forwards; }
         @keyframes shimmerSweep { to { transform: translateX(110%); } }
 
-        /* Corner brackets */
         .card-corner {
           position: absolute;
           width: 12px; height: 12px;
@@ -377,7 +465,6 @@ export default function ShopByStyle() {
         .cc-bl { bottom: 12px; left: 12px; border-bottom: 1px solid rgba(201,169,110,0.65); border-left: 1px solid rgba(201,169,110,0.65); }
         .cc-br { bottom: 12px; right: 12px; border-bottom: 1px solid rgba(201,169,110,0.65); border-right: 1px solid rgba(201,169,110,0.65); }
 
-        /* Badge */
         .card-badge {
           position: absolute;
           top: 12px;
@@ -393,7 +480,6 @@ export default function ShopByStyle() {
           border-radius: 2px;
         }
 
-        /* Content */
         .card-content {
           position: absolute;
           inset: 0;
@@ -484,7 +570,6 @@ export default function ShopByStyle() {
         .cta-arrow { transition: transform 0.25s ease; font-size: 10px; }
         .sbs-card:hover .cta-arrow { transform: translateX(4px); }
 
-        /* ── Scroll indicator ── */
         .sbs-indicator {
           display: flex;
           align-items: center;
@@ -509,7 +594,6 @@ export default function ShopByStyle() {
           transform: scale(1.4);
         }
 
-        /* Edge fade masks */
         .sbs-track-wrap {
           position: relative;
           z-index: 2;
@@ -543,7 +627,6 @@ export default function ShopByStyle() {
       `}</style>
 
       <section className="sbs-wrap" ref={sectionRef} aria-label="Shop by Style">
-        {/* Header row */}
         <div className="sbs-head">
           <div className="sbs-head-left">
             <div className={`sbs-pill${visible ? " on" : ""}`}>
@@ -551,7 +634,7 @@ export default function ShopByStyle() {
               Curated Collections
             </div>
             <h2 className={`sbs-title${visible ? " on" : ""}`}>
-              Shop by <em>Your</em> Style
+              {sectionTitle}
             </h2>
           </div>
 
@@ -575,12 +658,8 @@ export default function ShopByStyle() {
           </div>
         </div>
 
-        {/* Track */}
         <div className="sbs-track-wrap">
-          <div
-            className="sbs-fade-left"
-            style={{ opacity: canScrollLeft ? 1 : 0 }}
-          />
+          <div className="sbs-fade-left" style={{ opacity: canScrollLeft ? 1 : 0 }} />
           <div className="sbs-track" ref={trackRef}>
             {styles.map((s, i) => (
               <div
@@ -595,7 +674,6 @@ export default function ShopByStyle() {
                 onKeyDown={(e) => e.key === "Enter" && router.push(`/styles/${s.slug}`)}
                 aria-label={`Shop ${s.name} style`}
               >
-                {/* Photo */}
                 <div className="card-photo">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -639,13 +717,9 @@ export default function ShopByStyle() {
               </div>
             ))}
           </div>
-          <div
-            className="sbs-fade-right"
-            style={{ opacity: canScrollRight ? 1 : 0 }}
-          />
+          <div className="sbs-fade-right" style={{ opacity: canScrollRight ? 1 : 0 }} />
         </div>
 
-        {/* Dot indicators */}
         <div className={`sbs-indicator${visible ? " on" : ""}`} aria-hidden="true">
           {styles.map((s) => (
             <div

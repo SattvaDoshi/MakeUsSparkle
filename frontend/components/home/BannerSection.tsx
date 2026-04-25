@@ -12,23 +12,23 @@ import Link from 'next/link';
 ───────────────────────────────────────────── */
 
 const banners = [
+  // {
+  //   id: 1,
+  //   tag: 'New Arrival',
+  //   title: 'The Bloom\nCollection',
+  //   subtitle: 'Handcrafted necklaces inspired by nature',
+  //   cta: 'Discover',
+  //   href: '/categories/women/jewellery/necklace',
+  //   accent: 'Necklaces',
+  //   bg: '#1e2410',
+  //   overlay: 'linear-gradient(100deg,#1e2410 38%,transparent 70%)',
+  //   textColor: '#e8ead0',
+  //   // 900×1100px portrait — replace with next/image in production
+  //   imgSrc: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=85&auto=format&fit=crop',
+  //   imgAlt: 'Woman wearing delicate gold necklace with floral pendant',
+  // },
   {
     id: 1,
-    tag: 'New Arrival',
-    title: 'The Bloom\nCollection',
-    subtitle: 'Handcrafted necklaces inspired by nature',
-    cta: 'Discover',
-    href: '/categories/women/jewellery/necklace',
-    accent: 'Necklaces',
-    bg: '#1e2410',
-    overlay: 'linear-gradient(100deg,#1e2410 38%,transparent 70%)',
-    textColor: '#e8ead0',
-    // 900×1100px portrait — replace with next/image in production
-    imgSrc: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=85&auto=format&fit=crop',
-    imgAlt: 'Woman wearing delicate gold necklace with floral pendant',
-  },
-  {
-    id: 2,
     tag: 'Bestseller',
     title: 'Gift Boxes\nCurated',
     subtitle: 'The perfect present, thoughtfully wrapped',
@@ -43,7 +43,7 @@ const banners = [
     imgAlt: 'Elegant jewellery gift box with ribbon',
   },
   {
-    id: 3,
+    id: 2,
     tag: 'Limited',
     title: 'Custom Charm\nJewellery',
     subtitle: 'Design your story, wear your world',
@@ -499,7 +499,7 @@ export default function BannerSection() {
 
         {/* ── Header ── */}
         <div className="bs-header">
-          <span className="bs-eyebrow">Featured</span>
+          {/* <span className="bs-eyebrow">Featured</span> */}
           <h2 className="bs-header-title">Collections &amp; Stories</h2>
           <div className="bs-header-ornament">
             <span />

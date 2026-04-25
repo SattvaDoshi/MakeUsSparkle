@@ -1,45 +1,7 @@
-'use client';
 
-/**
- * ═══════════════════════════════════════════════════════════════
- *  IMAGE SIZE GUIDE
- * ═══════════════════════════════════════════════════════════════
- *
- *  DESKTOP
- *  ┌──────────────────────────────────────────────────────────┐
- *  │  Sidebar preview image (bottom of sidebar)               │
- *  │  → Ratio : 3 : 2  (landscape)                           │
- *  │  → Example size : 210 × 140 px                          │
- *  │                                                          │
- *  │  Subcategory grid cards (content area)                   │
- *  │  → Ratio : 4 : 3  (landscape)                           │
- *  │  → Example size : 320 × 240 px                          │
- *  │                                                          │
- *  │  Solo / banner card (when no subcategories)              │
- *  │  → Ratio : 16 : 9  or wider                             │
- *  │  → Example size : 800 × 450 px, min-height 350px        │
- *  └──────────────────────────────────────────────────────────┘
- *
- *  MOBILE  (split-pane layout)
- *  ┌──────────────────────────────────────────────────────────┐
- *  │  Left sidebar row thumbnails                             │
- *  │  → Ratio : 1 : 1  (square)                              │
- *  │  → Example size : 48 × 48 px                            │
- *  │                                                          │
- *  │  Right content – subcategory grid cards                  │
- *  │  → Ratio : 1 : 1  (square) — matches reference image    │
- *  │  → Example size : 120 × 120 px                          │
- *  │                                                          │
- *  │  Right content – solo banner                             │
- *  │  → Ratio : 16 : 7  (wide landscape)                     │
- *  │  → Example size : 300 × 131 px, height ~150 px          │
- *  └──────────────────────────────────────────────────────────┘
- *
- *  TABLET  (661 – 960 px)
- *  → Same as desktop but sidebar shrinks to 165px
- *  → Grid drops to 2 columns
- * ═══════════════════════════════════════════════════════════════
- */
+
+
+'use client';
 
 import {
   useState,
@@ -49,6 +11,7 @@ import {
   type MouseEvent,
 } from 'react';
 import Link from 'next/link';
+import { useGender } from '@/lib/genderContext';
 
 type Gender = 'women' | 'men';
 
@@ -66,23 +29,27 @@ interface CategoryItem {
   sub: SubCategoryItem[];
 }
 
-/* ─── Images ─────────────────────────────────────────────────────────────── */
 const IMG = {
-  necklace:   'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
-  earrings:   'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&q=90',
-  rings:      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=90',
-  bracelets:  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=90',
-  waistChain: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=90',
-  couple:     'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=800&q=90',
-  giftBox:    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=90',
-  fanCombo:   'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=90',
-  hair:       'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=800&q=90',
-  keychain:   'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=800&q=90',
-  combo:      'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=90',
-  charm:      'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=800&q=90',
+  necklace:    'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
+  earrings:    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&q=90',
+  rings:       'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=90',
+  bracelets:   'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=90',
+  waistChain:  'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=90',
+  couple:      'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=800&q=90',
+  giftBox:     'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=90',
+  fanCombo:    'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=90',
+  hair:        'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=800&q=90',
+  keychain:    'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=800&q=90',
+  combo:       'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=90',
+  charm:       'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=800&q=90',
+  menChain:    'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=90',
+  menBracelet: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=90',
+  menRing:     'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=90',
+  menEarring:  'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&q=90',
+  menWatch:    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=90',
+  menPendant:  'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
 };
 
-/* ─── Data ───────────────────────────────────────────────────────────────── */
 const womenJewellery: SubCategoryItem[] = [
   { name: 'Necklaces',    img: IMG.necklace,   href: '/subcategory/necklace'     },
   { name: 'Earrings',     img: IMG.earrings,   href: '/subcategory/earrings'     },
@@ -93,27 +60,36 @@ const womenJewellery: SubCategoryItem[] = [
 ];
 
 const menJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces',    img: IMG.necklace,   href: '/subcategory/necklace'     },
-  { name: 'Earrings',     img: IMG.earrings,   href: '/subcategory/earrings'     },
-  { name: 'Rings',        img: IMG.rings,      href: '/subcategory/rings'        },
-  { name: 'Bracelets',    img: IMG.bracelets,  href: '/subcategory/bracelets'    },
-  { name: 'Waist Chains', img: IMG.waistChain, href: '/subcategory/waist-chains' },
-  { name: 'Couple Sets',  img: IMG.couple,     href: '/subcategory/couple-sets'  },
+  { name: 'Chains',      img: IMG.menChain,    href: '/subcategory/men-chains'    },
+  { name: 'Bracelets',   img: IMG.menBracelet, href: '/subcategory/men-bracelets' },
+  { name: 'Rings',       img: IMG.menRing,     href: '/subcategory/men-rings'     },
+  { name: 'Earrings',    img: IMG.menEarring,  href: '/subcategory/men-earrings'  },
+  { name: 'Pendants',    img: IMG.menPendant,  href: '/subcategory/men-pendants'  },
+  { name: 'Couple Sets', img: IMG.couple,      href: '/subcategory/couple-sets'   },
 ];
 
-const buildCategories = (gender: Gender): CategoryItem[] => [
-  { name: 'Jewellery',              icon: '◈', img: IMG.necklace,  href: `/categories/${gender}/jewellery`,        sub: gender === 'women' ? womenJewellery : menJewellery },
-  { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/${gender}/gift-boxes`,       sub: [] },
-  { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/${gender}/fan-combos`,       sub: [] },
-  { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/${gender}/custom-charm`,     sub: [] },
-  { name: 'Hair Accessories',       icon: '⟡', img: IMG.hair,      href: `/categories/${gender}/hair-accessories`, sub: [] },
-  { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/${gender}/keychains`,        sub: [] },
-  { name: 'Curated Combos',         icon: '⊞', img: IMG.combo,     href: `/categories/${gender}/curated-combos`,  sub: [] },
-];
+const buildCategories = (gender: Gender): CategoryItem[] =>
+  gender === 'women'
+    ? [
+        { name: 'Jewellery',              icon: '◈', img: IMG.necklace,  href: `/categories/women/jewellery`,        sub: womenJewellery },
+        { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/women/gift-boxes`,       sub: [] },
+        { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/women/fan-combos`,       sub: [] },
+        { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/women/custom-charm`,     sub: [] },
+        { name: 'Hair Accessories',       icon: '⟡', img: IMG.hair,      href: `/categories/women/hair-accessories`, sub: [] },
+        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/women/keychains`,        sub: [] },
+        { name: 'Curated Combos',         icon: '⊞', img: IMG.combo,     href: `/categories/women/curated-combos`,  sub: [] },
+      ]
+    : [
+        { name: 'Jewellery',              icon: '◈', img: IMG.menChain,  href: `/categories/men/jewellery`,         sub: menJewellery },
+        { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/men/gift-boxes`,        sub: [] },
+        { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/men/fan-combos`,        sub: [] },
+        { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/men/custom-charm`,      sub: [] },
+        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/men/keychains`,         sub: [] },
+        { name: 'Watch Straps',           icon: '⊞', img: IMG.menWatch,  href: `/categories/men/watch-straps`,      sub: [] },
+        { name: 'Curated Combos',         icon: '⊟', img: IMG.combo,     href: `/categories/men/curated-combos`,   sub: [] },
+      ];
 
-/* ═══════════════════════════════════════════════════════════════
-   DESKTOP SUB-CARD  (4:3 image ratio — use 320×240px images)
-═══════════════════════════════════════════════════════════════ */
+/* ─── Desktop Sub-Card: image fills entire card, name overlaid on image ─── */
 function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [shine, setShine] = useState({ x: 50, y: 50, on: false });
@@ -133,29 +109,30 @@ function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
       onMouseLeave={() => setShine(s => ({ ...s, on: false }))}
       style={{ '--sx': `${shine.x}%`, '--sy': `${shine.y}%`, animationDelay: `${index * 0.065}s` } as CSSProperties & Record<string, string>}
     >
+      {/* Full-bleed image — no white footer */}
       <div className="sc-img">
         <img src={sub.img} alt={sub.name} loading="lazy" />
+        {/* gradient bottom overlay for text legibility */}
         <div className="sc-grad" />
         <div className={`sc-shine${shine.on ? ' on' : ''}`} />
       </div>
-      <div className="sc-foot">
+
+      {/* Name overlaid on image */}
+      <div className="sc-overlay-name">
         <span className="sc-name">{sub.name}</span>
         <span className="sc-arr">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </span>
       </div>
+
       <div className="sc-bar" />
     </Link>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MOBILE SPLIT-PANE
-   Left sidebar  : narrow, dark-green, thumbnail + label
-   Right content : subcategory 2-col grid OR solo banner
-═══════════════════════════════════════════════════════════════ */
+/* ─── Mobile Split-Pane ─── */
 function MobileSplit({
   categories,
   tab,
@@ -171,32 +148,20 @@ function MobileSplit({
 
   return (
     <div className="ms-root">
-
-      {/* ── Header row ───────────────────────────── */}
       <div className="ms-top">
         <div className="ms-top-left">
           <p className="ms-eyebrow">Discover</p>
           <h2 className="ms-title">Shop by <em>Category</em></h2>
         </div>
-        {/* Gender toggle */}
         <div className="ms-toggle">
           <div className={`ms-pill${tab === 'men' ? ' right' : ''}`} />
-          <button
-            className={`ms-tbtn${tab === 'women' ? ' on' : ''}`}
-            onClick={() => setTab('women')}
-          >Women</button>
-          <button
-            className={`ms-tbtn${tab === 'men' ? ' on' : ''}`}
-            onClick={() => setTab('men')}
-          >Men</button>
+          <button className={`ms-tbtn${tab === 'women' ? ' on' : ''}`} onClick={() => setTab('women')}>Women</button>
+          <button className={`ms-tbtn${tab === 'men' ? ' on' : ''}`} onClick={() => setTab('men')}>Men</button>
         </div>
       </div>
 
-      {/* ── Split pane ───────────────────────────── */}
       <div className="ms-pane">
-
-        {/* LEFT: sidebar nav
-            Thumbnail: 1:1 square — 48×48px images recommended */}
+        {/* LEFT sidebar */}
         <nav className="ms-sb" aria-label="Category navigation">
           {categories.map((cat, i) => (
             <button
@@ -205,7 +170,6 @@ function MobileSplit({
               onClick={() => setActiveIdx(i)}
               aria-current={activeIdx === i ? 'page' : undefined}
             >
-              {/* 1:1 thumbnail */}
               <div className="ms-sb-thumb">
                 <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
               </div>
@@ -215,9 +179,8 @@ function MobileSplit({
           ))}
         </nav>
 
-        {/* RIGHT: content area */}
+        {/* RIGHT content */}
         <div className="ms-ct">
-          {/* Content header */}
           <div className="ms-ct-hd">
             <span className="ms-ct-title">
               {active.name.split(' ').length > 1
@@ -233,21 +196,21 @@ function MobileSplit({
             </Link>
           </div>
 
-          {/* Sub-category grid: 1:1 ratio — 120×120px images recommended */}
           {active.sub.length > 0 ? (
+            /* Sub-category grid: image fills card, name on image */
             <div className="ms-subgrid">
               {active.sub.map(sub => (
                 <Link key={sub.name} href={sub.href} className="ms-subcard">
                   <div className="ms-subcard-img">
                     <img src={sub.img} alt={sub.name} loading="lazy" />
                     <div className="ms-subcard-ov" />
+                    {/* Name on image */}
+                    <span className="ms-subcard-name">{sub.name}</span>
                   </div>
-                  <span className="ms-subcard-name">{sub.name}</span>
                 </Link>
               ))}
             </div>
           ) : (
-            /* Solo banner: 16:7 ratio — ~300×131px, displayed at height 150px */
             <Link href={active.href} className="ms-solo">
               <img src={active.img} alt={active.name} className="ms-solo-img" />
               <div className="ms-solo-ov" />
@@ -268,17 +231,27 @@ function MobileSplit({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN COMPONENT
-═══════════════════════════════════════════════════════════════ */
+/* ─── Main Component ─── */
 export default function CategorySection() {
-  const [tab, setTab]             = useState<Gender>('women');
+  const { gender: globalGender, setGender: setGlobalGender } = useGender();
+  const [tab, setTabLocal] = useState<Gender>(globalGender);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [visible, setVisible]     = useState(false);
-  const sectionRef                = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setTabLocal(globalGender);
+    setActiveIdx(0);
+  }, [globalGender]);
+
+  const setTab = (g: Gender) => {
+    setTabLocal(g);
+    setGlobalGender(g);
+    setActiveIdx(0);
+  };
 
   const categories = buildCategories(tab);
-  const active     = categories[activeIdx];
+  const active = categories[activeIdx];
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -294,7 +267,7 @@ export default function CategorySection() {
       <style>{CSS}</style>
       <section className="cs" id="categories" ref={sectionRef}>
 
-        {/* ══════════ DESKTOP + TABLET (> 660px) ══════════ */}
+        {/* DESKTOP + TABLET */}
         <div className={`cs-hd${visible ? ' in' : ''}`}>
           <div className="cs-hd-left">
             <span className="cs-eyebrow">Discover</span>
@@ -302,15 +275,13 @@ export default function CategorySection() {
           </div>
           <div className="cs-toggle">
             <div className={`cs-pill${tab === 'men' ? ' right' : ''}`} />
-            <button className={`cs-tbtn${tab === 'women' ? ' on' : ''}`} onClick={() => { setTab('women'); setActiveIdx(0); }}>Women</button>
-            <button className={`cs-tbtn${tab === 'men' ? ' on' : ''}`}   onClick={() => { setTab('men');   setActiveIdx(0); }}>Men</button>
+            <button className={`cs-tbtn${tab === 'women' ? ' on' : ''}`} onClick={() => setTab('women')}>Women</button>
+            <button className={`cs-tbtn${tab === 'men' ? ' on' : ''}`}   onClick={() => setTab('men')}>Men</button>
           </div>
         </div>
 
         <div className={`cs-wrap${visible ? ' in' : ''}`}>
           <div className="cs-panel">
-
-            {/* Sidebar — dark forest green, styled */}
             <nav className="cs-sb" aria-label="Product categories">
               <div className="cs-sb-hd">
                 <span className="cs-sb-eyebrow">Browse</span>
@@ -330,7 +301,6 @@ export default function CategorySection() {
                 </button>
               ))}
 
-              {/* Active preview — 3:2 ratio, use ~210×140px images */}
               <div className="cs-sb-preview">
                 <img src={active.img} alt={active.name} />
                 <div className="cs-sb-preview-ov" />
@@ -338,7 +308,6 @@ export default function CategorySection() {
               </div>
             </nav>
 
-            {/* Content */}
             <div className="cs-ct">
               <div className="cs-ct-hd">
                 <h3 className="cs-ct-title">
@@ -379,7 +348,7 @@ export default function CategorySection() {
           </div>
         </div>
 
-        {/* ══════════ MOBILE (≤ 660px) ══════════ */}
+        {/* MOBILE */}
         <MobileSplit categories={categories} tab={tab} setTab={setTab} />
 
       </section>
@@ -387,24 +356,19 @@ export default function CategorySection() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   STYLES
-═══════════════════════════════════════════════════════════════ */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap');
 
-/* ── Tokens ──────────────────────────────────────────────── */
 :root {
   --white:     #ffffff;
   --cream:     #faf8f3;
   --cream2:    #f3ede1;
-  --cream3:    #e8dfc8;
-  --gd:        #253d18;   /* deep green  */
-  --gm:        #365928;   /* mid green   */
-  --gs:        #527a3e;   /* soft green  */
-  --gl:        #7aaa5c;   /* light green */
-  --gp:        #ddecd1;   /* pale green  */
-  --gt:        #eff6ea;   /* tint green  */
+  --gd:        #253d18;
+  --gm:        #365928;
+  --gs:        #527a3e;
+  --gl:        #7aaa5c;
+  --gp:        #ddecd1;
+  --gt:        #eff6ea;
   --gold:      #a07820;
   --gold-l:    #c8992e;
   --t1:        #1c1c17;
@@ -413,7 +377,6 @@ const CSS = `
   --t4:        #b4b4a4;
   --bs:        rgba(60,90,35,0.09);
   --bm:        rgba(60,90,35,0.18);
-  --bst:       rgba(60,90,35,0.30);
   --sxs:       0 1px 4px rgba(35,60,18,0.07);
   --ssm:       0 2px 12px rgba(35,60,18,0.09);
   --smd:       0 6px 26px rgba(35,60,18,0.11);
@@ -425,7 +388,6 @@ const CSS = `
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Section ─────────────────────────────────────────────── */
 .cs {
   background: var(--cream);
   padding: 56px 0 72px;
@@ -433,14 +395,12 @@ const CSS = `
   position: relative;
   overflow: hidden;
 }
-/* top accent line */
 .cs::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 2.5px;
   background: linear-gradient(90deg, transparent 4%, var(--gs) 32%, var(--gold-l) 62%, transparent 96%);
   opacity: .42;
 }
-/* ambient bg wash */
 .cs::after {
   content: '';
   position: absolute; inset: 0; pointer-events: none; z-index: 0;
@@ -449,28 +409,23 @@ const CSS = `
     radial-gradient(ellipse 55% 55% at 4%  96%, rgba(160,120,32,.04) 0%, transparent 56%);
 }
 
-/* ── Desktop header ──────────────────────────────────────── */
+/* ── Desktop header ── */
 .cs-hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 0 48px 32px;
   position: relative; z-index: 1;
   opacity: 0; transform: translateY(14px);
   transition: opacity .52s ease, transform .52s ease;
 }
 .cs-hd.in { opacity: 1; transform: translateY(0); }
-
 .cs-hd-left { display: flex; flex-direction: column; gap: 5px; }
 
 .cs-eyebrow {
   font-size: 9px; font-weight: 700; letter-spacing: .46em; text-transform: uppercase;
-  color: var(--gs);
-  display: flex; align-items: center; gap: 8px;
+  color: var(--gs); display: flex; align-items: center; gap: 8px;
 }
 .cs-eyebrow::before {
-  content: '';
-  width: 20px; height: 1.5px;
+  content: ''; width: 20px; height: 1.5px;
   background: var(--gs); border-radius: 2px; opacity: .65;
 }
 
@@ -482,28 +437,22 @@ const CSS = `
 }
 .cs-title em { font-style: italic; color: var(--gd); }
 
-/* Desktop gender toggle */
 .cs-toggle {
   display: flex; align-items: center;
-  background: var(--white);
-  border: 1.5px solid var(--bm);
-  border-radius: 100px;
-  padding: 4px;
-  position: relative;
+  background: var(--white); border: 1.5px solid var(--bm);
+  border-radius: 100px; padding: 4px; position: relative;
   box-shadow: var(--sxs);
 }
 .cs-pill {
   position: absolute; top: 4px; bottom: 4px;
   width: calc(50% - 4px); left: 4px;
-  background: var(--gd);
-  border-radius: 100px;
+  background: var(--gd); border-radius: 100px;
   transition: transform .36s cubic-bezier(.77,0,.18,1);
   box-shadow: 0 2px 8px rgba(37,61,24,.3);
 }
 .cs-pill.right { transform: translateX(100%); }
 .cs-tbtn {
-  position: relative; z-index: 1;
-  padding: 9px 26px;
+  position: relative; z-index: 1; padding: 9px 26px;
   font-family: 'Nunito', sans-serif;
   font-size: 10px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
   background: transparent; border: none; cursor: pointer; border-radius: 100px;
@@ -511,57 +460,46 @@ const CSS = `
 }
 .cs-tbtn.on { color: #fff; }
 
-/* ── Desktop wrapper + panel ─────────────────────────────── */
+/* ── Desktop wrap + panel ── */
 .cs-wrap {
-  padding: 0 48px;
-  position: relative; z-index: 1;
+  padding: 0 48px; position: relative; z-index: 1;
   opacity: 0; transform: translateY(20px);
   transition: opacity .62s ease .1s, transform .62s ease .1s;
 }
 .cs-wrap.in { opacity: 1; transform: translateY(0); }
 
-/* Grid: sidebar takes 175px, content gets the rest */
 .cs-panel {
-  display: grid;
-  grid-template-columns: 175px 1fr;
+  display: grid; grid-template-columns: 175px 1fr;
   background: var(--white);
-  border: 1px solid var(--bs);
-  border-radius: var(--r16);
-  overflow: hidden;
-  box-shadow: var(--smd);
+  border: 1px solid var(--bs); border-radius: var(--r16);
+  overflow: hidden; box-shadow: var(--smd);
 }
 
-/* ── Desktop sidebar ─────────────────────────────────────── */
+/* ── Sidebar ── */
 .cs-sb {
   display: flex; flex-direction: column;
   background: linear-gradient(168deg, #253d18 0%, #172710 100%);
   border-right: 1px solid rgba(255,255,255,.06);
   position: relative; overflow: hidden;
 }
-
-/* inner ambient glow */
 .cs-sb::before {
-  content: '';
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
     radial-gradient(ellipse 130% 55% at 50% -2%, rgba(82,122,62,.38) 0%, transparent 62%),
     radial-gradient(ellipse 80%  80% at 100% 100%, rgba(160,120,32,.1) 0%, transparent 55%);
 }
 
 .cs-sb-hd {
-  padding: 20px 16px 14px;
-  position: relative; z-index: 1;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-  margin-bottom: 4px;
+  padding: 20px 16px 14px; position: relative; z-index: 1;
+  border-bottom: 1px solid rgba(255,255,255,.07); margin-bottom: 4px;
 }
 .cs-sb-eyebrow {
-  display: block;
-  font-size: 7.5px; font-weight: 700; letter-spacing: .52em; text-transform: uppercase;
+  display: block; font-size: 7.5px; font-weight: 700;
+  letter-spacing: .52em; text-transform: uppercase;
   color: rgba(255,255,255,.35); margin-bottom: 3px;
 }
 .cs-sb-heading {
-  display: block;
-  font-family: 'Cormorant Garamond', serif;
+  display: block; font-family: 'Cormorant Garamond', serif;
   font-size: .95rem; font-style: italic; font-weight: 300;
   color: rgba(255,255,255,.7); letter-spacing: .02em;
 }
@@ -572,52 +510,29 @@ const CSS = `
   background: transparent; border: none;
   border-left: 2.5px solid transparent;
   cursor: pointer; text-align: left;
-  color: rgba(255,255,255,.48);
-  position: relative; z-index: 1;
+  color: rgba(255,255,255,.48); position: relative; z-index: 1;
   transition: color .2s, border-color .2s, background .2s;
 }
-.cs-sbbtn:hover {
-  color: rgba(255,255,255,.82);
-  background: rgba(255,255,255,.06);
-  border-left-color: rgba(255,255,255,.22);
-}
-.cs-sbbtn.on {
-  color: #fff;
-  border-left-color: var(--gold-l);
-  background: rgba(255,255,255,.09);
-}
+.cs-sbbtn:hover { color: rgba(255,255,255,.82); background: rgba(255,255,255,.06); border-left-color: rgba(255,255,255,.22); }
+.cs-sbbtn.on   { color: #fff; border-left-color: var(--gold-l); background: rgba(255,255,255,.09); }
 
-.cs-sb-icon {
-  font-size: 10px; color: var(--gold-l);
-  opacity: .45; flex-shrink: 0;
-  transition: opacity .2s;
-}
+.cs-sb-icon { font-size: 10px; color: var(--gold-l); opacity: .45; flex-shrink: 0; transition: opacity .2s; }
 .cs-sbbtn:hover .cs-sb-icon { opacity: .75; }
 .cs-sbbtn.on   .cs-sb-icon { opacity: 1; }
 
-.cs-sb-txt {
-  font-size: 11px; font-weight: 400;
-  letter-spacing: .025em; flex: 1;
-  line-height: 1.3;
-}
+.cs-sb-txt { font-size: 11px; font-weight: 400; letter-spacing: .025em; flex: 1; line-height: 1.3; }
 .cs-sbbtn.on .cs-sb-txt { font-weight: 600; }
 
 .cs-sb-badge {
-  font-size: 8px; font-weight: 700; letter-spacing: .04em;
-  color: var(--gold-l);
-  background: rgba(200,153,46,.14);
-  border: 1px solid rgba(200,153,46,.22);
-  padding: 1px 6px; border-radius: 100px;
-  transition: background .2s;
+  font-size: 8px; font-weight: 700; letter-spacing: .04em; color: var(--gold-l);
+  background: rgba(200,153,46,.14); border: 1px solid rgba(200,153,46,.22);
+  padding: 1px 6px; border-radius: 100px; transition: background .2s;
 }
 .cs-sbbtn.on .cs-sb-badge { background: rgba(200,153,46,.26); }
 
-/* Active preview at bottom of sidebar — 3:2 ratio (210×140px) */
 .cs-sb-preview {
-  margin-top: auto;
-  position: relative; z-index: 1;
-  aspect-ratio: 3/2;
-  overflow: hidden;
+  margin-top: auto; position: relative; z-index: 1;
+  aspect-ratio: 3/2; overflow: hidden;
   border-top: 1px solid rgba(255,255,255,.07);
 }
 .cs-sb-preview img {
@@ -636,25 +551,21 @@ const CSS = `
   color: rgba(255,255,255,.65);
 }
 
-/* ── Desktop content area ────────────────────────────────── */
+/* ── Content area ── */
 .cs-ct {
   padding: 28px 30px 32px;
   min-height: 440px;
   background: var(--white);
 }
-
 .cs-ct-hd {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 22px; padding-bottom: 16px;
-  border-bottom: 1px solid var(--bs);
-  position: relative;
+  border-bottom: 1px solid var(--bs); position: relative;
 }
 .cs-ct-hd::after {
-  content: '';
-  position: absolute; bottom: -1px; left: 0;
+  content: ''; position: absolute; bottom: -1px; left: 0;
   width: 52px; height: 2px;
-  background: linear-gradient(90deg, var(--gd), transparent);
-  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gd), transparent); border-radius: 2px;
 }
 .cs-ct-title {
   font-family: 'Cormorant Garamond', serif;
@@ -666,28 +577,27 @@ const CSS = `
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 9px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase;
   color: var(--gs); text-decoration: none;
-  padding: 8px 16px;
-  border: 1.5px solid var(--bm); border-radius: 100px;
+  padding: 8px 16px; border: 1.5px solid var(--bm); border-radius: 100px;
   background: var(--gt);
   transition: background .22s, border-color .22s, color .22s, gap .22s;
 }
 .cs-va:hover { background: var(--gp); border-color: var(--gs); color: var(--gd); gap: 10px; }
 
-/* ── Desktop sub-category grid ───────────────────────────── */
-/* Card image: 4:3 ratio — use 320×240px images */
+/* ── Desktop grid — image-only cards, name on image ── */
 .cs-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 10px;
 }
 
+/* Card: no white footer, image fills entire card */
 .sc-card {
   display: block; text-decoration: none;
   position: relative; overflow: hidden;
   border-radius: var(--r8);
   border: 1px solid var(--bs);
-  background: var(--cream);
   cursor: pointer;
+  aspect-ratio: 3/4;       /* portrait ratio, no extra white space */
   animation: cardIn .48s ease both;
   transition: border-color .28s, box-shadow .28s, transform .28s;
 }
@@ -701,9 +611,9 @@ const CSS = `
   transform: translateY(-3px);
 }
 
-/* 4:3 image */
+/* Image fills 100% of card */
 .sc-img {
-  position: relative; aspect-ratio: 4/3;
+  position: absolute; inset: 0;
   overflow: hidden; background: var(--cream2);
 }
 .sc-img img {
@@ -714,8 +624,15 @@ const CSS = `
 
 .sc-grad {
   position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(28,46,16,.55) 0%, rgba(28,46,16,.04) 55%, transparent 72%);
+  background: linear-gradient(
+    to top,
+    rgba(15,28,8,.82) 0%,
+    rgba(15,28,8,.28) 42%,
+    rgba(15,28,8,.06) 68%,
+    transparent 88%
+  );
 }
+
 .sc-shine {
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(circle at var(--sx,50%) var(--sy,50%), rgba(255,255,255,.13) 0%, transparent 54%);
@@ -723,43 +640,50 @@ const CSS = `
 }
 .sc-shine.on { opacity: 1; }
 
-.sc-foot {
-  display: flex; align-items: center; gap: 6px;
-  padding: 11px 13px;
+/* Name + arrow overlaid on image bottom */
+.sc-overlay-name {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 14px 14px 14px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  z-index: 2;
 }
 .sc-name {
-  font-size: 10.5px; font-weight: 600;
-  letter-spacing: .13em; text-transform: uppercase;
-  color: var(--t1); flex: 1;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(0.82rem, 1.4vw, 1rem);
+  font-weight: 600;
+  font-style: italic;
+  color: #fff;
+  letter-spacing: .03em;
+  line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.55);
 }
 .sc-arr {
-  color: var(--gs);
+  color: rgba(255,255,255,0.8);
   opacity: 0; transform: translateX(-5px);
   display: flex; align-items: center;
   transition: opacity .22s, transform .22s;
+  flex-shrink: 0; margin-left: 6px;
 }
 .sc-card:hover .sc-arr { opacity: 1; transform: translateX(0); }
 
 .sc-bar {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--gd), var(--gl));
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2.5px;
+  background: linear-gradient(90deg, var(--gold-l), var(--gl));
   transform: scaleX(0); transform-origin: left;
   transition: transform .36s cubic-bezier(.25,.46,.45,.94);
+  z-index: 3;
 }
 .sc-card:hover .sc-bar { transform: scaleX(1); }
 
-/* ── Desktop solo banner ─────────────────────────────────── */
-/* Image: 16:9 — use 800×450px, min-height 350px */
+/* ── Solo banner ── */
 .cs-solo {
   display: block; text-decoration: none;
   position: relative; overflow: hidden;
   height: 100%; min-height: 360px;
-  border-radius: var(--r12);
-  border: 1px solid var(--bs);
+  border-radius: var(--r12); border: 1px solid var(--bs);
   transition: box-shadow .34s, border-color .34s;
 }
 .cs-solo:hover { box-shadow: var(--slg); border-color: var(--bm); }
-
 .cs-solo-img {
   width: 100%; height: 100%; object-fit: cover;
   position: absolute; inset: 0;
@@ -767,7 +691,6 @@ const CSS = `
   transition: transform .84s cubic-bezier(.25,.46,.45,.94), filter .44s;
 }
 .cs-solo:hover .cs-solo-img { transform: scale(1.04); filter: brightness(.62) saturate(.88); }
-
 .cs-solo-ov {
   position: absolute; inset: 0;
   background:
@@ -780,7 +703,6 @@ const CSS = `
   transition: border-color .4s; pointer-events: none;
 }
 .cs-solo:hover .cs-solo-inset { border-color: rgba(255,255,255,.1); }
-
 .cs-solo-body { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 28px; }
 .cs-solo-ey {
   display: flex; align-items: center; gap: 8px;
@@ -804,68 +726,52 @@ const CSS = `
 }
 .cs-solo:hover .cs-solo-cta { background: rgba(37,61,24,.82); border-color: rgba(255,255,255,.35); gap: 13px; }
 
-/* ═══════════════════════════════════════════════════════════
-   TABLET  661–960px
-═══════════════════════════════════════════════════════════ */
+/* ── Tablet 661–960px ── */
 @media (max-width: 960px) and (min-width: 661px) {
   .cs-wrap  { padding: 0 28px; }
   .cs-hd    { padding: 0 28px 28px; }
   .cs-panel { grid-template-columns: 165px 1fr; }
   .cs-ct    { padding: 22px 22px 26px; }
-  .cs-grid  { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cs-grid  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sc-name  { font-size: 0.88rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MOBILE  ≤ 660px — split-pane layout
-═══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════
+   MOBILE ≤ 660px — split-pane
+══════════════════════════════ */
 .ms-root { display: none; }
 
 @media (max-width: 660px) {
   .cs { padding: 28px 0 44px; }
-
-  /* Hide desktop elements */
   .cs-hd  { display: none !important; }
   .cs-wrap { display: none !important; }
-
-  /* Show mobile */
   .ms-root { display: block; padding: 0 14px; position: relative; z-index: 1; }
 
-  /* ── Top header row ── */
   .ms-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
   }
   .ms-top-left { display: flex; flex-direction: column; gap: 4px; }
 
   .ms-eyebrow {
     font-size: 8.5px; font-weight: 700; letter-spacing: .42em; text-transform: uppercase;
-    color: var(--gs);
-    display: flex; align-items: center; gap: 6px;
+    color: var(--gs); display: flex; align-items: center; gap: 6px;
   }
   .ms-eyebrow::before {
-    content: '';
-    width: 13px; height: 1.5px;
+    content: ''; width: 13px; height: 1.5px;
     background: var(--gs); border-radius: 2px; opacity: .6;
   }
-
   .ms-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 1.8rem; font-weight: 400; color: var(--t1); line-height: 1;
   }
   .ms-title em { font-style: italic; color: var(--gd); }
 
-  /* ── Gender toggle (compact) ── */
   .ms-toggle {
-    flex-shrink: 0;
-    display: flex; align-items: center;
-    background: var(--white);
-    border: 1.5px solid var(--bm); border-radius: 100px;
-    padding: 3px; position: relative;
-    box-shadow: var(--sxs);
-    align-self: flex-start; margin-top: 3px;
+    flex-shrink: 0; display: flex; align-items: center;
+    background: var(--white); border: 1.5px solid var(--bm);
+    border-radius: 100px; padding: 3px; position: relative;
+    box-shadow: var(--sxs); align-self: flex-start; margin-top: 3px;
   }
   .ms-pill {
     position: absolute; top: 3px; bottom: 3px;
@@ -876,8 +782,7 @@ const CSS = `
   }
   .ms-pill.right { transform: translateX(100%); }
   .ms-tbtn {
-    position: relative; z-index: 1;
-    padding: 7px 16px;
+    position: relative; z-index: 1; padding: 7px 16px;
     font-family: 'Nunito', sans-serif;
     font-size: 9.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
     background: transparent; border: none; cursor: pointer; border-radius: 100px;
@@ -886,37 +791,29 @@ const CSS = `
   }
   .ms-tbtn.on { color: #fff; }
 
-  /* ── Split pane container ── */
   .ms-pane {
-    display: grid;
-    grid-template-columns: 90px 1fr;   /* narrow sidebar, wide content */
-    background: var(--white);
-    border: 1px solid var(--bs);
-    border-radius: var(--r12);
-    overflow: hidden;
-    box-shadow: var(--ssm);
-    min-height: 430px;
+    display: grid; grid-template-columns: 86px 1fr;
+    background: var(--white); border: 1px solid var(--bs);
+    border-radius: var(--r12); overflow: hidden;
+    box-shadow: var(--ssm); min-height: 420px;
   }
 
-  /* ── Left sidebar ── */
+  /* Left sidebar */
   .ms-sb {
     background: linear-gradient(175deg, #253d18 0%, #446c35bd 100%);
     display: flex; flex-direction: column;
     border-right: 1px solid rgba(255,255,255,.06);
-    overflow-y: auto; scrollbar-width: none;
-    position: relative;
+    overflow-y: auto; scrollbar-width: none; position: relative;
   }
   .ms-sb::before {
-    content: '';
-    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background: radial-gradient(ellipse 160% 65% at 50% -5%, rgba(82,122,62,.32) 0%, transparent 56%);
   }
   .ms-sb::-webkit-scrollbar { display: none; }
 
-  /* Each sidebar button */
   .ms-sbbtn {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
-    width: 100%; padding: 13px 6px 11px;
+    width: 100%; padding: 12px 5px 10px;
     background: transparent; border: none;
     border-left: 2.5px solid transparent;
     cursor: pointer; text-align: center;
@@ -926,68 +823,50 @@ const CSS = `
     -webkit-tap-highlight-color: transparent;
   }
   .ms-sbbtn:active { background: rgba(255,255,255,.08); }
-  .ms-sbbtn.on {
-    color: #fff;
-    background: rgba(255,255,255,.1);
-    border-left-color: var(--gold-l);
-  }
+  .ms-sbbtn.on { color: #fff; background: rgba(255,255,255,.1); border-left-color: var(--gold-l); }
 
-  /* Thumbnail — 1:1 square, 48×48px images */
   .ms-sb-thumb {
-    width: 60px; height: 60px;
-    border-radius: 9px; overflow: hidden;
-    border: 1.5px solid rgba(255,255,255,.1);
-    transition: border-color .22s;
-    flex-shrink: 0;
+    width: 52px; height: 52px; border-radius: 8px; overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,.1); transition: border-color .22s; flex-shrink: 0;
   }
   .ms-sbbtn.on .ms-sb-thumb { border-color: rgba(200,153,46,.5); }
   .ms-sb-thumb img {
     width: 100%; height: 100%; object-fit: cover; display: block;
-    filter: brightness(.52) saturate(.68);
-    transition: filter .28s;
+    filter: brightness(.52) saturate(.68); transition: filter .28s;
   }
   .ms-sbbtn.on .ms-sb-thumb img { filter: brightness(.72) saturate(.85); }
 
   .ms-sb-label {
-    font-size: 8.5px; font-weight: 600; letter-spacing: .02em;
+    font-size: 8px; font-weight: 600; letter-spacing: .02em;
     color: inherit; line-height: 1.3; text-align: center;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; width: 100%;
-    padding: 0 2px;
+    overflow: hidden; width: 100%; padding: 0 2px;
   }
-
-  /* Active dot indicator */
   .ms-sb-dot {
     width: 4px; height: 4px; border-radius: 50%;
     background: var(--gold-l); flex-shrink: 0;
   }
 
-  /* ── Right content area ── */
+  /* Right content */
   .ms-ct {
     display: flex; flex-direction: column;
-    padding: 14px 12px 14px 12px;
-    background: var(--cream);
-    overflow: hidden;
+    padding: 12px 10px 12px;
+    background: var(--cream); overflow: hidden;
   }
-
-  /* Content header */
   .ms-ct-hd {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; padding-bottom: 10px;
+    margin-bottom: 10px; padding-bottom: 9px;
     border-bottom: 1px solid var(--bs);
-    position: relative; gap: 8px;
+    position: relative; gap: 6px;
   }
   .ms-ct-hd::after {
-    content: '';
-    position: absolute; bottom: -1px; left: 0;
-    width: 38px; height: 2px;
-    background: linear-gradient(90deg, var(--gd), transparent);
-    border-radius: 2px;
+    content: ''; position: absolute; bottom: -1px; left: 0;
+    width: 36px; height: 2px;
+    background: linear-gradient(90deg, var(--gd), transparent); border-radius: 2px;
   }
-
   .ms-ct-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem; font-weight: 400; color: var(--t1);
+    font-size: 1rem; font-weight: 400; color: var(--t1);
     line-height: 1.2; flex: 1; min-width: 0;
   }
   .ms-ct-title em { font-style: italic; color: var(--gd); }
@@ -995,70 +874,75 @@ const CSS = `
   .ms-showall {
     flex-shrink: 0;
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 8px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+    font-size: 7.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
     color: var(--gs); text-decoration: none;
-    padding: 5px 10px;
+    padding: 5px 9px;
     border: 1.5px solid var(--bm); border-radius: 100px;
-    background: var(--gt);
-    transition: background .2s, color .2s;
-    -webkit-tap-highlight-color: transparent;
-    white-space: nowrap;
+    background: var(--gt); transition: background .2s, color .2s;
+    -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   .ms-showall:active { background: var(--gp); color: var(--gd); }
 
-  /* ── Subcategory 2-col grid ──
-     Image: 1:1 square — use 120×120px images */
+  /* ── Sub-category grid: image fills card, name on image ── */
   .ms-subgrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    flex: 1;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4px; flex: 1;
   }
 
   .ms-subcard {
     display: block; text-decoration: none;
-    border-radius: var(--r8); overflow: hidden;
-    border: 1px solid var(--bs);
-    background: var(--white);
+    border-radius: 6px; overflow: hidden;
     -webkit-tap-highlight-color: transparent;
     transition: transform .14s;
+    position: relative;
   }
   .ms-subcard:active { transform: scale(.97); }
 
-  /* 1:1 square image */
+  /* Image fills entire card — 4:5 portrait ratio */
   .ms-subcard-img {
-    position: relative; aspect-ratio: 1/1;
+    position: relative;
+    aspect-ratio: 4/5;
     overflow: hidden; background: var(--cream2);
   }
   .ms-subcard-img img {
     width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform .4s ease;
   }
+  .ms-subcard:active .ms-subcard-img img { transform: scale(1.04); }
+
+  /* Gradient overlay for text readability */
   .ms-subcard-ov {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(18,36,10,.48) 0%, transparent 52%);
-  }
-  .ms-subcard-name {
-    display: block;
-    padding: 7px 9px 8px;
-    font-size: 9px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase;
-    color: var(--t1); line-height: 1.3;
+    background: linear-gradient(
+      to top,
+      rgba(12,24,6,.78) 0%,
+      rgba(12,24,6,.18) 42%,
+      transparent 68%
+    );
   }
 
-  /* ── Solo banner (categories with no subs) ──
-     Ratio: 16:7, height ~150px */
+  /* Name overlaid on image */
+  .ms-subcard-name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 10px 10px 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(0.78rem, 3vw, 0.92rem);
+    font-weight: 600; font-style: italic;
+    color: #fff; line-height: 1.2;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.5);
+    z-index: 2;
+  }
+
+  /* Solo banner */
   .ms-solo {
     display: block; text-decoration: none;
     position: relative; overflow: hidden;
-    border-radius: var(--r8);
-    height: 150px;
-    flex: 1;
+    border-radius: 6px; height: 148px; flex: 1;
     -webkit-tap-highlight-color: transparent;
   }
   .ms-solo-img {
     width: 100%; height: 100%; object-fit: cover;
-    position: absolute; inset: 0;
-    filter: brightness(.46);
+    position: absolute; inset: 0; filter: brightness(.46);
     transition: filter .3s;
   }
   .ms-solo:active .ms-solo-img { filter: brightness(.54); }
@@ -1068,30 +952,31 @@ const CSS = `
   }
   .ms-solo-body {
     position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 12px 14px;
+    padding: 12px 13px;
     display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
   }
   .ms-solo-ttl {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem; font-weight: 400; font-style: italic;
+    font-size: 1rem; font-weight: 400; font-style: italic;
     color: #fff; line-height: 1.2; flex: 1;
   }
   .ms-solo-cta {
     flex-shrink: 0;
     display: inline-flex; align-items: center; gap: 5px;
-    font-size: 8px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
-    color: #fff; padding: 7px 12px;
+    font-size: 7.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    color: #fff; padding: 6px 11px;
     background: rgba(37,61,24,.72);
-    border: 1px solid rgba(255,255,255,.2);
-    border-radius: 100px;
-    white-space: nowrap;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 100px; white-space: nowrap;
   }
 }
 
-/* very small screens */
+/* Very small screens ≤ 380px */
 @media (max-width: 380px) {
-  .ms-pane { grid-template-columns: 78px 1fr; }
-  .ms-sb-thumb { width: 38px; height: 38px; }
-  .ms-sb-label { font-size: 7.5px; }
+  .ms-pane { grid-template-columns: 74px 1fr; }
+  .ms-sb-thumb { width: 44px; height: 44px; }
+  .ms-sb-label { font-size: 7px; }
+  .ms-ct { padding: 10px 8px; }
+  .ms-subcard-name { font-size: 0.74rem; padding: 8px 8px 8px; }
 }
 `;
+

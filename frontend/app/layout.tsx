@@ -11,6 +11,7 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import { ConfettiManager } from '@/components/cart/ConfettiManager';
 import { WishlistProvider } from '@/lib/wishlistContext';
 import Providers from "./providers";
+import { GenderProvider } from "@/lib/genderContext";
 
 export const metadata: Metadata = {
   title: 'MakeUsSparkle — Luxury Jewellery & Gifts',
@@ -44,6 +45,7 @@ export default function RootLayout({
       </head>
 
       <body className="has-bottom-nav">
+        <GenderProvider> 
         <Providers>
             
             {/* <TopNav/> */}
@@ -56,6 +58,7 @@ export default function RootLayout({
           <CartDrawer />
           <ConfettiManager />
           </Providers>
+          </GenderProvider>
       </body>
     </html>
   );

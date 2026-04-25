@@ -1,52 +1,55 @@
-import Cart from "../models/cart.model.js";
-
-async function getOrCreateCart(userId) {
-	let cart = await Cart.findOne({ user: userId });
-	if (!cart) {
-		cart = await Cart.create({ user: userId, items: [], total: 0, shipping: 0 });
-	}
-	return cart;
-}
+import cartService from "../services/cart.service.js";
 
 export async function getCart(req, res) {
-	const cart = await getOrCreateCart(req.user.id);
-	res.json({ success: true, cart });
+	try {
+		const result = await cartService.getCart(req.user._id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get cart error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
-export async function addCartItem(req, res) {
-	const cart = await getOrCreateCart(req.user.id);
-	cart.items.push(req.body);
-	await cart.save();
-	res.status(201).json({ success: true, cart });
+export async function addToCart(req, res) {
+	try {
+		const { productId, quantity } = req.body;
+		const result = await cartService.addToCart(req.user._id, productId, quantity);
+		res.json(result);
+	} catch (error) {
+		console.error("Add to cart error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function removeFromCart(req, res) {
+	try {
+		const result = await cartService.removeFromCart(req.user._id, req.params.productId);
+		res.json(result);
+	} catch (error) {
+		console.error("Remove from cart error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateCartItem(req, res) {
-	const cart = await getOrCreateCart(req.user.id);
-	const item = cart.items.id(req.params.itemId);
-	if (!item) {
-		return res.status(404).json({ success: false, message: "Cart item not found" });
+	try {
+		const { quantity } = req.body;
+		const result = await cartService.updateCartItem(req.user._id, req.params.productId, quantity);
+		res.json(result);
+	} catch (error) {
+		console.error("Update cart item error:", error);
+		res.status(400).json({ success: false, message: error.message });
 	}
-	Object.assign(item, req.body);
-	await cart.save();
-	res.json({ success: true, cart });
-}
-
-export async function removeCartItem(req, res) {
-	const cart = await getOrCreateCart(req.user.id);
-	cart.items.pull(req.params.itemId);
-	await cart.save();
-	res.json({ success: true, cart });
 }
 
 export async function clearCart(req, res) {
-	const cart = await getOrCreateCart(req.user.id);
-	cart.items = [];
-	await cart.save();
-	res.json({ success: true, cart });
-}
-
-export async function applyCoupon(req, res) {
-	res.json({ success: true, message: "Coupon applied" });
+	try {
+		const result = await cartService.clearCart(req.user._id);
+		res.json(result);
+	} catch (error) {
+		console.error("Clear cart error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function removeCartCoupon(req, res) {

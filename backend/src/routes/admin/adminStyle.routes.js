@@ -3,7 +3,7 @@ import {
 	createStyle,
 	deleteStyle,
 	updateStyle,
-} from "../../controllers/category.controller.js";
+} from "../../controllers/style.controller.js";
 import { requireAdmin, requireAuth } from "../../middleware/auth.middleware.js";
 
 const router = Router();

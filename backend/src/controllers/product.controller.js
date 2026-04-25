@@ -1,74 +1,93 @@
-import Product from "../models/product.model.js";
-
-function buildProductQuery(queryParams) {
-	const { category, style, gender, minPrice, maxPrice, rating } = queryParams;
-	const query = {};
-
-	if (category) query.category = category;
-	if (style) query.style = style;
-	if (gender) query.gender = gender;
-	if (rating) query.rating = { $gte: Number(rating) };
-	if (minPrice || maxPrice) {
-		query.price = {};
-		if (minPrice) query.price.$gte = Number(minPrice);
-		if (maxPrice) query.price.$lte = Number(maxPrice);
-	}
-
-	return query;
-}
+import productService from "../services/product.service.js";
 
 export async function getProducts(req, res) {
-	const query = buildProductQuery(req.query);
-	let productQuery = Product.find(query);
-
-	if (req.query.sort === "price_asc") productQuery = productQuery.sort({ price: 1 });
-	if (req.query.sort === "price_desc") productQuery = productQuery.sort({ price: -1 });
-	if (req.query.sort === "rating_desc") productQuery = productQuery.sort({ rating: -1 });
-	if (req.query.sort === "rating_asc") productQuery = productQuery.sort({ rating: 1 });
-
-	const products = await productQuery;
-	res.json({ success: true, products });
+	try {
+		const result = await productService.getProducts(req.query);
+		res.json(result);
+	} catch (error) {
+		console.error("Get products error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function getProductById(req, res) {
-	const product = await Product.findById(req.params.id);
-	res.json({ success: true, product });
+	try {
+		const result = await productService.getProductById(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get product by ID error:", error);
+		res.status(404).json({ success: false, message: error.message });
+	}
 }
 
 export async function searchProducts(req, res) {
-	const q = req.query.q || "";
-	const products = await Product.find({ title: new RegExp(q, "i") });
-	res.json({ success: true, products });
+	try {
+		const result = await productService.searchProducts(req.query.q);
+		res.json(result);
+	} catch (error) {
+		console.error("Search products error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function filterProducts(req, res) {
-	const products = await Product.find(buildProductQuery(req.query));
-	res.json({ success: true, products });
-}
-
-export async function addProductReview(req, res) {
-	const product = await Product.findById(req.params.id);
-	product.reviews.push({ ...req.body, user: req.user.id });
-	await product.save();
-	res.status(201).json({ success: true, reviews: product.reviews });
-}
-
-export async function getProductReviews(req, res) {
-	const product = await Product.findById(req.params.id).populate("reviews.user");
-	res.json({ success: true, reviews: product?.reviews || [] });
+	try {
+		const result = await productService.filterProducts(req.query);
+		res.json(result);
+	} catch (error) {
+		console.error("Filter products error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function createProduct(req, res) {
-	const product = await Product.create(req.body);
-	res.status(201).json({ success: true, product });
+	try {
+		const imageBuffer = req.file?.buffer;
+		const result = await productService.createProduct(req.body, imageBuffer);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Create product error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateProduct(req, res) {
-	const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-	res.json({ success: true, product });
+	try {
+		const imageBuffer = req.file?.buffer;
+		const result = await productService.updateProduct(req.params.id, req.body, imageBuffer);
+		res.json(result);
+	} catch (error) {
+		console.error("Update product error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function deleteProduct(req, res) {
-	await Product.findByIdAndDelete(req.params.id);
-	res.json({ success: true, message: "Product deleted" });
+	try {
+		const result = await productService.deleteProduct(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete product error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function addProductReview(req, res) {
+	try {
+		const result = await productService.addProductReview(req.params.id, req.user._id, req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Add review error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getProductReviews(req, res) {
+	try {
+		const result = await productService.getProductReviews(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get reviews error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }

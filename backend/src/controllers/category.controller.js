@@ -1,60 +1,94 @@
-import Category from "../models/category.model.js";
-import SubCategory from "../models/subCategory.model.js";
-import Style from "../models/style.model.js";
+import categoryService from "../services/category.service.js";
 
 export async function getCategories(req, res) {
-	const categories = await Category.find();
-	res.json({ success: true, categories });
+	try {
+		const result = await categoryService.getCategories();
+		res.json(result);
+	} catch (error) {
+		console.error("Get categories error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function getCategoryById(req, res) {
-	const category = await Category.findById(req.params.id);
-	res.json({ success: true, category });
+	try {
+		const result = await categoryService.getCategoryById(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get category error:", error);
+		res.status(404).json({ success: false, message: error.message });
+	}
 }
 
 export async function createCategory(req, res) {
-	const category = await Category.create(req.body);
-	res.status(201).json({ success: true, category });
+	try {
+		const result = await categoryService.createCategory(req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Create category error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateCategory(req, res) {
-	const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
-	res.json({ success: true, category });
+	try {
+		const result = await categoryService.updateCategory(req.params.id, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update category error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function deleteCategory(req, res) {
-	await Category.findByIdAndDelete(req.params.id);
-	res.json({ success: true, message: "Category deleted" });
+	try {
+		const result = await categoryService.deleteCategory(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete category error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function getSubCategories(req, res) {
-	const subcategories = await SubCategory.find();
-	res.json({ success: true, subcategories });
+	try {
+		const categoryId = req.query.categoryId || null;
+		const result = await categoryService.getSubCategories(categoryId);
+		res.json(result);
+	} catch (error) {
+		console.error("Get subcategories error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function createSubCategory(req, res) {
-	const subCategory = await SubCategory.create(req.body);
-	res.status(201).json({ success: true, subCategory });
+	try {
+		const result = await categoryService.createSubCategory(req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Create subcategory error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateSubCategory(req, res) {
-	const subCategory = await SubCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
-	res.json({ success: true, subCategory });
+	try {
+		const result = await categoryService.updateSubCategory(req.params.id, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update subcategory error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function deleteSubCategory(req, res) {
-	await SubCategory.findByIdAndDelete(req.params.id);
-	res.json({ success: true, message: "Subcategory deleted" });
-}
-
-export async function getStyles(req, res) {
-	const styles = await Style.find();
-	res.json({ success: true, styles });
-}
-
-export async function createStyle(req, res) {
-	const style = await Style.create(req.body);
-	res.status(201).json({ success: true, style });
+	try {
+		const result = await categoryService.deleteSubCategory(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete subcategory error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateStyle(req, res) {

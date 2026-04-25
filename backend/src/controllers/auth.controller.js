@@ -1,54 +1,74 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import User from "../models/user.model.js";
-
-function signToken(user) {
-	return jwt.sign(
-		{ sub: String(user._id), role: user.role, email: user.email },
-		process.env.JWT_SECRET || "dev-secret",
-		{ expiresIn: "7d" }
-	);
-}
+import authService from "../services/auth.service.js";
 
 export async function register(req, res) {
-	const { password, ...rest } = req.body;
-	const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-	const user = await User.create({
-		...rest,
-		password: hashedPassword,
-	});
-
-	const token = signToken(user);
-	res.status(201).json({ success: true, user, token });
+	try {
+		const result = await authService.register(req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Register error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function login(req, res) {
-	const user = await User.findOne({ email: req.body.email });
-	if (!user) {
-		return res.status(401).json({ success: false, message: "Invalid credentials" });
+	try {
+		const { email, password } = req.body;
+		const result = await authService.login(email, password);
+		res.json(result);
+	} catch (error) {
+		console.error("Login error:", error);
+		res.status(401).json({ success: false, message: error.message });
 	}
-
-	const isPasswordValid = await bcrypt.compare(req.body.password || "", user.password || "");
-	if (!isPasswordValid) {
-		return res.status(401).json({ success: false, message: "Invalid credentials" });
-	}
-
-	const token = signToken(user);
-	res.json({ success: true, message: "Login successful", user, token });
 }
 
 export async function logout(req, res) {
-	res.json({ success: true, message: "Logged out" });
+	try {
+		const result = await authService.logout();
+		res.json(result);
+	} catch (error) {
+		console.error("Logout error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function getMe(req, res) {
-	res.json({ success: true, user: req.user });
+	try {
+		res.json({ success: true, user: req.user });
+	} catch (error) {
+		console.error("GetMe error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function forgotPassword(req, res) {
-	res.json({ success: true, message: "Password reset flow not wired yet" });
+	try {
+		const { email } = req.body;
+		const result = await authService.requestPasswordReset(email);
+		res.json(result);
+	} catch (error) {
+		console.error("Forgot password error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function resetPassword(req, res) {
-	res.json({ success: true, message: "Password reset flow not wired yet" });
+	try {
+		const { token, newPassword } = req.body;
+		const result = await authService.resetPassword(token, newPassword);
+		res.json(result);
+	} catch (error) {
+		console.error("Reset password error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function verifyEmail(req, res) {
+	try {
+		const { token } = req.body;
+		const result = await authService.verifyEmail(token);
+		res.json(result);
+	} catch (error) {
+		console.error("Email verification error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }

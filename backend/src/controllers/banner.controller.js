@@ -1,21 +1,43 @@
-import Banner from "../models/banner.model.js";
+import bannerService from "../services/banner.service.js";
 
 export async function getBanners(req, res) {
-	const banners = await Banner.find();
-	res.json({ success: true, banners });
+	try {
+		const result = await bannerService.getBanners();
+		res.json(result);
+	} catch (error) {
+		console.error("Get banners error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function createBanner(req, res) {
-	const banner = await Banner.create(req.body);
-	res.status(201).json({ success: true, banner });
+	try {
+		const imageBuffer = req.file?.buffer;
+		const result = await bannerService.createBanner(req.body, imageBuffer);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Create banner error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function updateBanner(req, res) {
-	const banner = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true });
-	res.json({ success: true, banner });
+	try {
+		const imageBuffer = req.file?.buffer;
+		const result = await bannerService.updateBanner(req.params.id, req.body, imageBuffer);
+		res.json(result);
+	} catch (error) {
+		console.error("Update banner error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function deleteBanner(req, res) {
-	await Banner.findByIdAndDelete(req.params.id);
-	res.json({ success: true, message: "Banner deleted" });
+	try {
+		const result = await bannerService.deleteBanner(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete banner error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }

@@ -1,67 +1,82 @@
-import User from "../models/user.model.js";
-import mongoose from "mongoose";
+import userService from "../services/user.service.js";
 
-export async function getProfile(req, res) {
-	const user = await User.findById(req.user.id);
-	res.json({ success: true, user });
-}
-
-export async function updateProfile(req, res) {
-	const update = { ...req.body };
-	if (update.password) {
-		return res.status(400).json({ success: false, message: "Use auth reset flow to change password" });
+export async function getUserProfile(req, res) {
+	try {
+		const result = await userService.getUserProfile(req.user._id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get user profile error:", error);
+		res.status(404).json({ success: false, message: error.message });
 	}
-	const user = await User.findByIdAndUpdate(req.user.id, update, { new: true });
-	res.json({ success: true, user });
 }
 
-export async function deleteAccount(req, res) {
-	await User.findByIdAndDelete(req.user.id);
-	res.json({ success: true, message: "Account deleted" });
-}
-
-export async function addAddress(req, res) {
-	const user = await User.findById(req.user.id);
-	user.addresses.push(req.body);
-	await user.save();
-	res.status(201).json({ success: true, addresses: user.addresses });
-}
-
-export async function updateAddress(req, res) {
-	const user = await User.findById(req.user.id);
-	const address = user.addresses.id(new mongoose.Types.ObjectId(req.params.id));
-	if (!address) {
-		return res.status(404).json({ success: false, message: "Address not found" });
+export async function updateUserProfile(req, res) {
+	try {
+		const result = await userService.updateUserProfile(req.user._id, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update user profile error:", error);
+		res.status(400).json({ success: false, message: error.message });
 	}
-	Object.assign(address, req.body);
-	await user.save();
-	res.json({ success: true, addresses: user.addresses });
 }
 
-export async function deleteAddress(req, res) {
-	const user = await User.findById(req.user.id);
-	user.addresses.pull(req.params.id);
-	await user.save();
-	res.json({ success: true, addresses: user.addresses });
+export async function addToWishlist(req, res) {
+	try {
+		const { productId } = req.body;
+		const result = await userService.addToWishlist(req.user._id, productId);
+		res.json(result);
+	} catch (error) {
+		console.error("Add to wishlist error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function removeFromWishlist(req, res) {
+	try {
+		const result = await userService.removeFromWishlist(req.user._id, req.params.productId);
+		res.json(result);
+	} catch (error) {
+		console.error("Remove from wishlist error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }
 
 export async function getWishlist(req, res) {
-	const user = await User.findById(req.user.id).populate("wishlist");
-	res.json({ success: true, wishlist: user.wishlist });
-}
-
-export async function addWishlistItem(req, res) {
-	const user = await User.findById(req.user.id);
-	if (!user.wishlist.some((item) => String(item) === req.params.productId)) {
-		user.wishlist.push(req.params.productId);
-		await user.save();
+	try {
+		const result = await userService.getWishlist(req.user._id);
+		res.json(result);
+	} catch (error) {
+		console.error("Get wishlist error:", error);
+		res.status(400).json({ success: false, message: error.message });
 	}
-	res.json({ success: true, wishlist: user.wishlist });
 }
 
-export async function deleteWishlistItem(req, res) {
-	const user = await User.findById(req.user.id);
-	user.wishlist = user.wishlist.filter((item) => String(item) !== req.params.productId);
-	await user.save();
-	res.json({ success: true, wishlist: user.wishlist });
+export async function addAddress(req, res) {
+	try {
+		const result = await userService.addAddress(req.user._id, req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Add address error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateAddress(req, res) {
+	try {
+		const result = await userService.updateAddress(req.user._id, req.params.addressId, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update address error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function deleteAddress(req, res) {
+	try {
+		const result = await userService.deleteAddress(req.user._id, req.params.addressId);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete address error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }

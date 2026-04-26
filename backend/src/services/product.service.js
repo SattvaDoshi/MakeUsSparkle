@@ -38,6 +38,16 @@ class ProductService {
 		}
 	}
 
+	async getTags() {
+		try {
+			const tags = await Product.distinct("tags");
+			return { success: true, tags: tags.filter(Boolean) };
+		} catch (error) {
+			console.error("Error fetching tags:", error);
+			throw error;
+		}
+	}
+
 	async getProductById(productId) {
 		try {
 			const product = await Product.findById(productId);
@@ -73,23 +83,24 @@ class ProductService {
 		}
 	}
 
-	async createProduct(productData, imageBuffer = null) {
+	async createProduct(productData, imageFiles = []) {
 		try {
-			let imageUrl = null;
-			let imagePublicId = null;
+			let imageUrls = [];
+			let imagePublicIds = [];
 
-			// Upload image if provided
-			if (imageBuffer) {
-				const uploadedImage = await imageService.uploadImage(imageBuffer, "products");
-				imageUrl = uploadedImage.url;
-				imagePublicId = uploadedImage.publicId;
+			if (imageFiles && imageFiles.length > 0) {
+				const buffers = imageFiles.map((file) => file.buffer);
+				const uploadedImages = await imageService.uploadMultipleImages(buffers, "products");
+				imageUrls = uploadedImages.map((img) => img.url);
+				imagePublicIds = uploadedImages.map((img) => img.publicId);
 			}
 
-			// Create product
+			const existingImages = productData.existingImages ? (Array.isArray(productData.existingImages) ? productData.existingImages : [productData.existingImages]) : [];
+
 			const product = await Product.create({
 				...productData,
-				image: imageUrl,
-				imagePublicId,
+				images: [...existingImages, ...imageUrls],
+				imagePublicIds,
 			});
 
 			return { success: true, product };
@@ -99,27 +110,43 @@ class ProductService {
 		}
 	}
 
-	async updateProduct(productId, updateData, newImageBuffer = null) {
+	async updateProduct(productId, updateData, newImageFiles = []) {
 		try {
 			const product = await Product.findById(productId);
 			if (!product) {
 				throw new Error("Product not found");
 			}
 
-			// Handle image update
-			if (newImageBuffer) {
-				// Delete old image if exists
-				if (product.imagePublicId) {
-					await imageService.deleteImage(product.imagePublicId);
-				}
+			let existingImages = updateData.existingImages ? (Array.isArray(updateData.existingImages) ? updateData.existingImages : [updateData.existingImages]) : [];
+			let imageUrls = [...existingImages];
+			let imagePublicIds = product.imagePublicIds ? [...product.imagePublicIds] : [];
 
-				// Upload new image
-				const uploadedImage = await imageService.uploadImage(newImageBuffer, "products");
-				updateData.image = uploadedImage.url;
-				updateData.imagePublicId = uploadedImage.publicId;
+			if (product.images && product.images.length > 0) {
+				for (let i = 0; i < product.images.length; i++) {
+					if (!existingImages.includes(product.images[i])) {
+						if (product.imagePublicIds && product.imagePublicIds[i]) {
+							await imageService.deleteImage(product.imagePublicIds[i]).catch(err => console.error("Could not delete image", err));
+							const pIndex = imagePublicIds.indexOf(product.imagePublicIds[i]);
+							if (pIndex > -1) {
+								imagePublicIds.splice(pIndex, 1);
+							}
+						}
+					}
+				}
 			}
 
-			// Update product
+			if (newImageFiles && newImageFiles.length > 0) {
+				const buffers = newImageFiles.map((file) => file.buffer);
+				const uploadedImages = await imageService.uploadMultipleImages(buffers, "products");
+				for (const img of uploadedImages) {
+					imageUrls.push(img.url);
+					imagePublicIds.push(img.publicId);
+				}
+			}
+
+			updateData.images = imageUrls;
+			updateData.imagePublicIds = imagePublicIds;
+
 			const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { returnDocument: "after" });
 
 			return { success: true, product: updatedProduct };

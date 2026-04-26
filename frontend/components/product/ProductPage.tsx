@@ -1120,10 +1120,12 @@ type Product = ((typeof ALL_PRODUCTS)[number] | CatalogProduct) & {
 export default function ProductsPage({
   type,
   subtype,
+  gender,
   embedded = false,
 }: {
   type: string;
   subtype?: string;
+  gender?: string;
   embedded?: boolean;
 }) {
   const [activeTag, setActiveTag] = useState('All');
@@ -1159,6 +1161,19 @@ export default function ProductsPage({
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
+
+    if (gender === 'women') {
+      list = list.filter((p) => {
+        const productGender = (p as Product & { gender?: string }).gender;
+        return productGender === 'female' || productGender === 'unisex';
+      });
+    } else if (gender === 'men') {
+      list = list.filter((p) => {
+        const productGender = (p as Product & { gender?: string }).gender;
+        return productGender === 'male' || productGender === 'unisex';
+      });
+    }
+
     if (type) {
       list = list.filter((p) => p.type === type || p.categorySlug === type);
     }
@@ -1183,7 +1198,7 @@ export default function ProductsPage({
       list = list.filter((p) => p.badge === activeTag || (p as any).tags?.includes(activeTag));
     }
     return list;
-  }, [activeTag, search, type, subtype]);
+  }, [dynamicProducts, gender, activeTag, search, type, subtype]);
 
   const displayType = type ? type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
   const displaySubtype = subtype

@@ -181,7 +181,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
     let list = [...allStyle];
     if (filter !== 'all') list = list.filter(p => p.type === filter);
     return list;
-  }, [sid, filter]);
+  }, [allStyle, filter]);
 
   const count = (type: string) =>
     type === 'all' ? allStyle.length : allStyle.filter(p => p.type === type).length;

@@ -9,12 +9,14 @@ import {
 	searchProducts,
 	updateProduct,
 	addProductReview,
+	getTags,
 } from "../controllers/product.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
 router.get("/", getProducts);
+router.get("/tags", getTags);
 router.get("/search", searchProducts);
 router.get("/filter", filterProducts);
 router.get("/:id", getProductById);

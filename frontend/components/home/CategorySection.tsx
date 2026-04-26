@@ -69,6 +69,24 @@ const menJewellery: SubCategoryItem[] = [
   { name: 'Couple Sets', img: IMG.couple,      href: '/subcategory/couple-sets'   },
 ];
 
+const womenJewellerySubcategoryNames = new Set([
+  'Necklaces',
+  'Earrings',
+  'Rings',
+  'Bracelets',
+  'Waist Chains',
+  'Couple Sets',
+]);
+
+const menJewellerySubcategoryNames = new Set([
+  'Men Chains',
+  'Men Bracelets',
+  'Men Rings',
+  'Men Earrings',
+  'Men Pendants',
+  'Couple Sets',
+]);
+
 const buildCategories = (gender: Gender): CategoryItem[] =>
   gender === 'women'
     ? [
@@ -253,6 +271,7 @@ export default function CategorySection() {
 
   useEffect(() => {
     let mounted = true;
+    const templateCategories = buildCategories(tab);
 
     Promise.all([fetchCatalogCategories(), fetchCatalogSubCategories()])
       .then(([categories, subcategories]) => {
@@ -261,54 +280,54 @@ export default function CategorySection() {
         }
 
         const templateBySlug = new Map(
-          buildCategories(tab).map((item) => [item.href.split('/').pop() || '', item])
+          templateCategories.map((item) => [item.href.split('/').pop() || '', item])
         );
-
-        const iconMap: Record<string, string> = {
-          jewellery: '◈',
-          'gift-boxes': '⊡',
-          'fan-combos': '✦',
-          'custom-charm-jewellery': '◎',
-          'hair-accessories': '⟡',
-          keychains: '⌖',
-          'watch-straps': '⊞',
-          'curated-combos': '⊟',
-        };
-
-        const imageMap: Record<string, string> = {
-          jewellery: tab === 'men' ? IMG.menChain : IMG.necklace,
-          'gift-boxes': IMG.giftBox,
-          'fan-combos': IMG.fanCombo,
-          'custom-charm-jewellery': IMG.charm,
-          'hair-accessories': IMG.hair,
-          keychains: IMG.keychain,
-          'watch-straps': IMG.menWatch,
-          'curated-combos': IMG.combo,
-        };
+        const allowedCategorySlugs = new Set(templateBySlug.keys());
+        const allowedJewellerySubcategoryNames =
+          tab === 'men' ? menJewellerySubcategoryNames : womenJewellerySubcategoryNames;
 
         const jewelleryCategory = categories.find((category) => category.slug === 'jewellery');
         const jewellerySub = subcategories
-          .filter((sub) => sub.categoryId && sub.categoryId === jewelleryCategory?.id)
+          .filter(
+            (sub) =>
+              sub.categoryId &&
+              sub.categoryId === jewelleryCategory?.id &&
+              allowedJewellerySubcategoryNames.has(sub.name)
+          )
           .map((sub) => ({
             name: sub.name,
             img: sub.image || IMG.necklace,
             href: `/subcategory/${sub.slug}`,
           }));
 
-        const mapped: CategoryItem[] = categories.map((category) => ({
-          name: category.name,
-          icon: templateBySlug.get(category.slug)?.icon || iconMap[category.slug] || '◈',
-          img: category.image || templateBySlug.get(category.slug)?.img || imageMap[category.slug] || IMG.combo,
-          href: `/categories/${tab}/${category.slug}`,
-          sub: category.slug === 'jewellery' ? jewellerySub : [],
-        }));
+        const categoryBySlug = new Map(categories.map((category) => [category.slug, category]));
 
-        setDynamicCategories(mapped);
+        const mapped: CategoryItem[] = templateCategories
+          .map((template) => {
+            const slug = template.href.split('/').pop() || '';
+            const category = categoryBySlug.get(slug);
+
+            if (!category || !allowedCategorySlugs.has(slug)) {
+              return null;
+            }
+
+            return {
+              name: category.name,
+              icon: template.icon,
+              img: category.image || template.img,
+              href: `/categories/${tab}/${category.slug}`,
+              sub: category.slug === 'jewellery' ? jewellerySub : [],
+            };
+          })
+          .filter((item): item is CategoryItem => Boolean(item));
+
+        setDynamicCategories(mapped.length > 0 ? mapped : templateCategories);
         setActiveIdx(0);
       })
       .catch(() => {
         if (mounted) {
-          setDynamicCategories([]);
+          setDynamicCategories(templateCategories);
+          setActiveIdx(0);
         }
       });
 

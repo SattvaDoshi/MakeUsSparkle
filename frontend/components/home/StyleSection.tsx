@@ -170,8 +170,8 @@ export default function ShopByStyle() {
   const router = useRouter();
   const { gender } = useGender();
   const [dynamicStyles, setDynamicStyles] = useState<typeof womenStyles>([]);
-
-  const styles = dynamicStyles;
+  const styleTemplates = gender === "men" ? menStyles : womenStyles;
+  const styles = dynamicStyles.length > 0 ? dynamicStyles : styleTemplates;
 
   const [visible, setVisible] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -182,6 +182,7 @@ export default function ShopByStyle() {
 
   useEffect(() => {
     let mounted = true;
+    const templatesForGender = gender === "men" ? menStyles : womenStyles;
 
     fetchCatalogStyles()
       .then((stylesFromApi) => {
@@ -189,21 +190,21 @@ export default function ShopByStyle() {
           return;
         }
 
-        const fallbackCards = [...womenStyles, ...menStyles];
-        const fallbackBySlug = new Map(fallbackCards.map((item) => [item.slug, item]));
+        const stylesBySlug = new Map(
+          stylesFromApi.map((style) => [style.slug || slugifyCatalog(style.name), style])
+        );
 
-        const mapped = stylesFromApi.map((style, index) => {
-          const slug = style.slug || slugifyCatalog(style.name);
-          const fallback =
-            fallbackBySlug.get(slug) ||
-            womenStyles[index % womenStyles.length];
+        const mapped = templatesForGender.map((template, index) => {
+          const apiMatch =
+            stylesBySlug.get(template.slug) ||
+            stylesBySlug.get(slugifyCatalog(template.name));
 
           return {
-            ...fallback,
+            ...template,
             id: index + 1,
-            name: style.name,
-            slug,
-            img: style.image || fallback.img,
+            name: apiMatch?.name || template.name,
+            slug: apiMatch?.slug || template.slug,
+            img: apiMatch?.image || template.img,
           };
         });
 
@@ -211,14 +212,14 @@ export default function ShopByStyle() {
       })
       .catch(() => {
         if (mounted) {
-          setDynamicStyles([]);
+          setDynamicStyles(templatesForGender as typeof womenStyles);
         }
       });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [gender]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -232,9 +233,15 @@ export default function ShopByStyle() {
   // Reset scroll on gender change
   useEffect(() => {
     const el = trackRef.current;
-    if (el) el.scrollLeft = 0;
-    setCanScrollLeft(false);
-    setCanScrollRight(true);
+    if (!el) return;
+
+    el.scrollLeft = 0;
+    const frame = requestAnimationFrame(() => {
+      setCanScrollLeft(el.scrollLeft > 8);
+      setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [gender]);
 
   const updateScrollState = () => {

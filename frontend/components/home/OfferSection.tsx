@@ -264,8 +264,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '@/lib/api';
 
 interface Offer {
   id: string;
@@ -281,45 +282,95 @@ interface Offer {
   imageSrc: string; // Added image property
 }
 
-const OFFERS: Offer[] = [
-  { 
-    id: '1', 
-    code: 'SPARK20', 
-    title: '20% off on Jewellery', 
-    description: 'Valid on all jewellery orders above ₹999', 
-    discount: '20', 
-    discountType: 'percent', 
-    minOrder: 999, 
-    expiry: '30 Apr 2025', 
-    category: 'jewellery', 
+type ApiOffer = {
+  _id: string;
+  code: string;
+  name: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderValue?: number;
+  expiryDate?: string;
+  offerCategory?: 'jewellery' | 'combo' | 'gift' | 'all';
+  image?: string;
+  isFeatured?: boolean;
+  createdAt?: string;
+};
+
+type PublicOffersResponse = {
+  success: boolean;
+  offers: ApiOffer[];
+};
+
+const FALLBACK_OFFERS: Offer[] = [
+  {
+    id: '1',
+    code: 'SPARK20',
+    title: '20% off on Jewellery',
+    description: 'Valid on all jewellery orders above INR 999',
+    discount: '20',
+    discountType: 'percent',
+    minOrder: 999,
+    expiry: '30 Apr 2027',
+    category: 'jewellery',
     isNew: true,
-    imageSrc: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=200'
+    imageSrc: '/images/hero.png'
   },
-  { 
-    id: '2', 
-    code: 'COMBO150', 
-    title: '₹150 off on Combos', 
-    description: 'Mix and match your favourite pieces', 
-    discount: '150', 
-    discountType: 'flat', 
-    minOrder: 1499, 
-    expiry: '15 May 2025', 
+  {
+    id: '2',
+    code: 'COMBO150',
+    title: 'INR 150 off on Combos',
+    description: 'Mix and match your favourite pieces',
+    discount: '150',
+    discountType: 'flat',
+    minOrder: 1499,
+    expiry: '15 May 2027',
     category: 'combo',
-    imageSrc: 'https://images.unsplash.com/photo-1611085583191-a3b158866642?auto=format&fit=crop&q=80&w=200'
+    imageSrc: '/images/hero1.png'
   },
-  { 
-    id: '3', 
-    code: 'GIFT10', 
-    title: '10% off on Gift Boxes', 
-    description: 'Surprise someone special today', 
-    discount: '10', 
-    discountType: 'percent', 
-    minOrder: 599, 
-    expiry: '31 May 2025', 
+  {
+    id: '3',
+    code: 'GIFT10',
+    title: '10% off on Gift Boxes',
+    description: 'Surprise someone special today',
+    discount: '10',
+    discountType: 'percent',
+    minOrder: 599,
+    expiry: '31 May 2027',
     category: 'gift',
-    imageSrc: 'https://images.unsplash.com/photo-1549439602-43ebca2327af?auto=format&fit=crop&q=80&w=200'
+    imageSrc: '/images/FairyCoded.jpg'
   },
 ];
+
+const mapApiOffer = (offer: ApiOffer): Offer => {
+  const parsedExpiry = offer.expiryDate ? new Date(offer.expiryDate) : null;
+  const expiryText = parsedExpiry && !Number.isNaN(parsedExpiry.getTime())
+    ? parsedExpiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'No expiry';
+
+  const category = offer.offerCategory === 'jewellery' || offer.offerCategory === 'combo' || offer.offerCategory === 'gift' || offer.offerCategory === 'all'
+    ? offer.offerCategory
+    : 'all';
+
+  const createdAt = offer.createdAt ? new Date(offer.createdAt) : null;
+  const isRecent = createdAt && !Number.isNaN(createdAt.getTime())
+    ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 10
+    : false;
+
+  return {
+    id: offer._id,
+    code: offer.code,
+    title: offer.name,
+    description: offer.description || 'Limited period offer',
+    discount: String(offer.discountValue ?? 0),
+    discountType: offer.discountType === 'fixed' ? 'flat' : 'percent',
+    minOrder: Number(offer.minOrderValue || 0),
+    expiry: expiryText,
+    category,
+    isNew: Boolean(offer.isFeatured || isRecent),
+    imageSrc: offer.image || '/images/hero.png',
+  };
+};
 
 const FILTERS = ['All', 'Jewellery', 'Combos', 'Gift', 'Sitewide'] as const;
 type Filter = typeof FILTERS[number];
@@ -335,10 +386,41 @@ const categoryMap: Record<Filter, Offer['category'] | 'all-filter'> = {
 export default function OffersSection() {
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [copied, setCopied] = useState<string | null>(null);
+  const [offers, setOffers] = useState<Offer[]>(FALLBACK_OFFERS);
 
-  const filtered = activeFilter === 'All'
-    ? OFFERS
-    : OFFERS.filter(o => o.category === categoryMap[activeFilter]);
+  useEffect(() => {
+    let ignore = false;
+
+    const loadOffers = async () => {
+      try {
+        const response = await fetch(getApiUrl('/coupons/offers'));
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as PublicOffersResponse;
+        const mapped = (data.offers || []).map(mapApiOffer);
+
+        if (!ignore && mapped.length > 0) {
+          setOffers(mapped);
+        }
+      } catch {
+        // Keep fallback offers when API is unavailable.
+      }
+    };
+
+    void loadOffers();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const filtered = useMemo(() => (
+    activeFilter === 'All'
+      ? offers
+      : offers.filter(o => o.category === categoryMap[activeFilter])
+  ), [activeFilter, offers]);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);

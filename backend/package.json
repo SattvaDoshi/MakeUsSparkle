@@ -8,6 +8,9 @@
     "dev": "nodemon index.js",
     "seed:catalog": "node src/seed/catalog.seed.js --reset",
     "seed:category-style": "node src/seed/categoryStyleProducts.seed.js",
+    "seed:banners": "node src/seed/banner.seed.js --reset",
+    "seed:offers": "node src/seed/offers.seed.js --reset",
+    "seed:offers:append": "node src/seed/offers.seed.js",
     "test": "echo \"No tests configured\" && exit 0"
   },
   "keywords": [],

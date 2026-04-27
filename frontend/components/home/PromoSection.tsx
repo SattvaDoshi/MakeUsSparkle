@@ -3,6 +3,8 @@
 
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { getApiUrl } from "@/lib/api";
+import Image from "next/image";
 
 type PatternKey = "circles" | "dots" | "lines";
 
@@ -22,9 +24,30 @@ interface BannerItem {
   tagColor: string;
   ctaBorderColor: string;
   ctaTextColor: string;
+  link?: string;
 }
 
-const banners: BannerItem[] = [
+type ApiBanner = {
+  _id: string;
+  text?: string;
+  title?: string;
+  subtitle?: string;
+  tag?: string;
+  cta?: string;
+  link?: string;
+  description?: string;
+  image?: string;
+  imageAlt?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
+type PublicBannersResponse = {
+  success: boolean;
+  banners: ApiBanner[];
+};
+
+const fallbackBanners: BannerItem[] = [
   {
     id: 1,
     tag: "New Launch",
@@ -136,13 +159,105 @@ const Patterns = {
 
 const INTERVAL = 4000;
 
+const bannerThemes = [
+  {
+    bg: "linear-gradient(135deg, #e8c07d 0%, #c9a96e 40%, #a07840 100%)",
+    textDark: true,
+    pattern: "circles" as PatternKey,
+    titleColor: "#000000",
+    subtitleColor: "rgba(0, 0, 0, 0.62)",
+    tagColor: "#311f01",
+    ctaBorderColor: "rgba(37, 20, 0, 0.55)",
+    ctaTextColor: "#1a0d00",
+  },
+  {
+    bg: "linear-gradient(135deg, #b8c9a3 0%, #8fa870 40%, #6b7c45 100%)",
+    textDark: false,
+    pattern: "dots" as PatternKey,
+    titleColor: "#fdf6e9",
+    subtitleColor: "rgba(253,246,233,0.75)",
+    tagColor: "#fdf6e9",
+    ctaBorderColor: "rgba(253,246,233,0.5)",
+    ctaTextColor: "#fdf6e9",
+  },
+  {
+    bg: "linear-gradient(135deg, #f5e6c8 0%, #e8c87d 50%, #d4a843 100%)",
+    textDark: true,
+    pattern: "lines" as PatternKey,
+    titleColor: "#1a0d00",
+    subtitleColor: "rgba(40,20,0,0.62)",
+    tagColor: "#5c3a00",
+    ctaBorderColor: "rgba(90,50,0,0.55)",
+    ctaTextColor: "#1a0d00",
+  },
+  {
+    bg: "linear-gradient(135deg, #3b4a2f 0%, #4e6035 50%, #6b7c45 100%)",
+    textDark: false,
+    pattern: "circles" as PatternKey,
+    titleColor: "#fdf6e9",
+    subtitleColor: "rgba(253,246,233,0.75)",
+    tagColor: "#fdf6e9",
+    ctaBorderColor: "rgba(253,246,233,0.5)",
+    ctaTextColor: "#fdf6e9",
+  },
+];
+
+const mapApiBanner = (banner: ApiBanner, index: number): BannerItem => {
+  const theme = bannerThemes[index % bannerThemes.length];
+  const title = (banner.title || banner.text || "Featured Collection").trim();
+  const subtitle = (banner.subtitle || banner.description || "Discover our latest handcrafted pieces").trim();
+
+  return {
+    id: index + 1,
+    tag: (banner.tag || "Featured").trim(),
+    title,
+    subtitle,
+    cta: (banner.cta || "Shop Now").trim(),
+    imageSrc: (banner.image || "/images/hero.png").trim(),
+    imageAlt: (banner.imageAlt || title).trim(),
+    link: (banner.link || "").trim(),
+    ...theme,
+  };
+};
+
 export default function BannerSlider() {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [liveBanners, setLiveBanners] = useState<BannerItem[]>([]);
+
+  const displayBanners = liveBanners.length > 0 ? liveBanners : fallbackBanners;
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadBanners = async () => {
+      try {
+        const response = await fetch(getApiUrl("/banners"));
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as PublicBannersResponse;
+        const mapped = (data.banners || []).filter((entry) => entry?.isActive !== false).map(mapApiBanner);
+
+        if (!ignore && mapped.length > 0) {
+          setLiveBanners(mapped);
+        }
+      } catch {
+        // Keep fallback banners on request errors.
+      }
+    };
+
+    void loadBanners();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const goTo = useCallback((idx: number) => setCurrent(idx), []);
-  const next = useCallback(() => setCurrent((c) => (c + 1) % banners.length), []);
-  const prev_ = useCallback(() => setCurrent((c) => (c - 1 + banners.length) % banners.length), []);
+  const next = useCallback(() => setCurrent((c) => (c + 1) % displayBanners.length), [displayBanners.length]);
+  const prev_ = useCallback(() => setCurrent((c) => (c - 1 + displayBanners.length) % displayBanners.length), [displayBanners.length]);
 
   useEffect(() => {
     if (paused) return;
@@ -150,7 +265,8 @@ export default function BannerSlider() {
     return () => clearInterval(t);
   }, [next, paused]);
 
-  const b = banners[current];
+  const safeCurrent = current % displayBanners.length;
+  const b = displayBanners[safeCurrent];
   const PatternComp = Patterns[b.pattern];
   const patternColor = b.textDark ? "#3b2000" : "#ffffff";
 
@@ -503,8 +619,8 @@ export default function BannerSlider() {
 
               {/* ══ IMAGE ZONE (80%) ══ */}
               <div className="bs-image-zone">
-                <img src={b.imageSrc} alt={b.imageAlt} />
-                {!paused && <div key={`prog-${current}`} className="bs-progress" />}
+                <Image src={b.imageSrc} alt={b.imageAlt} fill sizes="100vw" />
+                {!paused && <div key={`prog-${safeCurrent}`} className="bs-progress" />}
               </div>
 
               {/* ══ TEXT ZONE (20%) — horizontal bar ══ */}
@@ -550,6 +666,11 @@ export default function BannerSlider() {
                   <button
                     className="bs-cta"
                     style={{ color: b.ctaTextColor, borderColor: b.ctaBorderColor }}
+                    onClick={() => {
+                      if (b.link) {
+                        window.location.href = b.link;
+                      }
+                    }}
                   >
                     {b.cta}
                     <span className="bs-cta-arrow" />
@@ -571,8 +692,8 @@ export default function BannerSlider() {
             </button>
 
             <div className="bs-dots">
-              {banners.map((_, i) => (
-                <button key={i} className={`bs-dot ${i === current ? "active" : ""}`}
+              {displayBanners.map((_, i) => (
+                <button key={i} className={`bs-dot ${i === safeCurrent ? "active" : ""}`}
                   onClick={() => goTo(i)} aria-label={`Go to slide ${i + 1}`}>
                   <div className="bs-dot-inner" />
                 </button>
@@ -580,9 +701,9 @@ export default function BannerSlider() {
             </div>
 
             <p className="bs-counter">
-              <span>{String(current + 1).padStart(2, "0")}</span>
+              <span>{String(safeCurrent + 1).padStart(2, "0")}</span>
               {" / "}
-              {String(banners.length).padStart(2, "0")}
+              {String(displayBanners.length).padStart(2, "0")}
             </p>
 
             <button className="bs-arrow" onClick={next} aria-label="Next">
@@ -595,8 +716,8 @@ export default function BannerSlider() {
 
           {/* ── Thumbnails ── */}
           <div className="bs-thumbs">
-            {banners.map((bn, i) => (
-              <div key={i} className={`bs-thumb ${i === current ? "active" : ""}`}
+            {displayBanners.map((bn, i) => (
+              <div key={i} className={`bs-thumb ${i === safeCurrent ? "active" : ""}`}
                 onClick={() => goTo(i)}>
                 <div className="bs-thumb-bg" style={{ background: bn.bg }} />
                 <div className="bs-thumb-label">{bn.title.split("\n")[0]}</div>

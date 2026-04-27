@@ -2,9 +2,30 @@ import Banner from "../models/banner.model.js";
 import imageService from "./image.service.js";
 
 class BannerService {
+	buildBannerPayload(data = {}) {
+		const normalizedTitle = (data.title || data.text || "").trim();
+		const normalizedSubtitle = (data.subtitle || data.description || "").trim();
+
+		return {
+			text: (data.text || normalizedTitle).trim(),
+			title: normalizedTitle,
+			subtitle: normalizedSubtitle,
+			tag: (data.tag || "").trim(),
+			cta: (data.cta || "Shop Now").trim(),
+			link: (data.link || "").trim(),
+			description: (data.description || normalizedSubtitle).trim(),
+			tags: Array.isArray(data.tags) ? data.tags : [],
+			product: data.product || undefined,
+			image: typeof data.image === "string" ? data.image.trim() : "",
+			imageAlt: (data.imageAlt || "").trim(),
+			isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+			sortOrder: Number.isFinite(Number(data.sortOrder)) ? Number(data.sortOrder) : 0,
+		};
+	}
+
 	async getBanners() {
 		try {
-			const banners = await Banner.find().sort({ createdAt: -1 });
+			const banners = await Banner.find({ isActive: true }).sort({ sortOrder: 1, createdAt: -1 });
 			return { success: true, banners };
 		} catch (error) {
 			console.error("Error fetching banners:", error);
@@ -14,21 +35,16 @@ class BannerService {
 
 	async createBanner(bannerData, imageBuffer = null) {
 		try {
-			let imageUrl = null;
-			let imagePublicId = null;
+			const payload = this.buildBannerPayload(bannerData);
 
 			// Upload image if provided
 			if (imageBuffer) {
 				const uploadedImage = await imageService.uploadImage(imageBuffer, "banners");
-				imageUrl = uploadedImage.url;
-				imagePublicId = uploadedImage.publicId;
+				payload.image = uploadedImage.url;
+				payload.imagePublicId = uploadedImage.publicId;
 			}
 
-			const banner = await Banner.create({
-				...bannerData,
-				image: imageUrl,
-				imagePublicId,
-			});
+			const banner = await Banner.create(payload);
 
 			return { success: true, banner };
 		} catch (error) {
@@ -44,6 +60,8 @@ class BannerService {
 				throw new Error("Banner not found");
 			}
 
+			const payload = this.buildBannerPayload({ ...banner.toObject(), ...updateData });
+
 			// Handle image update
 			if (newImageBuffer) {
 				if (banner.imagePublicId) {
@@ -51,11 +69,11 @@ class BannerService {
 				}
 
 				const uploadedImage = await imageService.uploadImage(newImageBuffer, "banners");
-				updateData.image = uploadedImage.url;
-				updateData.imagePublicId = uploadedImage.publicId;
+				payload.image = uploadedImage.url;
+				payload.imagePublicId = uploadedImage.publicId;
 			}
 
-			const updatedBanner = await Banner.findByIdAndUpdate(bannerId, updateData, { returnDocument: "after" });
+			const updatedBanner = await Banner.findByIdAndUpdate(bannerId, payload, { returnDocument: "after" });
 
 			return { success: true, banner: updatedBanner };
 		} catch (error) {

@@ -53,19 +53,40 @@ type AdminCoupon = {
 	_id: string;
 	code: string;
 	name: string;
+	description?: string;
 	discountType: "percentage" | "fixed";
 	discountValue: number;
+	maxDiscount?: number;
+	minOrderValue?: number;
 	usageLimit?: number;
+	usedCount?: number;
+	startsAt?: string;
 	expiryDate?: string;
 	isActive?: boolean;
+	offerCategory?: "jewellery" | "combo" | "gift" | "all";
+	image?: string;
+	isFeatured?: boolean;
+	applicableCategories?: Array<{ _id: string; name?: string } | string>;
+	applicableSubCategories?: Array<{ _id: string; name?: string } | string>;
+	applicableStyles?: Array<{ _id: string; name?: string } | string>;
+	applicableProducts?: Array<{ _id: string; title?: string } | string>;
+	applicableProductTypes?: string[];
 };
 
 type AdminBanner = {
 	_id: string;
 	text?: string;
+	title?: string;
+	subtitle?: string;
+	tag?: string;
+	cta?: string;
 	link?: string;
 	description?: string;
 	tags?: string[];
+	image?: string;
+	imageAlt?: string;
+	isActive?: boolean;
+	sortOrder?: number;
 	product?: {
 		_id: string;
 		title?: string;
@@ -131,20 +152,40 @@ type CouponFormState = {
 	id: string;
 	code: string;
 	name: string;
+	description: string;
 	discountType: "percentage" | "fixed";
 	discountValue: string;
+	maxDiscount: string;
+	minOrderValue: string;
 	usageLimit: string;
+	startsAt: string;
 	expiryDate: string;
 	isActive: boolean;
+	offerCategory: "jewellery" | "combo" | "gift" | "all";
+	image: string;
+	isFeatured: boolean;
+	applicableCategories: string;
+	applicableSubCategories: string;
+	applicableStyles: string;
+	applicableProducts: string;
+	applicableProductTypes: string;
 };
 
 type BannerFormState = {
 	id: string;
 	text: string;
+	title: string;
+	subtitle: string;
+	tag: string;
+	cta: string;
 	link: string;
 	description: string;
 	tags: string;
 	product: string;
+	image: string;
+	imageAlt: string;
+	isActive: boolean;
+	sortOrder: string;
 };
 
 type ModalKind = "product" | "user" | "coupon" | "banner" | null;
@@ -171,20 +212,40 @@ const defaultCouponForm: CouponFormState = {
 	id: "",
 	code: "",
 	name: "",
+	description: "",
 	discountType: "percentage",
 	discountValue: "",
+	maxDiscount: "",
+	minOrderValue: "0",
 	usageLimit: "1",
+	startsAt: "",
 	expiryDate: "",
 	isActive: true,
+	offerCategory: "all",
+	image: "",
+	isFeatured: false,
+	applicableCategories: "",
+	applicableSubCategories: "",
+	applicableStyles: "",
+	applicableProducts: "",
+	applicableProductTypes: "",
 };
 
 const defaultBannerForm: BannerFormState = {
 	id: "",
 	text: "",
+	title: "",
+	subtitle: "",
+	tag: "",
+	cta: "Shop Now",
 	link: "",
 	description: "",
 	tags: "",
 	product: "",
+	image: "",
+	imageAlt: "",
+	isActive: true,
+	sortOrder: "0",
 };
 
 const createActionsByTab: Partial<Record<TabKey, string>> = {
@@ -476,14 +537,27 @@ export default function AdminDashboardPage() {
 
 	const handleCouponSubmit = async (event: FormEvent) => {
 		event.preventDefault();
+		const parseCsv = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 		const payload = {
 			code: couponForm.code,
 			name: couponForm.name,
+			description: couponForm.description,
 			discountType: couponForm.discountType,
 			discountValue: Number(couponForm.discountValue),
+			maxDiscount: couponForm.maxDiscount ? Number(couponForm.maxDiscount) : undefined,
+			minOrderValue: Number(couponForm.minOrderValue || 0),
 			usageLimit: Number(couponForm.usageLimit),
+			startsAt: couponForm.startsAt ? new Date(couponForm.startsAt).toISOString() : undefined,
 			expiryDate: couponForm.expiryDate ? new Date(couponForm.expiryDate).toISOString() : undefined,
 			isActive: couponForm.isActive,
+			offerCategory: couponForm.offerCategory,
+			image: couponForm.image,
+			isFeatured: couponForm.isFeatured,
+			applicableCategories: parseCsv(couponForm.applicableCategories),
+			applicableSubCategories: parseCsv(couponForm.applicableSubCategories),
+			applicableStyles: parseCsv(couponForm.applicableStyles),
+			applicableProducts: parseCsv(couponForm.applicableProducts),
+			applicableProductTypes: parseCsv(couponForm.applicableProductTypes),
 		};
 
 		await runAction(async () => {
@@ -521,10 +595,18 @@ export default function AdminDashboardPage() {
 		event.preventDefault();
 		const payload = {
 			text: bannerForm.text,
+			title: bannerForm.title,
+			subtitle: bannerForm.subtitle,
+			tag: bannerForm.tag,
+			cta: bannerForm.cta,
 			link: bannerForm.link,
 			description: bannerForm.description,
 			product: bannerForm.product || undefined,
 			tags: bannerForm.tags.split(",").map((item) => item.trim()).filter(Boolean),
+			image: bannerForm.image,
+			imageAlt: bannerForm.imageAlt,
+			isActive: bannerForm.isActive,
+			sortOrder: Number(bannerForm.sortOrder || 0),
 		};
 
 		await runAction(async () => {
@@ -734,7 +816,7 @@ export default function AdminDashboardPage() {
 				<h2>Coupons List</h2>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
-						<thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Value</th><th>Actions</th></tr></thead>
+						<thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used/Limit</th><th>Expiry</th><th>Active</th><th>Actions</th></tr></thead>
 						<tbody>
 							{coupons.map((entry) => (
 								<tr key={entry._id}>
@@ -742,18 +824,35 @@ export default function AdminDashboardPage() {
 									<td>{entry.name}</td>
 									<td>{entry.discountType}</td>
 									<td>{entry.discountValue}</td>
+									<td>{entry.minOrderValue ?? 0}</td>
+									<td>{entry.usedCount ?? 0}/{entry.usageLimit ?? 0}</td>
+									<td>{entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "-"}</td>
+									<td>{entry.isActive ? "Yes" : "No"}</td>
 									<td>
 										<div className="admin-inline-actions">
 											<button className="admin-btn" onClick={() => {
+												const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
 												setCouponForm({
 													id: entry._id,
 													code: entry.code ?? "",
 													name: entry.name ?? "",
+													description: entry.description ?? "",
 													discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
 													discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
+													maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
+													minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
 													usageLimit: entry.usageLimit != null ? String(entry.usageLimit) : "1",
+													startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
 													expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
 													isActive: Boolean(entry.isActive),
+													offerCategory: entry.offerCategory || "all",
+													image: entry.image || "",
+													isFeatured: Boolean(entry.isFeatured),
+													applicableCategories: mapIds(entry.applicableCategories),
+													applicableSubCategories: mapIds(entry.applicableSubCategories),
+													applicableStyles: mapIds(entry.applicableStyles),
+													applicableProducts: mapIds(entry.applicableProducts),
+													applicableProductTypes: (entry.applicableProductTypes || []).join(", "),
 												});
 												setModalMode("edit");
 												setModalKind("coupon");
@@ -776,23 +875,33 @@ export default function AdminDashboardPage() {
 				<h2>Banners List</h2>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
-						<thead><tr><th>Text</th><th>Link</th><th>Tags</th><th>Actions</th></tr></thead>
+						<thead><tr><th>Title</th><th>Tag</th><th>Active</th><th>Order</th><th>Link</th><th>Actions</th></tr></thead>
 						<tbody>
 							{banners.map((entry) => (
 								<tr key={entry._id}>
-									<td>{entry.text || "-"}</td>
+									<td>{entry.title || entry.text || "-"}</td>
+									<td>{entry.tag || "-"}</td>
+									<td>{entry.isActive === false ? "No" : "Yes"}</td>
+									<td>{entry.sortOrder ?? 0}</td>
 									<td>{entry.link || "-"}</td>
-									<td>{(entry.tags || []).join(", ")}</td>
 									<td>
 										<div className="admin-inline-actions">
 											<button className="admin-btn" onClick={() => {
 												setBannerForm({
 													id: entry._id,
 													text: entry.text ?? "",
+													title: entry.title ?? entry.text ?? "",
+													subtitle: entry.subtitle ?? entry.description ?? "",
+													tag: entry.tag ?? "",
+													cta: entry.cta ?? "Shop Now",
 													link: entry.link ?? "",
 													description: entry.description ?? "",
 													tags: (entry.tags || []).join(", "),
 													product: entry.product?._id ?? "",
+													image: entry.image ?? "",
+													imageAlt: entry.imageAlt ?? "",
+													isActive: entry.isActive !== false,
+													sortOrder: String(entry.sortOrder ?? 0),
 												});
 												setModalMode("edit");
 												setModalKind("banner");
@@ -923,14 +1032,31 @@ export default function AdminDashboardPage() {
 						<form className="admin-form-grid" onSubmit={handleCouponSubmit}>
 							<input placeholder="Code" value={couponForm.code ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value }))} required />
 							<input placeholder="Name" value={couponForm.name ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, name: event.target.value }))} required />
+							<textarea placeholder="Description" value={couponForm.description ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, description: event.target.value }))} />
 							<select value={couponForm.discountType ?? "percentage"} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as "percentage" | "fixed" }))}>
 								<option value="percentage">Percentage</option>
 								<option value="fixed">Fixed</option>
 							</select>
 							<input placeholder="Discount Value" type="number" value={couponForm.discountValue ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} required />
+							<input placeholder="Max Discount (for %)" type="number" value={couponForm.maxDiscount ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxDiscount: event.target.value }))} />
+							<input placeholder="Min Order Value" type="number" value={couponForm.minOrderValue ?? "0"} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderValue: event.target.value }))} />
 							<input placeholder="Usage Limit" type="number" value={couponForm.usageLimit ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, usageLimit: event.target.value }))} />
+							<input placeholder="Starts At" type="date" value={couponForm.startsAt ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
 							<input placeholder="Expiry" type="date" value={couponForm.expiryDate ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, expiryDate: event.target.value }))} />
+							<select value={couponForm.offerCategory} onChange={(event) => setCouponForm((prev) => ({ ...prev, offerCategory: event.target.value as "jewellery" | "combo" | "gift" | "all" }))}>
+								<option value="all">Sitewide</option>
+								<option value="jewellery">Jewellery</option>
+								<option value="combo">Combos</option>
+								<option value="gift">Gift</option>
+							</select>
+							<input placeholder="Offer Image URL" value={couponForm.image ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, image: event.target.value }))} />
+							<input placeholder="Category IDs (comma separated)" value={couponForm.applicableCategories ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableCategories: event.target.value }))} />
+							<input placeholder="Subcategory IDs (comma separated)" value={couponForm.applicableSubCategories ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableSubCategories: event.target.value }))} />
+							<input placeholder="Style IDs (comma separated)" value={couponForm.applicableStyles ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableStyles: event.target.value }))} />
+							<input placeholder="Product IDs (comma separated)" value={couponForm.applicableProducts ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProducts: event.target.value }))} />
+							<input placeholder="Types: male,female,unisex" value={couponForm.applicableProductTypes ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProductTypes: event.target.value }))} />
 							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
+							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isFeatured} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFeatured: event.target.checked }))} />Featured (show New badge)</label>
 							<div className="admin-inline-actions">
 								<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Coupon" : "Create Coupon"}</button>
 							</div>
@@ -948,11 +1074,19 @@ export default function AdminDashboardPage() {
 						<button className="admin-btn admin-btn-muted" type="button" onClick={closeModal}>Close</button>
 					</div>
 					<form className="admin-form-grid" onSubmit={handleBannerSubmit}>
+						<input placeholder="Title" value={bannerForm.title ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, title: event.target.value }))} required />
+						<input placeholder="Subtitle" value={bannerForm.subtitle ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, subtitle: event.target.value }))} />
+						<input placeholder="Tag (e.g. New Launch)" value={bannerForm.tag ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, tag: event.target.value }))} />
+						<input placeholder="CTA Text" value={bannerForm.cta ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, cta: event.target.value }))} />
 						<input placeholder="Banner Text" value={bannerForm.text ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, text: event.target.value }))} required />
 						<input placeholder="Link" value={bannerForm.link ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, link: event.target.value }))} />
+						<input placeholder="Image URL" value={bannerForm.image ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, image: event.target.value }))} />
+						<input placeholder="Image Alt" value={bannerForm.imageAlt ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, imageAlt: event.target.value }))} />
+						<input placeholder="Sort Order" type="number" value={bannerForm.sortOrder ?? "0"} onChange={(event) => setBannerForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
 						<input placeholder="Product Id (optional)" value={bannerForm.product ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, product: event.target.value }))} />
 						<input placeholder="Tags comma separated" value={bannerForm.tags ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, tags: event.target.value }))} />
 						<textarea placeholder="Description" value={bannerForm.description ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, description: event.target.value }))} />
+						<label className="admin-checkbox"><input type="checkbox" checked={bannerForm.isActive} onChange={(event) => setBannerForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
 						<div className="admin-inline-actions">
 							<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Banner" : "Create Banner"}</button>
 						</div>

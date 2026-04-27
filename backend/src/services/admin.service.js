@@ -286,7 +286,14 @@ class AdminService {
 	async getCoupons(page = 1, limit = 20) {
 		try {
 			const skip = (page - 1) * limit;
-			const coupons = await Coupon.find().sort({ _id: -1 }).skip(skip).limit(limit);
+			const coupons = await Coupon.find()
+				.populate("applicableCategories", "name")
+				.populate("applicableSubCategories", "name")
+				.populate("applicableStyles", "name")
+				.populate("applicableProducts", "title")
+				.sort({ createdAt: -1 })
+				.skip(skip)
+				.limit(limit);
 			const total = await Coupon.countDocuments();
 
 			return {
@@ -303,7 +310,7 @@ class AdminService {
 	async getBanners(page = 1, limit = 20) {
 		try {
 			const skip = (page - 1) * limit;
-			const banners = await Banner.find().populate("product", "title").sort({ _id: -1 }).skip(skip).limit(limit);
+			const banners = await Banner.find().populate("product", "title").sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limit);
 			const total = await Banner.countDocuments();
 
 			return {

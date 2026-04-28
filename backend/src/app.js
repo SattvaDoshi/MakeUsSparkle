@@ -14,6 +14,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 import couponRoutes from "./routes/coupon.routes.js";
 import bannerRoutes from "./routes/banner.routes.js";
 import abandonedRoutes from "./routes/abandoned.routes.js";
+import charmItemRoutes from "./routes/charmItem.routes.js";
 import adminRoutes from "./routes/admin/admin.routes.js";
 import adminProductRoutes from "./routes/admin/adminProduct.routes.js";
 import adminCategoryRoutes from "./routes/admin/adminCategory.routes.js";
@@ -23,6 +24,7 @@ import adminComboRoutes from "./routes/admin/adminCombo.routes.js";
 import adminOrderRoutes from "./routes/admin/adminOrder.routes.js";
 import adminCouponRoutes from "./routes/admin/adminCoupon.routes.js";
 import adminBannerRoutes from "./routes/admin/adminBanner.routes.js";
+import adminCharmItemRoutes from "./routes/admin/adminCharmItem.routes.js";
 
 const app = express();
 
@@ -65,6 +67,7 @@ app.use("/orders", orderRoutes);
 app.use("/payment", paymentRoutes);
 app.use("/coupons", couponRoutes);
 app.use("/banners", bannerRoutes);
+app.use("/charm-items", charmItemRoutes);
 app.use("/admin", adminRoutes);
 app.use("/admin/products", adminProductRoutes);
 app.use("/admin/categories", adminCategoryRoutes);
@@ -74,6 +77,7 @@ app.use("/admin/combos", adminComboRoutes);
 app.use("/admin/orders", adminOrderRoutes);
 app.use("/admin/coupons", adminCouponRoutes);
 app.use("/admin/banners", adminBannerRoutes);
+app.use("/admin/charm-items", adminCharmItemRoutes);
 app.use("/abandoned", abandonedRoutes);
 
 export default app;

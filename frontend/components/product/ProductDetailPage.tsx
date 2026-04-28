@@ -3,7 +3,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
-import { ALL_PRODUCTS } from './ProductPage'; // adjust path if needed
+import { fetchCatalogProducts, slugifyCatalog } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
@@ -361,12 +361,23 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
 }
 
 // ─── ✨ Customisation Panel ───────────────────────────────────────────────────
-function CustomisationPanel({ category }: { category: string }) {
+function CustomisationPanel({ category, onChange }: { category: string, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
   const [uploads, setUploads]       = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
   const [dragOver, setDragOver]     = useState(false);
   const fileInputRef                = useRef<HTMLInputElement | null>(null);
+
+  // Notify parent on change
+  useEffect(() => {
+    if (onChange) {
+      onChange({
+        wantCustom,
+        uploads: uploads.map(u => u.preview),
+        globalNote
+      });
+    }
+  }, [wantCustom, uploads, globalNote, onChange]);
   const MAX_FILES = 5;
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -499,27 +510,64 @@ function GoesWellWithSection() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
-  const product = ALL_PRODUCTS.find(p => p.href === `/products/${slug}`) as ProductDetailsProduct | undefined;
-  if (!product) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Product not found</div>;
   const { addItem } = useCart();
-  const { name, category, rating, reviewCount, description, price, originalPrice, offer, sku, stock, images, colors } = product;
+  const { toggleItem, isWished } = useWishlist();
 
+  const [remoteProducts, setRemoteProducts] = useState<ProductDetailsProduct[] | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeColor,   setActiveColor]   = useState(0);
   const [activeImg,     setActiveImg]     = useState(0);
   const [shipping,      setShipping]      = useState('standard');
   const [payment,       setPayment]       = useState('prepaid');
   const [qty,           setQty]           = useState(1);
-  const { toggleItem, isWished } = useWishlist();
-  const wished = isWished(product.id);
   const [cartAnim,      setCartAnim]      = useState(false);
   const [sparkleAnim,   setSparkleAnim]   = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  const isCustomisable = CUSTOMISABLE_CATEGORIES.some(c => category?.toLowerCase().includes(c.toLowerCase()));
+  const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
 
-  const currentColorHex = colors?.[activeColor]?.hex;
-  const currentImages   = Array.isArray(images) ? images : (images?.[currentColorHex] || images?.[colors?.[0]?.hex] || []);
+  useEffect(() => {
+    let mounted = true;
+
+    fetchCatalogProducts()
+      .then((products) => {
+        if (mounted) {
+          setRemoteProducts(products as unknown as ProductDetailsProduct[]);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setRemoteProducts([]);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const sourceProducts = remoteProducts ?? [];
+  const product = sourceProducts.find(
+    (p) => p.href === `/products/${slug}` || slugifyCatalog(p.name) === slug
+  );
+
+  const category = product?.category ?? '';
+  const price = product?.price ?? 0;
+  const originalPrice = product?.originalPrice ?? null;
+  const stock = product?.stock ?? 0;
+  const colors = product?.colors ?? [];
+  const images = product?.images;
+  const isCustomisable = CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase()));
+
+  const currentColor = colors[activeColor] || colors[0];
+  const currentColorHex = currentColor?.hex;
+  const fallbackColorHex = colors[0]?.hex;
+  const currentImages = Array.isArray(images)
+    ? images
+    : (images?.[currentColorHex || ''] || (fallbackColorHex ? images?.[fallbackColorHex] : undefined) || []);
   const displayImg      = currentImages?.[activeImg] || currentImages?.[0] || '';
   const discount        = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
@@ -527,51 +575,64 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const codCharge       = payment === 'cod' && shipping !== 'express' ? 70 : 0;
   const totalPrice      = (price + deliveryCharge + codCharge) * qty;
 
-  const wishlistItem = {
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    originalPrice: product.originalPrice ?? null,
-    image: displayImg,
-    category: product.category,
-    href: product.href,
-    colors: product.colors,
-    badge: product.badge ?? null,
-    rating: product.rating,
-    reviewCount: product.reviewCount,
-  };
+  const wished = product ? isWished(product.id) : false;
+
+  const wishlistItem = product
+    ? {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice ?? null,
+        image: displayImg,
+        category: product.category,
+        href: product.href,
+        colors: product.colors,
+        badge: product.badge ?? null,
+        rating: product.rating,
+        reviewCount: product.reviewCount,
+      }
+    : null;
 
   const handleWishToggle = useCallback(() => {
+    if (!wishlistItem) return;
     toggleItem(wishlistItem);
-  }, [toggleItem, product, displayImg]);
+  }, [toggleItem, wishlistItem]);
 
   const handleBuyNow = useCallback(() => {
+    if (!product || !currentColor) return;
+
     const cartItem = {
       id: String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
       image: displayImg,
-      color: colors[activeColor].label,
-      colorHex: colors[activeColor].hex,
+      color: currentColor.label,
+      colorHex: currentColor.hex,
       sku: product.sku,
       href: product.href,
+      customNote: customData.wantCustom ? customData.globalNote : undefined,
+      customImages: customData.wantCustom ? customData.uploads : undefined,
     };
     for (let i = 0; i < qty; i++) addItem(cartItem, false);
     router.push('/cart');
-  }, [addItem, product, displayImg, colors, activeColor, qty, router]);
+  }, [addItem, product, displayImg, currentColor, qty, router, customData]);
 
   const handleAddToCart = useCallback(() => {
+    if (!product || !currentColor) return;
+
     const cartItem = {
       id: String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
       image: displayImg,
-      color: colors[activeColor].label,
-      colorHex: colors[activeColor].hex,
+      color: currentColor.label,
+      colorHex: currentColor.hex,
       sku: product.sku,
       href: product.href,
+      customNote: customData.wantCustom ? customData.globalNote : undefined,
+      customImages: customData.wantCustom ? customData.uploads : undefined,
     };
     for (let i = 0; i < qty; i++) addItem(cartItem);
     fireConfetti(cartBtnRef.current);
@@ -579,11 +640,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, displayImg, colors, activeColor, qty]);
+  }, [addItem, product, displayImg, currentColor, qty, customData]);
 
   const handleColorChange = useCallback((i: number) => { setActiveColor(i); setActiveImg(0); }, []);
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
+
+  if (loading) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Loading product...</div>;
+  if (!product) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Product not found</div>;
+
+  const { name, rating, reviewCount, description, offer, sku } = product;
 
   return (
     <>
@@ -1151,7 +1217,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   <p className="pdp-cust-banner-sub">
                     This {category.toLowerCase()} can be personalised with your own photos, names, or a special message. Choose below and our team will craft something truly unique for you.
                   </p>
-                  <CustomisationPanel category={category} />
+                  <CustomisationPanel category={category} onChange={setCustomData} />
                 </div>
                 <div className="pdp-divider" />
               </>

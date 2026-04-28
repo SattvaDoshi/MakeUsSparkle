@@ -32,6 +32,26 @@ export async function deleteUser(req, res) {
 	}
 }
 
+export async function createUser(req, res) {
+	try {
+		const result = await adminService.createUser(req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("Create user error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateUser(req, res) {
+	try {
+		const result = await adminService.updateUser(req.params.id, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update user error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
 export async function getAnalyticsSales(req, res) {
 	try {
 		const startDate = req.query.startDate;
@@ -61,6 +81,119 @@ export async function getAnalyticsOrders(req, res) {
 		res.json(result);
 	} catch (error) {
 		console.error("Get order analytics error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getProducts(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 20;
+		const result = await adminService.getProducts(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get admin products error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getOrders(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 20;
+		const result = await adminService.getOrders(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get admin orders error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getPayments(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 20;
+		const result = await adminService.getPayments(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get payments error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updatePaymentStatus(req, res) {
+	try {
+		const { paymentStatus } = req.body;
+		const result = await adminService.updatePaymentStatus(req.params.orderId, paymentStatus);
+		res.json(result);
+	} catch (error) {
+		console.error("Update payment status error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function deleteOrder(req, res) {
+	try {
+		const result = await adminService.deleteOrder(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete order error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getCoupons(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 20;
+		const result = await adminService.getCoupons(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get coupons error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getBanners(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 20;
+		const result = await adminService.getBanners(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get banners error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getReviews(req, res) {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 30;
+		const result = await adminService.getReviews(page, limit);
+		res.json(result);
+	} catch (error) {
+		console.error("Get reviews error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateReview(req, res) {
+	try {
+		const result = await adminService.updateReview(req.params.productId, req.params.reviewId, req.body);
+		res.json(result);
+	} catch (error) {
+		console.error("Update review error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function deleteReview(req, res) {
+	try {
+		const result = await adminService.deleteReview(req.params.productId, req.params.reviewId);
+		res.json(result);
+	} catch (error) {
+		console.error("Delete review error:", error);
 		res.status(400).json({ success: false, message: error.message });
 	}
 }

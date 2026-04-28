@@ -12,6 +12,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { useGender } from '@/lib/genderContext';
+import { fetchCatalogCategories, fetchCatalogSubCategories } from '@/lib/catalogApi';
 
 type Gender = 'women' | 'men';
 
@@ -67,6 +68,24 @@ const menJewellery: SubCategoryItem[] = [
   { name: 'Pendants',    img: IMG.menPendant,  href: '/subcategory/men-pendants'  },
   { name: 'Couple Sets', img: IMG.couple,      href: '/subcategory/couple-sets'   },
 ];
+
+const womenJewellerySubcategoryNames = new Set([
+  'Necklaces',
+  'Earrings',
+  'Rings',
+  'Bracelets',
+  'Waist Chains',
+  'Couple Sets',
+]);
+
+const menJewellerySubcategoryNames = new Set([
+  'Men Chains',
+  'Men Bracelets',
+  'Men Rings',
+  'Men Earrings',
+  'Men Pendants',
+  'Couple Sets',
+]);
 
 const buildCategories = (gender: Gender): CategoryItem[] =>
   gender === 'women'
@@ -143,8 +162,13 @@ function MobileSplit({
   setTab: (g: Gender) => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  useEffect(() => { setActiveIdx(0); }, [tab]);
-  const active = categories[activeIdx];
+  const active = categories[activeIdx] || categories[0] || {
+    name: 'Loading',
+    icon: '◈',
+    img: IMG.combo,
+    href: '#',
+    sub: [],
+  };
 
   return (
     <div className="ms-root">
@@ -234,24 +258,92 @@ function MobileSplit({
 /* ─── Main Component ─── */
 export default function CategorySection() {
   const { gender: globalGender, setGender: setGlobalGender } = useGender();
-  const [tab, setTabLocal] = useState<Gender>(globalGender);
+  const tab = globalGender;
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [dynamicCategories, setDynamicCategories] = useState<CategoryItem[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    setTabLocal(globalGender);
-    setActiveIdx(0);
-  }, [globalGender]);
-
   const setTab = (g: Gender) => {
-    setTabLocal(g);
     setGlobalGender(g);
     setActiveIdx(0);
   };
 
-  const categories = buildCategories(tab);
-  const active = categories[activeIdx];
+  useEffect(() => {
+    let mounted = true;
+    const templateCategories = buildCategories(tab);
+
+    Promise.all([fetchCatalogCategories(), fetchCatalogSubCategories()])
+      .then(([categories, subcategories]) => {
+        if (!mounted) {
+          return;
+        }
+
+        const allowedJewellerySubcategoryNames =
+          tab === 'men' ? menJewellerySubcategoryNames : womenJewellerySubcategoryNames;
+
+        const jewelleryCategory = categories.find((category) => category.slug === 'jewellery');
+        const jewellerySub = subcategories
+          .filter(
+            (sub) =>
+              sub.categoryId &&
+              sub.categoryId === jewelleryCategory?.id &&
+              allowedJewellerySubcategoryNames.has(sub.name)
+          )
+          .map((sub) => ({
+            name: sub.name,
+            img: sub.image || IMG.necklace,
+            href: `/subcategory/${sub.slug}`,
+          }));
+
+        const ICONS: Record<string, string> = {
+          'jewellery': '◈',
+          'gift-boxes': '⊡',
+          'fan-combos': '✦',
+          'custom-charm-jewellery': '◎',
+          'hair-accessories': '⟡',
+          'keychains': '⌖',
+          'watch-straps': '⊞',
+          'curated-combos': '⊟',
+        };
+
+        const womenExcludedSlugs = new Set(['watch-straps']);
+        const menExcludedSlugs = new Set(['hair-accessories']);
+        const excludedSlugs = tab === 'men' ? menExcludedSlugs : womenExcludedSlugs;
+
+        const mapped: CategoryItem[] = categories
+          .filter((category) => !excludedSlugs.has(category.slug))
+          .map((category) => ({
+            name: category.name,
+            icon: ICONS[category.slug] || '◈',
+            img: category.image || IMG.combo,
+            href: `/categories/${tab}/${category.slug}`,
+            sub: category.slug === 'jewellery' ? jewellerySub : [],
+          }));
+
+        setDynamicCategories(mapped.length > 0 ? mapped : templateCategories);
+        setActiveIdx(0);
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicCategories(templateCategories);
+          setActiveIdx(0);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [tab]);
+
+  const categories = dynamicCategories;
+  const active = categories[activeIdx] || categories[0] || {
+    name: 'Loading',
+    icon: '◈',
+    img: IMG.combo,
+    href: '#',
+    sub: [],
+  };
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -349,7 +441,7 @@ export default function CategorySection() {
         </div>
 
         {/* MOBILE */}
-        <MobileSplit categories={categories} tab={tab} setTab={setTab} />
+        <MobileSplit key={tab} categories={categories} tab={tab} setTab={setTab} />
 
       </section>
     </>

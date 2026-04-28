@@ -10,6 +10,16 @@ export async function getProducts(req, res) {
 	}
 }
 
+export async function getTags(req, res) {
+	try {
+		const result = await productService.getTags();
+		res.json(result);
+	} catch (error) {
+		console.error("Get tags error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
 export async function getProductById(req, res) {
 	try {
 		const result = await productService.getProductById(req.params.id);
@@ -42,8 +52,8 @@ export async function filterProducts(req, res) {
 
 export async function createProduct(req, res) {
 	try {
-		const imageBuffer = req.file?.buffer;
-		const result = await productService.createProduct(req.body, imageBuffer);
+		const files = req.files || [];
+		const result = await productService.createProduct(req.body, files);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create product error:", error);
@@ -53,8 +63,8 @@ export async function createProduct(req, res) {
 
 export async function updateProduct(req, res) {
 	try {
-		const imageBuffer = req.file?.buffer;
-		const result = await productService.updateProduct(req.params.id, req.body, imageBuffer);
+		const files = req.files || [];
+		const result = await productService.updateProduct(req.params.id, req.body, files);
 		res.json(result);
 	} catch (error) {
 		console.error("Update product error:", error);

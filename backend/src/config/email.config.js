@@ -51,21 +51,49 @@ export const emailTemplates = {
     `,
 	}),
 
-	orderConfirmationEmail: (orderNumber, items, total) => ({
-		subject: `Order Confirmation #${orderNumber}`,
+	orderConfirmationEmail: (orderNumber, items, total) => {
+		const shortId = orderNumber.toString().slice(-8).toUpperCase();
+		return {
+		subject: `Order Confirmation #${shortId}`,
 		html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Order Confirmed!</h2>
-        <p>Thank you for your purchase. Your order number is: <strong>#${orderNumber}</strong></p>
-        <h3>Order Items:</h3>
-        <ul>
-          ${items.map((item) => `<li>${item.name} x ${item.quantity} - ₹${item.price}</li>`).join("")}
-        </ul>
-        <h3>Total: ₹${total}</h3>
-        <p style="color: #999; font-size: 12px;">We'll send you tracking information soon!</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #faf7ef; padding: 30px; border-radius: 8px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #2f3a25; font-size: 28px; margin-bottom: 10px;">Order Confirmed! 🎉</h2>
+          <p style="color: #4f5a44; font-size: 16px;">Thank you for your purchase! We're getting your order ready to be shipped.</p>
+          <div style="margin-top: 20px; padding: 15px; background-color: #fff; border-radius: 6px; border: 1px dashed #d9d0bd;">
+            <p style="margin: 0; color: #6b6b55; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Order Number</p>
+            <p style="margin: 5px 0 0; font-size: 20px; font-weight: bold; color: #2f3a25;">#${shortId}</p>
+          </div>
+        </div>
+
+        <h3 style="color: #2f3a25; border-bottom: 2px solid #e1dbcb; padding-bottom: 10px;">Order Summary</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          ${items.map((item) => {
+			const itemName = item.product?.title || "Custom Charm Jewellery";
+            return `
+            <tr>
+              <td style="padding: 15px 0; border-bottom: 1px solid #e1dbcb; color: #4f5a44;">
+                <strong>${itemName}</strong><br />
+                <span style="font-size: 13px; color: #888;">Qty: ${item.quantity}</span>
+              </td>
+              <td style="padding: 15px 0; border-bottom: 1px solid #e1dbcb; text-align: right; color: #2f3a25; font-weight: bold;">
+                ₹${item.price}
+              </td>
+            </tr>
+          `}).join("")}
+        </table>
+        
+        <div style="margin-top: 20px; text-align: right;">
+          <h3 style="color: #2f3a25; font-size: 20px;">Total: ₹${total}</h3>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; font-size: 13px; color: #8b8b7a;">
+          <p>We'll send you an email with tracking information as soon as your order ships.</p>
+          <p>Make Us Sparkle Team</p>
+        </div>
       </div>
     `,
-	}),
+	}},
 
 	shipmentNotificationEmail: (trackingNumber, carrier) => ({
 		subject: "Your Order Has Shipped!",

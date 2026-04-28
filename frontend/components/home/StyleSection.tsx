@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGender } from "@/lib/genderContext";
+import { fetchCatalogStyles, slugifyCatalog } from "@/lib/catalogApi";
 
 const womenStyles = [
   {
@@ -13,7 +14,7 @@ const womenStyles = [
     desc: "Delicate pieces that whisper, never shout",
     tag: "Bestseller",
     img: "/images/soft-girl.jpg",
-    fallback: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/IslandGirl.jpg",
     accent: "#e8c4c4",
     tint: "rgba(220,170,170,0.18)",
   },
@@ -26,7 +27,7 @@ const womenStyles = [
     desc: "Statement jewels for your most radiant moments",
     tag: "Trending",
     img: "/images/GlamLook.jpg",
-    fallback: "https://images.unsplash.com/photo-1596944924591-d8745fc78bac?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/GlamLook.jpg",
     accent: "#d4af37",
     tint: "rgba(212,175,55,0.18)",
   },
@@ -39,7 +40,7 @@ const womenStyles = [
     desc: "Effortless layers, salt air & golden skin",
     tag: "New",
     img: "/images/IslandGirl.jpg",
-    fallback: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/IslandGirl.jpg",
     accent: "#a8c5a0",
     tint: "rgba(140,190,160,0.18)",
   },
@@ -52,7 +53,7 @@ const womenStyles = [
     desc: "Power dressing starts with the right accent",
     tag: "Essential",
     img: "/images/office-jewellery.jpg",
-    fallback: "https://images.unsplash.com/photo-1573408301185-9519f94f6e94?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/hero1.png",
     accent: "#c9a96e",
     tint: "rgba(201,169,110,0.18)",
   },
@@ -65,7 +66,7 @@ const womenStyles = [
     desc: "More is more — stack, layer, conquer",
     tag: "Fan Fav",
     img: "/images/Maximalist.jpg",
-    fallback: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/FairyCoded.jpg",
     accent: "#d4af37",
     tint: "rgba(212,175,55,0.18)",
   },
@@ -78,7 +79,7 @@ const womenStyles = [
     desc: "Enchanted adornments from another realm",
     tag: "Magical",
     img: "/images/FairyCoded.jpg",
-    fallback: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/FairyCoded.jpg",
     accent: "#c4b8e8",
     tint: "rgba(190,170,230,0.18)",
   },
@@ -94,7 +95,7 @@ const menStyles = [
     desc: "Chunky chains and attitude — wear it loud",
     tag: "Trending",
     img: "/images/men-street.jpg",
-    fallback: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/FairyCoded.jpg",
     accent: "#8a8a8a",
     tint: "rgba(100,100,100,0.18)",
   },
@@ -107,7 +108,7 @@ const menStyles = [
     desc: "Subtle accents that command respect in any boardroom",
     tag: "Essential",
     img: "/images/men-corporate.jpg",
-    fallback: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/GlamLook.jpg",
     accent: "#c9a96e",
     tint: "rgba(201,169,110,0.18)",
   },
@@ -120,7 +121,7 @@ const menStyles = [
     desc: "Rope, shells, and gold for the free-spirited man",
     tag: "New",
     img: "/images/men-island.jpg",
-    fallback: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/IslandGirl.jpg",
     accent: "#a8c5a0",
     tint: "rgba(140,190,160,0.18)",
   },
@@ -133,7 +134,7 @@ const menStyles = [
     desc: "Less noise, more meaning — one perfect piece",
     tag: "Bestseller",
     img: "/images/men-minimal.jpg",
-    fallback: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/FairyCoded.jpg",
     accent: "#d4af37",
     tint: "rgba(212,175,55,0.15)",
   },
@@ -146,7 +147,7 @@ const menStyles = [
     desc: "Black, silver, and no apologies",
     tag: "Fan Fav",
     img: "/images/men-rocker.jpg",
-    fallback: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/Maximalist.jpg",
     accent: "#6a6a6a",
     tint: "rgba(80,80,80,0.2)",
   },
@@ -159,7 +160,7 @@ const menStyles = [
     desc: "Heavy gold, thick links — for the man who leads",
     tag: "Luxury",
     img: "/images/men-gold.jpg",
-    fallback: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80&auto=format&fit=crop",
+    fallback: "/images/hero.png",
     accent: "#d4af37",
     tint: "rgba(212,175,55,0.22)",
   },
@@ -168,7 +169,9 @@ const menStyles = [
 export default function ShopByStyle() {
   const router = useRouter();
   const { gender } = useGender();
-  const styles = gender === "men" ? menStyles : womenStyles;
+  const [dynamicStyles, setDynamicStyles] = useState<typeof womenStyles>([]);
+  const styleTemplates = gender === "men" ? menStyles : womenStyles;
+  const styles = dynamicStyles.length > 0 ? dynamicStyles : styleTemplates;
 
   const [visible, setVisible] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -176,6 +179,47 @@ export default function ShopByStyle() {
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const templatesForGender = gender === "men" ? menStyles : womenStyles;
+
+    fetchCatalogStyles()
+      .then((stylesFromApi) => {
+        if (!mounted) {
+          return;
+        }
+
+        const stylesBySlug = new Map(
+          stylesFromApi.map((style) => [style.slug || slugifyCatalog(style.name), style])
+        );
+
+        const mapped = templatesForGender.map((template, index) => {
+          const apiMatch =
+            stylesBySlug.get(template.slug) ||
+            stylesBySlug.get(slugifyCatalog(template.name));
+
+          return {
+            ...template,
+            id: index + 1,
+            name: apiMatch?.name || template.name,
+            slug: apiMatch?.slug || template.slug,
+            img: apiMatch?.image || template.img,
+          };
+        });
+
+        setDynamicStyles(mapped as typeof womenStyles);
+      })
+      .catch(() => {
+        if (mounted) {
+          setDynamicStyles(templatesForGender as typeof womenStyles);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [gender]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -189,9 +233,15 @@ export default function ShopByStyle() {
   // Reset scroll on gender change
   useEffect(() => {
     const el = trackRef.current;
-    if (el) el.scrollLeft = 0;
-    setCanScrollLeft(false);
-    setCanScrollRight(true);
+    if (!el) return;
+
+    el.scrollLeft = 0;
+    const frame = requestAnimationFrame(() => {
+      setCanScrollLeft(el.scrollLeft > 8);
+      setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [gender]);
 
   const updateScrollState = () => {

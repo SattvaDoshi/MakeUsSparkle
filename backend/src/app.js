@@ -31,22 +31,61 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
+
+const normalizeOrigin = (value) => {
+	if (!value) return "";
+	return String(value).trim().replace(/\/+$/, "");
+};
+
+const allowedOrigins = new Set(
+	[
+		process.env.FRONTEND_URL,
+		process.env.CORS_ORIGINS,
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+		"https://make-us-sparkle.vercel.app",
+	]
+		.flatMap((value) => (value ? String(value).split(",") : []))
+		.map(normalizeOrigin)
+		.filter(Boolean)
+);
+
 app.use((req, res, next) => {
-	const origin = req.headers.origin;
-	if (origin) {
+	const origin = normalizeOrigin(req.headers.origin);
+
+	// Allow non-browser clients (curl/postman) which may not send Origin.
+	if (!origin) {
+		if (req.method === "OPTIONS") {
+			return res.sendStatus(204);
+		}
+		return next();
+	}
+
+	if (allowedOrigins.has(origin)) {
 		res.header("Access-Control-Allow-Origin", origin);
 		res.header("Vary", "Origin");
-	} else {
-		res.header("Access-Control-Allow-Origin", "*");
+		res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+		res.header(
+			"Access-Control-Allow-Headers",
+			"Content-Type, Authorization, X-Requested-With, Accept"
+		);
+		res.header("Access-Control-Max-Age", "86400");
+
+		if (req.method === "OPTIONS") {
+			return res.sendStatus(204);
+		}
+
+		return next();
 	}
-	res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-	res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
 	if (req.method === "OPTIONS") {
-		return res.sendStatus(204);
+		return res.status(403).end();
 	}
 
-	return next();
+	return res.status(403).json({
+		success: false,
+		message: "CORS blocked: origin not allowed",
+	});
 });
 
 app.get("/", (req, res) => {

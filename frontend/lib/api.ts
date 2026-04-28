@@ -1,7 +1,10 @@
-const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const DEFAULT_API_BASE = (process.env.NEXT_PUBLIC_API_URL ||
+	(process.env.NODE_ENV === "production" ? "https://makeussparkle.onrender.com" : "http://localhost:5000")
+).replace(/\/+$/, "");
 
 export function getApiUrl(path: string) {
-	return `${DEFAULT_API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	return `${DEFAULT_API_BASE}${normalizedPath}`;
 }
 
 export function getStoredAuthToken() {

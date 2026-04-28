@@ -255,3 +255,52 @@ export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
     normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
   );
 }
+
+/* ─── Charm Items ─── */
+
+export interface CharmItemData {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  emoji: string;
+  charmCategory: string;
+  parentCategory: string;
+  customisable: boolean;
+  hasPhotoUpload: boolean;
+  sortOrder: number;
+}
+
+interface BackendCharmItem {
+  _id: string;
+  name: string;
+  price: number;
+  image?: string;
+  emoji?: string;
+  charmCategory?: string;
+  parentCategory?: string;
+  customisable?: boolean;
+  hasPhotoUpload?: boolean;
+  sortOrder?: number;
+}
+
+function toCharmItem(item: BackendCharmItem): CharmItemData {
+  return {
+    id: item._id,
+    name: item.name || "Charm",
+    price: item.price || 0,
+    image: item.image || FALLBACK_IMAGE,
+    emoji: item.emoji || "",
+    charmCategory: item.charmCategory || "designs",
+    parentCategory: item.parentCategory || "custom-charm-jewellery",
+    customisable: item.customisable || false,
+    hasPhotoUpload: item.hasPhotoUpload || false,
+    sortOrder: item.sortOrder || 0,
+  };
+}
+
+export async function fetchCharmItems(parentCategory?: string): Promise<CharmItemData[]> {
+  const query = parentCategory ? `?parentCategory=${encodeURIComponent(parentCategory)}` : "";
+  const data = await apiRequest<{ success: boolean; charmItems?: BackendCharmItem[] }>(`/charm-items${query}`);
+  return (data.charmItems || []).map(toCharmItem);
+}

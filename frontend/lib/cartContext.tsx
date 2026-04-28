@@ -21,6 +21,10 @@ export interface CartItem {
   qty: number;
   sku: string;
   href: string;
+  cartItemId?: string;
+  customNote?: string;
+  customImages?: string[];
+  selectedCharms?: any[];
 }
 
 export interface CartState {
@@ -82,17 +86,18 @@ const INITIAL: CartState = {
   discountAmount: 0,
 };
 
-function key(id: string, colorHex: string) {
-  return `${id}__${colorHex}`;
+function key(item: Partial<CartItem>) {
+  return item.cartItemId || `${item.id}__${item.colorHex}__${item.customNote || ''}__${item.selectedCharms?.length || 0}`;
 }
 
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
 
    case 'ADD_ITEM': {
-  const k   = key(action.payload.id, action.payload.colorHex);
+  const payloadItem = { ...action.payload, cartItemId: action.payload.cartItemId || Date.now().toString() + Math.random().toString(36).substr(2, 9) };
+  const k   = key(payloadItem);
   const idx = state.items.findIndex(
-    i => key(i.id, i.colorHex) === k,
+    i => key(i) === k,
   );
 
   const items =
@@ -100,7 +105,7 @@ function reducer(state: CartState, action: Action): CartState {
       ? state.items.map((i, n) =>
           n === idx ? { ...i, qty: i.qty + 1 } : i,
         )
-      : [...state.items, { ...action.payload, qty: 1 }];
+      : [...state.items, { ...payloadItem, qty: 1 }];
 
   return { 
     ...state, 
@@ -110,22 +115,22 @@ function reducer(state: CartState, action: Action): CartState {
 }
 
     case 'REMOVE_ITEM': {
-      const k = key(action.payload.id, action.payload.colorHex);
+      const k = action.payload.id; // We'll pass cartItemId or generated key if needed, but for now fallback is fine. Wait, REMOVE_ITEM payload has id and colorHex. We should probably update REMOVE_ITEM to take cartItemId.
+      // Let's modify REMOVE_ITEM to match by cartItemId if present, else fallback
       return {
         ...state,
-        items: state.items.filter(i => key(i.id, i.colorHex) !== k),
+        items: state.items.filter(i => key(i) !== action.payload.id && i.id !== action.payload.id && `${i.id}__${i.colorHex}` !== `${action.payload.id}__${action.payload.colorHex}`),
       };
     }
 
     case 'UPDATE_QTY': {
-      const k = key(action.payload.id, action.payload.colorHex);
       return {
         ...state,
         items:
           action.payload.qty <= 0
-            ? state.items.filter(i => key(i.id, i.colorHex) !== k)
+            ? state.items.filter(i => key(i) !== action.payload.id && i.id !== action.payload.id && `${i.id}__${i.colorHex}` !== `${action.payload.id}__${action.payload.colorHex}`)
             : state.items.map(i =>
-                key(i.id, i.colorHex) === k
+                (key(i) === action.payload.id || i.id === action.payload.id || `${i.id}__${i.colorHex}` === `${action.payload.id}__${action.payload.colorHex}`)
                   ? { ...i, qty: action.payload.qty }
                   : i,
               ),

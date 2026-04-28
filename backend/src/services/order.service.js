@@ -29,12 +29,30 @@ class OrderService {
 		try {
 			const order = await Order.create({
 				user: userId,
-				items: orderData.items,
+				items: orderData.items.map(item => ({
+					product: item.product,
+					quantity: item.quantity,
+					price: item.price,
+					customNote: item.customNote,
+					customImages: item.customImages,
+					selectedCharms: item.selectedCharms,
+				})),
 				totalAmount: orderData.totalAmount,
-				shippingAddress: orderData.shippingAddress,
-				status: "pending",
+				address: orderData.shippingAddress,
+				isGift: orderData.isGift,
+				giftMessage: orderData.giftMessage,
+				status: "placed",
 				paymentStatus: "pending",
+                paymentMode: orderData.paymentMode || "COD",
 			});
+
+			if (orderData.paymentMode === 'COD') {
+				const populatedOrder = await order.populate([
+					{ path: "user" },
+					{ path: "items.product", select: "title" }
+				]);
+				await emailService.sendOrderConfirmationEmail(populatedOrder.user.email, populatedOrder._id, populatedOrder.items, populatedOrder.totalAmount);
+			}
 
 			return { success: true, order };
 		} catch (error) {

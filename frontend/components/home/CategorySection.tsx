@@ -279,10 +279,6 @@ export default function CategorySection() {
           return;
         }
 
-        const templateBySlug = new Map(
-          templateCategories.map((item) => [item.href.split('/').pop() || '', item])
-        );
-        const allowedCategorySlugs = new Set(templateBySlug.keys());
         const allowedJewellerySubcategoryNames =
           tab === 'men' ? menJewellerySubcategoryNames : womenJewellerySubcategoryNames;
 
@@ -300,26 +296,30 @@ export default function CategorySection() {
             href: `/subcategory/${sub.slug}`,
           }));
 
-        const categoryBySlug = new Map(categories.map((category) => [category.slug, category]));
+        const ICONS: Record<string, string> = {
+          'jewellery': '◈',
+          'gift-boxes': '⊡',
+          'fan-combos': '✦',
+          'custom-charm-jewellery': '◎',
+          'hair-accessories': '⟡',
+          'keychains': '⌖',
+          'watch-straps': '⊞',
+          'curated-combos': '⊟',
+        };
 
-        const mapped: CategoryItem[] = templateCategories
-          .map((template) => {
-            const slug = template.href.split('/').pop() || '';
-            const category = categoryBySlug.get(slug);
+        const womenExcludedSlugs = new Set(['watch-straps']);
+        const menExcludedSlugs = new Set(['hair-accessories']);
+        const excludedSlugs = tab === 'men' ? menExcludedSlugs : womenExcludedSlugs;
 
-            if (!category || !allowedCategorySlugs.has(slug)) {
-              return null;
-            }
-
-            return {
-              name: category.name,
-              icon: template.icon,
-              img: category.image || template.img,
-              href: `/categories/${tab}/${category.slug}`,
-              sub: category.slug === 'jewellery' ? jewellerySub : [],
-            };
-          })
-          .filter((item): item is CategoryItem => Boolean(item));
+        const mapped: CategoryItem[] = categories
+          .filter((category) => !excludedSlugs.has(category.slug))
+          .map((category) => ({
+            name: category.name,
+            icon: ICONS[category.slug] || '◈',
+            img: category.image || IMG.combo,
+            href: `/categories/${tab}/${category.slug}`,
+            sub: category.slug === 'jewellery' ? jewellerySub : [],
+          }));
 
         setDynamicCategories(mapped.length > 0 ? mapped : templateCategories);
         setActiveIdx(0);

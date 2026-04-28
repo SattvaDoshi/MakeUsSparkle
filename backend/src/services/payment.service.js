@@ -16,11 +16,22 @@ class PaymentService {
 			// Create order record in database
 			const order = await Order.create({
 				user: userId,
-				items: orderData.items,
+				items: orderData.items.map(item => ({
+					product: item.product,
+					quantity: item.quantity,
+					price: item.price,
+					customNote: item.customNote,
+					customImages: item.customImages,
+					selectedCharms: item.selectedCharms,
+				})),
 				totalAmount: orderData.amount,
+				address: orderData.shippingAddress,
+				isGift: orderData.isGift,
+				giftMessage: orderData.giftMessage,
 				razorpayOrderId: razorpayOrder.id,
-				status: "pending",
+				status: "placed",
 				paymentStatus: "pending",
+				paymentMode: "ONLINE",
 			});
 
 			return {
@@ -50,9 +61,9 @@ class PaymentService {
 			const order = await Order.findByIdAndUpdate(
 				orderId,
 				{
-					paymentStatus: "completed",
+					paymentStatus: "paid",
 					razorpayPaymentId: paymentId,
-					status: "confirmed",
+					status: "placed",
 				},
 				{ returnDocument: "after" }
 			);
@@ -62,7 +73,10 @@ class PaymentService {
 			}
 
 			// Send order confirmation email
-			const user = await order.populate("user");
+			const user = await order.populate([
+				{ path: "user" },
+				{ path: "items.product", select: "title" }
+			]);
 			await emailService.sendOrderConfirmationEmail(user.user.email, order._id, order.items, order.totalAmount);
 
 			return {

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart, GIFT_CHARGE } from '@/lib/cartContext';
+import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
 // ⬇️  Replace with your actual UpperNav path once confirmed
 import UpperNav from '@/components/ui/UpperNav';
+import { apiRequest } from '@/lib/api';
 
 // ─── UPI apps ─────────────────────────────────────────────────────────────────
 const UPI_APPS = [
@@ -105,8 +107,8 @@ const PayIcon = ({ type, active }: { type: string; active: boolean }) => {
 
 export default function CheckoutPage() {
   const {
-    state, subtotal, savings, shipping, total,
-    itemCount, toggleGift,
+    state, savings, shipping, total,
+    itemCount, toggleGift, clearCart
   } = useCart();
 
   const { items, isGift, discountCode, discountAmount } = state;
@@ -115,16 +117,171 @@ export default function CheckoutPage() {
   const [upiId, setUpiId]                   = useState('');
   const [selectedMethod, setSelectedMethod] = useState('');
   const [showUPIInput, setShowUPIInput]     = useState(false);
-  const [orderPlaced, setOrderPlaced]       = useState(false);
   const [loading, setLoading]               = useState(false);
+  const [orderPlaced, setOrderPlaced]       = useState(false);
+  
+  const { user, refreshUser } = useAuth();
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    fullAddress: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+  const [addressBusy, setAddressBusy] = useState(false);
 
   const finalTotal = total;
 
-  const handlePay = useCallback(() => {
+  // Load Razorpay script dynamically
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
+  const handleSaveAddress = async () => {
+    if (!addressForm.fullAddress || !addressForm.city || !addressForm.state || !addressForm.pincode) {
+      alert("Please fill all address fields.");
+      return;
+    }
+    setAddressBusy(true);
+    try {
+      const addresses = [...(user?.addresses || []), addressForm];
+      await apiRequest('/users/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ addresses })
+      });
+      await refreshUser();
+      setShowAddressForm(false);
+      setSelectedAddressIndex(addresses.length - 1);
+      setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save address.");
+    } finally {
+      setAddressBusy(false);
+    }
+  };
+
+  const handlePay = useCallback(async () => {
     if (!selectedMethod && !selectedUPI && !upiId) return;
+
+    let currentAddress = null;
+    if (user?.addresses && user.addresses.length > 0) {
+      currentAddress = user.addresses[selectedAddressIndex];
+    }
+
+    if (!currentAddress) {
+      alert("Please add a shipping address.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => { setLoading(false); setOrderPlaced(true); }, 1800);
-  }, [selectedMethod, selectedUPI, upiId]);
+    
+    try {
+      const orderPayload = {
+        amount: finalTotal,
+        items: items.map(item => {
+          // Check if item.id is a valid 24-char hex string
+          const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
+          const mappedProduct = (!item.id.startsWith('custom-') && isValidObjectId) ? item.id : undefined;
+          
+          return {
+            product: mappedProduct,
+            quantity: item.qty,
+            price: item.price,
+            customNote: item.customNote,
+            customImages: item.customImages,
+            selectedCharms: item.selectedCharms?.map((c: { id?: string; _id?: string } | string) => {
+              if (typeof c === 'string') return c;
+              return c.id || c._id || c;
+            }),
+          };
+        }),
+        shippingAddress: currentAddress,
+        isGift: isGift,
+        giftMessage: state.giftMessage,
+      };
+
+      const isOnline = selectedMethod !== 'partial' && selectedMethod !== 'pad';
+
+      if (isOnline) {
+        // Online Payment via Razorpay
+        const rzpOrder = await apiRequest<{ success: boolean, orderId: string, razorpayOrderId: string, amount: number, currency: string }>('/payment/create-order', {
+          method: 'POST',
+          body: JSON.stringify(orderPayload)
+        });
+
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RmCmc4bECn3PRU", // Fallback if env is missing
+          amount: rzpOrder.amount * 100,
+          currency: rzpOrder.currency,
+          name: "MakeUsSparkle",
+          description: "Order Payment",
+          order_id: rzpOrder.razorpayOrderId,
+          handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+            try {
+              setLoading(true);
+              await apiRequest('/payment/verify', {
+                method: 'POST',
+                body: JSON.stringify({
+                  orderId: rzpOrder.orderId,
+                  razorpayOrderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature
+                })
+              });
+              clearCart();
+              setOrderPlaced(true);
+            } catch (err) {
+              console.error("Verification failed:", err);
+              alert("Payment verification failed. Please contact support.");
+            } finally {
+              setLoading(false);
+            }
+          },
+          prefill: {
+            name: user?.name || "",
+            email: user?.email || "",
+            contact: user?.phone || ""
+          },
+          theme: {
+            color: "#2d5a27"
+          }
+        };
+
+        const razorpayClass = (window as unknown as { Razorpay: new (opts: object) => { on: (event: string, handler: (res: { error: { description: string } }) => void) => void; open: () => void } }).Razorpay;
+        const rzp = new razorpayClass(options);
+        rzp.on('payment.failed', function (response: { error: { description: string } }) {
+          console.error(response.error);
+          alert("Payment failed: " + response.error.description);
+        });
+        rzp.open();
+
+      } else {
+        // COD Order
+        await apiRequest('/orders/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            ...orderPayload,
+            totalAmount: finalTotal,
+            paymentMode: 'COD'
+          })
+        });
+        
+        clearCart();
+        setOrderPlaced(true);
+      }
+    } catch (err) {
+      console.error("Order failed:", err);
+      alert("Failed to place order. Please try again.");
+    } finally {
+      setLoading(false); // only stop loading here if it failed before Razorpay opened, or if COD finished.
+    }
+  }, [selectedMethod, selectedUPI, upiId, items, finalTotal, isGift, state.giftMessage, clearCart, user, selectedAddressIndex]);
 
   // ── Success screen ────────────────────────────────────────────────────────────
   if (orderPlaced) {
@@ -142,7 +299,7 @@ export default function CheckoutPage() {
         <div className="ck-s">
           <div className="ck-s-icon">✅</div>
           <h1 className="ck-s-title">Order Placed!</h1>
-          <p className="ck-s-sub">Your order is confirmed. You'll receive a confirmation SMS shortly.</p>
+          <p className="ck-s-sub">Your order is confirmed. You&apos;ll receive a confirmation SMS shortly.</p>
           <Link href="/shop" className="ck-s-btn">Continue Shopping</Link>
         </div>
       </>
@@ -453,16 +610,55 @@ export default function CheckoutPage() {
         {/* Savings strip */}
         {savings > 0 && (
           <div className="ck-savings-strip">
-            🎉 You're saving <strong style={{ marginLeft: 3 }}>₹{savings.toLocaleString('en-IN')}</strong> on this order
+            🎉 You&apos;re saving <strong style={{ marginLeft: 3 }}>₹{savings.toLocaleString('en-IN')}</strong> on this order
           </div>
         )}
 
         <div className="ck-body">
           <div className="ck-layout">
 
-            {/* ══ LEFT — Payment methods ════════════════════════════════════ */}
+            {/* ══ LEFT — Address + Payment methods ════════════════════════════════════ */}
             <div>
-              <p className="ck-col-title">Payment</p>
+              <p className="ck-col-title">Shipping Address</p>
+              <div className="ck-panel" style={{ animationDelay: '0s', padding: 20 }}>
+                {user?.addresses && user.addresses.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: showAddressForm ? 16 : 0 }}>
+                    {user.addresses.map((addr, idx) => (
+                      <label key={idx} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: 12, border: selectedAddressIndex === idx ? '2px solid var(--g600)' : '1.5px solid var(--border)', borderRadius: 10, background: selectedAddressIndex === idx ? '#eaf5ea' : 'transparent' }}>
+                        <input type="radio" name="address" checked={selectedAddressIndex === idx} onChange={() => { setSelectedAddressIndex(idx); setShowAddressForm(false); }} style={{ marginTop: 4 }} />
+                        <div style={{ fontSize: 13, color: 'var(--ink)' }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{user.name}</div>
+                          <div>{addr.fullAddress}</div>
+                          <div>{addr.city}, {addr.state} - {addr.pincode}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--mist)', marginBottom: 16 }}>No saved addresses.</div>
+                )}
+                
+                {!showAddressForm ? (
+                  <button onClick={() => setShowAddressForm(true)} style={{ background: 'none', border: '1.5px dashed var(--g500)', color: 'var(--g700)', padding: 12, borderRadius: 8, cursor: 'pointer', width: '100%', fontSize: 13, fontWeight: 600 }}>
+                    + Add New Address
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input placeholder="Full Address" value={addressForm.fullAddress} onChange={e => setAddressForm({...addressForm, fullAddress: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13 }} />
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input placeholder="City" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, flex: 1 }} />
+                      <input placeholder="State" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, width: 80 }} />
+                      <input placeholder="Pincode" value={addressForm.pincode} onChange={e => setAddressForm({...addressForm, pincode: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, width: 100 }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button onClick={() => setShowAddressForm(false)} style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer' }}>Cancel</button>
+                      <button onClick={handleSaveAddress} disabled={addressBusy} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: 'var(--g700)', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{addressBusy ? 'Saving...' : 'Save Address'}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="ck-col-title" style={{ marginTop: 24 }}>Payment</p>
 
               {/* UPI */}
               <div className="ck-panel" style={{ animationDelay: '0s' }}>

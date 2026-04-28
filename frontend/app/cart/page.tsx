@@ -35,7 +35,6 @@ export default function CartPage() {
   const [couponSuccess, setCouponSuccess] = useState('');
 
   // Which offer dots are unlocked
-  const unlockedOffers = OFFERS.filter(o => subtotal >= o.threshold);
   const nextOffer      = OFFERS.find(o => subtotal < o.threshold);
   const remaining      = nextOffer ? nextOffer.threshold - subtotal : 0;
   const progressBase   = nextOffer
@@ -462,7 +461,7 @@ export default function CartPage() {
                 <div className="cp-panel">
                   {savings > 0 && (
                     <div className="cp-savings-strip">
-                      🎉 You're saving ₹{savings.toLocaleString('en-IN')} on this order!
+                      🎉 You&apos;re saving ₹{savings.toLocaleString('en-IN')} on this order!
                     </div>
                   )}
                   {items.map(item => (
@@ -537,7 +536,7 @@ export default function CartPage() {
                   <p className="cp-panel-head" style={{ padding: 0, border: 'none', marginBottom: 12 }}>Apply Coupon</p>
                   {discountCode && (
                     <div className="cp-coupon-applied">
-                      <span>"{discountCode}" — ₹{discountAmount} off</span>
+                      <span>&quot;{discountCode}&quot; — ₹{discountAmount} off</span>
                       <button className="cp-coupon-remove" onClick={removeDiscount} aria-label="Remove coupon">×</button>
                     </div>
                   )}

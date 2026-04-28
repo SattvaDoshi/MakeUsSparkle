@@ -39,14 +39,33 @@ type AdminProduct = {
 type AdminOrder = {
 	_id: string;
 	totalAmount?: number;
-	status?: "placed" | "shipped" | "delivered" | "cancelled";
-	paymentStatus?: "pending" | "paid" | "failed";
+	status?: "placed" | "shipped" | "delivered" | "cancelled" | "confirmed";
+	paymentStatus?: "pending" | "paid" | "failed" | "completed";
 	paymentMode?: string;
 	user?: {
+		_id?: string;
 		name?: string;
 		email?: string;
 	};
+	address?: {
+		fullAddress?: string;
+		city?: string;
+		state?: string;
+		pincode?: string;
+	};
+	items?: Array<{
+		_id?: string;
+		product?: { _id: string; title?: string } | string;
+		quantity?: number;
+		price?: number;
+		customNote?: string;
+		customImages?: string[];
+		selectedCharms?: Array<{ _id: string; name?: string } | string>;
+	}>;
+	isGift?: boolean;
+	giftMessage?: string;
 	createdAt?: string;
+	updatedAt?: string;
 };
 
 type AdminCoupon = {
@@ -105,6 +124,20 @@ type AdminReview = {
 	};
 };
 
+type AdminCharmItem = {
+	_id: string;
+	name: string;
+	price: number;
+	image?: string;
+	emoji?: string;
+	charmCategory: string;
+	parentCategory: string;
+	customisable?: boolean;
+	hasPhotoUpload?: boolean;
+	sortOrder?: number;
+	active?: boolean;
+};
+
 type PagedResponse<T, K extends string> = {
 	success: boolean;
 	pagination: {
@@ -114,7 +147,7 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews";
+type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
 
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
@@ -125,6 +158,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "coupons", label: "Coupons" },
 	{ key: "banners", label: "Banners" },
 	{ key: "reviews", label: "Reviews" },
+	{ key: "charms", label: "Charms" },
 ];
 
 const orderStatuses: Array<AdminOrder["status"]> = ["placed", "shipped", "delivered", "cancelled"];
@@ -188,7 +222,22 @@ type BannerFormState = {
 	sortOrder: string;
 };
 
-type ModalKind = "product" | "user" | "coupon" | "banner" | null;
+type CharmFormState = {
+	id: string;
+	name: string;
+	price: string;
+	emoji: string;
+	charmCategory: string;
+	parentCategory: string;
+	customisable: boolean;
+	hasPhotoUpload: boolean;
+	sortOrder: string;
+	active: boolean;
+	imageFile: File | null;
+	imageUrl: string;
+};
+
+type ModalKind = "product" | "user" | "coupon" | "banner" | "charm" | null;
 
 const defaultProductForm: ProductFormState = {
 	id: "",
@@ -248,11 +297,27 @@ const defaultBannerForm: BannerFormState = {
 	sortOrder: "0",
 };
 
+const defaultCharmForm: CharmFormState = {
+	id: "",
+	name: "",
+	price: "",
+	emoji: "",
+	charmCategory: "designs",
+	parentCategory: "custom-charm-jewellery",
+	customisable: false,
+	hasPhotoUpload: false,
+	sortOrder: "0",
+	active: true,
+	imageFile: null,
+	imageUrl: "",
+};
+
 const createActionsByTab: Partial<Record<TabKey, string>> = {
 	products: "Add Product",
 	users: "Add User",
 	coupons: "Add Coupon",
 	banners: "Add Banner",
+	charms: "Add Charm",
 };
 
 const normalizeGender = (value?: string | null): ProductFormState["gender"] => {
@@ -280,11 +345,13 @@ export default function AdminDashboardPage() {
 	const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
 	const [banners, setBanners] = useState<AdminBanner[]>([]);
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
+	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
 
 	const [productForm, setProductForm] = useState(defaultProductForm);
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
 	const [bannerForm, setBannerForm] = useState(defaultBannerForm);
+	const [charmForm, setCharmForm] = useState(defaultCharmForm);
 	const [modalKind, setModalKind] = useState<ModalKind>(null);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -292,13 +359,52 @@ export default function AdminDashboardPage() {
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
 
 	const totalManagedItems = useMemo(
-		() => users.length + products.length + orders.length + payments.length + coupons.length + banners.length + reviews.length,
-		[users, products, orders, payments, coupons, banners, reviews]
+		() => users.length + products.length + orders.length + payments.length + coupons.length + banners.length + reviews.length + charms.length,
+		[users, products, orders, payments, coupons, banners, reviews, charms]
 	);
 
 	const resetMessages = () => {
 		setError(null);
 		setNotice(null);
+	};
+
+	const formatShortId = (value: string) => value.slice(-8).toUpperCase();
+	const formatMoney = (amount?: number) => `INR ${Math.round(amount || 0).toLocaleString()}`;
+	const formatDateTime = (value?: string) => {
+		if (!value) return "-";
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return "-";
+		return date.toLocaleString();
+	};
+	const formatAddress = (address?: AdminOrder["address"]) => {
+		if (!address) return "-";
+		const parts = [address.fullAddress, address.city, address.state, address.pincode].filter(Boolean);
+		return parts.length ? parts.join(", ") : "-";
+	};
+	const normalizeOrderStatus = (value?: AdminOrder["status"]) => {
+		if (value === "confirmed") return "placed";
+		return value || "placed";
+	};
+	const normalizePaymentStatus = (value?: AdminOrder["paymentStatus"]) => {
+		if (value === "completed") return "paid";
+		return value || "pending";
+	};
+	const getOrderItemLabel = (item: NonNullable<AdminOrder["items"]>[number]) => {
+		const product = item.product;
+		if (product && typeof product !== "string" && product.title) {
+			return product.title;
+		}
+		if (typeof product === "string" && product.length >= 6) {
+			return `Product ${formatShortId(product)}`;
+		}
+		const charmCount = item.selectedCharms?.length || 0;
+		if (charmCount > 0) {
+			return `Custom Charm Jewellery (${charmCount} charm${charmCount === 1 ? "" : "s"})`;
+		}
+		if (item.customNote) {
+			return "Custom Item";
+		}
+		return "Custom Item";
 	};
 
 	const runAction = async (action: () => Promise<void>, successMessage: string) => {
@@ -351,6 +457,11 @@ export default function AdminDashboardPage() {
 		setReviews(reviewsResult.reviews);
 	}, []);
 
+	const loadCharms = useCallback(async () => {
+		const charmsResult = await apiRequest<{ success: boolean; charmItems: AdminCharmItem[] }>("/admin/charm-items");
+		setCharms(charmsResult.charmItems || []);
+	}, []);
+
 	const loadActiveTab = useCallback(async (tab: TabKey) => {
 		setLoading(true);
 		setError(null);
@@ -365,12 +476,13 @@ export default function AdminDashboardPage() {
 			if (tab === "coupons") await loadCoupons();
 			if (tab === "banners") await loadBanners();
 			if (tab === "reviews") await loadReviews();
+			if (tab === "charms") await loadCharms();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load admin data");
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers]);
+	}, [loadBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -410,6 +522,12 @@ export default function AdminDashboardPage() {
 			setBannerForm(defaultBannerForm);
 			setModalMode("create");
 			setModalKind("banner");
+		}
+
+		if (activeTab === "charms") {
+			setCharmForm(defaultCharmForm);
+			setModalMode("create");
+			setModalKind("charm");
 		}
 	};
 
@@ -651,6 +769,54 @@ export default function AdminDashboardPage() {
 		}, "Review deleted");
 	};
 
+	const handleDeleteCharm = async (id: string) => {
+		if (!window.confirm("Delete this charm?")) {
+			return;
+		}
+
+		await runAction(async () => {
+			await apiRequest(`/admin/charm-items/${id}`, { method: "DELETE" });
+			await loadCharms();
+		}, "Charm deleted");
+	};
+
+	const handleCharmSubmit = async (event: FormEvent) => {
+		event.preventDefault();
+		const formData = new FormData();
+		formData.append("name", charmForm.name);
+		formData.append("price", String(charmForm.price));
+		formData.append("emoji", charmForm.emoji);
+		formData.append("charmCategory", charmForm.charmCategory);
+		formData.append("parentCategory", charmForm.parentCategory);
+		formData.append("customisable", String(charmForm.customisable));
+		formData.append("hasPhotoUpload", String(charmForm.hasPhotoUpload));
+		formData.append("sortOrder", String(charmForm.sortOrder || 0));
+		formData.append("active", String(charmForm.active));
+
+		if (charmForm.imageFile) {
+			formData.append("images", charmForm.imageFile); // Multer expects 'images' for single upload as well based on our upload middleware
+		}
+
+		await runAction(async () => {
+			if (charmForm.id) {
+				await apiRequest(`/admin/charm-items/${charmForm.id}`, {
+					method: "PUT",
+					body: formData, // FormData removes Content-Type automatically in apiRequest
+				});
+			} else {
+				await apiRequest("/admin/charm-items", {
+					method: "POST",
+					body: formData,
+				});
+			}
+
+			setModalKind(null);
+			setModalMode("create");
+			setCharmForm(defaultCharmForm);
+			await loadCharms();
+		}, charmForm.id ? "Charm updated" : "Charm created");
+	};
+
 	const handleUpdateReview = async (event: FormEvent) => {
 		event.preventDefault();
 		if (!editingReview) {
@@ -760,20 +926,45 @@ export default function AdminDashboardPage() {
 				<h2>Orders</h2>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
-						<thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+						<thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
 						<tbody>
 							{orders.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry._id.slice(-8).toUpperCase()}</td>
-									<td>{entry.user?.name || entry.user?.email || "-"}</td>
-									<td>INR {Math.round(entry.totalAmount || 0).toLocaleString()}</td>
-									<td>
-										<select value={entry.status || "placed"} onChange={(event) => void handleOrderStatus(entry._id, event.target.value)}>
-											{orderStatuses.map((status) => <option key={status} value={status || "placed"}>{status}</option>)}
-										</select>
-									</td>
-									<td><button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteOrder(entry._id)}>Delete</button></td>
-								</tr>
+									<>
+										<tr key={entry._id}>
+											<td>{formatShortId(entry._id)}</td>
+											<td>{entry.user?.name || entry.user?.email || "-"}</td>
+											<td>{formatMoney(entry.totalAmount)}</td>
+											<td>{`${entry.paymentMode || "-"} • ${normalizePaymentStatus(entry.paymentStatus)}`}</td>
+											<td>
+												<select value={normalizeOrderStatus(entry.status)} onChange={(event) => void handleOrderStatus(entry._id, event.target.value)}>
+													{orderStatuses.map((status) => <option key={status} value={status || "placed"}>{status}</option>)}
+												</select>
+											</td>
+											<td>{formatDateTime(entry.createdAt)}</td>
+											<td><button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteOrder(entry._id)}>Delete</button></td>
+										</tr>
+										<tr key={`${entry._id}-details`}>
+											<td colSpan={7} style={{ whiteSpace: "normal" }}>
+												<div style={{ display: "grid", gap: 6 }}>
+													<div><strong>Shipping:</strong> {formatAddress(entry.address)}</div>
+													{!!entry.isGift && (
+														<div><strong>Gift:</strong> Yes{entry.giftMessage ? ` — “${entry.giftMessage}”` : ""}</div>
+													)}
+													<div>
+														<strong>Items:</strong>
+														<ul style={{ margin: "6px 0 0 18px" }}>
+															{(entry.items || []).length === 0 && <li>—</li>}
+															{(entry.items || []).map((item) => (
+																<li key={item._id || `${entry._id}-${String(item.price)}-${String(item.quantity)}`}>
+																	{getOrderItemLabel(item)} • Qty {item.quantity ?? 0} • ₹{Math.round(item.price || 0).toLocaleString()}
+																</li>
+															))}
+														</ul>
+													</div>
+												</div>
+											</td>
+										</tr>
+									</>
 							))}
 						</tbody>
 					</table>
@@ -792,15 +983,15 @@ export default function AdminDashboardPage() {
 						<tbody>
 							{payments.map((entry) => (
 								<tr key={entry._id}>
-									<td>{entry._id.slice(-8).toUpperCase()}</td>
+									<td>{formatShortId(entry._id)}</td>
 									<td>{entry.user?.name || entry.user?.email || "-"}</td>
 									<td>{entry.paymentMode || "-"}</td>
 									<td>
-										<select value={entry.paymentStatus || "pending"} onChange={(event) => void handlePaymentStatus(entry._id, event.target.value)}>
+										<select value={normalizePaymentStatus(entry.paymentStatus)} onChange={(event) => void handlePaymentStatus(entry._id, event.target.value)}>
 											{paymentStatuses.map((status) => <option key={status} value={status || "pending"}>{status}</option>)}
 										</select>
 									</td>
-									<td>INR {Math.round(entry.totalAmount || 0).toLocaleString()}</td>
+									<td>{formatMoney(entry.totalAmount)}</td>
 								</tr>
 							))}
 						</tbody>
@@ -958,6 +1149,54 @@ export default function AdminDashboardPage() {
 		</section>
 	);
 
+	const renderCharms = () => (
+		<section className="admin-content">
+			<div className="admin-panel">
+				<h2>Charms List</h2>
+				<div className="admin-table-wrap">
+					<table className="admin-table">
+						<thead><tr><th>Name</th><th>Price</th><th>Category</th><th>Parent</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead>
+						<tbody>
+							{charms.map((entry) => (
+								<tr key={entry._id}>
+									<td>{entry.emoji} {entry.name}</td>
+									<td>INR {entry.price}</td>
+									<td>{entry.charmCategory}</td>
+									<td>{entry.parentCategory}</td>
+									<td>{entry.sortOrder}</td>
+									<td>{entry.active === false ? "No" : "Yes"}</td>
+									<td>
+										<div className="admin-inline-actions">
+											<button className="admin-btn" onClick={() => {
+												setCharmForm({
+													id: entry._id,
+													name: entry.name || "",
+													price: String(entry.price || 0),
+													emoji: entry.emoji || "",
+													charmCategory: entry.charmCategory || "designs",
+													parentCategory: entry.parentCategory || "custom-charm-jewellery",
+													customisable: Boolean(entry.customisable),
+													hasPhotoUpload: Boolean(entry.hasPhotoUpload),
+													sortOrder: String(entry.sortOrder || 0),
+													active: entry.active !== false,
+													imageFile: null,
+													imageUrl: entry.image || "",
+												});
+												setModalMode("edit");
+												setModalKind("charm");
+											}}>Edit</button>
+											<button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteCharm(entry._id)}>Delete</button>
+										</div>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+	);
+
 	const renderTabContent = () => {
 		if (activeTab === "home") return renderHome();
 		if (activeTab === "products") return renderProducts();
@@ -966,6 +1205,7 @@ export default function AdminDashboardPage() {
 		if (activeTab === "payments") return renderPayments();
 		if (activeTab === "coupons") return renderCoupons();
 		if (activeTab === "banners") return renderBanners();
+		if (activeTab === "charms") return renderCharms();
 		return renderReviews();
 	};
 
@@ -1059,6 +1299,48 @@ export default function AdminDashboardPage() {
 							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isFeatured} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFeatured: event.target.checked }))} />Featured (show New badge)</label>
 							<div className="admin-inline-actions">
 								<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Coupon" : "Create Coupon"}</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			);
+		}
+
+		if (modalKind === "charm") {
+			return (
+				<div className="admin-modal-backdrop" onClick={closeModal}>
+					<div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+						<div className="admin-modal-header">
+							<h3>{modalMode === "edit" ? "Edit Charm" : "Add Charm"}</h3>
+							<button className="admin-btn admin-btn-muted" type="button" onClick={closeModal}>Close</button>
+						</div>
+						<form className="admin-form-grid" onSubmit={handleCharmSubmit}>
+							<input placeholder="Name" value={charmForm.name} onChange={(event) => setCharmForm((prev) => ({ ...prev, name: event.target.value }))} required />
+							<input placeholder="Price" type="number" value={charmForm.price} onChange={(event) => setCharmForm((prev) => ({ ...prev, price: event.target.value }))} required />
+							<input placeholder="Emoji (e.g. ⭐)" value={charmForm.emoji} onChange={(event) => setCharmForm((prev) => ({ ...prev, emoji: event.target.value }))} />
+							<select value={charmForm.charmCategory} onChange={(event) => setCharmForm((prev) => ({ ...prev, charmCategory: event.target.value }))}>
+								<option value="initials">Initials</option>
+								<option value="symbols">Symbols</option>
+								<option value="birthstones">Birthstones</option>
+								<option value="custom">Custom</option>
+								<option value="designs">Designs</option>
+								<option value="characters">Characters</option>
+							</select>
+							<select value={charmForm.parentCategory} onChange={(event) => setCharmForm((prev) => ({ ...prev, parentCategory: event.target.value }))}>
+								<option value="custom-charm-jewellery">Custom Charm Jewellery</option>
+								<option value="keychains">Keychains</option>
+							</select>
+							<input placeholder="Sort Order" type="number" value={charmForm.sortOrder} onChange={(event) => setCharmForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
+							<input type="file" accept="image/*" onChange={(event) => {
+								const file = event.target.files?.[0] || null;
+								setCharmForm((prev) => ({ ...prev, imageFile: file }));
+							}} />
+							{charmForm.imageUrl && !charmForm.imageFile && <img src={charmForm.imageUrl} alt="Charm Preview" style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8 }} />}
+							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.customisable} onChange={(event) => setCharmForm((prev) => ({ ...prev, customisable: event.target.checked }))} />Customisable Text?</label>
+							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.hasPhotoUpload} onChange={(event) => setCharmForm((prev) => ({ ...prev, hasPhotoUpload: event.target.checked }))} />Has Photo Upload?</label>
+							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.active} onChange={(event) => setCharmForm((prev) => ({ ...prev, active: event.target.checked }))} />Active</label>
+							<div className="admin-inline-actions">
+								<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Charm" : "Create Charm"}</button>
 							</div>
 						</form>
 					</div>

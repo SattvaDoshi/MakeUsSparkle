@@ -361,12 +361,23 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
 }
 
 // ─── ✨ Customisation Panel ───────────────────────────────────────────────────
-function CustomisationPanel({ category }: { category: string }) {
+function CustomisationPanel({ category, onChange }: { category: string, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
   const [uploads, setUploads]       = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
   const [dragOver, setDragOver]     = useState(false);
   const fileInputRef                = useRef<HTMLInputElement | null>(null);
+
+  // Notify parent on change
+  useEffect(() => {
+    if (onChange) {
+      onChange({
+        wantCustom,
+        uploads: uploads.map(u => u.preview),
+        globalNote
+      });
+    }
+  }, [wantCustom, uploads, globalNote, onChange]);
   const MAX_FILES = 5;
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -514,6 +525,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
+  const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
+
   useEffect(() => {
     let mounted = true;
 
@@ -598,10 +611,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       colorHex: currentColor.hex,
       sku: product.sku,
       href: product.href,
+      customNote: customData.wantCustom ? customData.globalNote : undefined,
+      customImages: customData.wantCustom ? customData.uploads : undefined,
     };
     for (let i = 0; i < qty; i++) addItem(cartItem, false);
     router.push('/cart');
-  }, [addItem, product, displayImg, currentColor, qty, router]);
+  }, [addItem, product, displayImg, currentColor, qty, router, customData]);
 
   const handleAddToCart = useCallback(() => {
     if (!product || !currentColor) return;
@@ -616,6 +631,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       colorHex: currentColor.hex,
       sku: product.sku,
       href: product.href,
+      customNote: customData.wantCustom ? customData.globalNote : undefined,
+      customImages: customData.wantCustom ? customData.uploads : undefined,
     };
     for (let i = 0; i < qty; i++) addItem(cartItem);
     fireConfetti(cartBtnRef.current);
@@ -623,7 +640,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, displayImg, currentColor, qty]);
+  }, [addItem, product, displayImg, currentColor, qty, customData]);
 
   const handleColorChange = useCallback((i: number) => { setActiveColor(i); setActiveImg(0); }, []);
 
@@ -1200,7 +1217,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   <p className="pdp-cust-banner-sub">
                     This {category.toLowerCase()} can be personalised with your own photos, names, or a special message. Choose below and our team will craft something truly unique for you.
                   </p>
-                  <CustomisationPanel category={category} />
+                  <CustomisationPanel category={category} onChange={setCustomData} />
                 </div>
                 <div className="pdp-divider" />
               </>

@@ -1,9 +1,12 @@
 
 'use client';
 
-import { useState, useRef, type ChangeEvent, useCallback } from 'react';
-// Add import at top:
+import { useState, useEffect, useRef, type ChangeEvent, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCart } from '@/lib/cartContext';
 import UpperNav from '@/components/ui/UpperNav';
+import { fetchCharmItems, type CharmItemData } from '@/lib/catalogApi';
+
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
@@ -24,64 +27,54 @@ interface CharmCategory {
   charms: CharmItem[];
 }
 
-/* ─────────────────────────────────────────────────────────────
-   DATA
-───────────────────────────────────────────────────────────── */
-const CHARM_CATEGORIES: CharmCategory[] = [
-  {
-    id: 'initials',
-    label: 'Initials',
-    icon: '𝑨',
-    charms: [
-      { id: 'c-a', name: 'Letter A', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'A' },
-      { id: 'c-b', name: 'Letter B', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'B' },
-      { id: 'c-c', name: 'Letter C', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'C' },
-      { id: 'c-d', name: 'Letter D', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'D' },
-      { id: 'c-e', name: 'Letter E', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'E' },
-      { id: 'c-m', name: 'Letter M', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'M' },
-      { id: 'c-s', name: 'Letter S', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'S' },
-      { id: 'c-r', name: 'Letter R', price: 199, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: 'R' },
-    ],
-  },
-  {
-    id: 'symbols',
-    label: 'Symbols',
-    icon: '✦',
-    charms: [
-      { id: 's-star',      name: 'Gold Star',     price: 249, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '⭐' },
-      { id: 's-heart',     name: 'Heart',         price: 249, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '❤️' },
-      { id: 's-moon',      name: 'Crescent Moon', price: 299, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '🌙' },
-      { id: 's-crown',     name: 'Crown',         price: 349, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '👑' },
-      { id: 's-butterfly', name: 'Butterfly',     price: 299, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '🦋' },
-      { id: 's-flower',    name: 'Flower',        price: 249, image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&q=80', emoji: '🌸' },
-    ],
-  },
-  {
-    id: 'birthstones',
-    label: 'Birthstones',
-    icon: '💎',
-    charms: [
-      { id: 'bs-jan', name: 'Garnet — Jan',     price: 399, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '🔴' },
-      { id: 'bs-feb', name: 'Amethyst — Feb',   price: 399, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '🟣' },
-      { id: 'bs-mar', name: 'Aquamarine — Mar', price: 399, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '🔵' },
-      { id: 'bs-apr', name: 'Diamond — Apr',    price: 499, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '💎' },
-      { id: 'bs-aug', name: 'Peridot — Aug',    price: 399, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '🟢' },
-      { id: 'bs-dec', name: 'Turquoise — Dec',  price: 399, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80', emoji: '🩵' },
-    ],
-  },
-  {
-    id: 'custom',
-    label: 'Custom',
-    icon: '✎',
-    charms: [
-      { id: 'cu-name',  name: 'Custom Name',  price: 799, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: '🔤', customisable: true },
-      { id: 'cu-date',  name: 'Special Date', price: 699, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: '📅', customisable: true },
-      { id: 'cu-photo', name: 'Photo Locket', price: 999, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=200&q=80', emoji: '🖼️', customisable: true, hasPhotoUpload: true },
-    ],
-  },
-];
+const TAB_ICONS: Record<string, string> = {
+  initials: '𝑨',
+  symbols: '✦',
+  birthstones: '💎',
+  custom: '✎',
+  designs: '◈',
+  characters: '🎭',
+};
 
-const MAX_CHARMS = 6;
+function groupCharmsByCategory(items: CharmItemData[]): CharmCategory[] {
+  const map = new Map<string, CharmItem[]>();
+  for (const item of items) {
+    const key = item.charmCategory;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      emoji: item.emoji,
+      customisable: item.customisable || undefined,
+      hasPhotoUpload: item.hasPhotoUpload || undefined,
+    });
+  }
+  return Array.from(map.entries()).map(([key, charms]) => ({
+    id: key,
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    icon: TAB_ICONS[key] || '◈',
+    charms,
+  }));
+}
+
+const CATEGORY_CONFIG: Record<string, { title: string; titleEm: string; desc: string; maxCharms: number }> = {
+  'custom-charm-jewellery': {
+    title: 'Design Your',
+    titleEm: 'Charm Jewellery',
+    desc: 'Browse our hand-finished charms and add your favourites — initials, birthstones, symbols & custom engravings.',
+    maxCharms: 8,
+  },
+  keychains: {
+    title: 'Build Your',
+    titleEm: 'Custom Keychain',
+    desc: 'Pick your favourite charms to create a one-of-a-kind keychain — letters, symbols, characters & more.',
+    maxCharms: 6,
+  },
+};
+
+const DEFAULT_CONFIG = CATEGORY_CONFIG['custom-charm-jewellery'];
 
 /* ─────────────────────────────────────────────────────────────
    CHARM CARD — Compact
@@ -190,10 +183,34 @@ function CharmCard({
 /* ─────────────────────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
-export default function KeychainsCharmsPage() {
+export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jewellery' }: { parentCategory?: string }) {
+  const router = useRouter();
+  const { addItem } = useCart();
+  const config = CATEGORY_CONFIG[parentCategory] || DEFAULT_CONFIG;
+  const MAX_CHARMS = config.maxCharms;
+
+  const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCharms, setSelectedCharms] = useState<CharmItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState('initials');
+  const [activeCategory, setActiveCategory] = useState('');
   const [cartAdded, setCartAdded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    fetchCharmItems(parentCategory)
+      .then((items) => {
+        if (!mounted) return;
+        const grouped = groupCharmsByCategory(items);
+        setCharmCategories(grouped);
+        if (grouped.length > 0) setActiveCategory(grouped[0].id);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [parentCategory]);
 
   const toggleCharm = useCallback((charm: CharmItem) => {
     setSelectedCharms((prev) => {
@@ -202,7 +219,7 @@ export default function KeychainsCharmsPage() {
       if (prev.length >= MAX_CHARMS) return prev;
       return [...prev, charm];
     });
-  }, []);
+  }, [MAX_CHARMS]);
 
   const removeCharm = useCallback((charmId: string) => {
     setSelectedCharms((prev) => prev.filter((c) => c.id !== charmId));
@@ -210,11 +227,27 @@ export default function KeychainsCharmsPage() {
 
   const totalPrice = selectedCharms.reduce((s, c) => s + c.price, 0);
   const hasItems = selectedCharms.length > 0;
-  const activeCharmCategory = CHARM_CATEGORIES.find((c) => c.id === activeCategory);
+  const activeCharmCategory = charmCategories.find((c) => c.id === activeCategory);
 
   function handleAddToCart() {
     if (!hasItems) return;
-    // addItem(...) — wire up your cart context here
+    
+    const cartItem = {
+      id: `custom-${parentCategory}-${Date.now()}`,
+      name: `Custom ${config.title}`,
+      price: totalPrice,
+      image: selectedCharms[0]?.image || '', // Using first charm as preview
+      color: 'Custom',
+      colorHex: '#d9cdb8',
+      sku: `CUST-${parentCategory.toUpperCase()}`,
+      href: '#',
+      selectedCharms: selectedCharms.map(c => c.id), // Storing just IDs or full objects. Let's store objects to display names if needed, but backend expects ObjectIds if we populated it. Wait, the backend model is: `selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }]`. So we just need the IDs!
+    };
+    
+    // Pass full objects for frontend rendering if we want, but backend expects IDs.
+    // Let's pass objects, we can map to ID in checkout.
+    addItem({ ...cartItem, selectedCharms: selectedCharms }, false);
+
     setCartAdded(true);
     setTimeout(() => setCartAdded(false), 1800);
   }
@@ -222,7 +255,7 @@ export default function KeychainsCharmsPage() {
   function handleBuyNow() {
     if (!hasItems) return;
     handleAddToCart();
-    // router.push('/checkout')
+    router.push('/cart');
   }
 
   return (
@@ -651,6 +684,10 @@ export default function KeychainsCharmsPage() {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.15; }
+        }
 
         /* ── RESPONSIVE ── */
 
@@ -697,10 +734,9 @@ export default function KeychainsCharmsPage() {
 
         {/* ── HERO ── */}
         <div className="hero">
-          {/* <div className="hero-crumb">Women · Accessories · Keychains &amp; Charms</div> */}
-          <h1>Design Your <em>Charm</em> Keychain</h1>
+          <h1>{config.title} <em>{config.titleEm}</em></h1>
           <p className="hero-desc">
-            Browse our hand-finished charms and add up to {MAX_CHARMS} to your keychain — initials, birthstones, symbols &amp; custom engravings.
+            {config.desc} Add up to {MAX_CHARMS} pieces to your order.
           </p>
         </div>
 
@@ -713,7 +749,7 @@ export default function KeychainsCharmsPage() {
 
             {/* Category Tabs */}
             <div className="cat-tabs">
-              {CHARM_CATEGORIES.map((cat) => (
+              {charmCategories.map((cat) => (
                 <button
                   key={cat.id}
                   className={`cat-tab${activeCategory === cat.id ? ' on' : ''}`}
@@ -727,19 +763,25 @@ export default function KeychainsCharmsPage() {
 
             {/* Charm Grid */}
             <div className="charm-grid">
-              {activeCharmCategory?.charms.map((charm) => {
-                const isAdded = selectedCharms.some((c) => c.id === charm.id);
-                const isFull = selectedCharms.length >= MAX_CHARMS;
-                return (
-                  <CharmCard
-                    key={charm.id}
-                    charm={charm}
-                    added={isAdded}
-                    disabled={isFull}
-                    onToggle={() => toggleCharm(charm)}
-                  />
-                );
-              })}
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="cc" style={{ minHeight: 120, opacity: 0.3, animation: 'pulse 1.4s ease-in-out infinite' }} />
+                ))
+              ) : (
+                activeCharmCategory?.charms.map((charm) => {
+                  const isAdded = selectedCharms.some((c) => c.id === charm.id);
+                  const isFull = selectedCharms.length >= MAX_CHARMS;
+                  return (
+                    <CharmCard
+                      key={charm.id}
+                      charm={charm}
+                      added={isAdded}
+                      disabled={isFull}
+                      onToggle={() => toggleCharm(charm)}
+                    />
+                  );
+                })
+              )}
             </div>
           </div>
 

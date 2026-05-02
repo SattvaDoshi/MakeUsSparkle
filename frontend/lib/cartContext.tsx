@@ -8,10 +8,12 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
+import { applyCouponToCart } from '@/lib/catalogApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface CartItem {
   id: string;
+  sourceId?: string;
   name: string;
   price: number;
   originalPrice?: number | null;
@@ -24,7 +26,15 @@ export interface CartItem {
   cartItemId?: string;
   customNote?: string;
   customImages?: string[];
-  selectedCharms?: any[];
+  selectedCharms?: Array<{
+    id?: string;
+    name?: string;
+    price?: number;
+    image?: string;
+    emoji?: string;
+  }>;
+  category?: string;
+  style?: string;
 }
 
 export interface CartState {
@@ -115,8 +125,6 @@ function reducer(state: CartState, action: Action): CartState {
 }
 
     case 'REMOVE_ITEM': {
-      const k = action.payload.id; // We'll pass cartItemId or generated key if needed, but for now fallback is fine. Wait, REMOVE_ITEM payload has id and colorHex. We should probably update REMOVE_ITEM to take cartItemId.
-      // Let's modify REMOVE_ITEM to match by cartItemId if present, else fallback
       return {
         ...state,
         items: state.items.filter(i => key(i) !== action.payload.id && i.id !== action.payload.id && `${i.id}__${i.colorHex}` !== `${action.payload.id}__${action.payload.colorHex}`),
@@ -180,6 +188,7 @@ interface CartContextValue {
   toggleGift:     (val?: boolean) => void;
   setGiftMessage: (msg: string) => void;
   applyDiscount:  (code: string, amount: number) => void;
+  applyCouponCode: (code: string) => Promise<{ success: boolean; message?: string }>;
   removeDiscount: () => void;
   clearCart:      () => void;
   // derived
@@ -233,6 +242,42 @@ const addItem = useCallback(
 
   const sub  = cartSubtotal(state.items);
 
+  // Apply coupon via backend (validates targeting, min order, expiry, etc.)
+  const applyCouponCode = useCallback(async (code: string) => {
+    try {
+      const payload = {
+        cartTotal: sub,
+        items: state.items.map((i) => ({
+          product: i.sourceId || i.id,
+          qty: i.qty,
+          name: i.name,
+          sourceId: i.sourceId,
+          category: i.category,
+          style: i.style,
+        })),
+        productIds: state.items.map((i) => i.sourceId || i.id),
+        categoryIds: state.items.map((i) => i.category).filter(Boolean),
+        styleIds: state.items.map((i) => i.style).filter(Boolean),
+      };
+
+      const result = await applyCouponToCart(code, payload);
+
+      if (result && result.success) {
+        const amount = Number(result.discountAmount || 0);
+        dispatch({ type: 'APPLY_DISCOUNT', payload: { code, amount } });
+        return { success: true };
+      }
+
+      const message = typeof result === 'object' && result && 'message' in result
+        ? String((result as { message?: string }).message || 'Invalid coupon')
+        : 'Invalid coupon';
+      return { success: false, message };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to apply coupon';
+      return { success: false, message };
+    }
+  }, [sub, state.items]);
+
   const value: CartContextValue = {
     state,
     addItem, removeItem, updateQty,
@@ -240,6 +285,7 @@ const addItem = useCallback(
     toggleGift, setGiftMessage,
     applyDiscount, removeDiscount,
     clearCart,
+    applyCouponCode,
     subtotal:  sub,
     savings:   cartSavings(state.items),
     shipping:  cartShipping(sub),

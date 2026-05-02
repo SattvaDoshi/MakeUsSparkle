@@ -54,7 +54,7 @@ function Card({ product, theme, index, isDark, sid }: {
   function handleAdd(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault(); e.stopPropagation();
     addItem({
-      id: String(product.id), name: product.name, price: product.price,
+      id: String(product.id), sourceId: product.sourceId, name: product.name, price: product.price,
       originalPrice: product.originalPrice ?? null,
       image: product.images[0], color: product.colors[0].label,
       colorHex: product.colors[0].hex,

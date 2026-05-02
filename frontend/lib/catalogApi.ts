@@ -304,3 +304,36 @@ export async function fetchCharmItems(parentCategory?: string): Promise<CharmIte
   const data = await apiRequest<{ success: boolean; charmItems?: BackendCharmItem[] }>(`/charm-items${query}`);
   return (data.charmItems || []).map(toCharmItem);
 }
+
+// ─── Coupons ───────────────────────────────────────────────────────────────
+export interface CouponValidationResult {
+  success: boolean;
+  valid?: boolean;
+  message?: string;
+  coupon?: any;
+}
+
+export interface CouponApplyResult {
+  success: boolean;
+  discountAmount?: number;
+  finalTotal?: number;
+  coupon?: any;
+}
+
+export async function fetchPublicOffers(): Promise<{ success: boolean; offers?: any[] }> {
+  return apiRequest(`/coupons/offers` as any);
+}
+
+export async function validateCoupon(code: string, payload: { cartTotal: number; items?: any[]; productIds?: string[] } ) : Promise<CouponValidationResult> {
+  return apiRequest(`/coupons/validate`, {
+    method: "POST",
+    body: JSON.stringify({ code, ...payload }),
+  });
+}
+
+export async function applyCouponToCart(code: string, payload: { cartTotal: number; items?: any[]; productIds?: string[] } ) : Promise<CouponApplyResult> {
+  return apiRequest(`/coupons/apply`, {
+    method: "POST",
+    body: JSON.stringify({ code, ...payload }),
+  });
+}

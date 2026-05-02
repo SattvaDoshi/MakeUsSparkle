@@ -59,18 +59,16 @@ function groupCharmsByCategory(items: CharmItemData[]): CharmCategory[] {
   }));
 }
 
-const CATEGORY_CONFIG: Record<string, { title: string; titleEm: string; desc: string; maxCharms: number }> = {
+const CATEGORY_CONFIG: Record<string, { title: string; titleEm: string; desc: string }> = {
   'custom-charm-jewellery': {
     title: 'Design Your',
     titleEm: 'Charm Jewellery',
     desc: 'Browse our hand-finished charms and add your favourites — initials, birthstones, symbols & custom engravings.',
-    maxCharms: 8,
   },
   keychains: {
     title: 'Build Your',
     titleEm: 'Custom Keychain',
     desc: 'Pick your favourite charms to create a one-of-a-kind keychain — letters, symbols, characters & more.',
-    maxCharms: 6,
   },
 };
 
@@ -187,7 +185,6 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
   const router = useRouter();
   const { addItem } = useCart();
   const config = CATEGORY_CONFIG[parentCategory] || DEFAULT_CONFIG;
-  const MAX_CHARMS = config.maxCharms;
 
   const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,10 +213,9 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
     setSelectedCharms((prev) => {
       const exists = prev.find((c) => c.id === charm.id);
       if (exists) return prev.filter((c) => c.id !== charm.id);
-      if (prev.length >= MAX_CHARMS) return prev;
       return [...prev, charm];
     });
-  }, [MAX_CHARMS]);
+  }, []);
 
   const removeCharm = useCallback((charmId: string) => {
     setSelectedCharms((prev) => prev.filter((c) => c.id !== charmId));
@@ -234,19 +230,26 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
     
     const cartItem = {
       id: `custom-${parentCategory}-${Date.now()}`,
-      name: `Custom ${config.title}`,
+      sourceId: parentCategory,
+      name: `${config.title} ${config.titleEm}`,
       price: totalPrice,
-      image: selectedCharms[0]?.image || '', // Using first charm as preview
+      image: selectedCharms[0]?.image || '',
       color: 'Custom',
       colorHex: '#d9cdb8',
       sku: `CUST-${parentCategory.toUpperCase()}`,
       href: '#',
-      selectedCharms: selectedCharms.map(c => c.id), // Storing just IDs or full objects. Let's store objects to display names if needed, but backend expects ObjectIds if we populated it. Wait, the backend model is: `selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }]`. So we just need the IDs!
+      // Store full charm objects so cart can display each piece with name & price
+      // Backend mapping to IDs happens at checkout
+      selectedCharms: selectedCharms.map(c => ({
+        id: c.id,
+        name: c.name,
+        price: c.price,
+        image: c.image,
+        emoji: c.emoji,
+      })),
     };
     
-    // Pass full objects for frontend rendering if we want, but backend expects IDs.
-    // Let's pass objects, we can map to ID in checkout.
-    addItem({ ...cartItem, selectedCharms: selectedCharms }, false);
+    addItem(cartItem, false);
 
     setCartAdded(true);
     setTimeout(() => setCartAdded(false), 1800);
@@ -736,7 +739,7 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
         <div className="hero">
           <h1>{config.title} <em>{config.titleEm}</em></h1>
           <p className="hero-desc">
-            {config.desc} Add up to {MAX_CHARMS} pieces to your order.
+            {config.desc} Add as many pieces as you like to your order.
           </p>
         </div>
 
@@ -745,7 +748,7 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
 
           {/* LEFT */}
           <div className="col-left">
-            <p className="sec-lbl">Choose Your Charms ({selectedCharms.length}/{MAX_CHARMS})</p>
+            <p className="sec-lbl">Choose Your Charms ({selectedCharms.length})</p>
 
             {/* Category Tabs */}
             <div className="cat-tabs">
@@ -770,13 +773,12 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
               ) : (
                 activeCharmCategory?.charms.map((charm) => {
                   const isAdded = selectedCharms.some((c) => c.id === charm.id);
-                  const isFull = selectedCharms.length >= MAX_CHARMS;
                   return (
                     <CharmCard
                       key={charm.id}
                       charm={charm}
                       added={isAdded}
-                      disabled={isFull}
+                      disabled={false}
                       onToggle={() => toggleCharm(charm)}
                     />
                   );
@@ -793,8 +795,8 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
             <div className="sel-panel">
               <div className="sel-head">
                 <span className="sel-title">Selected Charms</span>
-                <span className={`sel-badge${selectedCharms.length >= MAX_CHARMS ? ' full' : ''}`}>
-                  {selectedCharms.length >= MAX_CHARMS ? 'Max reached' : `${selectedCharms.length} / ${MAX_CHARMS}`}
+                <span className="sel-badge">
+                  {selectedCharms.length} selected
                 </span>
               </div>
               <div className="sel-body">

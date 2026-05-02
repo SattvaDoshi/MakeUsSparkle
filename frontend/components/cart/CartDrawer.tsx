@@ -1225,34 +1225,56 @@ export default function CartDrawer() {
           ) : (
             <div className="drawer-items">
               {items.map(item => (
-                <div className="di-card" key={`${item.id}-${item.colorHex}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="di-img" src={item.image} alt={item.name} />
-                  <div className="di-body">
-                    <div className="di-name">{item.name}</div>
-                    <div className="di-color">
-                      <span className="di-color-dot" style={{ background: item.colorHex }} />
-                      {item.color}
+                <div className="di-card" key={`${item.id}-${item.colorHex}`} style={item.selectedCharms?.length ? { flexDirection: 'column', gap: 8 } : undefined}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="di-img" src={item.image} alt={item.name} />
+                    <div className="di-body">
+                      <div className="di-name">{item.name}</div>
+                      {!item.selectedCharms?.length && (
+                        <div className="di-color">
+                          <span className="di-color-dot" style={{ background: item.colorHex }} />
+                          {item.color}
+                        </div>
+                      )}
+                      <div className="di-price-row">
+                        <span className="di-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
+                        {item.originalPrice && (
+                          <span className="di-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="di-price-row">
-                      <span className="di-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
-                      {item.originalPrice && (
-                        <span className="di-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
+                    <div className="di-actions">
+                      <button
+                        className="di-remove"
+                        onClick={() => removeItem(item.id, item.colorHex)}
+                        aria-label={`Remove ${item.name}`}
+                      >×</button>
+                      {!item.selectedCharms?.length && (
+                        <div className="di-qty">
+                          <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
+                          <span className="di-qty-val">{item.qty}</span>
+                          <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div className="di-actions">
-                    <button
-                      className="di-remove"
-                      onClick={() => removeItem(item.id, item.colorHex)}
-                      aria-label={`Remove ${item.name}`}
-                    >×</button>
-                    <div className="di-qty">
-                      <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
-                      <span className="di-qty-val">{item.qty}</span>
-                      <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                  {item.selectedCharms && item.selectedCharms.length > 0 && (
+                    <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
+                        {item.selectedCharms.length} Pieces
+                      </div>
+                      {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                        <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
+                          <span style={{ color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ fontSize: 12 }}>{charm.emoji || '◈'}</span>
+                            {charm.name || 'Charm'}
+                          </span>
+                          <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 10 }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

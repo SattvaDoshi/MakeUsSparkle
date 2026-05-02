@@ -52,8 +52,9 @@ export async function filterProducts(req, res) {
 
 export async function createProduct(req, res) {
 	try {
-		const files = req.files || [];
-		const result = await productService.createProduct(req.body, files);
+		// req.files is an object when using .fields(): { mainImage: [...], images: [...], variantImage_N: [...] }
+		const filesMap = req.files || {};
+		const result = await productService.createProduct(req.body, filesMap);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create product error:", error);
@@ -63,8 +64,9 @@ export async function createProduct(req, res) {
 
 export async function updateProduct(req, res) {
 	try {
-		const files = req.files || [];
-		const result = await productService.updateProduct(req.params.id, req.body, files);
+		// req.files is an object when using .fields()
+		const filesMap = req.files || {};
+		const result = await productService.updateProduct(req.params.id, req.body, filesMap);
 		res.json(result);
 	} catch (error) {
 		console.error("Update product error:", error);

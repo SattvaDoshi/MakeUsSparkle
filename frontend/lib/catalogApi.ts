@@ -53,6 +53,14 @@ export interface CatalogProduct {
   sku: string;
   href: string;
   colors: CatalogColor[];
+  sizes: string[];
+  variants: Array<{
+    color: string;
+    size: string;
+    stock: number;
+    image?: string;
+    imagePublicId?: string;
+  }>;
   tags: string[];
 }
 
@@ -86,9 +94,20 @@ interface BackendProduct {
   _id: string;
   title?: string;
   description?: string;
+  about?: string;
   price?: number;
   rating?: number;
   images?: string[];
+  mainImage?: string;
+  colors?: Array<{ name?: string; hex?: string }>;
+  sizes?: string[];
+  variants?: Array<{
+    color?: string;
+    size?: string;
+    stock?: number;
+    image?: string;
+    imagePublicId?: string;
+  }>;
   category?: BackendMaybeRef;
   subCategory?: BackendMaybeRef;
   style?: BackendMaybeRef;
@@ -128,6 +147,10 @@ function pickBadge(rating: number): string | null {
   if (rating >= 4.8) return "Best Seller";
   if (rating >= 4.5) return "Trending";
   return null;
+}
+
+function uniqueStrings(values: Array<string | undefined | null>): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))));
 }
 
 function toCategory(item: BackendCategory): CatalogCategory {
@@ -180,6 +203,42 @@ function normalizeProduct(
   const categoryName = category?.name || "Jewellery";
   const subCategoryName = subCategory?.name || "";
   const styleName = style?.name || "";
+  const rawColors = Array.isArray(item.colors) ? item.colors : [];
+  const variants = Array.isArray(item.variants)
+    ? item.variants
+        .map((variant) => ({
+          color: variant.color || "",
+          size: variant.size || "",
+          stock: Number(variant.stock ?? 0),
+          image: variant.image,
+          imagePublicId: variant.imagePublicId,
+        }))
+        .filter((variant) => variant.color || variant.size || variant.image)
+    : [];
+
+  const colorsFromBackend = rawColors
+    .map((color) => ({
+      label: color.name || "Color",
+      hex: color.hex || "#c9a84c",
+    }))
+    .filter((color, index, array) => array.findIndex((entry) => entry.label.toLowerCase() === color.label.toLowerCase()) === index);
+
+  const colorsFromVariants = uniqueStrings(variants.map((variant) => variant.color)).map((label, index) => ({
+    label,
+    hex: colorsFromBackend[index]?.hex || "#c9a84c",
+  }));
+
+  const colors = colorsFromBackend.length > 0 ? colorsFromBackend : colorsFromVariants;
+  const sizes = uniqueStrings([
+    ...(Array.isArray(item.sizes) ? item.sizes : []),
+    ...variants.map((variant) => variant.size),
+  ]);
+
+  const imagePool = uniqueStrings([
+    ...(Array.isArray(item.images) ? item.images : []),
+    item.mainImage,
+    ...variants.map((variant) => variant.image),
+  ]);
 
   const rating = Number(item.rating ?? 0);
   const reviewCount = Array.isArray(item.reviews) ? item.reviews.length : 0;
@@ -199,7 +258,6 @@ function normalizeProduct(
     originalPrice,
     rating,
     reviewCount,
-    images: Array.isArray(item.images) && item.images.length > 0 ? item.images : [FALLBACK_IMAGE],
     category: categoryName,
     categorySlug,
     subCategory: subCategoryName,
@@ -214,7 +272,10 @@ function normalizeProduct(
     offer: "Limited Time Deal",
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
     href: `/products/${slug}`,
-    colors: [{ label: "Gold", hex: "#c9a84c" }, { label: "Silver", hex: "#b8b8b8" }],
+    colors: colors.length > 0 ? colors : [{ label: "Gold", hex: "#c9a84c" }, { label: "Silver", hex: "#b8b8b8" }],
+    sizes,
+    variants,
+    images: imagePool.length > 0 ? imagePool : [FALLBACK_IMAGE],
     tags: Array.isArray(item.tags) ? item.tags : [],
   };
 }

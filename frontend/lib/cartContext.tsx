@@ -20,6 +20,7 @@ export interface CartItem {
   image: string;
   color: string;
   colorHex: string;
+  size?: string;
   qty: number;
   sku: string;
   href: string;
@@ -97,7 +98,7 @@ const INITIAL: CartState = {
 };
 
 function key(item: Partial<CartItem>) {
-  return item.cartItemId || `${item.id}__${item.colorHex}__${item.customNote || ''}__${item.selectedCharms?.length || 0}`;
+  return item.cartItemId || `${item.id}__${item.colorHex}__${item.size || ''}__${item.customNote || ''}__${item.selectedCharms?.length || 0}`;
 }
 
 function reducer(state: CartState, action: Action): CartState {

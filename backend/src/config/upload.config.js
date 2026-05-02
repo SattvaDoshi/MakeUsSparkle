@@ -39,6 +39,25 @@ export const uploadMultiple = multer({
 	},
 }).array("images", 10);
 
+// Product-specific multer: handles mainImage + images[] + variantImages[n] dynamically
+export const uploadProductImages = multer({
+	storage: uploadStorage,
+	limits: { fileSize: 5 * 1024 * 1024 },
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+		if (allowedMimes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+		}
+	},
+}).fields([
+	{ name: "mainImage", maxCount: 1 },
+	{ name: "images", maxCount: 20 },
+	// Variant images will come as variantImage_<index> fields (dynamic)
+	...Array.from({ length: 50 }, (_, i) => ({ name: `variantImage_${i}`, maxCount: 1 })),
+]);
+
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {
 	return new Promise((resolve, reject) => {

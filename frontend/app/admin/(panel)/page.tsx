@@ -1,11 +1,20 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/lib/authContext";
 import AdminProductModal from "./AdminProductModal";
+import AdminHomeTab from "./_components/tabs/AdminHomeTab";
+import AdminProductsTab from "./_components/tabs/AdminProductsTab";
+import AdminUsersTab from "./_components/tabs/AdminUsersTab";
+import AdminOrdersTab from "./_components/tabs/AdminOrdersTab";
+import AdminPaymentsTab from "./_components/tabs/AdminPaymentsTab";
+import AdminCouponsTab from "./_components/tabs/AdminCouponsTab";
+import AdminBannersTab from "./_components/tabs/AdminBannersTab";
+import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
+import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -164,16 +173,27 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "charms", label: "Charms" },
 ];
 
-const orderStatuses: Array<AdminOrder["status"]> = ["placed", "shipped", "delivered", "cancelled"];
-const paymentStatuses: Array<AdminOrder["paymentStatus"]> = ["pending", "paid", "partial_paid", "failed"];
+// order/payment status lists moved to dedicated tab components
 
 type ProductFormState = {
 	id: string;
 	title: string;
-	price: string;
-	stock: string;
+	category: string;
+	subCategory: string;
+	style: string;
 	gender: "male" | "female" | "unisex";
+	price: string;
+	discountedPrice: string;
+	discountTag: string;
+	stock: string;
 	description: string;
+	about: string;
+	tags: string[];
+	mainImage: string | null;
+	images: string[];
+	colors: Array<{ name: string; hex: string }>;
+	sizes: string[];
+	variants: Array<{ color: string; size: string; stock: number; image?: string; imagePublicId?: string }>;
 };
 
 type UserFormState = {
@@ -245,10 +265,22 @@ type ModalKind = "product" | "user" | "coupon" | "banner" | "charm" | null;
 const defaultProductForm: ProductFormState = {
 	id: "",
 	title: "",
-	price: "",
-	stock: "",
+	category: "",
+	subCategory: "",
+	style: "",
 	gender: "unisex",
+	price: "",
+	discountedPrice: "",
+	discountTag: "",
+	stock: "",
 	description: "",
+	about: "",
+	tags: [],
+	mainImage: null,
+	images: [],
+	colors: [],
+	sizes: [],
+	variants: [],
 };
 
 const defaultUserForm: UserFormState = {
@@ -357,7 +389,7 @@ export default function AdminDashboardPage() {
 	const [charmForm, setCharmForm] = useState(defaultCharmForm);
 	const [modalKind, setModalKind] = useState<ModalKind>(null);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-	const [selectedProduct, setSelectedProduct] = useState<any>(null);
+	const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
 
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
 
@@ -371,44 +403,7 @@ export default function AdminDashboardPage() {
 		setNotice(null);
 	};
 
-	const formatShortId = (value: string) => value.slice(-8).toUpperCase();
-	const formatMoney = (amount?: number) => `INR ${Math.round(amount || 0).toLocaleString()}`;
-	const formatDateTime = (value?: string) => {
-		if (!value) return "-";
-		const date = new Date(value);
-		if (Number.isNaN(date.getTime())) return "-";
-		return date.toLocaleString();
-	};
-	const formatAddress = (address?: AdminOrder["address"]) => {
-		if (!address) return "-";
-		const parts = [address.fullAddress, address.city, address.state, address.pincode].filter(Boolean);
-		return parts.length ? parts.join(", ") : "-";
-	};
-	const normalizeOrderStatus = (value?: AdminOrder["status"]) => {
-		if (value === "confirmed") return "placed";
-		return value || "placed";
-	};
-	const normalizePaymentStatus = (value?: AdminOrder["paymentStatus"]) => {
-		if (value === "completed") return "paid";
-		return value || "pending";
-	};
-	const getOrderItemLabel = (item: NonNullable<AdminOrder["items"]>[number]) => {
-		const product = item.product;
-		if (product && typeof product !== "string" && product.title) {
-			return product.title;
-		}
-		if (typeof product === "string" && product.length >= 6) {
-			return `Product ${formatShortId(product)}`;
-		}
-		const charmCount = item.selectedCharms?.length || 0;
-		if (charmCount > 0) {
-			return `Custom Charm Jewellery (${charmCount} charm${charmCount === 1 ? "" : "s"})`;
-		}
-		if (item.customNote) {
-			return "Custom Item";
-		}
-		return "Custom Item";
-	};
+	// Formatting and label helpers are provided by ./_lib/admin.helpers and imported above.
 
 	const runAction = async (action: () => Promise<void>, successMessage: string) => {
 		try {
@@ -844,429 +839,86 @@ export default function AdminDashboardPage() {
 		router.push("/admin/login");
 	};
 
-	const renderHome = () => (
-		<section className="admin-content">
-			{!!stats && (
-				<section className="admin-stats-grid">
-					<article className="admin-stat-card"><h3>Users</h3><p>{stats.users}</p></article>
-					<article className="admin-stat-card"><h3>Orders</h3><p>{stats.orders}</p></article>
-					<article className="admin-stat-card"><h3>Products</h3><p>{stats.products}</p></article>
-					<article className="admin-stat-card"><h3>Revenue</h3><p>INR {Math.round(stats.revenue).toLocaleString()}</p></article>
-					<article className="admin-stat-card"><h3>Visible Records</h3><p>{totalManagedItems}</p></article>
-				</section>
-			)}
-		</section>
-	);
-
-	const renderProducts = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Products List</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Title</th><th>Price</th><th>Stock</th><th>Gender</th><th>Actions</th></tr></thead>
-						<tbody>
-							{products.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry.title || "-"}</td>
-									<td>INR {Math.round(entry.price || 0).toLocaleString()}</td>
-									<td>{entry.stock ?? "-"}</td>
-									<td>{entry.gender || "-"}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => {
-												setSelectedProduct({ id: entry._id, ...entry });
-												setModalMode("edit");
-												setModalKind("product");
-											}}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => handleDeleteProduct(entry._id)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderUsers = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Users List</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
-						<tbody>
-							{users.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry.name}</td>
-									<td>{entry.email}</td>
-									<td>{entry.role}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => {
-												setUserForm({ id: entry._id, name: entry.name || "", email: entry.email || "", phone: entry.phone || "", role: entry.role || "user", password: "" });
-												setModalMode("edit");
-												setModalKind("user");
-											}}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => handleDeleteUser(entry._id)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderOrders = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Orders</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
-						<tbody>
-							{orders.map((entry) => (
-									<Fragment key={entry._id}>
-										<tr style={{ background: "#fdfdfd" }}>
-											<td><strong>{formatShortId(entry._id)}</strong></td>
-											<td>
-												<div style={{ fontWeight: 500 }}>{entry.user?.name || "-"}</div>
-												<div style={{ fontSize: 11, color: "var(--mist)" }}>{entry.user?.email || "-"}</div>
-											</td>
-											<td>
-												<div style={{ fontWeight: 600 }}>{formatMoney(entry.totalAmount)}</div>
-												{entry.paymentMode === "PARTIAL_COD" && (
-													<div style={{ fontSize: 11, color: "var(--mist)" }}>
-														Adv: {formatMoney(entry.advanceAmount)} | Bal: {formatMoney(entry.balanceAmount)}
-													</div>
-												)}
-											</td>
-											<td>
-												<div style={{ fontWeight: 500 }}>{entry.paymentMode || "-"}</div>
-												<div style={{ fontSize: 11, color: entry.paymentStatus === "paid" ? "green" : entry.paymentStatus === "partial_paid" ? "orange" : "red" }}>
-													{normalizePaymentStatus(entry.paymentStatus)?.toUpperCase()}
-												</div>
-											</td>
-											<td>
-												<select value={normalizeOrderStatus(entry.status)} onChange={(event) => void handleOrderStatus(entry._id, event.target.value)}>
-													{orderStatuses.map((status) => <option key={status} value={status || "placed"}>{status?.toUpperCase()}</option>)}
-												</select>
-											</td>
-											<td>{formatDateTime(entry.createdAt)}</td>
-											<td><button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteOrder(entry._id)}>Delete</button></td>
-										</tr>
-										<tr key={`${entry._id}-details`} style={{ borderBottom: "2px solid #eaeaea" }}>
-											<td colSpan={7} style={{ whiteSpace: "normal", padding: "16px 24px", background: "#f9f9f9" }}>
-												<div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24 }}>
-													<div>
-														<h4 style={{ marginBottom: 8, fontSize: 13, textTransform: "uppercase", color: "var(--mist)" }}>Order Details</h4>
-														<div style={{ display: "grid", gap: 6, fontSize: 13 }}>
-															<div><strong>Shipping Address:</strong><br/>{formatAddress(entry.address)}</div>
-															{!!entry.isGift && (
-																<div><strong>Gift Order:</strong> Yes{entry.giftMessage ? ` — “${entry.giftMessage}”` : ""}</div>
-															)}
-															{entry.paymentMode === "PARTIAL_COD" && (
-																<div style={{ background: "#fff3cd", padding: 8, borderRadius: 4, marginTop: 4, border: "1px solid #ffeeba" }}>
-																	<strong>COD Collection:</strong> Collect {formatMoney(entry.balanceAmount)} on delivery.
-																</div>
-															)}
-														</div>
-													</div>
-													<div>
-														<h4 style={{ marginBottom: 8, fontSize: 13, textTransform: "uppercase", color: "var(--mist)" }}>Items</h4>
-														<div style={{ overflowX: "auto", background: "white", borderRadius: 8, border: "1px solid #eaeaea" }}>
-															<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-																<thead>
-																	<tr style={{ textAlign: "left", borderBottom: "1px solid #eaeaea", background: "#f5f5f5" }}>
-																		<th style={{ padding: "8px 12px", width: 48 }}>Image</th>
-																		<th style={{ padding: "8px 12px" }}>Item</th>
-																		<th style={{ padding: "8px 12px", width: 60 }}>Qty</th>
-																		<th style={{ padding: "8px 12px", width: 100 }}>Price</th>
-																	</tr>
-																</thead>
-																<tbody>
-																	{(entry.items || []).length === 0 ? (
-																		<tr><td colSpan={4} style={{ padding: 12, textAlign: "center", color: "var(--mist)" }}>No items</td></tr>
-																	) : (
-																		(entry.items || []).map((item) => (
-																			<tr key={item._id || `${entry._id}-${String(item.price)}-${String(item.quantity)}`} style={{ borderBottom: "1px solid #f0f0f0" }}>
-																				<td style={{ padding: "8px 12px" }}>
-																					{item.product && typeof item.product === 'object' && 'images' in item.product && Array.isArray((item.product as any).images) && (item.product as any).images[0] ? (
-																						// eslint-disable-next-line @next/next/no-img-element
-																						<img src={(item.product as any).images[0]} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4 }} />
-																					) : (
-																						<div style={{ width: 40, height: 40, background: "#f4f4f4", borderRadius: 4 }} />
-																					)}
-																				</td>
-																				<td style={{ padding: "8px 12px" }}>
-																					<div style={{ fontWeight: 500 }}>{getOrderItemLabel(item)}</div>
-																					{item.selectedCharms && item.selectedCharms.length > 0 && (
-																						<div style={{ fontSize: 11, color: "var(--mist)", marginTop: 4 }}>
-																							Charms: {item.selectedCharms.map((c: any) => typeof c === 'string' ? 'Charm' : c.name || 'Charm').join(", ")}
-																						</div>
-																					)}
-																				</td>
-																				<td style={{ padding: "8px 12px" }}>{item.quantity ?? 0}</td>
-																				<td style={{ padding: "8px 12px", fontWeight: 500 }}>₹{Math.round(item.price || 0).toLocaleString()}</td>
-																			</tr>
-																		))
-																	)}
-																</tbody>
-															</table>
-														</div>
-													</div>
-												</div>
-											</td>
-										</tr>
-									</Fragment>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderPayments = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Payments</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Order</th><th>Customer</th><th>Mode</th><th>Status</th><th>Amount</th></tr></thead>
-						<tbody>
-							{payments.map((entry) => (
-								<tr key={entry._id}>
-									<td>{formatShortId(entry._id)}</td>
-									<td>{entry.user?.name || entry.user?.email || "-"}</td>
-									<td>{entry.paymentMode || "-"}</td>
-									<td>
-										<select value={normalizePaymentStatus(entry.paymentStatus)} onChange={(event) => void handlePaymentStatus(entry._id, event.target.value)}>
-											{paymentStatuses.map((status) => <option key={status} value={status || "pending"}>{status}</option>)}
-										</select>
-									</td>
-									<td>{formatMoney(entry.totalAmount)}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderCoupons = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Coupons List</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used/Limit</th><th>Expiry</th><th>Active</th><th>Actions</th></tr></thead>
-						<tbody>
-							{coupons.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry.code}</td>
-									<td>{entry.name}</td>
-									<td>{entry.discountType}</td>
-									<td>{entry.discountValue}</td>
-									<td>{entry.minOrderValue ?? 0}</td>
-									<td>{entry.usedCount ?? 0}/{entry.usageLimit ?? 0}</td>
-									<td>{entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "-"}</td>
-									<td>{entry.isActive ? "Yes" : "No"}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => {
-												const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
-												setCouponForm({
-													id: entry._id,
-													code: entry.code ?? "",
-													name: entry.name ?? "",
-													description: entry.description ?? "",
-													discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
-													discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
-													maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
-													minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
-													usageLimit: entry.usageLimit != null ? String(entry.usageLimit) : "1",
-													startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
-													expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
-													isActive: Boolean(entry.isActive),
-													offerCategory: entry.offerCategory || "all",
-													image: entry.image || "",
-													isFeatured: Boolean(entry.isFeatured),
-													applicableCategories: mapIds(entry.applicableCategories),
-													applicableSubCategories: mapIds(entry.applicableSubCategories),
-													applicableStyles: mapIds(entry.applicableStyles),
-													applicableProducts: mapIds(entry.applicableProducts),
-													applicableProductTypes: (entry.applicableProductTypes || []).join(", "),
-												});
-												setModalMode("edit");
-												setModalKind("coupon");
-											}}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteCoupon(entry._id)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderBanners = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Banners List</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Title</th><th>Tag</th><th>Active</th><th>Order</th><th>Link</th><th>Actions</th></tr></thead>
-						<tbody>
-							{banners.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry.title || entry.text || "-"}</td>
-									<td>{entry.tag || "-"}</td>
-									<td>{entry.isActive === false ? "No" : "Yes"}</td>
-									<td>{entry.sortOrder ?? 0}</td>
-									<td>{entry.link || "-"}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => {
-												setBannerForm({
-													id: entry._id,
-													text: entry.text ?? "",
-													title: entry.title ?? entry.text ?? "",
-													subtitle: entry.subtitle ?? entry.description ?? "",
-													tag: entry.tag ?? "",
-													cta: entry.cta ?? "Shop Now",
-													link: entry.link ?? "",
-													description: entry.description ?? "",
-													tags: (entry.tags || []).join(", "),
-													product: entry.product?._id ?? "",
-													image: entry.image ?? "",
-													imageAlt: entry.imageAlt ?? "",
-													isActive: entry.isActive !== false,
-													sortOrder: String(entry.sortOrder ?? 0),
-												});
-												setModalMode("edit");
-												setModalKind("banner");
-											}}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteBanner(entry._id)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderReviews = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Reviews</h2>
-				{!!editingReview && (
-					<form className="admin-form-grid" onSubmit={handleUpdateReview}>
-						<input type="number" min={1} max={5} value={editingReview.rating} onChange={(event) => setEditingReview((prev) => prev ? ({ ...prev, rating: event.target.value }) : null)} required />
-						<textarea value={editingReview.comment} onChange={(event) => setEditingReview((prev) => prev ? ({ ...prev, comment: event.target.value }) : null)} required />
-						<div className="admin-inline-actions">
-							<button className="admin-btn" type="submit">Save Review</button>
-							<button className="admin-btn admin-btn-muted" type="button" onClick={() => setEditingReview(null)}>Cancel</button>
-						</div>
-					</form>
-				)}
-
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Product</th><th>User</th><th>Rating</th><th>Comment</th><th>Actions</th></tr></thead>
-						<tbody>
-							{reviews.map((entry) => (
-								<tr key={entry.reviewId}>
-									<td>{entry.productTitle}</td>
-									<td>{entry.user?.name || entry.user?.email || "-"}</td>
-									<td>{entry.rating || "-"}</td>
-									<td>{entry.comment || "-"}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteReview(entry.productId, entry.reviewId)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
-	const renderCharms = () => (
-		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>Charms List</h2>
-				<div className="admin-table-wrap">
-					<table className="admin-table">
-						<thead><tr><th>Name</th><th>Price</th><th>Category</th><th>Parent</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead>
-						<tbody>
-							{charms.map((entry) => (
-								<tr key={entry._id}>
-									<td>{entry.emoji} {entry.name}</td>
-									<td>INR {entry.price}</td>
-									<td>{entry.charmCategory}</td>
-									<td>{entry.parentCategory}</td>
-									<td>{entry.sortOrder}</td>
-									<td>{entry.active === false ? "No" : "Yes"}</td>
-									<td>
-										<div className="admin-inline-actions">
-											<button className="admin-btn" onClick={() => {
-												setCharmForm({
-													id: entry._id,
-													name: entry.name || "",
-													price: String(entry.price || 0),
-													emoji: entry.emoji || "",
-													charmCategory: entry.charmCategory || "designs",
-													parentCategory: entry.parentCategory || "custom-charm-jewellery",
-													customisable: Boolean(entry.customisable),
-													hasPhotoUpload: Boolean(entry.hasPhotoUpload),
-													sortOrder: String(entry.sortOrder || 0),
-													active: entry.active !== false,
-													imageFile: null,
-													imageUrl: entry.image || "",
-												});
-												setModalMode("edit");
-												setModalKind("charm");
-											}}>Edit</button>
-											<button className="admin-btn admin-btn-danger" onClick={() => void handleDeleteCharm(entry._id)}>Delete</button>
-										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-	);
-
 	const renderTabContent = () => {
-		if (activeTab === "home") return renderHome();
-		if (activeTab === "products") return renderProducts();
-		if (activeTab === "users") return renderUsers();
-		if (activeTab === "orders") return renderOrders();
-		if (activeTab === "payments") return renderPayments();
-		if (activeTab === "coupons") return renderCoupons();
-		if (activeTab === "banners") return renderBanners();
-		if (activeTab === "charms") return renderCharms();
-		return renderReviews();
+		if (activeTab === "home") return <AdminHomeTab stats={stats} totalManagedItems={totalManagedItems} />;
+		    if (activeTab === "products") return <AdminProductsTab products={products} onEdit={(entry) => {
+			    setSelectedProduct(entry);
+			setModalMode("edit");
+			setModalKind("product");
+		}} onDelete={handleDeleteProduct} />;
+		if (activeTab === "users") return <AdminUsersTab users={users} onEdit={(entry) => {
+			setUserForm({ id: entry._id, name: entry.name || "", email: entry.email || "", phone: entry.phone || "", role: entry.role || "user", password: "" });
+			setModalMode("edit");
+			setModalKind("user");
+		}} onDelete={handleDeleteUser} />;
+		if (activeTab === "orders") return <AdminOrdersTab orders={orders} onStatusChange={handleOrderStatus} onDelete={handleDeleteOrder} />;
+		if (activeTab === "payments") return <AdminPaymentsTab payments={payments} onStatusChange={handlePaymentStatus} />;
+		if (activeTab === "coupons") return <AdminCouponsTab coupons={coupons} onEdit={(entry) => {
+			const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
+			setCouponForm({
+				id: entry._id,
+				code: entry.code ?? "",
+				name: entry.name ?? "",
+				description: entry.description ?? "",
+				discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
+				discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
+				maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
+				minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
+				usageLimit: entry.usageLimit != null ? String(entry.usageLimit) : "1",
+				startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
+				expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
+				isActive: Boolean(entry.isActive),
+				offerCategory: entry.offerCategory || "all",
+				image: entry.image || "",
+				isFeatured: Boolean(entry.isFeatured),
+				applicableCategories: mapIds(entry.applicableCategories),
+				applicableSubCategories: mapIds(entry.applicableSubCategories),
+				applicableStyles: mapIds(entry.applicableStyles),
+				applicableProducts: mapIds(entry.applicableProducts),
+				applicableProductTypes: (entry.applicableProductTypes || []).join(", "),
+			});
+			setModalMode("edit");
+			setModalKind("coupon");
+		}} onDelete={handleDeleteCoupon} />;
+		if (activeTab === "banners") return <AdminBannersTab banners={banners} onEdit={(entry) => {
+			setBannerForm({
+				id: entry._id,
+				text: entry.text ?? "",
+				title: entry.title ?? entry.text ?? "",
+				subtitle: entry.subtitle ?? entry.description ?? "",
+				tag: entry.tag ?? "",
+				cta: entry.cta ?? "Shop Now",
+				link: entry.link ?? "",
+				description: entry.description ?? "",
+				tags: (entry.tags || []).join(", "),
+				product: entry.product?._id ?? "",
+				image: entry.image ?? "",
+				imageAlt: entry.imageAlt ?? "",
+				isActive: entry.isActive !== false,
+				sortOrder: String(entry.sortOrder ?? 0),
+			});
+			setModalMode("edit");
+			setModalKind("banner");
+		}} onDelete={handleDeleteBanner} />;
+		if (activeTab === "charms") return <AdminCharmsTab charms={charms} onEdit={(entry) => {
+			setCharmForm({
+				id: entry._id,
+				name: entry.name || "",
+				price: String(entry.price || 0),
+				emoji: entry.emoji || "",
+				charmCategory: entry.charmCategory || "designs",
+				parentCategory: entry.parentCategory || "custom-charm-jewellery",
+				customisable: Boolean(entry.customisable),
+				hasPhotoUpload: Boolean(entry.hasPhotoUpload),
+				sortOrder: String(entry.sortOrder || 0),
+				active: entry.active !== false,
+				imageFile: null,
+				imageUrl: entry.image || "",
+			});
+			setModalMode("edit");
+			setModalKind("charm");
+		}} onDelete={handleDeleteCharm} />;
+		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};
 
 	const renderModal = () => {

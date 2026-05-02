@@ -1,5 +1,16 @@
 import mongoose from "mongoose";
 
+const variantSchema = new mongoose.Schema(
+  {
+    color: { type: String }, // e.g. "Red"
+    size: { type: String },  // e.g. "S", "M", "L", "XL"
+    image: { type: String }, // Cloudinary URL for this variant's image
+    imagePublicId: { type: String },
+    stock: { type: Number, default: 0 },
+  },
+  { _id: true }
+);
+
 const productSchema = new mongoose.Schema(
   {
     title: String,
@@ -9,8 +20,29 @@ const productSchema = new mongoose.Schema(
     discountedPrice: Number,
     discountTag: String,
     rating: { type: Number, default: 0 },
+
+    // Main hero image (first image shown)
+    mainImage: { type: String },
+    mainImagePublicId: { type: String },
+
+    // Additional gallery images (not variant-specific)
     images: [String],
     imagePublicIds: [String],
+
+    // Available colors for this product
+    colors: [
+      {
+        name: { type: String }, // e.g. "Gold", "Silver"
+        hex: { type: String },  // e.g. "#FFD700"
+      },
+    ],
+
+    // Available sizes for this product
+    sizes: [String], // e.g. ["XS", "S", "M", "L", "XL", "XXL"]
+
+    // Variants: each variant links a color + size to a specific image
+    variants: [variantSchema],
+
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

@@ -43,8 +43,30 @@ interface ProductDetailsProduct {
   stock: number;
   images: string[] | Record<string, string[]>;
   colors: ProductColor[];
+  sizes: string[];
+  variants: Array<{
+    color: string;
+    size: string;
+    stock: number;
+    image?: string;
+    imagePublicId?: string;
+  }>;
   href: string;
   badge?: string | null;
+}
+
+const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function uniqueValues(values: Array<string | undefined | null>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))));
+}
+
+function dedupeImages(values: Array<string | undefined | null>) {
+  return uniqueValues(values);
 }
 
 // ─── Categories that support customisation ────────────────────────────────────
@@ -516,6 +538,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [remoteProducts, setRemoteProducts] = useState<ProductDetailsProduct[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeColor,   setActiveColor]   = useState(0);
+  const [activeSize,    setActiveSize]    = useState('');
   const [activeImg,     setActiveImg]     = useState(0);
   const [shipping,      setShipping]      = useState('standard');
   const [payment,       setPayment]       = useState('prepaid');
@@ -559,17 +582,49 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const originalPrice = product?.originalPrice ?? null;
   const stock = product?.stock ?? 0;
   const colors = product?.colors ?? [];
+  const sizes = product?.sizes ?? [];
+  const variants = product?.variants ?? [];
   const images = product?.images;
   const isCustomisable = CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase()));
 
+  useEffect(() => {
+    if (!product) return;
+
+    setActiveColor(0);
+    setActiveSize(product.sizes?.[0] || product.variants?.[0]?.size || '');
+    setActiveImg(0);
+  }, [product?.id]);
+
   const currentColor = colors[activeColor] || colors[0];
   const currentColorHex = currentColor?.hex;
-  const fallbackColorHex = colors[0]?.hex;
-  const currentImages = Array.isArray(images)
+  const currentColorLabel = currentColor?.label || '';
+  const normalizedColor = normalizeText(currentColorLabel);
+  const normalizedSize = normalizeText(activeSize);
+
+  const matchingVariant = variants.find((variant) =>
+    normalizeText(variant.color) === normalizedColor && normalizeText(variant.size) === normalizedSize,
+  ) || variants.find((variant) => normalizeText(variant.color) === normalizedColor) || variants.find((variant) => normalizeText(variant.size) === normalizedSize);
+
+  const imageCandidates = Array.isArray(images)
     ? images
-    : (images?.[currentColorHex || ''] || (fallbackColorHex ? images?.[fallbackColorHex] : undefined) || []);
-  const displayImg      = currentImages?.[activeImg] || currentImages?.[0] || '';
+    : [
+        ...(images?.[`${currentColorLabel}__${activeSize}`] || []),
+        ...(images?.[currentColorLabel] || []),
+        ...(images?.[currentColorHex || ''] || []),
+      ];
+
+  const currentImages = dedupeImages([
+    matchingVariant?.image,
+    ...(imageCandidates || []),
+    ...variants.map((variant) => variant.image),
+    ...(Array.isArray(product?.images) ? product.images : []),
+  ]).filter(Boolean);
+
+  const displayImg      = currentImages?.[activeImg] || currentImages?.[0] || matchingVariant?.image || FALLBACK_PRODUCT_IMAGE;
   const discount        = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const currentStock    = matchingVariant?.stock ?? stock;
+  const availableSizes  = sizes.length > 0 ? sizes : uniqueValues(variants.map((variant) => variant.size));
+  const sizeOptions     = availableSizes.length > 0 ? availableSizes : [];
 
   const deliveryCharge  = shipping === 'express' ? 120 : (price >= 999 ? 0 : 60);
   const codCharge       = payment === 'cod' && shipping !== 'express' ? 70 : 0;
@@ -609,6 +664,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       image: displayImg,
       color: currentColor.label,
       colorHex: currentColor.hex,
+      size: activeSize || undefined,
       sku: product.sku,
       href: product.href,
       customNote: customData.wantCustom ? customData.globalNote : undefined,
@@ -629,6 +685,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       image: displayImg,
       color: currentColor.label,
       colorHex: currentColor.hex,
+      size: activeSize || undefined,
       sku: product.sku,
       href: product.href,
       customNote: customData.wantCustom ? customData.globalNote : undefined,
@@ -642,7 +699,23 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setTimeout(() => setSparkleAnim(false), 800);
   }, [addItem, product, displayImg, currentColor, qty, customData]);
 
-  const handleColorChange = useCallback((i: number) => { setActiveColor(i); setActiveImg(0); }, []);
+  const handleColorChange = useCallback((i: number) => {
+    const nextColor = colors[i];
+    setActiveColor(i);
+    setActiveImg(0);
+
+    if (!nextColor) return;
+
+    const nextSize = variants.find((variant) => normalizeText(variant.color) === normalizeText(nextColor.label))?.size
+      || sizeOptions[0]
+      || '';
+    setActiveSize(nextSize);
+  }, [colors, variants, sizeOptions]);
+
+  const handleSizeChange = useCallback((size: string) => {
+    setActiveSize(size);
+    setActiveImg(0);
+  }, []);
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
 
@@ -740,6 +813,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         .pdp-swatch:hover{transform:scale(1.15)}
         .pdp-swatch.active{box-shadow:0 0 0 2px var(--beige),0 0 0 4px var(--olive-500)}
         .pdp-swatch-label{font-size:8px;letter-spacing:.06em;color:var(--mist);white-space:nowrap}
+        .pdp-sizes{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+        .pdp-size-btn{
+          min-width:54px;padding:9px 12px;border-radius:999px;
+          border:1.5px solid var(--beige-dkr);background:white;
+          font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+          color:var(--olive-600);cursor:pointer;transition:all .2s;
+        }
+        .pdp-size-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
+        .pdp-size-btn.active{border-color:var(--olive-600);background:var(--olive-600);color:var(--beige)}
+        .pdp-size-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
 
         .pdp-desc{font-size:13px;font-weight:300;line-height:1.85;color:var(--mist);letter-spacing:.03em;margin-bottom:20px}
 
@@ -1188,10 +1271,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             <div className="pdp-divider" />
 
             {/* Colour */}
-            <p className="pdp-section-label">Colour: <span>{colors[activeColor].label}</span></p>
+            <p className="pdp-section-label">Colour: <span>{currentColor?.label || 'Default'}</span></p>
             <div className="pdp-swatches">
               {colors.map((c, i) => (
-                <button key={c.hex} className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
+                <button key={c.hex} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
                   <div
                     className={`pdp-swatch${activeColor === i ? ' active' : ''}`}
                     style={{ background: c.hex, border: c.hex === '#ffffff' ? '2px solid #d9cdb8' : undefined }}
@@ -1200,6 +1283,36 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </button>
               ))}
             </div>
+
+            {sizeOptions.length > 0 && (
+              <>
+                <p className="pdp-section-label">Size: <span>{activeSize || sizeOptions[0]}</span></p>
+                <div className="pdp-sizes">
+                  {sizeOptions.map((size) => {
+                    const variantForSize = variants.find((variant) =>
+                      normalizeText(variant.color) === normalizedColor && normalizeText(variant.size) === normalizeText(size),
+                    );
+                    const isAvailable = Boolean(variantForSize || variants.some((variant) => normalizeText(variant.size) === normalizeText(size)));
+
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`pdp-size-btn${activeSize === size ? ' active' : ''}`}
+                        disabled={!isAvailable}
+                        onClick={() => handleSizeChange(size)}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {matchingVariant?.image && (
+              <p className="pdp-section-label" style={{ marginTop: 4 }}>Selected image updates with the active color and size.</p>
+            )}
 
             <p className="pdp-desc">{description}</p>
             <div className="pdp-divider" />
@@ -1231,7 +1344,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 <span className="pdp-qty-val">{qty}</span>
                 <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock, q + 1))}>+</button>
               </div>
-              <span className="pdp-stock">Only {stock} left in stock!</span>
+              <span className="pdp-stock">Only {currentStock} left in stock!</span>
             </div>
             <div className="pdp-divider" />
 

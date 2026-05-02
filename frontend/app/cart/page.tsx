@@ -15,18 +15,14 @@ const OFFERS = [
   { label: 'Free Organiser', threshold: 1199, emoji: '🛍️', short: 'Organiser' },
 ];
 
-const COUPON_MAP: Record<string, number> = {
-  MAISON10: 100,
-  SAVE20:   200,
-  WELCOME:  50,
-};
+// coupon map removed — use backend validation instead
 
 export default function CartPage() {
   const {
     state, subtotal, savings, shipping, total,
     itemCount, removeItem, updateQty,
     toggleGift, setGiftMessage,
-    applyDiscount, removeDiscount,
+    applyDiscount, removeDiscount, applyCouponCode,
   } = useCart();
   const { items, isGift, giftMessage, discountCode, discountAmount } = state;
 
@@ -45,17 +41,26 @@ export default function CartPage() {
     ? Math.min(100, ((subtotal - progressBase) / progressRange) * 100)
     : 100;
 
-  const handleApplyCoupon = useCallback(() => {
+  const handleApplyCoupon = useCallback(async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) { setCouponError('Enter a code first.'); return; }
     if (discountCode === code) { setCouponError('Already applied.'); return; }
-    const amount = COUPON_MAP[code];
-    if (!amount) { setCouponError('Invalid code. Try MAISON10, SAVE20 or WELCOME.'); setCouponSuccess(''); return; }
-    applyDiscount(code, amount);
-    setCouponSuccess(`₹${amount} off applied! 🎉`);
+
     setCouponError('');
-    setCouponInput('');
-  }, [couponInput, discountCode, applyDiscount]);
+    setCouponSuccess('');
+
+    try {
+      const res = await applyCouponCode(code);
+      if (res?.success) {
+        setCouponSuccess('Coupon applied!');
+        setCouponInput('');
+      } else {
+        setCouponError(res?.message || 'Invalid code.');
+      }
+    } catch (err: any) {
+      setCouponError(err?.message || 'Failed to validate coupon');
+    }
+  }, [couponInput, discountCode, applyCouponCode]);
 
   return (
     <>
@@ -465,35 +470,60 @@ export default function CartPage() {
                     </div>
                   )}
                   {items.map(item => (
-                    <div className="cp-item" key={`${item.id}-${item.colorHex}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img className="cp-item-img" src={item.image} alt={item.name} />
-                      <div className="cp-item-body">
-                        <div className="cp-item-name">{item.name}</div>
-                        <div className="cp-item-color">
-                          <span className="cp-item-color-dot" style={{ background: item.colorHex }} />
-                          {item.color}
-                        </div>
-                        <div className="cp-item-price-row">
-                          <span className="cp-item-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
-                          {item.originalPrice && (
-                            <span className="cp-item-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
+                    <div className="cp-item" key={`${item.id}-${item.colorHex}`} style={item.selectedCharms?.length ? { flexDirection: 'column', gap: 10 } : undefined}>
+                      <div style={{ display: 'flex', gap: 14 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img className="cp-item-img" src={item.image} alt={item.name} />
+                        <div className="cp-item-body">
+                          <div className="cp-item-name">{item.name}</div>
+                          {!item.selectedCharms?.length && (
+                            <div className="cp-item-color">
+                              <span className="cp-item-color-dot" style={{ background: item.colorHex }} />
+                              {item.color}
+                            </div>
+                          )}
+                          <div className="cp-item-price-row">
+                            <span className="cp-item-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
+                            {item.originalPrice && (
+                              <span className="cp-item-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
+                            )}
+                          </div>
+                          {!item.selectedCharms?.length && (
+                            <p className="cp-item-per">₹{item.price.toLocaleString('en-IN')} per item</p>
                           )}
                         </div>
-                        <p className="cp-item-per">₹{item.price.toLocaleString('en-IN')} per item</p>
-                      </div>
-                      <div className="cp-item-actions">
-                        <button
-                          className="cp-item-remove"
-                          onClick={() => removeItem(item.id, item.colorHex)}
-                          aria-label={`Remove ${item.name}`}
-                        >×</button>
-                        <div className="cp-qty">
-                          <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
-                          <span className="cp-qty-val">{item.qty}</span>
-                          <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                        <div className="cp-item-actions">
+                          <button
+                            className="cp-item-remove"
+                            onClick={() => removeItem(item.id, item.colorHex)}
+                            aria-label={`Remove ${item.name}`}
+                          >×</button>
+                          {!item.selectedCharms?.length && (
+                            <div className="cp-qty">
+                              <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
+                              <span className="cp-qty-val">{item.qty}</span>
+                              <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                            </div>
+                          )}
                         </div>
                       </div>
+                      {/* Show individual charm pieces for custom charm/keychain items */}
+                      {item.selectedCharms && item.selectedCharms.length > 0 && (
+                        <div style={{ background: 'var(--olive-50)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
+                            Selected Pieces ({item.selectedCharms.length})
+                          </div>
+                          {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                            <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: idx < (item.selectedCharms?.length || 0) - 1 ? '1px solid rgba(61,74,34,.08)' : 'none' }}>
+                              <span style={{ fontSize: 12, color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 14 }}>{charm.emoji || '◈'}</span>
+                                {charm.name || 'Charm'}
+                              </span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

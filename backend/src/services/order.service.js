@@ -1,7 +1,24 @@
 import Order from "../models/order.model.js";
+import Product from "../models/product.model.js";
 import emailService from "./email.service.js";
 
 class OrderService {
+	async resolveProductId(item = {}) {
+		const directId = String(item.product || item.sourceId || item.id || "").trim();
+		if (/^[0-9a-fA-F]{24}$/.test(directId)) {
+			return directId;
+		}
+
+		const title = String(item.name || "").trim();
+		if (!title) {
+			return undefined;
+		}
+
+		const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		const product = await Product.findOne({ title: new RegExp(`^${escaped}$`, "i") }).select("_id").lean();
+		return product ? String(product._id) : undefined;
+	}
+
 	async getOrders(userId) {
 		try {
 			const orders = await Order.find({ user: userId }).populate("items.product").sort({ createdAt: -1 });
@@ -27,23 +44,28 @@ class OrderService {
 
 	async createOrder(userId, orderData) {
 		try {
+			const orderItems = await Promise.all(orderData.items.map(async (item) => ({
+				product: await this.resolveProductId(item),
+				quantity: item.quantity,
+				price: item.price,
+				customNote: item.customNote,
+				customImages: item.customImages,
+				selectedCharms: item.selectedCharms,
+			})));
+
 			const order = await Order.create({
 				user: userId,
-				items: orderData.items.map(item => ({
-					product: item.product,
-					quantity: item.quantity,
-					price: item.price,
-					customNote: item.customNote,
-					customImages: item.customImages,
-					selectedCharms: item.selectedCharms,
-				})),
+				items: orderItems,
 				totalAmount: orderData.totalAmount,
+				advanceAmount: Number(orderData.advanceAmount || 0),
+				balanceAmount: Number(orderData.balanceAmount || 0),
+				paidAmount: Number(orderData.paidAmount || 0),
 				address: orderData.shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,
 				status: "placed",
 				paymentStatus: "pending",
-                paymentMode: orderData.paymentMode || "COD",
+				paymentMode: orderData.paymentMode || "COD",
 			});
 
 			if (orderData.paymentMode === 'COD') {

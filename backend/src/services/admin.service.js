@@ -262,7 +262,7 @@ class AdminService {
 
 	async updatePaymentStatus(orderId, paymentStatus) {
 		try {
-			const allowedStatuses = ["pending", "paid", "failed"];
+			const allowedStatuses = ["pending", "paid", "partial_paid", "failed"];
 			if (!allowedStatuses.includes(paymentStatus)) {
 				throw new Error("Invalid payment status");
 			}

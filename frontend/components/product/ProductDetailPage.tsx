@@ -603,6 +603,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
     const cartItem = {
       id: String(product.id),
+      sourceId: product.sourceId,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
@@ -623,6 +624,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
     const cartItem = {
       id: String(product.id),
+      sourceId: product.sourceId,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,

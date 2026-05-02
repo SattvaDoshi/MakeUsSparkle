@@ -5,105 +5,14 @@ import Link from 'next/link';
 import { useCart, GIFT_CHARGE } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
-// ⬇️  Replace with your actual UpperNav path once confirmed
 import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
 
-// ─── UPI apps ─────────────────────────────────────────────────────────────────
-const UPI_APPS = [
-  { id: 'gpay',    label: 'Google Pay' },
-  { id: 'phonepe', label: 'PhonePe'    },
-  { id: 'paytm',   label: 'Paytm'      },
-  { id: 'cred',    label: 'CRED UPI'   },
-];
-
-// ─── Payment methods ───────────────────────────────────────────────────────────
 const PAYMENT_METHODS = [
-  { id: 'card',       label: 'Credit / Debit Card',  sub: 'Visa · Mastercard · RuPay',      prepaidOnly: true,  badge: null,     svgKey: 'card'    },
-  { id: 'netbanking', label: 'Net Banking',           sub: 'All major banks supported',      prepaidOnly: true,  badge: null,     svgKey: 'bank'    },
-  { id: 'wallet',     label: 'Wallets',               sub: 'Paytm · Amazon Pay & more',      prepaidOnly: true,  badge: null,     svgKey: 'wallet'  },
-  { id: 'pad',        label: 'Pay After Delivery',    sub: 'Safe like COD. Quick like UPI!', prepaidOnly: false, badge: 'Popular',svgKey: 'pad'     },
-  { id: 'partial',    label: 'Partial COD',           sub: 'Pay Balance at Delivery',        prepaidOnly: false, badge: null,     svgKey: 'partial' },
+  { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via Razorpay', badge: 'Recommended' },
+  { id: 'PARTIAL_COD', label: 'Partial COD', sub: 'Pay a portion now, balance on delivery', badge: null },
+  { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives', badge: null },
 ];
-
-// ─── UPI brand icons (inline SVG approximations) ─────────────────────────────
-const UpiIcon = ({ id, active }: { id: string; active: boolean }) => {
-  const c = active ? '#2d5a27' : '#7a9e75';
-  const s = { width: 28, height: 28 } as const;
-
-  if (id === 'gpay') return (
-    <svg {...s} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="7" fill={active ? '#eaf5ea' : '#f5f0e8'}/>
-      <text x="14" y="20" textAnchor="middle" fontSize="14" fontWeight="700" fill={c} fontFamily="sans-serif">G</text>
-    </svg>
-  );
-  if (id === 'phonepe') return (
-    <svg {...s} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="7" fill={active ? '#eaf5ea' : '#f5f0e8'}/>
-      <path d="M10 8h5a3 3 0 0 1 0 6h-3v6h-2V8z" fill={c}/>
-    </svg>
-  );
-  if (id === 'paytm') return (
-    <svg {...s} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="7" fill={active ? '#eaf5ea' : '#f5f0e8'}/>
-      <rect x="8" y="12" width="12" height="8" rx="2" stroke={c} strokeWidth="1.6"/>
-      <path d="M11 12V10a3 3 0 0 1 6 0v2" stroke={c} strokeWidth="1.6"/>
-      <circle cx="14" cy="16" r="1.5" fill={c}/>
-    </svg>
-  );
-  // CRED
-  return (
-    <svg {...s} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="7" fill={active ? '#eaf5ea' : '#f5f0e8'}/>
-      <path d="M9 14a5 5 0 1 1 5 5" stroke={c} strokeWidth="1.6" strokeLinecap="round"/>
-      <circle cx="14" cy="14" r="2" fill={c}/>
-    </svg>
-  );
-};
-
-// ─── Payment method icons ─────────────────────────────────────────────────────
-const PayIcon = ({ type, active }: { type: string; active: boolean }) => {
-  const c = active ? '#2d5a27' : '#7a9e75';
-  const s = { width: 24, height: 24 } as const;
-
-  switch (type) {
-    case 'card': return (
-      <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7">
-        <rect x="2" y="5" width="20" height="14" rx="3"/>
-        <path d="M2 10h20" strokeLinecap="round"/>
-        <path d="M6 15h4" strokeLinecap="round"/>
-        <rect x="16" y="13" width="3" height="2" rx="0.5" fill={c} stroke="none"/>
-      </svg>
-    );
-    case 'bank': return (
-      <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7">
-        <path d="M3 21h18M3 10h18M5 6l7-3 7 3" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M5 10v11M9 10v11M15 10v11M19 10v11" strokeLinecap="round"/>
-      </svg>
-    );
-    case 'wallet': return (
-      <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7">
-        <path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4"/>
-        <path d="M16 12h4v4h-4a2 2 0 0 1 0-4z" strokeLinejoin="round"/>
-      </svg>
-    );
-    case 'pad': return (
-      <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7">
-        <path d="M20 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2z"/>
-        <path d="M12 20v-4M8 20h8" strokeLinecap="round"/>
-        <path d="M7 12h.01" strokeLinecap="round" strokeWidth="2.5"/>
-      </svg>
-    );
-    case 'partial': return (
-      <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7">
-        <path d="M12 2a10 10 0 1 0 10 10" strokeLinecap="round"/>
-        <path d="M12 6v6l3 3" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M18 2v4M22 2l-4 4" strokeLinecap="round"/>
-      </svg>
-    );
-    default: return null;
-  }
-};
 
 export default function CheckoutPage() {
   const {
@@ -113,10 +22,8 @@ export default function CheckoutPage() {
 
   const { items, isGift, discountCode, discountAmount } = state;
 
-  const [selectedUPI, setSelectedUPI]       = useState('');
-  const [upiId, setUpiId]                   = useState('');
-  const [selectedMethod, setSelectedMethod] = useState('');
-  const [showUPIInput, setShowUPIInput]     = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState('ONLINE');
+  const [partialPercentage, setPartialPercentage] = useState<25 | 50>(25);
   const [loading, setLoading]               = useState(false);
   const [orderPlaced, setOrderPlaced]       = useState(false);
   
@@ -132,6 +39,12 @@ export default function CheckoutPage() {
   const [addressBusy, setAddressBusy] = useState(false);
 
   const finalTotal = total;
+  let amountToPayNow = finalTotal;
+  if (selectedMethod === 'PARTIAL_COD') {
+    amountToPayNow = Math.round(finalTotal * (partialPercentage / 100));
+  } else if (selectedMethod === 'COD') {
+    amountToPayNow = 0;
+  }
 
   // Load Razorpay script dynamically
   useEffect(() => {
@@ -167,7 +80,7 @@ export default function CheckoutPage() {
   };
 
   const handlePay = useCallback(async () => {
-    if (!selectedMethod && !selectedUPI && !upiId) return;
+    if (!selectedMethod) return;
 
     let currentAddress = null;
     if (user?.addresses && user.addresses.length > 0) {
@@ -183,7 +96,11 @@ export default function CheckoutPage() {
     
     try {
       const orderPayload = {
-        amount: finalTotal,
+        amount: amountToPayNow,
+        totalAmount: finalTotal,
+        advanceAmount: amountToPayNow,
+        balanceAmount: Math.max(finalTotal - amountToPayNow, 0),
+        paymentMode: selectedMethod,
         items: items.map(item => {
           // Check if item.id is a valid 24-char hex string
           const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
@@ -191,6 +108,7 @@ export default function CheckoutPage() {
           
           return {
             product: mappedProduct,
+            name: item.name,
             quantity: item.qty,
             price: item.price,
             customNote: item.customNote,
@@ -206,9 +124,7 @@ export default function CheckoutPage() {
         giftMessage: state.giftMessage,
       };
 
-      const isOnline = selectedMethod !== 'partial' && selectedMethod !== 'pad';
-
-      if (isOnline) {
+      if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
         // Online Payment via Razorpay
         const rzpOrder = await apiRequest<{ success: boolean, orderId: string, razorpayOrderId: string, amount: number, currency: string }>('/payment/create-order', {
           method: 'POST',
@@ -231,7 +147,8 @@ export default function CheckoutPage() {
                   orderId: rzpOrder.orderId,
                   razorpayOrderId: response.razorpay_order_id,
                   paymentId: response.razorpay_payment_id,
-                  signature: response.razorpay_signature
+                  signature: response.razorpay_signature,
+                  paymentMode: selectedMethod,
                 })
               });
               clearCart();
@@ -258,6 +175,7 @@ export default function CheckoutPage() {
         rzp.on('payment.failed', function (response: { error: { description: string } }) {
           console.error(response.error);
           alert("Payment failed: " + response.error.description);
+          setLoading(false);
         });
         rzp.open();
 
@@ -265,11 +183,7 @@ export default function CheckoutPage() {
         // COD Order
         await apiRequest('/orders/create', {
           method: 'POST',
-          body: JSON.stringify({
-            ...orderPayload,
-            totalAmount: finalTotal,
-            paymentMode: 'COD'
-          })
+          body: JSON.stringify(orderPayload)
         });
         
         clearCart();
@@ -278,12 +192,11 @@ export default function CheckoutPage() {
     } catch (err) {
       console.error("Order failed:", err);
       alert("Failed to place order. Please try again.");
-    } finally {
-      setLoading(false); // only stop loading here if it failed before Razorpay opened, or if COD finished.
+      setLoading(false);
     }
-  }, [selectedMethod, selectedUPI, upiId, items, finalTotal, isGift, state.giftMessage, clearCart, user, selectedAddressIndex]);
+  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, state.giftMessage, clearCart, user, selectedAddressIndex]);
 
-  // ── Success screen ────────────────────────────────────────────────────────────
+  // Success screen
   if (orderPlaced) {
     return (
       <>
@@ -299,7 +212,7 @@ export default function CheckoutPage() {
         <div className="ck-s">
           <div className="ck-s-icon">✅</div>
           <h1 className="ck-s-title">Order Placed!</h1>
-          <p className="ck-s-sub">Your order is confirmed. You&apos;ll receive a confirmation SMS shortly.</p>
+          <p className="ck-s-sub">Your order is confirmed. You&apos;ll receive a confirmation email shortly.</p>
           <Link href="/shop" className="ck-s-btn">Continue Shopping</Link>
         </div>
       </>
@@ -337,20 +250,9 @@ export default function CheckoutPage() {
           background: var(--beige);
           font-family: 'DM Sans', sans-serif;
           color: var(--ink);
-          margin-top:60px
+          margin-top: 60px;
         }
 
-        /* ── Prepaid banner ── */
-        .ck-prepaid-banner {
-          background: var(--g800);
-          color: rgba(255,255,255,.88);
-          padding: 9px 20px;
-          font-size: 12px; font-weight: 400;
-          text-align: center; letter-spacing: .04em;
-        }
-        .ck-prepaid-banner strong { font-weight: 700; color: #9fdc82; }
-
-        /* ── Savings strip ── */
         .ck-savings-strip {
           background: #e5f4e0;
           padding: 9px 20px;
@@ -359,7 +261,6 @@ export default function CheckoutPage() {
           display: flex; align-items: center; gap: 6px; justify-content: center;
         }
 
-        /* ── Body ── */
         .ck-body {
           padding: 20px 16px 48px;
           max-width: 1060px; margin: 0 auto;
@@ -367,7 +268,6 @@ export default function CheckoutPage() {
         @media (min-width: 768px)  { .ck-body { padding: 32px 32px 60px; } }
         @media (min-width: 1024px) { .ck-body { padding: 40px 48px 60px; } }
 
-        /* ── Two-column grid ── */
         .ck-layout {
           display: grid;
           grid-template-columns: 1fr;
@@ -380,14 +280,12 @@ export default function CheckoutPage() {
           .ck-layout { grid-template-columns: 1fr 400px; gap: 28px; }
         }
 
-        /* ── Column title ── */
         .ck-col-title {
           font-family: 'Cormorant Garamond', serif;
           font-size: 22px; font-weight: 500; letter-spacing: .08em;
           color: var(--g900); margin-bottom: 14px;
         }
 
-        /* ── Panel ── */
         .ck-panel {
           background: var(--white);
           border-radius: 16px;
@@ -409,70 +307,8 @@ export default function CheckoutPage() {
           background: var(--beige);
         }
 
-        /* ── UPI grid ── */
-        .ck-upi-apps {
-          display: grid; grid-template-columns: repeat(4, 1fr);
-          gap: 10px; padding: 16px 20px;
-        }
-        @media (max-width: 380px) {
-          .ck-upi-apps { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        .ck-upi-app {
-          display: flex; flex-direction: column; align-items: center; gap: 7px;
-          padding: 13px 8px;
-          border: 1.5px solid var(--border); border-radius: 14px;
-          background: var(--beige); cursor: pointer;
-          transition: all .2s; font-family: 'DM Sans', sans-serif;
-        }
-        .ck-upi-app:hover { border-color: var(--g400); background: var(--g50); }
-        .ck-upi-app.active {
-          border-color: var(--g600); background: #eaf5ea;
-          box-shadow: 0 0 0 3px rgba(58,122,50,.11);
-        }
-        .ck-upi-app-label {
-          font-size: 9.5px; color: var(--mist); font-weight: 500;
-          letter-spacing: .02em; text-align: center; line-height: 1.3;
-        }
-        .ck-upi-app.active .ck-upi-app-label { color: var(--g700); font-weight: 600; }
-
-        /* ── UPI ID row ── */
-        .ck-upi-id-row {
-          padding: 0 20px 18px;
-          display: flex; gap: 8px;
-        }
-        .ck-upi-id-input {
-          flex: 1; padding: 12px 16px;
-          border: 1.5px solid var(--border); border-radius: 50px;
-          font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink);
-          background: var(--beige); outline: none; transition: border-color .2s;
-        }
-        .ck-upi-id-input:focus { border-color: var(--g500); }
-        .ck-upi-id-input::placeholder { color: rgba(26,42,26,.3); }
-        .ck-verify-btn {
-          padding: 12px 20px;
-          background: var(--g700); color: white;
-          border: none; border-radius: 50px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
-          cursor: pointer; white-space: nowrap; transition: background .2s;
-        }
-        .ck-verify-btn:hover { background: var(--g600); }
-
-        .ck-add-upi-btn {
-          margin: 0 20px 18px;
-          padding: 13px; width: calc(100% - 40px);
-          border: 1.5px dashed var(--beige-drk); border-radius: 12px;
-          background: transparent; font-family: 'DM Sans', sans-serif;
-          font-size: 12px; color: var(--g600); font-weight: 500;
-          cursor: pointer; transition: all .2s;
-          display: flex; align-items: center; justify-content: center; gap: 7px;
-        }
-        .ck-add-upi-btn:hover { border-color: var(--g500); background: var(--g50); }
-
-        /* ── Payment method rows ── */
         .ck-method {
-          display: flex; align-items: center; gap: 14px;
+          display: flex; align-items: flex-start; gap: 14px;
           padding: 15px 20px;
           border-bottom: 1px solid var(--border);
           cursor: pointer; transition: background .15s; position: relative;
@@ -481,51 +317,44 @@ export default function CheckoutPage() {
         .ck-method:hover  { background: var(--beige); }
         .ck-method.active { background: #eaf5ea; }
 
-        .ck-method-icon {
-          width: 44px; height: 44px; border-radius: 12px;
-          background: var(--beige); border: 1px solid var(--border);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; transition: background .2s;
-        }
-        .ck-method.active .ck-method-icon { background: #d8efd8; border-color: var(--g400); }
-
         .ck-method-body { flex: 1; min-width: 0; }
-        .ck-method-label { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
-        .ck-method-sub   { font-size: 11px; color: var(--mist); }
-
-        .ck-method-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-        .ck-method-price { font-size: 15px; font-weight: 700; color: var(--g900); }
-        .ck-method-save  {
-          font-size: 10px; font-weight: 600; color: var(--g700);
-          background: #d4edda; padding: 2px 8px; border-radius: 4px;
-        }
+        .ck-method-label { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .ck-method-sub   { font-size: 12px; color: var(--mist); line-height: 1.4; }
         .ck-method-badge {
-          position: absolute; top: 10px; right: 14px;
           font-size: 8px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
           color: white; background: var(--g600); padding: 2px 7px; border-radius: 4px;
         }
+
         .ck-radio {
-          width: 18px; height: 18px; border-radius: 50%;
+          width: 20px; height: 20px; border-radius: 50%;
           border: 2px solid var(--border); flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          transition: all .2s;
+          transition: all .2s; margin-top: 2px;
         }
         .ck-method.active .ck-radio { border-color: var(--g600); background: var(--g600); }
         .ck-method.active .ck-radio::after {
-          content: ''; width: 6px; height: 6px; border-radius: 50%; background: white;
+          content: ''; width: 8px; height: 8px; border-radius: 50%; background: white;
         }
 
-        /* COD note */
         .ck-cod-note {
-          margin: 0 20px 14px;
-          padding: 11px 16px;
-          background: rgba(181,52,28,.05); border: 1px solid rgba(181,52,28,.15);
-          border-radius: 10px; font-size: 11px; color: #8b2e21; line-height: 1.6;
-          animation: ckUp .3s ease;
+          padding: 12px 20px;
+          background: rgba(181,52,28,.05); border-bottom: 1px solid rgba(181,52,28,.15);
+          font-size: 12px; color: #8b2e21; line-height: 1.6;
         }
         .ck-cod-note strong { font-weight: 700; }
 
-        /* ── Gift toggle ── */
+        .ck-partial-options {
+          display: flex; gap: 10px; margin-top: 10px;
+        }
+        .ck-partial-btn {
+          flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px;
+          background: var(--white); cursor: pointer; text-align: center;
+          font-size: 13px; font-weight: 600; color: var(--ink); transition: all 0.2s;
+        }
+        .ck-partial-btn.active {
+          border-color: var(--g600); background: var(--g50); color: var(--g700);
+        }
+
         .ck-gift {
           display: flex; align-items: center; gap: 14px;
           padding: 16px 20px; cursor: pointer; transition: background .15s;
@@ -543,7 +372,6 @@ export default function CheckoutPage() {
         }
         .ck-gift-check.on { background: var(--g600); border-color: var(--g600); color: white; }
 
-        /* ── Summary rows ── */
         .ck-row {
           display: flex; justify-content: space-between; align-items: center;
           padding: 12px 20px; font-size: 13px; color: var(--mist);
@@ -563,7 +391,6 @@ export default function CheckoutPage() {
           text-transform: uppercase; letter-spacing: .1em;
         }
 
-        /* ── Pay button ── */
         .ck-pay-btn {
           display: flex; align-items: center; justify-content: center; gap: 10px;
           width: 100%; padding: 18px;
@@ -598,16 +425,8 @@ export default function CheckoutPage() {
 
       <div className="ck-root">
         <ExitIntent />
-
-        {/* ── UpperNav replaces old header ── */}
         <UpperNav />
 
-        {/* Prepaid banner */}
-        {/* <div className="ck-prepaid-banner">
-          Additional <strong>5% off</strong> on Prepaid Orders — pay online &amp; save more
-        </div> */}
-
-        {/* Savings strip */}
         {savings > 0 && (
           <div className="ck-savings-strip">
             🎉 You&apos;re saving <strong style={{ marginLeft: 3 }}>₹{savings.toLocaleString('en-IN')}</strong> on this order
@@ -617,7 +436,7 @@ export default function CheckoutPage() {
         <div className="ck-body">
           <div className="ck-layout">
 
-            {/* ══ LEFT — Address + Payment methods ════════════════════════════════════ */}
+            {/* LEFT COLUMN */}
             <div>
               <p className="ck-col-title">Shipping Address</p>
               <div className="ck-panel" style={{ animationDelay: '0s', padding: 20 }}>
@@ -658,91 +477,53 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <p className="ck-col-title" style={{ marginTop: 24 }}>Payment</p>
-
-              {/* UPI */}
-              <div className="ck-panel" style={{ animationDelay: '0s' }}>
-                <div className="ck-panel-head">Pay via UPI</div>
-
-                <div className="ck-upi-apps">
-                  {UPI_APPS.map(app => (
-                    <button
-                      key={app.id}
-                      className={`ck-upi-app${selectedUPI === app.id ? ' active' : ''}`}
-                      onClick={() => { setSelectedUPI(app.id); setSelectedMethod(''); setShowUPIInput(false); }}
-                    >
-                      <UpiIcon id={app.id} active={selectedUPI === app.id} />
-                      <span className="ck-upi-app-label">{app.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {showUPIInput ? (
-                  <div className="ck-upi-id-row">
-                    <input
-                      className="ck-upi-id-input"
-                      placeholder="yourname@upi"
-                      value={upiId}
-                      onChange={e => setUpiId(e.target.value)}
-                      autoFocus
-                    />
-                    <button className="ck-verify-btn">Verify</button>
-                  </div>
-                ) : (
-                  <button
-                    className="ck-add-upi-btn"
-                    onClick={() => { setShowUPIInput(true); setSelectedUPI(''); setSelectedMethod(''); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-                    </svg>
-                    Add UPI ID
-                  </button>
-                )}
-              </div>
-
-              {/* Other methods */}
+              <p className="ck-col-title" style={{ marginTop: 24 }}>Payment Options</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
-                <div className="ck-panel-head">Other Payment Methods</div>
+                <div className="ck-panel-head">Select Payment Method</div>
 
                 {PAYMENT_METHODS.map(method => {
-                  const displayPrice = method.prepaidOnly
-                    ? finalTotal - Math.round(finalTotal * 0.05)
-                    : method.id === 'partial' ? 100 : finalTotal;
-                  const saves    = method.prepaidOnly ? Math.round(finalTotal * 0.05) : 0;
                   const isActive = selectedMethod === method.id;
 
                   return (
                     <div key={method.id}>
-                      <div
-                        className={`ck-method${isActive ? ' active' : ''}`}
-                        onClick={() => { setSelectedMethod(method.id); setSelectedUPI(''); setShowUPIInput(false); }}
-                      >
-                        {method.badge && !isActive && (
-                          <span className="ck-method-badge">{method.badge}</span>
-                        )}
+                      <div className={`ck-method${isActive ? ' active' : ''}`} onClick={() => setSelectedMethod(method.id)}>
                         <div className="ck-radio" />
-                        <div className="ck-method-icon">
-                          <PayIcon type={method.svgKey} active={isActive} />
-                        </div>
                         <div className="ck-method-body">
-                          <div className="ck-method-label">{method.label}</div>
-                          <div className="ck-method-sub">
-                            {method.id === 'partial'
-                              ? `Pay balance ₹${(finalTotal - 100).toLocaleString('en-IN')} at delivery`
-                              : method.sub}
+                          <div className="ck-method-label">
+                            {method.label}
+                            {method.badge && <span className="ck-method-badge">{method.badge}</span>}
                           </div>
-                        </div>
-                        <div className="ck-method-right">
-                          <span className="ck-method-price">₹{displayPrice.toLocaleString('en-IN')}</span>
-                          {saves > 0 && <span className="ck-method-save">Save ₹{saves}</span>}
+                          <div className="ck-method-sub">{method.sub}</div>
+                          
+                          {isActive && method.id === 'PARTIAL_COD' && (
+                            <div className="ck-partial-options" onClick={e => e.stopPropagation()}>
+                              <button 
+                                className={`ck-partial-btn ${partialPercentage === 25 ? 'active' : ''}`}
+                                onClick={() => setPartialPercentage(25)}
+                              >
+                                Pay 25% Advance
+                              </button>
+                              <button 
+                                className={`ck-partial-btn ${partialPercentage === 50 ? 'active' : ''}`}
+                                onClick={() => setPartialPercentage(50)}
+                              >
+                                Pay 50% Advance
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      {isActive && method.id === 'partial' && (
+                      
+                      {isActive && method.id === 'PARTIAL_COD' && (
                         <div className="ck-cod-note">
-                          Pay <strong>₹100 now</strong> · Balance ₹{(finalTotal - 100).toLocaleString('en-IN')} at delivery
-                          <br /><span style={{ opacity: .7 }}>(Incl. ₹69.90 COD charges)</span>
+                          Pay <strong>₹{Math.round(finalTotal * (partialPercentage / 100)).toLocaleString('en-IN')} now</strong> via Razorpay.<br/>
+                          The balance of <strong>₹{(finalTotal - Math.round(finalTotal * (partialPercentage / 100))).toLocaleString('en-IN')}</strong> will be collected on delivery.
+                        </div>
+                      )}
+                      
+                      {isActive && method.id === 'COD' && (
+                        <div className="ck-cod-note">
+                          Pay the full amount of <strong>₹{finalTotal.toLocaleString('en-IN')}</strong> in cash or UPI when your order arrives.
                         </div>
                       )}
                     </div>
@@ -750,14 +531,8 @@ export default function CheckoutPage() {
                 })}
               </div>
 
-              {/* Gift toggle */}
               <div className="ck-panel" style={{ animationDelay: '.14s' }}>
-                <div
-                  className="ck-gift"
-                  onClick={() => toggleGift()}
-                  role="button" tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && toggleGift()}
-                >
+                <div className="ck-gift" onClick={() => toggleGift()} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && toggleGift()}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={isGift ? '#2d5a27' : '#7a9e75'} strokeWidth="1.6">
                     <rect x="3" y="8" width="18" height="14" rx="2"/>
                     <path d="M12 8V22M3 13h18" strokeLinecap="round"/>
@@ -773,7 +548,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* ══ RIGHT — Summary + Pay ═════════════════════════════════════ */}
+            {/* RIGHT COLUMN */}
             <div>
               <p className="ck-col-title">Order Summary</p>
 
@@ -781,12 +556,26 @@ export default function CheckoutPage() {
                 <div className="ck-panel-head">{itemCount} Item{itemCount !== 1 ? 's' : ''}</div>
 
                 {items.map(item => (
-                  <div key={`${item.id}-${item.colorHex}`} className="ck-row">
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--mist)', flexShrink: 0 }}>×{item.qty}</span>
-                      {item.name}
-                    </span>
-                    <span>₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
+                  <div key={`${item.id}-${item.colorHex}`}>
+                    <div className="ck-row">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, color: 'var(--mist)', flexShrink: 0 }}>×{item.qty}</span>
+                        {item.name}
+                      </span>
+                      <span>₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
+                    </div>
+                    {item.selectedCharms && item.selectedCharms.length > 0 && (
+                      <div style={{ padding: '4px 20px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                          <div key={charm.id || charm._id || idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--mist)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span>{charm.emoji || '◈'}</span> {charm.name}
+                            </span>
+                            <span style={{ fontWeight: 500 }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -821,11 +610,10 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Pay button — inline below summary */}
               <button
                 className="ck-pay-btn"
                 onClick={handlePay}
-                disabled={(!selectedMethod && !selectedUPI && !upiId) || loading}
+                disabled={!selectedMethod || loading}
               >
                 {loading ? (
                   <><div className="ck-spinner" /> Processing…</>
@@ -834,7 +622,12 @@ export default function CheckoutPage() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                     </svg>
-                    Pay ₹{finalTotal.toLocaleString('en-IN')}
+                    {selectedMethod === 'PARTIAL_COD' 
+                      ? `Pay Advance ₹${amountToPayNow.toLocaleString('en-IN')}` 
+                      : selectedMethod === 'COD' 
+                        ? `Place Order (Pay ₹${finalTotal.toLocaleString('en-IN')} on Delivery)` 
+                        : `Pay ₹${finalTotal.toLocaleString('en-IN')} Now`
+                    }
                   </>
                 )}
               </button>
@@ -843,7 +636,7 @@ export default function CheckoutPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                100% Secure &amp; Encrypted Payment
+                100% Secure &amp; Encrypted Payment via Razorpay
               </div>
             </div>
 

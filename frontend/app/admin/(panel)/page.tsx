@@ -879,7 +879,7 @@ export default function AdminDashboardPage() {
 			});
 			setModalMode("edit");
 			setModalKind("coupon");
-		}} onDelete={handleDeleteCoupon} />;
+		}} onDelete={handleDeleteCoupon} 	/>;
 		if (activeTab === "banners") return <AdminBannersTab banners={banners} onEdit={(entry) => {
 			setBannerForm({
 				id: entry._id,

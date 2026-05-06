@@ -20,6 +20,8 @@ import adminProductRoutes from "./routes/admin/adminProduct.routes.js";
 import adminCategoryRoutes from "./routes/admin/adminCategory.routes.js";
 import adminSubCategoryRoutes from "./routes/admin/adminSubcategory.routes.js";
 import adminStyleRoutes from "./routes/admin/adminStyle.routes.js";
+import genderRoutes from "./routes/gender.routes.js";
+import adminGenderRoutes from "./routes/admin/adminGender.routes.js";
 import adminComboRoutes from "./routes/admin/adminCombo.routes.js";
 import adminOrderRoutes from "./routes/admin/adminOrder.routes.js";
 import adminCouponRoutes from "./routes/admin/adminCoupon.routes.js";
@@ -117,6 +119,8 @@ app.use("/admin/orders", adminOrderRoutes);
 app.use("/admin/coupons", adminCouponRoutes);
 app.use("/admin/banners", adminBannerRoutes);
 app.use("/admin/charm-items", adminCharmItemRoutes);
+app.use("/genders", genderRoutes);
+app.use("/admin/genders", adminGenderRoutes);
 app.use("/abandoned", abandonedRoutes);
 
 export default app;

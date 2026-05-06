@@ -181,7 +181,7 @@ function CharmCard({
 /* ─────────────────────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
-export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jewellery' }: { parentCategory?: string }) {
+export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jewellery', gender = 'women' }: { parentCategory?: string; gender?: string }) {
   const router = useRouter();
   const { addItem } = useCart();
   const config = CATEGORY_CONFIG[parentCategory] || DEFAULT_CONFIG;

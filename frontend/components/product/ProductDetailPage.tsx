@@ -3,7 +3,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
-import { fetchCatalogProducts, slugifyCatalog } from '@/lib/catalogApi';
+import { fetchProductById, type CatalogProduct } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
@@ -15,6 +15,7 @@ interface AccordionData {
   emoji: string;
   label: string;
   content: string;
+  isHtml?: boolean;
 }
 
 interface ProductColor {
@@ -29,31 +30,7 @@ interface UploadItem {
   note: string;
 }
 
-interface ProductDetailsProduct {
-  id: number;
-  name: string;
-  category: string;
-  rating: number;
-  reviewCount: number;
-  description: string;
-  price: number;
-  originalPrice?: number | null;
-  offer: string;
-  sku: string;
-  stock: number;
-  images: string[] | Record<string, string[]>;
-  colors: ProductColor[];
-  sizes: string[];
-  variants: Array<{
-    color: string;
-    size: string;
-    stock: number;
-    image?: string;
-    imagePublicId?: string;
-  }>;
-  href: string;
-  badge?: string | null;
-}
+// Use CatalogProduct as the product type (imported from catalogApi)
 
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
 
@@ -375,7 +352,10 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
       </button>
       <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
         <div ref={bodyRef} className="acc-body">
-          {item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)}
+          {item.isHtml
+            ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
+            : item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
+          }
         </div>
       </div>
     </div>
@@ -535,7 +515,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const { addItem } = useCart();
   const { toggleItem, isWished } = useWishlist();
 
-  const [remoteProducts, setRemoteProducts] = useState<ProductDetailsProduct[] | null>(null);
+  const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [activeColor,   setActiveColor]   = useState(0);
   const [activeSize,    setActiveSize]    = useState('');
@@ -552,50 +532,67 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
+    setProduct(undefined);
 
-    fetchCatalogProducts()
-      .then((products) => {
+    // slug IS the MongoDB _id — call GET /products/:id directly
+    fetchProductById(slug)
+      .then((p) => {
         if (mounted) {
-          setRemoteProducts(products as unknown as ProductDetailsProduct[]);
+          setProduct(p);   // null if not found
           setLoading(false);
         }
       })
       .catch(() => {
         if (mounted) {
-          setRemoteProducts([]);
+          setProduct(null);
           setLoading(false);
         }
       });
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const sourceProducts = remoteProducts ?? [];
-  const product = sourceProducts.find(
-    (p) => p.href === `/products/${slug}` || slugifyCatalog(p.name) === slug
-  );
+    return () => { mounted = false; };
+  }, [slug]);
 
   const category = product?.category ?? '';
+  const subCategory = product?.subCategory ?? '';
+  const style = product?.style ?? '';
+  const gender = product?.gender ?? '';
   const price = product?.price ?? 0;
   const originalPrice = product?.originalPrice ?? null;
+  const discountedPrice = product?.discountedPrice ?? null;
+  const discountTag = product?.discountTag ?? null;
   const stock = product?.stock ?? 0;
-  const colors = product?.colors ?? [];
+  const tags = product?.tags ?? [];
+  const faqs = product?.faqs ?? [];
+  const about = product?.about ?? '';
+  
+  // Normalize colors: map backend format to frontend format
+  const normalizedColors: ProductColor[] = (product?.colors ?? []).map((c: any) => ({
+    label: c.label || c.name || 'Default',
+    hex: c.hex || '#c9a84c'
+  }));
+  
   const sizes = product?.sizes ?? [];
   const variants = product?.variants ?? [];
-  const images = product?.images;
-  const isCustomisable = CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase()));
+  const mainImage = product?.mainImage;
+  const images = product?.images ?? [];
+  
+  // Build current images list: mainImage first, then other images
+  const allImages = [
+    ...(mainImage ? [mainImage] : []),
+    ...images.filter((img: string) => img !== mainImage)
+  ].filter(Boolean);
+  
+  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
 
   useEffect(() => {
     if (!product) return;
-
     setActiveColor(0);
     setActiveSize(product.sizes?.[0] || product.variants?.[0]?.size || '');
     setActiveImg(0);
-  }, [product?.id]);
+  }, [product?.sourceId]);
 
-  const currentColor = colors[activeColor] || colors[0];
+  const currentColor = normalizedColors[activeColor] || normalizedColors[0];
   const currentColorHex = currentColor?.hex;
   const currentColorLabel = currentColor?.label || '';
   const normalizedColor = normalizeText(currentColorLabel);
@@ -605,46 +602,46 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     normalizeText(variant.color) === normalizedColor && normalizeText(variant.size) === normalizedSize,
   ) || variants.find((variant) => normalizeText(variant.color) === normalizedColor) || variants.find((variant) => normalizeText(variant.size) === normalizedSize);
 
-  const imageCandidates = Array.isArray(images)
-    ? images
-    : [
-        ...(images?.[`${currentColorLabel}__${activeSize}`] || []),
-        ...(images?.[currentColorLabel] || []),
-        ...(images?.[currentColorHex || ''] || []),
-      ];
-
+  // Image priority: variant image > main image > other images > fallback
   const currentImages = dedupeImages([
     matchingVariant?.image,
-    ...(imageCandidates || []),
-    ...variants.map((variant) => variant.image),
-    ...(Array.isArray(product?.images) ? product.images : []),
-  ]).filter(Boolean);
+    mainImage,
+    ...images,
+  ]).filter(Boolean) as string[];
 
-  const displayImg      = currentImages?.[activeImg] || currentImages?.[0] || matchingVariant?.image || FALLBACK_PRODUCT_IMAGE;
-  const discount        = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
-  const currentStock    = matchingVariant?.stock ?? stock;
-  const availableSizes  = sizes.length > 0 ? sizes : uniqueValues(variants.map((variant) => variant.size));
-  const sizeOptions     = availableSizes.length > 0 ? availableSizes : [];
+  const displayImg = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
+  
+  // Calculate discount: if discountedPrice exists, use it; otherwise use originalPrice
+  let discount = 0;
+  if (discountedPrice && price) {
+    discount = Math.round(((price - discountedPrice) / price) * 100);
+  } else if (originalPrice && price) {
+    discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  }
+  
+  const currentStock = matchingVariant?.stock ?? stock;
+  const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((variant) => variant.size));
+  const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
 
-  const deliveryCharge  = shipping === 'express' ? 120 : (price >= 999 ? 0 : 60);
+  const deliveryCharge  = shipping === 'express' ? 120 : ((discountedPrice || price) >= 999 ? 0 : 60);
   const codCharge       = payment === 'cod' && shipping !== 'express' ? 70 : 0;
-  const totalPrice      = (price + deliveryCharge + codCharge) * qty;
+  const totalPrice      = ((discountedPrice || price) + deliveryCharge + codCharge) * qty;
 
   const wished = product ? isWished(product.id) : false;
 
   const wishlistItem = product
     ? {
         id: product.id,
-        name: product.name,
-        price: product.price,
-        originalPrice: product.originalPrice ?? null,
+        name: product.name || 'Product',
+        price: discountedPrice || price,
+        originalPrice: price,
         image: displayImg,
-        category: product.category,
-        href: product.href,
-        colors: product.colors,
+        category: product.category || '',
+        href: product.href || `/products/${product.sourceId}`,
+        colors: normalizedColors,
         badge: product.badge ?? null,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
+        rating: product.rating ?? 0,
+        reviewCount: product.reviewCount ?? 0,
       }
     : null;
 
@@ -654,40 +651,42 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }, [toggleItem, wishlistItem]);
 
   const handleBuyNow = useCallback(() => {
-    if (!product || !currentColor) return;
+    if (!product) return;
 
+    const cartPrice = discountedPrice || price;
     const cartItem = {
-      id: String(product.id),
-      name: product.name,
-      price: product.price,
-      originalPrice: product.originalPrice ?? null,
+      id: String(product.sourceId),
+      name: product.name || '',
+      price: cartPrice,
+      originalPrice: price,
       image: displayImg,
-      color: currentColor.label,
-      colorHex: currentColor.hex,
+      color: currentColor?.label || '',
+      colorHex: currentColor?.hex || '#c9a84c',
       size: activeSize || undefined,
       sku: product.sku,
-      href: product.href,
+      href: product.href || `/products/${product.sourceId}`,
       customNote: customData.wantCustom ? customData.globalNote : undefined,
       customImages: customData.wantCustom ? customData.uploads : undefined,
     };
     for (let i = 0; i < qty; i++) addItem(cartItem, false);
     router.push('/cart');
-  }, [addItem, product, displayImg, currentColor, qty, router, customData]);
+  }, [addItem, product, displayImg, currentColor, qty, router, customData, discountedPrice, price, activeSize]);
 
   const handleAddToCart = useCallback(() => {
-    if (!product || !currentColor) return;
+    if (!product) return;
 
+    const cartPrice = discountedPrice || price;
     const cartItem = {
-      id: String(product.id),
-      name: product.name,
-      price: product.price,
-      originalPrice: product.originalPrice ?? null,
+      id: String(product.sourceId),
+      name: product.name || '',
+      price: cartPrice,
+      originalPrice: price,
       image: displayImg,
-      color: currentColor.label,
-      colorHex: currentColor.hex,
+      color: currentColor?.label || '',
+      colorHex: currentColor?.hex || '#c9a84c',
       size: activeSize || undefined,
       sku: product.sku,
-      href: product.href,
+      href: product.href || `/products/${product.sourceId}`,
       customNote: customData.wantCustom ? customData.globalNote : undefined,
       customImages: customData.wantCustom ? customData.uploads : undefined,
     };
@@ -697,10 +696,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, displayImg, currentColor, qty, customData]);
+  }, [addItem, product, displayImg, currentColor, qty, customData, discountedPrice, price, activeSize]);
 
   const handleColorChange = useCallback((i: number) => {
-    const nextColor = colors[i];
+    const nextColor = normalizedColors[i];
     setActiveColor(i);
     setActiveImg(0);
 
@@ -710,7 +709,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       || sizeOptions[0]
       || '';
     setActiveSize(nextSize);
-  }, [colors, variants, sizeOptions]);
+  }, [normalizedColors, variants, sizeOptions]);
 
   const handleSizeChange = useCallback((size: string) => {
     setActiveSize(size);
@@ -719,10 +718,40 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
 
-  if (loading) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Loading product...</div>;
-  if (!product) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Product not found</div>;
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid #d9cdb8', borderTopColor: '#3d4a22', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: 'rgba(30,35,16,.5)', fontSize: 13, letterSpacing: '.08em' }}>Loading product…</p>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    </div>
+  );
+  if (!product) return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16 }}>
+      <p style={{ fontSize: 28, color: '#3d4a22' }}>Product not found</p>
+      <p style={{ fontSize: 13, color: 'rgba(30,35,16,.5)' }}>This product may have been removed or the link is incorrect.</p>
+      <a href="/" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: '#f5f0e8', background: '#3d4a22', padding: '12px 28px', borderRadius: 50, textDecoration: 'none' }}>Back to Home</a>
+    </div>
+  );
 
-  const { name, rating, reviewCount, description, offer, sku } = product;
+  const productName = product.name || '';
+  const description = product.description || '';
+  const sku = product.sku || '';
+
+  // Build dynamic accordion items from real product data
+  const dynamicAccordionItems: AccordionData[] = [
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about, isHtml: true }] : []),
+    ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
+    ...(faqs.length > 0 ? [{
+      id: 'faq',
+      emoji: '❓',
+      label: 'FAQs',
+      content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
+    }] : []),
+    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once the order is dispatched. For damaged or wrong items received, contact us within 48 hours of delivery for a hassle-free replacement or full refund.' },
+    { id: 'shipping', emoji: '🚚', label: 'Shipping & Returns', content: 'STANDARD DELIVERY (3–5 business days) — ₹60 delivery charge. Free on orders above ₹999.\nEXPRESS DELIVERY (2–3 business days) — ₹120 delivery charge. No COD available on express orders.\n\nReturns accepted within 7 days of delivery. Item must be unused, unworn, and in original packaging.' },
+  ];
 
   return (
     <>
@@ -1220,7 +1249,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           <div className="pdp-gallery">
             <div className="pdp-main-img-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img key={displayImg} className="pdp-main-img" src={displayImg} alt={name} />
+              <img key={displayImg} className="pdp-main-img" src={displayImg} alt={productName} />
               <span className="pdp-badge">Best Seller</span>
               <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
@@ -1240,32 +1269,40 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
           {/* ── Info ─────────────────────────────────────────────────────────── */}
           <div className="pdp-info">
-            {/* CHANGE 1: Removed pdp-eyebrow / category line — was showing "Women Jewellery" */}
+            {/* Category / SubCategory breadcrumb */}
+            {(category || subCategory) && (
+              <p style={{ fontSize: '10px', letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: 8 }}>
+                {category}{subCategory ? ` › ${subCategory}` : ''}{style ? ` · ${style}` : ''}
+              </p>
+            )}
             <h1 className="pdp-name">
-              {name.split(' ').map((w, i) => i === 1 ? <em key={i}>{w} </em> : w + ' ')}
+              {productName.split(' ').map((w, i) => i === 1 ? <em key={i}>{w} </em> : w + ' ')}
             </h1>
 
             <div className="pdp-rating">
-              <span className="pdp-stars">{'★'.repeat(Math.round(rating))}{'☆'.repeat(5 - Math.round(rating))}</span>
-              <span className="pdp-rating-num">{rating}</span>
-              <span className="pdp-review-cnt">({reviewCount} reviews)</span>
+              <span className="pdp-stars">{'★'.repeat(Math.round(product.rating || 0))}{'☆'.repeat(5 - Math.round(product.rating || 0))}</span>
+              <span className="pdp-rating-num">{product.rating > 0 ? product.rating : 'New'}</span>
+              <span className="pdp-review-cnt">({product.reviewCount || 0} reviews)</span>
+              {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: 6 }}>{gender}</span>}
             </div>
 
             {/* Price row */}
             <div className="pdp-info-top">
               <div className="pdp-price-row">
-                <span className="pdp-price">₹{price.toLocaleString('en-IN')}</span>
-                {originalPrice && (
+                <span className="pdp-price">₹{(discountedPrice || price).toLocaleString('en-IN')}</span>
+                {(originalPrice || price) && (discountedPrice || originalPrice) && (
                   <>
-                    <span className="pdp-original">₹{originalPrice.toLocaleString('en-IN')}</span>
+                    <span className="pdp-original">₹{(originalPrice || price).toLocaleString('en-IN')}</span>
                     <span className="pdp-discount">{discount}% off</span>
                   </>
                 )}
               </div>
-              <div className="pdp-offer">
-                <span className="pdp-offer-icon">🏷️</span>
-                <span className="pdp-offer-text">{offer}</span>
-              </div>
+              {discountTag && (
+                <div className="pdp-offer">
+                  <span className="pdp-offer-icon">🏷️</span>
+                  <span className="pdp-offer-text">{discountTag}</span>
+                </div>
+              )}
             </div>
 
             <div className="pdp-divider" />
@@ -1273,7 +1310,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Colour */}
             <p className="pdp-section-label">Colour: <span>{currentColor?.label || 'Default'}</span></p>
             <div className="pdp-swatches">
-              {colors.map((c, i) => (
+              {normalizedColors.map((c, i) => (
                 <button key={c.hex} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
                   <div
                     className={`pdp-swatch${activeColor === i ? ' active' : ''}`}
@@ -1314,7 +1351,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <p className="pdp-section-label" style={{ marginTop: 4 }}>Selected image updates with the active color and size.</p>
             )}
 
-            <p className="pdp-desc">{description}</p>
+            {description && <p className="pdp-desc">{description}</p>}
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {tags.map((tag: string) => (
+                  <span key={tag} style={{ fontSize: 10, fontWeight: 500, letterSpacing: '.08em', textTransform: 'lowercase', color: 'var(--olive-600)', background: 'var(--olive-50)', border: '1px solid rgba(61,74,34,.12)', padding: '3px 10px', borderRadius: 50 }}>#{tag}</span>
+                ))}
+              </div>
+            )}
             <div className="pdp-divider" />
 
             {/* Customisation */}
@@ -1350,7 +1396,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {/* Order Summary */}
             <div className="pdp-summary">
-              <div className="pdp-summary-row"><span>Item price × {qty}</span><span>₹{(price * qty).toLocaleString('en-IN')}</span></div>
+              <div className="pdp-summary-row"><span>Item price × {qty}</span><span>₹{((discountedPrice || price) * qty).toLocaleString('en-IN')}</span></div>
               <div className="pdp-summary-row">
                 <span>Delivery charges</span>
                 <span style={{ color: deliveryCharge === 0 ? 'var(--green)' : 'var(--ink)' }}>{deliveryCharge === 0 ? 'FREE 🎉' : `₹${deliveryCharge}`}</span>
@@ -1392,9 +1438,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             </div>
             <div className="pdp-divider" />
 
-            {/* Accordion */}
+            {/* Accordion — dynamically built from real product data */}
             <div className="pdp-accordion">
-              {ACCORDION_ITEMS.map(item => (
+              {dynamicAccordionItems.map(item => (
                 <AccordionItem
                   key={item.id}
                   item={item}

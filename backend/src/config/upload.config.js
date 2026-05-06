@@ -14,7 +14,6 @@ export const uploadStorage = multer.memoryStorage();
 // Multer middleware for single file
 export const uploadSingle = multer({
 	storage: uploadStorage,
-	limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -28,7 +27,6 @@ export const uploadSingle = multer({
 // Multer middleware for multiple files
 export const uploadMultiple = multer({
 	storage: uploadStorage,
-	limits: { fileSize: 5 * 1024 * 1024 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -42,7 +40,6 @@ export const uploadMultiple = multer({
 // Product-specific multer: handles mainImage + images[] + variantImages[n] dynamically
 export const uploadProductImages = multer({
 	storage: uploadStorage,
-	limits: { fileSize: 5 * 1024 * 1024 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
 		if (allowedMimes.includes(file.mimetype)) {

@@ -36,6 +36,18 @@ const HERO_CFG: Record<string, {
   'office-jewellery': { tagline: 'Quiet Authority',      sub: 'Refined. Subtle. Powerful.',  gradA:'#f0eeeb', gradB:'#e8e6e2' },
   'maximalist':       { tagline: 'More Is More',         sub: 'Loud. Layered. Limitless.',   gradA:'#1c0d00', gradB:'#0e0600' },
   'fairy-coded':      { tagline: 'Enchant Everything',   sub: 'Whimsical. Magical. Rare.',   gradA:'#f0e8fc', gradB:'#ebe0f8' },
+  'men-street-edge':  { tagline: 'Street Edge',         sub: 'Bold. Raw. Unapologetic.',    gradA:'#1a1a1a', gradB:'#2a2a2a' },
+  'men-corporate':    { tagline: 'Corporate Sharp',      sub: 'Refined. Sleek. Precise.',    gradA:'#dde1dc', gradB:'#f0f2ef' },
+  'men-island':       { tagline: 'Island King',          sub: 'Laid-back. Sun-kissed. Easy.', gradA:'#d8efe7', gradB:'#eef8f4' },
+  'men-minimal':      { tagline: 'Minimal Stack',        sub: 'Clean. Intentional. Strong.', gradA:'#f1eee7', gradB:'#faf8f2' },
+  'men-rocker':       { tagline: 'Rocker Noir',          sub: 'Dark. Sharp. Rebellious.',    gradA:'#111114', gradB:'#1d1d24' },
+  'men-gold':         { tagline: 'Gold Royalty',        sub: 'Rich. Heavy. Statement.',     gradA:'#2a2010', gradB:'#181207' },
+  'street-edge':      { tagline: 'Street Edge',         sub: 'Bold. Raw. Unapologetic.',    gradA:'#1a1a1a', gradB:'#2a2a2a' },
+  'corporate-sharp':  { tagline: 'Corporate Sharp',      sub: 'Refined. Sleek. Precise.',    gradA:'#dde1dc', gradB:'#f0f2ef' },
+  'island-king':      { tagline: 'Island King',          sub: 'Laid-back. Sun-kissed. Easy.', gradA:'#d8efe7', gradB:'#eef8f4' },
+  'minimal-stack':    { tagline: 'Minimal Stack',        sub: 'Clean. Intentional. Strong.', gradA:'#f1eee7', gradB:'#faf8f2' },
+  'rocker-noir':      { tagline: 'Rocker Noir',          sub: 'Dark. Sharp. Rebellious.',    gradA:'#111114', gradB:'#1d1d24' },
+  'gold-royalty':     { tagline: 'Gold Royalty',        sub: 'Rich. Heavy. Statement.',     gradA:'#2a2010', gradB:'#181207' },
 };
 
 // ─── Product Card ─────────────────────────────────────────────────────────────

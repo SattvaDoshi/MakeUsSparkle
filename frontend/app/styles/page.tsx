@@ -6,7 +6,7 @@ import { STYLE_THEMES } from '@/lib/styleThemes';
 import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog } from '@/lib/catalogApi';
 
 type ThemeId = keyof typeof STYLE_THEMES;
-type StyleCard = (typeof STYLE_THEMES)[ThemeId] & { id: string };
+type StyleCard = (typeof STYLE_THEMES)[ThemeId] & { id: string; image?: string };
 
 const FALLBACK_THEME = STYLE_THEMES['soft-girl'];
 
@@ -44,6 +44,7 @@ export default function ShopByStylePage() {
             ...theme,
             id: slug,
             name: style.name,
+            image: style.image || null,
           };
         });
 
@@ -236,6 +237,42 @@ export default function ShopByStylePage() {
         /* Card layers */
         .card-base { position: absolute; inset: 0; background: #1e2817; }
         .card-grad { position: absolute; inset: 0; }
+        .card-photo {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          overflow: hidden;
+        }
+        .card-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center top;
+          transition: transform 0.5s ease;
+        }
+        .sbs-card:hover .card-photo img { transform: scale(1.06); }
+        .card-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          background: linear-gradient(
+            to top,
+            rgba(20, 26, 15, 0.88) 0%,
+            rgba(20, 26, 15, 0.65) 35%,
+            rgba(20, 26, 15, 0.25) 65%,
+            rgba(20, 26, 15, 0.05) 100%
+          );
+          transition: background 0.4s ease;
+        }
+        .sbs-card:hover .card-overlay {
+          background: linear-gradient(
+            to top,
+            rgba(20, 26, 15, 0.92) 0%,
+            rgba(20, 26, 15, 0.72) 40%,
+            rgba(20, 26, 15, 0.30) 70%,
+            rgba(20, 26, 15, 0.05) 100%
+          );
+        }
         .card-watermark {
           position: absolute;
           top: 50%; left: 50%;
@@ -261,7 +298,7 @@ export default function ShopByStylePage() {
 
         /* Corner brackets */
         .card-corner {
-          position: absolute; width: 16px; height: 16px; z-index: 6;
+          position: absolute; width: 16px; height: 16px; z-index: 7;
           opacity: 0; transition: opacity .35s ease;
         }
         .sbs-card:hover .card-corner { opacity: 1; }
@@ -272,7 +309,7 @@ export default function ShopByStylePage() {
 
         /* Badge */
         .card-badge {
-          position: absolute; top:16px; right:16px; z-index:7;
+          position: absolute; top:16px; right:16px; z-index:8;
           font-size:8px; font-weight:400; letter-spacing:2.5px; text-transform:uppercase;
           color:#141a0f; background:#c9a96e;
           padding:4px 9px 3px; border-radius:2px;
@@ -280,7 +317,7 @@ export default function ShopByStylePage() {
 
         /* Product count pill */
         .card-count {
-          position: absolute; top:16px; left:16px; z-index:7;
+          position: absolute; top:16px; left:16px; z-index:8;
           font-size:8px; font-weight:400; letter-spacing:2px; text-transform:uppercase;
           color:rgba(253,246,233,0.7);
           border:1px solid rgba(201,169,110,0.3);
@@ -290,7 +327,7 @@ export default function ShopByStylePage() {
 
         /* Content */
         .card-content {
-          position: absolute; inset: 0; z-index: 5;
+          position: absolute; inset: 0; z-index: 6;
           display: flex; flex-direction: column; justify-content: flex-end;
           padding: 28px;
           background: linear-gradient(to top, rgba(8,12,5,0.95) 0%, rgba(8,12,5,0.55) 45%, transparent 100%);
@@ -403,8 +440,27 @@ export default function ShopByStylePage() {
                   onMouseEnter={() => setHoveredId(s.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
-                  <div className="card-base"/>
-                  <div className="card-grad" style={{ background: s.heroPattern }}/>
+                  {s.image ? (
+                    <>
+                      <div className="card-photo">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={s.image}
+                          alt={s.name}
+                          loading={i < 3 ? "eager" : "lazy"}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      </div>
+                      <div className="card-overlay"/>
+                    </>
+                  ) : (
+                    <>
+                      <div className="card-base"/>
+                      <div className="card-grad" style={{ background: s.heroPattern }}/>
+                    </>
+                  )}
                   <div className="card-watermark">{s.emoji}</div>
                   <div className="card-shimmer"/>
                   <div className="card-corner cc-tl"/>

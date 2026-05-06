@@ -15,6 +15,7 @@ import AdminCouponsTab from "./_components/tabs/AdminCouponsTab";
 import AdminBannersTab from "./_components/tabs/AdminBannersTab";
 import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
 import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
+import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -160,10 +161,11 @@ type PagedResponse<T, K extends string> = {
 } & Record<K, T[]>;
 
 type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
-
+type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "categories";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
+	{ key: "categories", label: "Categories" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
@@ -382,6 +384,11 @@ export default function AdminDashboardPage() {
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
 
+	const [categories, setCategories] = useState<Array<{ _id: string; name?: string; image?: string }>>([]);
+	const [subcategories, setSubCategories] = useState<Array<any>>([]);
+	const [styles, setStyles] = useState<Array<{ _id: string; name?: string }>>([]);
+	const [genders, setGenders] = useState<Array<{ _id: string; name?: string; isActive?: boolean }>>([]);
+
 	const [productForm, setProductForm] = useState(defaultProductForm);
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
@@ -460,6 +467,26 @@ export default function AdminDashboardPage() {
 		setCharms(charmsResult.charmItems || []);
 	}, []);
 
+	const loadCategories = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; categories: Array<any> }>("/categories");
+		setCategories(result.categories || []);
+	}, []);
+
+	const loadSubCategories = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; subcategories: Array<any> }>("/subcategories");
+		setSubCategories(result.subcategories || []);
+	}, []);
+
+	const loadStyles = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; styles: Array<any> }>("/styles");
+		setStyles(result.styles || []);
+	}, []);
+
+	const loadGenders = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; genders: Array<any> }>("/genders");
+		setGenders(result.genders || []);
+	}, []);
+
 	const loadActiveTab = useCallback(async (tab: TabKey) => {
 		setLoading(true);
 		setError(null);
@@ -475,12 +502,13 @@ export default function AdminDashboardPage() {
 			if (tab === "banners") await loadBanners();
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
+			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load admin data");
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms]);
+	}, [loadBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -707,6 +735,99 @@ export default function AdminDashboardPage() {
 		}, "Coupon deleted");
 	};
 
+	// Categories CRUD
+	const handleCreateCategory = async (payload: { name: string; description?: string; image?: string }) => {
+		await runAction(async () => {
+			await apiRequest("/admin/categories", { method: "POST", body: JSON.stringify(payload) });
+			await loadCategories();
+		}, "Category created");
+	};
+
+	const handleEditCategory = async (id: string, payload: any) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/categories/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await loadCategories();
+		}, "Category updated");
+	};
+
+	const handleDeleteCategory = async (id: string) => {
+		if (!window.confirm("Delete this category?")) return;
+		await runAction(async () => {
+			await apiRequest(`/admin/categories/${id}`, { method: "DELETE" });
+			await loadCategories();
+		}, "Category deleted");
+	};
+
+	// Subcategories CRUD
+	const handleCreateSubCategory = async (payload: { name: string; category: string; image?: string }) => {
+		await runAction(async () => {
+			await apiRequest("/admin/subcategories", { method: "POST", body: JSON.stringify(payload) });
+			await loadSubCategories();
+		}, "Subcategory created");
+	};
+
+	const handleEditSubCategory = async (id: string, payload: any) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/subcategories/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await loadSubCategories();
+		}, "Subcategory updated");
+	};
+
+	const handleDeleteSubCategory = async (id: string) => {
+		if (!window.confirm("Delete this subcategory?")) return;
+		await runAction(async () => {
+			await apiRequest(`/admin/subcategories/${id}`, { method: "DELETE" });
+			await loadSubCategories();
+		}, "Subcategory deleted");
+	};
+
+	// Styles CRUD
+	const handleCreateStyle = async (payload: { name: string; image?: string }) => {
+		await runAction(async () => {
+			await apiRequest("/admin/styles", { method: "POST", body: JSON.stringify(payload) });
+			await loadStyles();
+		}, "Style created");
+	};
+
+	const handleEditStyle = async (id: string, payload: any) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/styles/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await loadStyles();
+		}, "Style updated");
+	};
+
+	const handleDeleteStyle = async (id: string) => {
+		if (!window.confirm("Delete this style?")) return;
+		await runAction(async () => {
+			await apiRequest(`/admin/styles/${id}`, { method: "DELETE" });
+			await loadStyles();
+		}, "Style deleted");
+	};
+
+	// Genders CRUD
+	const handleCreateGender = async (payload: { name: string; slug?: string; image?: string }) => {
+		await runAction(async () => {
+			await apiRequest("/admin/genders", { method: "POST", body: JSON.stringify(payload) });
+			await loadGenders();
+		}, "Gender created");
+	};
+
+	const handleEditGender = async (id: string, payload: any) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/genders/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await loadGenders();
+		}, "Gender updated");
+	};
+
+	const handleDeleteGender = async (id: string) => {
+		if (!window.confirm("Delete this gender?")) return;
+		await runAction(async () => {
+			await apiRequest(`/admin/genders/${id}`, { method: "DELETE" });
+			await loadGenders();
+		}, "Gender deleted");
+	};
+
+
 	const handleBannerSubmit = async (event: FormEvent) => {
 		event.preventDefault();
 		const payload = {
@@ -918,6 +1039,24 @@ export default function AdminDashboardPage() {
 			setModalMode("edit");
 			setModalKind("charm");
 		}} onDelete={handleDeleteCharm} />;
+	if (activeTab === "categories") return <AdminCategoriesTab
+		categories={categories}
+		subcategories={subcategories}
+		styles={styles}
+		genders={genders}
+		onCreateCategory={handleCreateCategory}
+		onEditCategory={handleEditCategory}
+		onDeleteCategory={handleDeleteCategory}
+		onCreateSubCategory={handleCreateSubCategory}
+		onEditSubCategory={handleEditSubCategory}
+		onDeleteSubCategory={handleDeleteSubCategory}
+		onCreateStyle={handleCreateStyle}
+		onEditStyle={handleEditStyle}
+		onDeleteStyle={handleDeleteStyle}
+		onCreateGender={handleCreateGender}
+		onEditGender={handleEditGender}
+		onDeleteGender={handleDeleteGender}
+	/>;
 		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};
 

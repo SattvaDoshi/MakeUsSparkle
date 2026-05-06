@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 type Gender = "women" | "men";
 
@@ -14,7 +14,23 @@ const GenderContext = createContext<GenderContextType>({
 });
 
 export function GenderProvider({ children }: { children: ReactNode }) {
-  const [gender, setGender] = useState<Gender>("women");
+  const [gender, setGenderState] = useState<Gender>("women");
+
+  useEffect(() => {
+    const storedGender = window.localStorage.getItem("selectedGender");
+    if (storedGender === "women" || storedGender === "men") {
+      setGenderState(storedGender);
+    }
+  }, []);
+
+  const setGender = (nextGender: Gender) => {
+    setGenderState(nextGender);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("selectedGender", nextGender);
+    }
+  };
+
   return (
     <GenderContext.Provider value={{ gender, setGender }}>
       {children}

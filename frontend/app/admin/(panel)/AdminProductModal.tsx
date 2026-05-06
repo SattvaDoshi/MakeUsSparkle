@@ -31,6 +31,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	const [categories, setCategories] = useState<TaxonomyItem[]>([]);
 	const [subCategories, setSubCategories] = useState<TaxonomyItem[]>([]);
 	const [styles, setStyles] = useState<TaxonomyItem[]>([]);
+	const [genders, setGenders] = useState<TaxonomyItem[]>([]);
 	const [allTags, setAllTags] = useState<string[]>([]);
 	const [newTagInput, setNewTagInput] = useState("");
 
@@ -40,7 +41,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		category: initialData?.category?._id || initialData?.category || "",
 		subCategory: initialData?.subCategory?._id || initialData?.subCategory || "",
 		style: initialData?.style?._id || initialData?.style || "",
-		gender: initialData?.gender || "unisex",
+		gender: initialData?.gender || "",
 		price: initialData?.price?.toString() || "",
 		discountedPrice: initialData?.discountedPrice?.toString() || "",
 		discountTag: initialData?.discountTag || "",
@@ -84,16 +85,18 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	useEffect(() => {
 		const fetchTaxonomy = async () => {
 			try {
-				const [cats, subs, stys, tRes] = await Promise.all([
+				const [cats, subs, stys, tRes, gendersResp] = await Promise.all([
 					apiRequest<{ success: boolean; categories: TaxonomyItem[] }>("/categories"),
 					apiRequest<{ success: boolean; subcategories: TaxonomyItem[] }>("/subcategories"),
 					apiRequest<{ success: boolean; styles: TaxonomyItem[] }>("/styles"),
 					apiRequest<{ success: boolean; tags: string[] }>("/products/tags"),
+					apiRequest<{ success: boolean; genders: TaxonomyItem[] }>("/genders"),
 				]);
 				setCategories(cats.categories || []);
 				setSubCategories(subs.subcategories || []);
 				setStyles(stys.styles || []);
 				setAllTags(tRes.tags || []);
+				setGenders(gendersResp.genders || []);
 			} catch (err) {
 				console.error("Failed to load taxonomy", err);
 			}
@@ -378,9 +381,16 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											background: "#fff",
 										}}
 									>
-										<option value="unisex">Unisex</option>
-										<option value="female">Female</option>
-										<option value="male">Male</option>
+										<option value="">Select Gender...</option>
+										{(genders.length > 0 ? genders : [
+											{ _id: "unisex", title: "Unisex" },
+											{ _id: "female", title: "Female" },
+											{ _id: "male", title: "Male" },
+										]).map((g: any) => (
+											<option key={g._id} value={g._id}>
+												{g.name || g.title}
+											</option>
+										))}
 									</select>
 								</div>
 
@@ -579,8 +589,12 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										Main Product Image
 									</label>
 									{form.mainImage && (
-										<div style={{ fontSize: "0.85rem", color: "#555", marginBottom: "0.5rem" }}>
-											Current: <strong>{typeof form.mainImage === "string" ? form.mainImage.substring(0, 50) : "Pending upload"}</strong>
+										<div style={{ fontSize: "0.85rem", color: "#555", marginBottom: "0.5rem", display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+											{typeof form.mainImage === "string" ? (
+												<img src={form.mainImage} alt="main" style={{ maxWidth: 120, maxHeight: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #d4d4c8' }} />
+											) : (
+												<strong>Pending upload</strong>
+											)}
 										</div>
 									)}
 									<input
@@ -606,23 +620,13 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									</label>
 									<div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
 										{form.galleryImages.map((img: string) => (
-											<span
-												key={img}
-												style={{
-													background: "#f5f4ef",
-													border: "1px solid #d4d4c8",
-													padding: "0.3rem 0.6rem",
-													borderRadius: "4px",
-													fontSize: "0.75rem",
-													display: "flex",
-													alignItems: "center",
-													gap: "0.4rem",
-													color: "#1c1c1a",
-												}}
-											>
-												<span style={{ maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis" }}>
-													{typeof img === "string" ? img.substring(0, 20) : "Image"}
-												</span>
+											<div key={img} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f4ef', padding: 6, borderRadius: 6, border: '1px solid #d4d4c8' }}>
+												{typeof img === 'string' ? (
+													<img src={img} alt="gallery" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #ddd' }} />
+												) : (
+													<span style={{ width: 80, height: 60, display: 'inline-block', background: '#e8ead0', borderRadius: 6 }} />
+												)}
+												<span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{typeof img === 'string' ? img : 'Image'}</span>
 												<button
 													type="button"
 													onClick={() =>
@@ -632,16 +636,16 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														}))
 													}
 													style={{
-														background: "none",
-														border: "none",
-														cursor: "pointer",
-														color: "#943b2a",
+														background: 'none',
+														border: 'none',
+														cursor: 'pointer',
+														color: '#943b2a',
 														padding: 0,
 													}}
 												>
 													×
 												</button>
-											</span>
+											</div>
 										))}
 										{galleryImageFiles.map((file, i) => (
 											<span
@@ -1072,7 +1076,11 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														</small>
 													)}
 													{variant.existingImage && !variantImageFile[variant.variantIndex] && (
-														<small style={{ color: "#6b6b60" }}>Current image exists</small>
+														typeof variant.existingImage === 'string' ? (
+															<img src={variant.existingImage} alt="variant" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #ddd' }} />
+														) : (
+															<small style={{ color: "#6b6b60" }}>Current image exists</small>
+														)
 													)}
 												</div>
 

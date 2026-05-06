@@ -8,12 +8,12 @@ export default async function Page({ params }: { params: Promise<{ category: str
   const { category, gender } = await params;
 
   if (category === 'curated-combos') {
-    return <CuratedCombosProductPage />;
+    return <CuratedCombosProductPage gender={gender} />;
   }
 
   if (CHARM_CATEGORIES.has(category)) {
-    return <CharmKeyChainProductPage parentCategory={category} />;
+    return <CharmKeyChainProductPage parentCategory={category} gender={gender} />;
   }
 
   return <ProductPage type={category} gender={gender} />;
-}
+}

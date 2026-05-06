@@ -400,7 +400,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
 /* ─────────────────────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
-export default function CuratedCombosPage() {
+export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
   // NOTE: Replace these with your actual imports:
   // import { useCart } from '@/lib/cartContext';
   // import { fireConfetti } from '@/components/cart/ConfettiManager';

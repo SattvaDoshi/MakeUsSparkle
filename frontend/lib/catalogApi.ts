@@ -33,11 +33,15 @@ export interface CatalogProduct {
   sourceId: string;
   name: string;
   description: string;
+  about?: string;
   price: number;
+  discountedPrice?: number | null;
+  discountTag?: string | null;
   originalPrice: number | null;
   rating: number;
   reviewCount: number;
   images: string[];
+  mainImage?: string | null;
   category: string;
   categorySlug: string;
   subCategory: string;
@@ -49,7 +53,7 @@ export interface CatalogProduct {
   gender: "male" | "female" | "unisex";
   stock: number;
   badge: string | null;
-  offer: string;
+  offer: string | null;
   sku: string;
   href: string;
   colors: CatalogColor[];
@@ -61,6 +65,7 @@ export interface CatalogProduct {
     image?: string;
     imagePublicId?: string;
   }>;
+  faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
 }
 
@@ -96,6 +101,8 @@ interface BackendProduct {
   description?: string;
   about?: string;
   price?: number;
+  discountedPrice?: number;
+  discountTag?: string;
   rating?: number;
   images?: string[];
   mainImage?: string;
@@ -114,6 +121,7 @@ interface BackendProduct {
   gender?: "male" | "female" | "unisex";
   stock?: number;
   tags?: string[];
+  faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
 }
 
@@ -243,8 +251,10 @@ function normalizeProduct(
   const rating = Number(item.rating ?? 0);
   const reviewCount = Array.isArray(item.reviews) ? item.reviews.length : 0;
   const price = Number(item.price ?? 0);
-  const originalPrice = price > 0 ? Math.round(price * 1.25) : null;
-  const slug = toSlug(name);
+  const discountedPrice = item.discountedPrice ? Number(item.discountedPrice) : null;
+  const originalPrice = discountedPrice ? price : (price > 0 ? Math.round(price * 1.25) : null);
+  // Use _id as slug so the detail page can call GET /products/:id directly
+  const slug = item._id;
 
   const subCategorySlug = subCategory?.slug || "";
   const categorySlug = category?.slug || toSlug(categoryName);
@@ -254,7 +264,10 @@ function normalizeProduct(
     sourceId: item._id,
     name,
     description: item.description || "",
+    about: item.about || "",
     price,
+    discountedPrice,
+    discountTag: item.discountTag || null,
     originalPrice,
     rating,
     reviewCount,
@@ -269,13 +282,15 @@ function normalizeProduct(
     gender: item.gender || "unisex",
     stock: Number(item.stock ?? 0),
     badge: pickBadge(rating),
-    offer: "Limited Time Deal",
+    offer: discountedPrice ? "Limited Time Deal" : null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
     href: `/products/${slug}`,
-    colors: colors.length > 0 ? colors : [{ label: "Gold", hex: "#c9a84c" }, { label: "Silver", hex: "#b8b8b8" }],
+    colors: colors.length > 0 ? colors : [],
     sizes,
     variants,
     images: imagePool.length > 0 ? imagePool : [FALLBACK_IMAGE],
+    mainImage: item.mainImage || null,
+    faqs: Array.isArray(item.faqs) ? item.faqs : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
   };
 }
@@ -315,6 +330,31 @@ export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   return (productsResponse.products || []).map((item) =>
     normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
   );
+}
+
+/**
+ * Fetch a single product by its MongoDB _id.
+ * Also fetches categories/subcategories/styles in parallel to resolve references.
+ */
+export async function fetchProductById(productId: string): Promise<CatalogProduct | null> {
+  try {
+    const [categories, subCategories, styles, productResponse] = await Promise.all([
+      fetchCatalogCategories(),
+      fetchCatalogSubCategories(),
+      fetchCatalogStyles(),
+      apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${productId}`),
+    ]);
+
+    if (!productResponse.product) return null;
+
+    const categoryMap = new Map(categories.map((item) => [item.id, item]));
+    const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+    const styleMap = new Map(styles.map((item) => [item.id, item]));
+
+    return normalizeProduct(productResponse.product, categoryMap, subCategoryMap, styleMap);
+  } catch {
+    return null;
+  }
 }
 
 /* ─── Charm Items ─── */

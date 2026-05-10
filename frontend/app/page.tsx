@@ -17,7 +17,7 @@ export default function HomePage() {
       <PromoSection/>
       <BannerSection />
     <Style/>
-      <CategorySection />
+      {/* <CategorySection /> */}
       {/* <TrustBadges /> */}
       <TestimonialsSection />
       <Footer />

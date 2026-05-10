@@ -1,11 +1,12 @@
 
 'use client';
 
-import { useState, useEffect, useRef, type ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import UpperNav from '@/components/ui/UpperNav';
 import { fetchCharmItems, type CharmItemData } from '@/lib/catalogApi';
+import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -191,7 +192,7 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
   const [selectedCharms, setSelectedCharms] = useState<CharmItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('');
   const [cartAdded, setCartAdded] = useState(false);
-
+const [sortOption, setSortOption] = useState<SortOption>('default');
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -260,7 +261,11 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
     handleAddToCart();
     router.push('/cart');
   }
-
+// ADD this useMemo near other useMemos/state:
+const sortedCharms = useMemo(
+  () => sortProducts(activeCharmCategory?.charms ?? [], sortOption),
+  [activeCharmCategory, sortOption]
+);
   return (
     <>
       <style>{`
@@ -694,7 +699,7 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
 
         /* ── RESPONSIVE ── */
 
-        /* Tablet */
+        /* Tablet */ 
         @media (max-width: 1024px) {
           .layout { grid-template-columns: 1fr; }
           .col-left { padding-right: 0; }
@@ -703,7 +708,19 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
           .nav-links { display: none; }
           .hero::after { display: none; }
         }
-
+/* SortFilter mobile dropdown — flip upward */
+@media (max-width: 680px) {
+  .sf-wrap { position: relative; z-index: 100; }
+  .sf-dropdown {
+    top: auto !important;
+    bottom: calc(100% + 7px) !important;
+    right: 0 !important;
+  }
+}
+/* Tablet/laptop responsive sort row */
+@media (max-width: 1024px) {
+  .sort-header-row { flex-wrap: wrap; }
+}
         /* Large mobile / small tablet */
         @media (max-width: 680px) {
           .nav, .hero, .layout { padding-left: 16px; padding-right: 16px; }
@@ -748,7 +765,18 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
 
           {/* LEFT */}
           <div className="col-left">
-            <p className="sec-lbl">Choose Your Charms ({selectedCharms.length})</p>
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+  <p className="sec-lbl" style={{ marginBottom: 0, flex: 1 }}>
+    Choose Your Charms ({selectedCharms.length})
+  </p>
+  <div style={{ flexShrink: 0, position: 'relative', zIndex: 100 }}>
+    <SortFilter
+      value={sortOption}
+      onChange={setSortOption}
+      variant="olive"
+    />
+  </div>
+</div>
 
             {/* Category Tabs */}
             <div className="cat-tabs">
@@ -771,7 +799,7 @@ export default function KeychainsCharmsPage({ parentCategory = 'custom-charm-jew
                   <div key={i} className="cc" style={{ minHeight: 120, opacity: 0.3, animation: 'pulse 1.4s ease-in-out infinite' }} />
                 ))
               ) : (
-                activeCharmCategory?.charms.map((charm) => {
+                sortedCharms.map((charm) => {
                   const isAdded = selectedCharms.some((c) => c.id === charm.id);
                   return (
                     <CharmCard

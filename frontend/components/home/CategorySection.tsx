@@ -1,6 +1,3 @@
-
-
-
 'use client';
 
 import {
@@ -70,21 +67,11 @@ const menJewellery: SubCategoryItem[] = [
 ];
 
 const womenJewellerySubcategoryNames = new Set([
-  'Necklaces',
-  'Earrings',
-  'Rings',
-  'Bracelets',
-  'Waist Chains',
-  'Couple Sets',
+  'Necklaces', 'Earrings', 'Rings', 'Bracelets', 'Waist Chains', 'Couple Sets',
 ]);
 
 const menJewellerySubcategoryNames = new Set([
-  'Men Chains',
-  'Men Bracelets',
-  'Men Rings',
-  'Men Earrings',
-  'Men Pendants',
-  'Couple Sets',
+  'Men Chains', 'Men Bracelets', 'Men Rings', 'Men Earrings', 'Men Pendants', 'Couple Sets',
 ]);
 
 const buildCategories = (gender: Gender): CategoryItem[] =>
@@ -93,7 +80,7 @@ const buildCategories = (gender: Gender): CategoryItem[] =>
         { name: 'Jewellery',              icon: '◈', img: IMG.necklace,  href: `/categories/women/jewellery`,        sub: womenJewellery },
         { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/women/gift-boxes`,       sub: [] },
         { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/women/fan-combos`,       sub: [] },
-        { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/women/custom-charm`,     sub: [] },
+        { name: 'Charm Jewellery',        icon: '◎', img: IMG.charm,     href: `/categories/women/charm-jewellery`,     sub: [] },
         { name: 'Hair Accessories',       icon: '⟡', img: IMG.hair,      href: `/categories/women/hair-accessories`, sub: [] },
         { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/women/keychains`,        sub: [] },
         { name: 'Curated Combos',         icon: '⊞', img: IMG.combo,     href: `/categories/women/curated-combos`,  sub: [] },
@@ -102,13 +89,13 @@ const buildCategories = (gender: Gender): CategoryItem[] =>
         { name: 'Jewellery',              icon: '◈', img: IMG.menChain,  href: `/categories/men/jewellery`,         sub: menJewellery },
         { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/men/gift-boxes`,        sub: [] },
         { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/men/fan-combos`,        sub: [] },
-        { name: 'Custom Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/men/custom-charm`,      sub: [] },
+        { name: 'Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/men/charm-jewellery`,      sub: [] },
         { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/men/keychains`,         sub: [] },
         { name: 'Watch Straps',           icon: '⊞', img: IMG.menWatch,  href: `/categories/men/watch-straps`,      sub: [] },
         { name: 'Curated Combos',         icon: '⊟', img: IMG.combo,     href: `/categories/men/curated-combos`,   sub: [] },
       ];
 
-/* ─── Desktop Sub-Card: image fills entire card, name overlaid on image ─── */
+/* ─── Desktop Sub-Card ─── */
 function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [shine, setShine] = useState({ x: 50, y: 50, on: false });
@@ -128,15 +115,11 @@ function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
       onMouseLeave={() => setShine(s => ({ ...s, on: false }))}
       style={{ '--sx': `${shine.x}%`, '--sy': `${shine.y}%`, animationDelay: `${index * 0.065}s` } as CSSProperties & Record<string, string>}
     >
-      {/* Full-bleed image — no white footer */}
       <div className="sc-img">
         <img src={sub.img} alt={sub.name} loading="lazy" />
-        {/* gradient bottom overlay for text legibility */}
         <div className="sc-grad" />
         <div className={`sc-shine${shine.on ? ' on' : ''}`} />
       </div>
-
-      {/* Name overlaid on image */}
       <div className="sc-overlay-name">
         <span className="sc-name">{sub.name}</span>
         <span className="sc-arr">
@@ -145,7 +128,6 @@ function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
           </svg>
         </span>
       </div>
-
       <div className="sc-bar" />
     </Link>
   );
@@ -163,11 +145,7 @@ function MobileSplit({
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const active = categories[activeIdx] || categories[0] || {
-    name: 'Loading',
-    icon: '◈',
-    img: IMG.combo,
-    href: '#',
-    sub: [],
+    name: 'Loading', icon: '◈', img: IMG.combo, href: '#', sub: [],
   };
 
   return (
@@ -185,7 +163,6 @@ function MobileSplit({
       </div>
 
       <div className="ms-pane">
-        {/* LEFT sidebar */}
         <nav className="ms-sb" aria-label="Category navigation">
           {categories.map((cat, i) => (
             <button
@@ -203,7 +180,6 @@ function MobileSplit({
           ))}
         </nav>
 
-        {/* RIGHT content */}
         <div className="ms-ct">
           <div className="ms-ct-hd">
             <span className="ms-ct-title">
@@ -221,14 +197,12 @@ function MobileSplit({
           </div>
 
           {active.sub.length > 0 ? (
-            /* Sub-category grid: image fills card, name on image */
             <div className="ms-subgrid">
               {active.sub.map(sub => (
                 <Link key={sub.name} href={sub.href} className="ms-subcard">
                   <div className="ms-subcard-img">
                     <img src={sub.img} alt={sub.name} loading="lazy" />
                     <div className="ms-subcard-ov" />
-                    {/* Name on image */}
                     <span className="ms-subcard-name">{sub.name}</span>
                   </div>
                 </Link>
@@ -275,9 +249,7 @@ export default function CategorySection() {
 
     Promise.all([fetchCatalogCategories(), fetchCatalogSubCategories()])
       .then(([categories, subcategories]) => {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         const allowedJewellerySubcategoryNames =
           tab === 'men' ? menJewellerySubcategoryNames : womenJewellerySubcategoryNames;
@@ -300,7 +272,7 @@ export default function CategorySection() {
           'jewellery': '◈',
           'gift-boxes': '⊡',
           'fan-combos': '✦',
-          'custom-charm-jewellery': '◎',
+          'charm-jewellery': '◎',
           'hair-accessories': '⟡',
           'keychains': '⌖',
           'watch-straps': '⊞',
@@ -331,18 +303,12 @@ export default function CategorySection() {
         }
       });
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [tab]);
 
   const categories = dynamicCategories;
   const active = categories[activeIdx] || categories[0] || {
-    name: 'Loading',
-    icon: '◈',
-    img: IMG.combo,
-    href: '#',
-    sub: [],
+    name: 'Loading', icon: '◈', img: IMG.combo, href: '#', sub: [],
   };
 
   useEffect(() => {
@@ -374,10 +340,11 @@ export default function CategorySection() {
 
         <div className={`cs-wrap${visible ? ' in' : ''}`}>
           <div className="cs-panel">
+
+            {/* ── LEFT SIDEBAR ── */}
             <nav className="cs-sb" aria-label="Product categories">
               <div className="cs-sb-hd">
-                <span className="cs-sb-eyebrow">Browse</span>
-                <span className="cs-sb-heading">Collections</span>
+                <span className="cs-sb-eyebrow">Collections</span>
               </div>
 
               {categories.map((cat, i) => (
@@ -387,19 +354,19 @@ export default function CategorySection() {
                   onClick={() => setActiveIdx(i)}
                   aria-current={activeIdx === i ? 'page' : undefined}
                 >
-                  <span className="cs-sb-icon" aria-hidden="true">{cat.icon}</span>
+                  {/* Thumbnail image */}
+                  <div className="cs-sb-thumb">
+                    <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+                  </div>
                   <span className="cs-sb-txt">{cat.name}</span>
-                  <span className="cs-sb-badge">{cat.sub.length > 0 ? cat.sub.length : '→'}</span>
+                  {cat.sub.length > 0 && (
+                    <span className="cs-sb-count">{cat.sub.length}</span>
+                  )}
                 </button>
               ))}
-
-              <div className="cs-sb-preview">
-                <img src={active.img} alt={active.name} />
-                <div className="cs-sb-preview-ov" />
-                <span className="cs-sb-preview-lbl">{active.name}</span>
-              </div>
             </nav>
 
+            {/* ── RIGHT CONTENT ── */}
             <div className="cs-ct">
               <div className="cs-ct-hd">
                 <h3 className="cs-ct-title">
@@ -561,86 +528,96 @@ const CSS = `
 .cs-wrap.in { opacity: 1; transform: translateY(0); }
 
 .cs-panel {
-  display: grid; grid-template-columns: 175px 1fr;
+  display: grid; grid-template-columns: 200px 1fr;
   background: var(--white);
   border: 1px solid var(--bs); border-radius: var(--r16);
   overflow: hidden; box-shadow: var(--smd);
 }
 
-/* ── Sidebar ── */
+/* ════════════════════════════════════════
+   SIDEBAR — clean, minimal, light theme
+════════════════════════════════════════ */
 .cs-sb {
   display: flex; flex-direction: column;
-  background: linear-gradient(168deg, #253d18 0%, #172710 100%);
-  border-right: 1px solid rgba(255,255,255,.06);
+  background: var(--white);
+  border-right: 1px solid var(--bs);
   position: relative; overflow: hidden;
-}
-.cs-sb::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 130% 55% at 50% -2%, rgba(82,122,62,.38) 0%, transparent 62%),
-    radial-gradient(ellipse 80%  80% at 100% 100%, rgba(160,120,32,.1) 0%, transparent 55%);
 }
 
 .cs-sb-hd {
-  padding: 20px 16px 14px; position: relative; z-index: 1;
-  border-bottom: 1px solid rgba(255,255,255,.07); margin-bottom: 4px;
+  padding: 20px 18px 12px;
+  border-bottom: 1px solid var(--bs);
+  margin-bottom: 4px;
 }
 .cs-sb-eyebrow {
-  display: block; font-size: 7.5px; font-weight: 700;
-  letter-spacing: .52em; text-transform: uppercase;
-  color: rgba(255,255,255,.35); margin-bottom: 3px;
-}
-.cs-sb-heading {
-  display: block; font-family: 'Cormorant Garamond', serif;
-  font-size: .95rem; font-style: italic; font-weight: 300;
-  color: rgba(255,255,255,.7); letter-spacing: .02em;
+  display: block;
+  font-size: 8px; font-weight: 700;
+  letter-spacing: .48em; text-transform: uppercase;
+  color: var(--t4);
 }
 
+/* Each sidebar button */
 .cs-sbbtn {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 10px 14px 10px 15px;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 14px 9px 12px;
   background: transparent; border: none;
-  border-left: 2.5px solid transparent;
+  border-left: 2px solid transparent;
   cursor: pointer; text-align: left;
-  color: rgba(255,255,255,.48); position: relative; z-index: 1;
-  transition: color .2s, border-color .2s, background .2s;
+  color: var(--t2);
+  transition: color .18s, border-color .18s, background .18s;
 }
-.cs-sbbtn:hover { color: rgba(255,255,255,.82); background: rgba(255,255,255,.06); border-left-color: rgba(255,255,255,.22); }
-.cs-sbbtn.on   { color: #fff; border-left-color: var(--gold-l); background: rgba(255,255,255,.09); }
+.cs-sbbtn:hover {
+  background: var(--gt);
+  border-left-color: var(--gl);
+  color: var(--gd);
+}
+.cs-sbbtn.on {
+  background: var(--gp);
+  border-left-color: var(--gd);
+  color: var(--gd);
+}
 
-.cs-sb-icon { font-size: 10px; color: var(--gold-l); opacity: .45; flex-shrink: 0; transition: opacity .2s; }
-.cs-sbbtn:hover .cs-sb-icon { opacity: .75; }
-.cs-sbbtn.on   .cs-sb-icon { opacity: 1; }
+/* Small square thumbnail — no filter, crisp */
+.cs-sb-thumb {
+  width: 38px; height: 38px;
+  border-radius: 6px; overflow: hidden; flex-shrink: 0;
+  border: 1px solid var(--bs);
+  transition: border-color .18s;
+}
+.cs-sbbtn:hover .cs-sb-thumb,
+.cs-sbbtn.on   .cs-sb-thumb { border-color: var(--gl); }
 
-.cs-sb-txt { font-size: 11px; font-weight: 400; letter-spacing: .025em; flex: 1; line-height: 1.3; }
-.cs-sbbtn.on .cs-sb-txt { font-weight: 600; }
+.cs-sb-thumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  /* NO filter — image shows naturally */
+  transition: transform .3s ease;
+}
+.cs-sbbtn:hover .cs-sb-thumb img,
+.cs-sbbtn.on   .cs-sb-thumb img { transform: scale(1.06); }
 
-.cs-sb-badge {
-  font-size: 8px; font-weight: 700; letter-spacing: .04em; color: var(--gold-l);
-  background: rgba(200,153,46,.14); border: 1px solid rgba(200,153,46,.22);
-  padding: 1px 6px; border-radius: 100px; transition: background .2s;
+/* Category name */
+.cs-sb-txt {
+  font-size: 11.5px; font-weight: 500;
+  letter-spacing: .01em; line-height: 1.3;
+  flex: 1;
+  color: inherit;
 }
-.cs-sbbtn.on .cs-sb-badge { background: rgba(200,153,46,.26); }
+.cs-sbbtn.on .cs-sb-txt { font-weight: 700; }
 
-.cs-sb-preview {
-  margin-top: auto; position: relative; z-index: 1;
-  aspect-ratio: 3/2; overflow: hidden;
-  border-top: 1px solid rgba(255,255,255,.07);
+/* Sub-count pill — only shown when has sub-categories */
+.cs-sb-count {
+  font-size: 8px; font-weight: 700;
+  color: var(--gs);
+  background: var(--gt);
+  border: 1px solid var(--gp);
+  padding: 1px 6px; border-radius: 100px;
+  flex-shrink: 0;
+  transition: background .18s, color .18s;
 }
-.cs-sb-preview img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: brightness(.42) saturate(.7);
-  transition: transform .6s ease, filter .4s;
-}
-.cs-sb-preview:hover img { transform: scale(1.05); filter: brightness(.52) saturate(.82); }
-.cs-sb-preview-ov {
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(15,30,8,.88) 0%, rgba(15,30,8,.16) 60%, transparent 100%);
-}
-.cs-sb-preview-lbl {
-  position: absolute; bottom: 11px; left: 13px; right: 13px;
-  font-size: 9px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
-  color: rgba(255,255,255,.65);
+.cs-sbbtn.on .cs-sb-count {
+  background: var(--gd);
+  color: #fff;
+  border-color: var(--gd);
 }
 
 /* ── Content area ── */
@@ -675,21 +652,20 @@ const CSS = `
 }
 .cs-va:hover { background: var(--gp); border-color: var(--gs); color: var(--gd); gap: 10px; }
 
-/* ── Desktop grid — image-only cards, name on image ── */
+/* ── Desktop grid ── */
 .cs-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-/* Card: no white footer, image fills entire card */
 .sc-card {
   display: block; text-decoration: none;
   position: relative; overflow: hidden;
   border-radius: var(--r8);
   border: 1px solid var(--bs);
   cursor: pointer;
-  aspect-ratio: 3/4;       /* portrait ratio, no extra white space */
+  aspect-ratio: 3/4;
   animation: cardIn .48s ease both;
   transition: border-color .28s, box-shadow .28s, transform .28s;
 }
@@ -703,7 +679,6 @@ const CSS = `
   transform: translateY(-3px);
 }
 
-/* Image fills 100% of card */
 .sc-img {
   position: absolute; inset: 0;
   overflow: hidden; background: var(--cream2);
@@ -732,7 +707,6 @@ const CSS = `
 }
 .sc-shine.on { opacity: 1; }
 
-/* Name + arrow overlaid on image bottom */
 .sc-overlay-name {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 14px 14px 14px;
@@ -742,11 +716,8 @@ const CSS = `
 .sc-name {
   font-family: 'Cormorant Garamond', serif;
   font-size: clamp(0.82rem, 1.4vw, 1rem);
-  font-weight: 600;
-  font-style: italic;
-  color: #fff;
-  letter-spacing: .03em;
-  line-height: 1.2;
+  font-weight: 600; font-style: italic;
+  color: #fff; letter-spacing: .03em; line-height: 1.2;
   text-shadow: 0 1px 6px rgba(0,0,0,0.55);
 }
 .sc-arr {
@@ -822,7 +793,7 @@ const CSS = `
 @media (max-width: 960px) and (min-width: 661px) {
   .cs-wrap  { padding: 0 28px; }
   .cs-hd    { padding: 0 28px 28px; }
-  .cs-panel { grid-template-columns: 165px 1fr; }
+  .cs-panel { grid-template-columns: 180px 1fr; }
   .cs-ct    { padding: 22px 22px 26px; }
   .cs-grid  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .sc-name  { font-size: 0.88rem; }
@@ -890,53 +861,49 @@ const CSS = `
     box-shadow: var(--ssm); min-height: 420px;
   }
 
-  /* Left sidebar */
+  /* Left sidebar — light on mobile too */
   .ms-sb {
-    background: linear-gradient(175deg, #253d18 0%, #446c35bd 100%);
+    background: var(--white);
     display: flex; flex-direction: column;
-    border-right: 1px solid rgba(255,255,255,.06);
+    border-right: 1px solid var(--bs);
     overflow-y: auto; scrollbar-width: none; position: relative;
-  }
-  .ms-sb::before {
-    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background: radial-gradient(ellipse 160% 65% at 50% -5%, rgba(82,122,62,.32) 0%, transparent 56%);
   }
   .ms-sb::-webkit-scrollbar { display: none; }
 
   .ms-sbbtn {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
-    width: 100%; padding: 12px 5px 10px;
+    width: 100%; padding: 10px 5px 8px;
     background: transparent; border: none;
-    border-left: 2.5px solid transparent;
+    border-left: 2px solid transparent;
     cursor: pointer; text-align: center;
-    color: rgba(255,255,255,.45);
-    position: relative; z-index: 1;
-    transition: color .2s, background .2s, border-color .2s;
+    color: var(--t3);
+    transition: color .18s, background .18s, border-color .18s;
     -webkit-tap-highlight-color: transparent;
   }
-  .ms-sbbtn:active { background: rgba(255,255,255,.08); }
-  .ms-sbbtn.on { color: #fff; background: rgba(255,255,255,.1); border-left-color: var(--gold-l); }
+  .ms-sbbtn:active { background: var(--gt); }
+  .ms-sbbtn.on { color: var(--gd); background: var(--gp); border-left-color: var(--gd); }
 
   .ms-sb-thumb {
-    width: 52px; height: 52px; border-radius: 8px; overflow: hidden;
-    border: 1.5px solid rgba(255,255,255,.1); transition: border-color .22s; flex-shrink: 0;
+    width: 48px; height: 48px; border-radius: 7px; overflow: hidden;
+    border: 1.5px solid var(--bs); transition: border-color .18s; flex-shrink: 0;
   }
-  .ms-sbbtn.on .ms-sb-thumb { border-color: rgba(200,153,46,.5); }
+  .ms-sbbtn.on .ms-sb-thumb { border-color: var(--gl); }
   .ms-sb-thumb img {
     width: 100%; height: 100%; object-fit: cover; display: block;
-    filter: brightness(.52) saturate(.68); transition: filter .28s;
+    /* NO filter on mobile either */
+    transition: transform .28s ease;
   }
-  .ms-sbbtn.on .ms-sb-thumb img { filter: brightness(.72) saturate(.85); }
+  .ms-sbbtn.on .ms-sb-thumb img { transform: scale(1.05); }
 
   .ms-sb-label {
-    font-size: 8px; font-weight: 600; letter-spacing: .02em;
-    color: inherit; line-height: 1.3; text-align: center;
+    font-size: 12px; font-weight: 600; letter-spacing: .01em;
+    color: #101010; line-height: 1.3; text-align: center;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; width: 100%; padding: 0 2px;
   }
   .ms-sb-dot {
     width: 4px; height: 4px; border-radius: 50%;
-    background: var(--gold-l); flex-shrink: 0;
+    background: var(--gd); flex-shrink: 0;
   }
 
   /* Right content */
@@ -958,7 +925,7 @@ const CSS = `
   }
   .ms-ct-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1rem; font-weight: 400; color: var(--t1);
+    font-size: 2rem; font-weight: 400; color: var(--t1);
     line-height: 1.2; flex: 1; min-width: 0;
   }
   .ms-ct-title em { font-style: italic; color: var(--gd); }
@@ -975,12 +942,10 @@ const CSS = `
   }
   .ms-showall:active { background: var(--gp); color: var(--gd); }
 
-  /* ── Sub-category grid: image fills card, name on image ── */
   .ms-subgrid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 4px; flex: 1;
   }
-
   .ms-subcard {
     display: block; text-decoration: none;
     border-radius: 6px; overflow: hidden;
@@ -989,11 +954,8 @@ const CSS = `
     position: relative;
   }
   .ms-subcard:active { transform: scale(.97); }
-
-  /* Image fills entire card — 4:5 portrait ratio */
   .ms-subcard-img {
-    position: relative;
-    aspect-ratio: 4/5;
+    position: relative; aspect-ratio: 4/5;
     overflow: hidden; background: var(--cream2);
   }
   .ms-subcard-img img {
@@ -1001,19 +963,10 @@ const CSS = `
     transition: transform .4s ease;
   }
   .ms-subcard:active .ms-subcard-img img { transform: scale(1.04); }
-
-  /* Gradient overlay for text readability */
   .ms-subcard-ov {
     position: absolute; inset: 0;
-    background: linear-gradient(
-      to top,
-      rgba(12,24,6,.78) 0%,
-      rgba(12,24,6,.18) 42%,
-      transparent 68%
-    );
+    background: linear-gradient(to top, rgba(12,24,6,.78) 0%, rgba(12,24,6,.18) 42%, transparent 68%);
   }
-
-  /* Name overlaid on image */
   .ms-subcard-name {
     position: absolute; bottom: 0; left: 0; right: 0;
     padding: 10px 10px 10px;
@@ -1021,11 +974,9 @@ const CSS = `
     font-size: clamp(0.78rem, 3vw, 0.92rem);
     font-weight: 600; font-style: italic;
     color: #fff; line-height: 1.2;
-    text-shadow: 0 1px 5px rgba(0,0,0,0.5);
-    z-index: 2;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.5); z-index: 2;
   }
 
-  /* Solo banner */
   .ms-solo {
     display: block; text-decoration: none;
     position: relative; overflow: hidden;
@@ -1064,11 +1015,10 @@ const CSS = `
 
 /* Very small screens ≤ 380px */
 @media (max-width: 380px) {
-  .ms-pane { grid-template-columns: 74px 1fr; }
-  .ms-sb-thumb { width: 44px; height: 44px; }
+  .ms-pane { grid-template-columns: 72px 1fr; }
+  .ms-sb-thumb { width: 42px; height: 42px; }
   .ms-sb-label { font-size: 7px; }
   .ms-ct { padding: 10px 8px; }
   .ms-subcard-name { font-size: 0.74rem; padding: 8px 8px 8px; }
 }
 `;
-

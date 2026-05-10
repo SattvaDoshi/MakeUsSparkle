@@ -6,7 +6,7 @@ import UpperNav from '@/components/ui/UpperNav';
 import { fetchCharmItems, type CharmItemData } from '@/lib/catalogApi';
 
 /* ─── Types ─── */
-interface CharmTypeCard {
+interface CharmTypeCard {  
   id: string;
   label: string;
   icon: string;

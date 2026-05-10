@@ -1,782 +1,261 @@
+
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGender } from "@/lib/genderContext";
 import { fetchCatalogStyles, slugifyCatalog } from "@/lib/catalogApi";
 
+// Swiper imports
+import { Swiper, SwiperSlide } from "swiper/react";
+import { EffectCoverflow, Navigation, Autoplay } from "swiper/modules";
+
+// Swiper styles
+import "swiper/css";
+import "swiper/css/effect-coverflow";
+import "swiper/css/navigation";
+
 const womenStyles = [
-  {
-    id: 1,
-    name: "Soft Girl",
-    sub: "Minimal & Dainty",
-    slug: "soft-girl",
-    emoji: "🌸",
-    desc: "Delicate pieces that whisper, never shout",
-    tag: "Bestseller",
-    img: "/images/soft-girl.jpg",
-    fallback: "/images/IslandGirl.jpg",
-    accent: "#e8c4c4",
-    tint: "rgba(220,170,170,0.18)",
-  },
-  {
-    id: 2,
-    name: "Glam Look",
-    sub: "Bold & Luminous",
-    slug: "glam-look",
-    emoji: "✨",
-    desc: "Statement jewels for your most radiant moments",
-    tag: "Trending",
-    img: "/images/GlamLook.jpg",
-    fallback: "/images/GlamLook.jpg",
-    accent: "#d4af37",
-    tint: "rgba(212,175,55,0.18)",
-  },
-  {
-    id: 3,
-    name: "Island Girl",
-    sub: "Free & Sun-Kissed",
-    slug: "island-girl",
-    emoji: "🌊",
-    desc: "Effortless layers, salt air & golden skin",
-    tag: "New",
-    img: "/images/IslandGirl.jpg",
-    fallback: "/images/IslandGirl.jpg",
-    accent: "#a8c5a0",
-    tint: "rgba(140,190,160,0.18)",
-  },
-  {
-    id: 4,
-    name: "Office Jewellery",
-    sub: "Refined & Polished",
-    slug: "office-jewellery",
-    emoji: "💼",
-    desc: "Power dressing starts with the right accent",
-    tag: "Essential",
-    img: "/images/office-jewellery.jpg",
-    fallback: "/images/hero1.png",
-    accent: "#c9a96e",
-    tint: "rgba(201,169,110,0.18)",
-  },
-  {
-    id: 5,
-    name: "Maximalist",
-    sub: "Bold & Fearless",
-    slug: "maximalist",
-    emoji: "👑",
-    desc: "More is more — stack, layer, conquer",
-    tag: "Fan Fav",
-    img: "/images/Maximalist.jpg",
-    fallback: "/images/FairyCoded.jpg",
-    accent: "#d4af37",
-    tint: "rgba(212,175,55,0.18)",
-  },
-  {
-    id: 6,
-    name: "Fairy Coded",
-    sub: "Whimsical & Ethereal",
-    slug: "fairy-coded",
-    emoji: "🧚",
-    desc: "Enchanted adornments from another realm",
-    tag: "Magical",
-    img: "/images/FairyCoded.jpg",
-    fallback: "/images/FairyCoded.jpg",
-    accent: "#c4b8e8",
-    tint: "rgba(190,170,230,0.18)",
-  },
+  { id: 1, name: "Soft Girl",          slug: "soft-girl",       img: "/images/IslandGirl.jpg",  fallback: "/images/IslandGirl.jpg" },
+  { id: 2, name: "Glam Look",          slug: "glam-look",       img: "/images/GlamLook.jpg",    fallback: "/images/GlamLook.jpg" },
+  { id: 3, name: "Island Girl",        slug: "island-girl",     img: "/images/IslandGirl.jpg",  fallback: "/images/IslandGirl.jpg" },
+  { id: 4, name: "Office Jewellery",   slug: "office-jewellery",img: "/images/GlamLook.jpg",    fallback: "/images/hero1.png" },
+  { id: 5, name: "Maximalist",         slug: "maximalist",      img: "/images/Maximalist.jpg",  fallback: "/images/FairyCoded.jpg" },
+  { id: 6, name: "Fairy Coded",        slug: "fairy-coded",     img: "/images/FairyCoded.jpg",  fallback: "/images/FairyCoded.jpg" },
 ];
 
 const menStyles = [
-  {
-    id: 1,
-    name: "Street Edge",
-    sub: "Bold & Raw",
-    slug: "men-street-edge",
-    emoji: "⛓️",
-    desc: "Chunky chains and attitude — wear it loud",
-    tag: "Trending",
-    img: "/images/men-street.jpg",
-    fallback: "/images/FairyCoded.jpg",
-    accent: "#8a8a8a",
-    tint: "rgba(100,100,100,0.18)",
-  },
-  {
-    id: 2,
-    name: "Corporate Sharp",
-    sub: "Refined & Sleek",
-    slug: "men-corporate",
-    emoji: "💼",
-    desc: "Subtle accents that command respect in any boardroom",
-    tag: "Essential",
-    img: "/images/men-corporate.jpg",
-    fallback: "/images/GlamLook.jpg",
-    accent: "#c9a96e",
-    tint: "rgba(201,169,110,0.18)",
-  },
-  {
-    id: 3,
-    name: "Island King",
-    sub: "Free & Laid-Back",
-    slug: "men-island",
-    emoji: "🌊",
-    desc: "Rope, shells, and gold for the free-spirited man",
-    tag: "New",
-    img: "/images/men-island.jpg",
-    fallback: "/images/IslandGirl.jpg",
-    accent: "#a8c5a0",
-    tint: "rgba(140,190,160,0.18)",
-  },
-  {
-    id: 4,
-    name: "Minimal Stack",
-    sub: "Clean & Intentional",
-    slug: "men-minimal",
-    emoji: "◈",
-    desc: "Less noise, more meaning — one perfect piece",
-    tag: "Bestseller",
-    img: "/images/men-minimal.jpg",
-    fallback: "/images/FairyCoded.jpg",
-    accent: "#d4af37",
-    tint: "rgba(212,175,55,0.15)",
-  },
-  {
-    id: 5,
-    name: "Rocker Noir",
-    sub: "Dark & Rebellious",
-    slug: "men-rocker",
-    emoji: "🤘",
-    desc: "Black, silver, and no apologies",
-    tag: "Fan Fav",
-    img: "/images/men-rocker.jpg",
-    fallback: "/images/Maximalist.jpg",
-    accent: "#6a6a6a",
-    tint: "rgba(80,80,80,0.2)",
-  },
-  {
-    id: 6,
-    name: "Gold Royalty",
-    sub: "Rich & Statement",
-    slug: "men-gold",
-    emoji: "👑",
-    desc: "Heavy gold, thick links — for the man who leads",
-    tag: "Luxury",
-    img: "/images/men-gold.jpg",
-    fallback: "/images/hero.png",
-    accent: "#d4af37",
-    tint: "rgba(212,175,55,0.22)",
-  },
+  { id: 1, name: "Street Edge",     slug: "men-street-edge", img: "/images/men-street.jpg",    fallback: "/images/FairyCoded.jpg" },
+  { id: 2, name: "Corporate Sharp", slug: "men-corporate",   img: "/images/men-corporate.jpg", fallback: "/images/GlamLook.jpg" },
+  { id: 3, name: "Island King",     slug: "men-island",      img: "/images/men-island.jpg",    fallback: "/images/IslandGirl.jpg" },
+  { id: 4, name: "Minimal Stack",   slug: "men-minimal",     img: "/images/men-minimal.jpg",   fallback: "/images/FairyCoded.jpg" },
+  { id: 5, name: "Rocker Noir",     slug: "men-rocker",      img: "/images/men-rocker.jpg",    fallback: "/images/Maximalist.jpg" },
+  { id: 6, name: "Gold Royalty",    slug: "men-gold",        img: "/images/men-gold.jpg",      fallback: "/images/hero.png" },
 ];
+
+type StyleItem = (typeof womenStyles)[number];
 
 export default function ShopByStyle() {
   const router = useRouter();
   const { gender } = useGender();
-  const [dynamicStyles, setDynamicStyles] = useState<typeof womenStyles>([]);
-  const styleTemplates = gender === "men" ? menStyles : womenStyles;
-  const styles = dynamicStyles.length > 0 ? dynamicStyles : styleTemplates;
+  const [dynamicStyles, setDynamicStyles] = useState<StyleItem[]>([]);
+  const base: StyleItem[] = gender === "men" ? menStyles : womenStyles;
+  const styles: StyleItem[] = dynamicStyles.length > 0 ? dynamicStyles : base;
 
-  const [visible, setVisible] = useState(false);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const sectionRef = useRef<HTMLElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
+  // Fetch catalog
   useEffect(() => {
-    let mounted = true;
-    const templatesForGender = gender === "men" ? menStyles : womenStyles;
-
+    let alive = true;
+    const tmpl = gender === "men" ? menStyles : womenStyles;
     fetchCatalogStyles()
-      .then((stylesFromApi) => {
-        if (!mounted) {
-          return;
-        }
-
-        const stylesBySlug = new Map(
-          stylesFromApi.map((style) => [style.slug || slugifyCatalog(style.name), style])
+      .then((api) => {
+        if (!alive) return;
+        const bySlug = new Map(api.map((s) => [s.slug || slugifyCatalog(s.name), s]));
+        setDynamicStyles(
+          tmpl.map((t, i) => {
+            const m = bySlug.get(t.slug) || bySlug.get(slugifyCatalog(t.name));
+            return { ...t, id: i + 1, name: m?.name || t.name, slug: m?.slug || t.slug, img: m?.image || t.img };
+          }) as StyleItem[]
         );
-
-        const mapped = templatesForGender.map((template, index) => {
-          const apiMatch =
-            stylesBySlug.get(template.slug) ||
-            stylesBySlug.get(slugifyCatalog(template.name));
-
-          return {
-            ...template,
-            id: index + 1,
-            name: apiMatch?.name || template.name,
-            slug: apiMatch?.slug || template.slug,
-            img: apiMatch?.image || template.img,
-          };
-        });
-
-        setDynamicStyles(mapped as typeof womenStyles);
       })
-      .catch(() => {
-        if (mounted) {
-          setDynamicStyles(templatesForGender as typeof womenStyles);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
+      .catch(() => { if (alive) setDynamicStyles(tmpl as StyleItem[]); });
+    return () => { alive = false; };
   }, [gender]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.04 }
-    );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Reset scroll on gender change
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-
-    el.scrollLeft = 0;
-    const frame = requestAnimationFrame(() => {
-      setCanScrollLeft(el.scrollLeft > 8);
-      setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [gender]);
-
-  const updateScrollState = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 8);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
-  };
-
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", updateScrollState, { passive: true });
-    updateScrollState();
-    return () => el.removeEventListener("scroll", updateScrollState);
-  }, []);
-
-  const scroll = (dir: "left" | "right") => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === "right" ? 320 : -320, behavior: "smooth" });
-  };
-
-  const sectionTitle = gender === "men"
-    ? (<>Shop by <em>His</em> Style</>)
-    : (<>Shop by <em>Your</em> Style</>);
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
 
-        .sbs-wrap {
-          background: #446c35bd;
-          padding: 36px 0 40px;
-          position: relative;
-          overflow: hidden;
+        .sbs {
+          background: #ffffff;
+          padding: 52px 0 64px;
           font-family: 'Jost', sans-serif;
-        }
-
-        .sbs-wrap::before {
-          content: '';
-          position: absolute;
-          width: 520px; height: 520px;
-          top: -160px; right: -100px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(100,130,60,0.10) 0%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
-        .sbs-wrap::after {
-          content: '';
-          position: absolute;
-          width: 360px; height: 360px;
-          bottom: -80px; left: -60px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(201,169,110,0.07) 0%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .sbs-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 32px 32px;
-          position: relative;
-          z-index: 2;
-        }
-
-        .sbs-head-left {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .sbs-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 9px;
-          font-weight: 500;
-          letter-spacing: 0.28em;
-          text-transform: uppercase;
-          color: #3b1f0f;
-          background: #be9568;;
-          border: 1px solid rgba(201,168,108,0.22);
-          padding: 5px 12px 4px;
-          border-radius: 100px;
-          width: fit-content;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-        .sbs-pill.on { opacity: 1; transform: translateY(0); }
-        .sbs-pill-dot {
-          width: 4px; height: 4px;
-          border-radius: 50%;
-          background:  #3b1f0f;
-          box-shadow: 0 0 5px rgba(201,168,108,0.7);
-        }
-
-        .sbs-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(28px, 3.5vw, 46px);
-          font-weight: 300;
-          line-height: 1.08;
-          color: #3b1f0f;
-          margin: 0;
-          letter-spacing: -0.01em;
-          opacity: 0;
-          transform: translateY(14px);
-          transition: opacity 0.75s ease 0.1s, transform 0.75s ease 0.1s;
-        }
-        .sbs-title.on { opacity: 1; transform: translateY(0); }
-        .sbs-title em {
-          font-style: italic;
-          color: #f9b302;
-        }
-
-        .sbs-arrows {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          opacity: 0;
-          transition: opacity 0.6s ease 0.3s;
-          flex-shrink: 0;
-        }
-        .sbs-arrows.on { opacity: 1; }
-
-        .sbs-arrow {
-          width: 38px; height: 38px;
-          border-radius: 50%;
-          border: 1px solid rgba(201,168,108,0.3);
-          background: rgba(255,255,255,0.04);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: border-color 0.25s ease, background 0.25s ease, transform 0.2s ease;
-          color: #c9a86c;
-          font-size: 14px;
-          line-height: 1;
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-        }
-        .sbs-arrow:hover:not(:disabled) {
-          border-color: rgba(201,168,108,0.65);
-          background: rgba(201,168,108,0.10);
-          transform: scale(1.06);
-        }
-        .sbs-arrow:disabled {
-          opacity: 0.25;
-          cursor: not-allowed;
-        }
-
-        .sbs-track {
-          display: flex;
-          gap: 14px;
-          overflow-x: auto;
-          overflow-y: visible;
-          scroll-snap-type: x mandatory;
-          -webkit-overflow-scrolling: touch;
-          padding: 4px 32px 16px 48px;
-          scroll-padding-left: 36px;
-          scrollbar-width: none;
-          position: relative;
-          z-index: 2;
-        }
-        .sbs-track::-webkit-scrollbar { display: none; }
-
-        .sbs-card {
-          flex: 0 0 220px;
-          position: relative;
           overflow: hidden;
+          position: relative;
+        }
+
+        .sbs__hdr {
+          text-align: center;
+          padding: 0 20px 40px;
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+
+        .sbs__title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(28px, 4vw, 44px);
+          font-weight: 400;
+          color: #1a1a1a;
+          margin: 0;
+          text-transform: uppercase;
+        }
+
+        /* ── Swiper Stage ── */
+        .sbs__swiper-container {
+          width: 100%;
+          padding: 20px 0;
+          position: relative;
+        }
+
+        .swiper-slide-custom {
+          width: 32vw;
+          max-width: 550px;
+          aspect-ratio: 3 / 4;
+          background-position: center;
+          background-size: cover;
+          position: relative;
           cursor: pointer;
-          border-radius: 10px;
-          aspect-ratio: 3 / 4.2;
-          border: 1px solid rgba(201,169,110,0.12);
-          scroll-snap-align: start;
-          opacity: 0;
-          transform: translateY(24px) scale(0.97);
-          transition:
-            opacity 0.6s ease,
-            transform 0.6s ease,
-            border-color 0.35s ease,
-            box-shadow 0.35s ease;
-        }
-        .sbs-card.on { opacity: 1; transform: translateY(0) scale(1); }
-        .sbs-card:hover {
-          border-color: rgba(201,169,110,0.4);
-          box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,169,110,0.08);
-          transform: translateY(-5px) scale(1.015) !important;
-          z-index: 3;
+          border-radius: 4px;
+          overflow: hidden;
+          transition: box-shadow 0.3s ease;
         }
 
-        @media (min-width: 640px) {
-          .sbs-card { flex: 0 0 240px; }
-        }
-        @media (min-width: 1024px) {
-          .sbs-card { flex: 0 0 260px; }
+        .swiper-slide-active {
+          box-shadow: 0 20px 50px rgba(0,0,0,0.2);
         }
 
-        .card-photo {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-        }
-        .card-photo img {
+        .swiper-slide-custom img {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
-          object-position: center top;
-          transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .sbs-card:hover .card-photo img { transform: scale(1.09); }
-
-        .card-vignette {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          background: linear-gradient(
-            to top,
-            rgba(6,9,3,0.97) 0%,
-            rgba(6,9,3,0.60) 36%,
-            rgba(6,9,3,0.18) 62%,
-            rgba(6,9,3,0.06) 100%
-          );
-          transition: background 0.35s ease;
-        }
-        .sbs-card:hover .card-vignette {
-          background: linear-gradient(
-            to top,
-            rgba(6,9,3,0.98) 0%,
-            rgba(6,9,3,0.72) 44%,
-            rgba(6,9,3,0.20) 68%,
-            rgba(6,9,3,0.05) 100%
-          );
+          filter: none;
+          -webkit-filter: none;
         }
 
-        .card-tint {
+        /* ── Label ── */
+        .sbs__lbl {
           position: absolute;
-          inset: 0;
-          z-index: 2;
-          opacity: 0;
-          transition: opacity 0.4s ease;
+          bottom: 30px;
+          left: 0;
+          width: 100%;
+          text-align: center;
+          z-index: 10;
         }
-        .sbs-card:hover .card-tint { opacity: 1; }
 
-        .card-shimmer {
-          position: absolute;
-          inset: 0;
-          z-index: 3;
-          background: linear-gradient(118deg, transparent 30%, rgba(212,175,55,0.08) 50%, transparent 70%);
-          transform: translateX(-110%);
-          pointer-events: none;
-        }
-        .sbs-card:hover .card-shimmer { animation: shimmerSweep 0.6s ease forwards; }
-        @keyframes shimmerSweep { to { transform: translateX(110%); } }
-
-        .card-corner {
-          position: absolute;
-          width: 12px; height: 12px;
-          z-index: 6;
-          opacity: 0;
-          transition: opacity 0.3s ease, width 0.3s ease, height 0.3s ease;
-        }
-        .sbs-card:hover .card-corner { opacity: 1; width: 16px; height: 16px; }
-        .cc-tl { top: 12px; left: 12px; border-top: 1px solid rgba(201,169,110,0.65); border-left: 1px solid rgba(201,169,110,0.65); }
-        .cc-tr { top: 12px; right: 12px; border-top: 1px solid rgba(201,169,110,0.65); border-right: 1px solid rgba(201,169,110,0.65); }
-        .cc-bl { bottom: 12px; left: 12px; border-bottom: 1px solid rgba(201,169,110,0.65); border-left: 1px solid rgba(201,169,110,0.65); }
-        .cc-br { bottom: 12px; right: 12px; border-bottom: 1px solid rgba(201,169,110,0.65); border-right: 1px solid rgba(201,169,110,0.65); }
-
-        .card-badge {
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          z-index: 7;
-          font-size: 7px;
+        .sbs__lbl span {
+          /* CHANGED: larger font + darker off-white (#f0ece4 instead of pure white) */
+          color: #f0ece4;
+          font-family: 'Jost', sans-serif;
+          font-size: 19px;
           font-weight: 500;
-          letter-spacing: 0.2em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
-          color: rgba(6,9,3,0.9);
-          background: #c9a86c;
-          padding: 3px 9px 2px;
-          border-radius: 2px;
+          padding-bottom: 7px;
+          border-bottom: 1px solid rgba(240, 236, 228, 0.75);
+          display: inline-block;
+          /* Slightly stronger shadow to keep legibility on light images */
+          text-shadow: 1px 2px 6px rgba(0,0,0,0.55);
         }
 
-        .card-content {
+        /* ── Custom Navigation Arrows ── */
+        .custom-swiper-button-prev,
+        .custom-swiper-button-next {
           position: absolute;
-          inset: 0;
-          z-index: 5;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 18px 16px 16px;
-        }
-
-        .card-emoji-wrap {
-          width: 34px;
-          height: 34px;
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(201,169,110,0.18);
+          top: 50%;
+          transform: translateY(-50%);
+          width: 48px;
+          height: 48px;
+          background-color: #ffffff;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 10px;
-          font-size: 16px;
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          transition: transform 0.35s ease, background 0.3s ease;
-          flex-shrink: 0;
-        }
-        .sbs-card:hover .card-emoji-wrap {
-          transform: scale(1.1) translateY(-2px);
-          background: rgba(201,169,110,0.14);
+          cursor: pointer;
+          z-index: 20;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          color: #000;
+          font-size: 22px;
+          transition: background-color 0.2s, transform 0.2s;
         }
 
-        .card-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(20px, 1.8vw, 24px);
-          font-weight: 400;
-          color: #f0e8d5;
-          line-height: 1.1;
-          margin: 0 0 3px;
+        .custom-swiper-button-prev:hover,
+        .custom-swiper-button-next:hover {
+          background-color: #f0f0f0;
+          transform: translateY(-50%) scale(1.05);
         }
 
-        .card-sub {
-          font-size: 8px;
-          font-weight: 400;
-          letter-spacing: 0.24em;
-          text-transform: uppercase;
-          color: #c9a86c;
-          margin: 0;
-          transition: margin-bottom 0.3s ease;
-        }
-        .sbs-card:hover .card-sub { margin-bottom: 8px; }
+        .custom-swiper-button-prev { left: 2%; }
+        .custom-swiper-button-next { right: 2%; }
 
-        .card-desc {
-          font-size: 11px;
-          font-weight: 300;
-          color: rgba(230,215,185,0.55);
-          line-height: 1.6;
-          max-height: 0;
-          overflow: hidden;
-          opacity: 0;
-          transform: translateY(6px);
-          transition: max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease, margin-bottom 0.3s ease;
-          margin-bottom: 0;
-        }
-        .sbs-card:hover .card-desc {
-          max-height: 48px;
-          opacity: 1;
-          transform: translateY(0);
-          margin-bottom: 12px;
+        /* ── Responsive ── */
+        @media (max-width: 1200px) {
+          .swiper-slide-custom { width: 420px; }
         }
 
-        .card-cta {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 8px;
-          font-weight: 500;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: #c9a86c;
-          opacity: 0;
-          transform: translateY(5px);
-          transition: opacity 0.25s ease 0.05s, transform 0.25s ease 0.05s;
-          width: fit-content;
-          border-bottom: 1px solid rgba(201,168,108,0.3);
-          padding-bottom: 2px;
-        }
-        .sbs-card:hover .card-cta { opacity: 1; transform: translateY(0); }
-        .cta-arrow { transition: transform 0.25s ease; font-size: 10px; }
-        .sbs-card:hover .cta-arrow { transform: translateX(4px); }
-
-        .sbs-indicator {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 5px;
-          padding: 0 32px;
-          margin-top: 4px;
-          position: relative;
-          z-index: 2;
-          opacity: 0;
-          transition: opacity 0.6s ease 0.5s;
-        }
-        .sbs-indicator.on { opacity: 1; }
-        .sbs-dot {
-          width: 4px; height: 4px;
-          border-radius: 50%;
-          background: rgba(201,168,108,0.25);
-          transition: background 0.3s ease, transform 0.3s ease;
-        }
-        .sbs-dot.active {
-          background: #c9a86c;
-          transform: scale(1.4);
+        @media (max-width: 1024px) {
+          .swiper-slide-custom { width: 360px; }
         }
 
-        .sbs-track-wrap {
-          position: relative;
-          z-index: 2;
-        }
-        .sbs-fade-right {
-          position: absolute;
-          right: 0; top: 0; bottom: 16px;
-          width: 60px;
-          background: linear-gradient(to left, rgba(50,80,30,0.7) 0%, transparent 100%);
-          pointer-events: none;
-          z-index: 4;
-          transition: opacity 0.3s ease;
-        }
-        .sbs-fade-left {
-          position: absolute;
-          left: 0; top: 0; bottom: 16px;
-          width: 60px;
-          background: linear-gradient(to right, rgba(50,80,30,0.7) 0%, transparent 100%);
-          pointer-events: none;
-          z-index: 4;
-          transition: opacity 0.3s ease;
+        @media (max-width: 768px) {
+          .swiper-slide-custom { width: 320px; }
+          .sbs__lbl span { font-size: 17px; }
+          .custom-swiper-button-prev { left: 2%; width: 40px; height: 40px; font-size: 18px; }
+          .custom-swiper-button-next { right: 2%; width: 40px; height: 40px; font-size: 18px; }
         }
 
         @media (max-width: 480px) {
-          .sbs-head { padding: 0 16px 28px; }
-          .sbs-track { padding: 4px 16px 14px 24px; gap: 10px; scroll-padding-left: 20px; }
-          .sbs-indicator { padding: 0 16px; }
-          .sbs-card { flex: 0 0 200px; }
-          .sbs-title { font-size: 26px; }
+          .swiper-slide-custom { width: 260px; }
+          .sbs__lbl { bottom: 20px; }
+          .sbs__lbl span { font-size: 14px; border-bottom: 0.5px solid rgba(240,236,228,0.75); }
         }
       `}</style>
 
-      <section className="sbs-wrap" ref={sectionRef} aria-label="Shop by Style">
-        <div className="sbs-head">
-          <div className="sbs-head-left">
-            <div className={`sbs-pill${visible ? " on" : ""}`}>
-              <span className="sbs-pill-dot" />
-              Curated Collections
-            </div>
-            <h2 className={`sbs-title${visible ? " on" : ""}`}>
-              {sectionTitle}
-            </h2>
-          </div>
-
-          <div className={`sbs-arrows${visible ? " on" : ""}`} aria-label="Scroll styles">
-            <button
-              className="sbs-arrow"
-              onClick={() => scroll("left")}
-              disabled={!canScrollLeft}
-              aria-label="Scroll left"
-            >
-              ←
-            </button>
-            <button
-              className="sbs-arrow"
-              onClick={() => scroll("right")}
-              disabled={!canScrollRight}
-              aria-label="Scroll right"
-            >
-              →
-            </button>
-          </div>
+      <section className="sbs" aria-label="Shop by Style">
+        <div className="sbs__hdr">
+          <h2 className="sbs__title">
+            {gender === "men" ? "Shop by His Style" : "Shop by Your Style"}
+          </h2>
         </div>
 
-        <div className="sbs-track-wrap">
-          <div className="sbs-fade-left" style={{ opacity: canScrollLeft ? 1 : 0 }} />
-          <div className="sbs-track" ref={trackRef}>
-            {styles.map((s, i) => (
-              <div
-                key={s.id}
-                className={`sbs-card${visible ? " on" : ""}`}
-                style={{ transitionDelay: `${0.06 + i * 0.08}s` }}
-                onClick={() => router.push(`/styles/${s.slug}`)}
-                onMouseEnter={() => setHoveredId(s.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && router.push(`/styles/${s.slug}`)}
-                aria-label={`Shop ${s.name} style`}
+        <div className="sbs__swiper-container">
+          <Swiper
+            effect={"coverflow"}
+            grabCursor={true}
+            centeredSlides={true}
+            slidesPerView={"auto"}
+            loop={true}
+            coverflowEffect={{
+              rotate: 15,
+              stretch: 0,
+              depth: 350,
+              modifier: 1,
+              slideShadows: false,
+            }}
+            navigation={{
+              nextEl: ".custom-swiper-button-next",
+              prevEl: ".custom-swiper-button-prev",
+            }}
+            autoplay={{
+              delay: 3800,
+              disableOnInteraction: false,
+            }}
+            modules={[EffectCoverflow, Navigation, Autoplay]}
+            className="styleSwiper"
+          >
+            {styles.map((card) => (
+              <SwiperSlide
+                key={card.id}
+                className="swiper-slide-custom"
+                onClick={() => router.push(`/styles/${card.slug}`)}
               >
-                <div className="card-photo">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={s.img}
-                    alt={s.name}
-                    loading={i < 3 ? "eager" : "lazy"}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = s.fallback;
-                    }}
-                  />
-                </div>
-
-                <div className="card-vignette" />
-                <div
-                  className="card-tint"
-                  style={{
-                    background: `radial-gradient(ellipse at 50% 25%, ${s.tint} 0%, transparent 70%)`,
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={card.img}
+                  alt={card.name}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = card.fallback;
                   }}
                 />
-                <div className="card-shimmer" />
-
-                <div className="card-corner cc-tl" />
-                <div className="card-corner cc-tr" />
-                <div className="card-corner cc-bl" />
-                <div className="card-corner cc-br" />
-
-                <span className="card-badge">{s.tag}</span>
-
-                <div className="card-content">
-                  <div className="card-emoji-wrap" aria-hidden="true">
-                    {s.emoji}
-                  </div>
-                  <p className="card-name">{s.name}</p>
-                  <p className="card-sub">{s.sub}</p>
-                  <p className="card-desc">{s.desc}</p>
-                  <div className="card-cta">
-                    Explore
-                    <span className="cta-arrow">→</span>
-                  </div>
+                <div className="sbs__lbl">
+                  <span>{card.name}</span>
                 </div>
-              </div>
+              </SwiperSlide>
             ))}
-          </div>
-          <div className="sbs-fade-right" style={{ opacity: canScrollRight ? 1 : 0 }} />
-        </div>
+          </Swiper>
 
-        <div className={`sbs-indicator${visible ? " on" : ""}`} aria-hidden="true">
-          {styles.map((s) => (
-            <div
-              key={s.id}
-              className={`sbs-dot${hoveredId === s.id ? " active" : ""}`}
-            />
-          ))}
+          {/* Custom Navigation Arrows */}
+          <div className="custom-swiper-button-prev">❮</div>
+          <div className="custom-swiper-button-next">❯</div>
         </div>
       </section>
     </>

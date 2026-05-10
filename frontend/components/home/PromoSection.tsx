@@ -303,9 +303,9 @@ export default function BannerSlider() {
         .bs-heading {
           font-family: 'Cormorant Garamond', serif;
           font-size: clamp(26px, 3.5vw, 40px);
-          font-weight: 300; color: #2c3320; margin: 0; letter-spacing: 0.5px;
+          font-weight: 500; color: #2c3320; margin: 0; letter-spacing: 0.5px;
         }
-        .bs-heading em { font-style: italic; color: #c9a96e; }
+        .bs-heading em { font-style: italic; color: #000000; font-weight: 500 }
 
         /* ── Outer wrapper ── */
         .bs-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }

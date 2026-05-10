@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -13,42 +11,76 @@ import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
+import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 
 type StyleId = keyof typeof STYLE_THEMES;
 type StyleTheme = (typeof STYLE_THEMES)[StyleId];
 type Product = CatalogProduct;
 
-function resolveStyleId(id: string): StyleId {
-  return (id in STYLE_THEMES ? id : 'soft-girl') as StyleId;
+// ─── Robust style resolver ────────────────────────────────────────────────────
+const ALL_STYLE_IDS = Object.keys(STYLE_THEMES) as StyleId[];
+
+function resolveStyleId(raw: string | undefined | null): StyleId {
+  if (!raw) return 'soft-girl' as StyleId;
+
+  if (ALL_STYLE_IDS.includes(raw as StyleId)) return raw as StyleId;
+
+  const kebab = raw
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+
+  if (ALL_STYLE_IDS.includes(kebab as StyleId)) return kebab as StyleId;
+
+  const lower = raw.toLowerCase();
+  const fuzzy = ALL_STYLE_IDS.find((id) =>
+    id.split('-').every((word) => lower.includes(word))
+  );
+  if (fuzzy) return fuzzy;
+
+  console.warn(`[StyleProductPage] Unknown styleId "${raw}" — falling back to "soft-girl".`);
+  return 'soft-girl' as StyleId;
 }
 
-// Per-theme hero config — compact, atmospheric
+// Per-theme hero config
 const HERO_CFG: Record<string, {
   tagline: string;
   sub: string;
-  gradA: string;
-  gradB: string;
 }> = {
-  'soft-girl':        { tagline: 'Bloom Into You',       sub: 'Soft. Sweet. Eternal.',       gradA:'#f9d4cc', gradB:'#f7e8e2' },
-  // Updated Glam Look to use proper metallic silver tones
-  'glam-look':        { tagline: 'Own The Room',         sub: 'Gilded. Bold. Unapologetic.', gradA:'#C0C0C0', gradB:'#E6E6E6' },
-  'island-girl':      { tagline: 'Salt & Spirit',        sub: 'Breezy. Free. Sun-kissed.',   gradA:'#d4ede6', gradB:'#e8f5f1' },
-  'office-jewellery': { tagline: 'Quiet Authority',      sub: 'Refined. Subtle. Powerful.',  gradA:'#f0eeeb', gradB:'#e8e6e2' },
-  'maximalist':       { tagline: 'More Is More',         sub: 'Loud. Layered. Limitless.',   gradA:'#1c0d00', gradB:'#0e0600' },
-  'fairy-coded':      { tagline: 'Enchant Everything',   sub: 'Whimsical. Magical. Rare.',   gradA:'#f0e8fc', gradB:'#ebe0f8' },
-  'men-street-edge':  { tagline: 'Street Edge',         sub: 'Bold. Raw. Unapologetic.',    gradA:'#1a1a1a', gradB:'#2a2a2a' },
-  'men-corporate':    { tagline: 'Corporate Sharp',      sub: 'Refined. Sleek. Precise.',    gradA:'#dde1dc', gradB:'#f0f2ef' },
-  'men-island':       { tagline: 'Island King',          sub: 'Laid-back. Sun-kissed. Easy.', gradA:'#d8efe7', gradB:'#eef8f4' },
-  'men-minimal':      { tagline: 'Minimal Stack',        sub: 'Clean. Intentional. Strong.', gradA:'#f1eee7', gradB:'#faf8f2' },
-  'men-rocker':       { tagline: 'Rocker Noir',          sub: 'Dark. Sharp. Rebellious.',    gradA:'#111114', gradB:'#1d1d24' },
-  'men-gold':         { tagline: 'Gold Royalty',        sub: 'Rich. Heavy. Statement.',     gradA:'#2a2010', gradB:'#181207' },
-  'street-edge':      { tagline: 'Street Edge',         sub: 'Bold. Raw. Unapologetic.',    gradA:'#1a1a1a', gradB:'#2a2a2a' },
-  'corporate-sharp':  { tagline: 'Corporate Sharp',      sub: 'Refined. Sleek. Precise.',    gradA:'#dde1dc', gradB:'#f0f2ef' },
-  'island-king':      { tagline: 'Island King',          sub: 'Laid-back. Sun-kissed. Easy.', gradA:'#d8efe7', gradB:'#eef8f4' },
-  'minimal-stack':    { tagline: 'Minimal Stack',        sub: 'Clean. Intentional. Strong.', gradA:'#f1eee7', gradB:'#faf8f2' },
-  'rocker-noir':      { tagline: 'Rocker Noir',          sub: 'Dark. Sharp. Rebellious.',    gradA:'#111114', gradB:'#1d1d24' },
-  'gold-royalty':     { tagline: 'Gold Royalty',        sub: 'Rich. Heavy. Statement.',     gradA:'#2a2010', gradB:'#181207' },
+  'soft-girl':        { tagline: 'Bloom Into You',        sub: 'Soft. Sweet. Eternal.' },
+  'glam-look':        { tagline: 'Own The Room',          sub: 'Gilded. Bold. Unapologetic.' },
+  'island-girl':      { tagline: 'Salt & Spirit',         sub: 'Breezy. Free. Sun-kissed.' },
+  'office-jewellery': { tagline: 'Quiet Authority',       sub: 'Refined. Subtle. Powerful.' },
+  'maximalist':       { tagline: 'More Is More',          sub: 'Loud. Layered. Limitless.' },
+  'fairy-coded':      { tagline: 'Enchant Everything',    sub: 'Whimsical. Magical. Rare.' },
+  'men-street-edge':  { tagline: 'Street Edge',           sub: 'Bold. Raw. Unapologetic.' },
+  'men-corporate':    { tagline: 'Corporate Sharp',       sub: 'Refined. Sleek. Precise.' },
+  'men-island':       { tagline: 'Island King',           sub: 'Laid-back. Sun-kissed. Easy.' },
+  'men-minimal':      { tagline: 'Minimal Stack',         sub: 'Clean. Intentional. Strong.' },
+  'men-rocker':       { tagline: 'Rocker Noir',           sub: 'Dark. Sharp. Rebellious.' },
+  'men-gold':         { tagline: 'Gold Royalty',          sub: 'Rich. Heavy. Statement.' },
+  'street-edge':      { tagline: 'Street Edge',           sub: 'Bold. Raw. Unapologetic.' },
+  'corporate-sharp':  { tagline: 'Corporate Sharp',       sub: 'Refined. Sleek. Precise.' },
+  'island-king':      { tagline: 'Island King',           sub: 'Laid-back. Sun-kissed. Easy.' },
+  'minimal-stack':    { tagline: 'Minimal Stack',         sub: 'Clean. Intentional. Strong.' },
+  'rocker-noir':      { tagline: 'Rocker Noir',           sub: 'Dark. Sharp. Rebellious.' },
+  'gold-royalty':     { tagline: 'Gold Royalty',          sub: 'Rich. Heavy. Statement.' },
 };
+
+// Map the style IDs to the provided image file names
+const HERO_IMAGES: Record<string, string> = {
+  'soft-girl': '/soft-girl.jpg',
+  'glam-look': '/glam-look.jpg',
+  'island-girl': '/island-girl.jpg',
+  'office-jewellery': '/office-jewellery.jpg',
+  'maximalist': '/maximalist.jpg',
+  'fairy-coded': '/fairy-coded.jpg',
+};
+
+// Dark-background styles that need inverted UI chrome
+const DARK_STYLES = new Set(['maximalist', 'men-street-edge', 'street-edge', 'men-rocker', 'rocker-noir', 'men-gold', 'gold-royalty']);
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function Card({ product, theme, index, isDark, sid }: {
@@ -79,8 +111,8 @@ function Card({ product, theme, index, isDark, sid }: {
 
   const radius =
     sid === 'fairy-coded' ? '14px' :
-    sid === 'glam-look' ? '2px' :
-    sid === 'maximalist' ? '6px' : '8px';
+    sid === 'glam-look'   ? '2px'  :
+    sid === 'maximalist'  ? '6px'  : '8px';
 
   return (
     <Link
@@ -94,7 +126,6 @@ function Card({ product, theme, index, isDark, sid }: {
         onMouseEnter={() => { setHovered(true); if (product.images[1]) setImgIdx(1); }}
         onMouseLeave={() => { setHovered(false); setImgIdx(0); }}
       >
-        {/* Image — square 1:1 */}
         <div className="c-img-wrap" style={{ borderRadius: `${radius} ${radius} 0 0` }}>
           <img
             src={product.images[imgIdx] || product.images[0]}
@@ -102,11 +133,7 @@ function Card({ product, theme, index, isDark, sid }: {
             className="c-img"
           />
           {discount && <span className="c-disc">{discount}%</span>}
-
-          {/* Hover scrim */}
           <div className={`c-scrim ${hovered ? 'on' : ''}`} />
-
-          {/* Add button */}
           <button
             ref={btnRef}
             className={`c-add-btn ${hovered ? 'show' : ''}`}
@@ -120,8 +147,6 @@ function Card({ product, theme, index, isDark, sid }: {
             }
           </button>
         </div>
-
-        {/* Info */}
         <div className="c-info">
           <p className="c-name">{product.name}</p>
           <div className="c-prow">
@@ -138,16 +163,17 @@ function Card({ product, theme, index, isDark, sid }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function StyleProductPage({ styleId = 'soft-girl' }) {
-  const sid = resolveStyleId(styleId);
-  const theme = STYLE_THEMES[sid];
-  const cfg = HERO_CFG[sid] || HERO_CFG['soft-girl'];
-  
-  // Removed 'glam-look' from isDark so it defaults to light UI elements
-  const isDark = ['maximalist'].includes(sid);
+  const sid    = resolveStyleId(styleId);
+  const theme  = STYLE_THEMES[sid];
+  const cfg    = HERO_CFG[sid] ?? HERO_CFG['soft-girl'];
+  const isDark = DARK_STYLES.has(sid);
+  const [sort, setSort] = useState<SortOption>('default');
+  // Resolve the mapped background image (fallback to soft girl if missing)
+  const bgImage = HERO_IMAGES[sid] || HERO_IMAGES['soft-girl'];
 
   const [filter, setFilter] = useState('all');
   const [mounted, setMounted] = useState(false);
-  const [navH, setNavH] = useState(64); // fallback height
+  const [navH, setNavH] = useState(64);
   const navRef = useRef<HTMLDivElement>(null);
   const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
 
@@ -162,38 +188,25 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
+    let active = true;
     fetchCatalogProducts()
-      .then((products) => {
-        if (mounted) {
-          setDynamicProducts(products);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setDynamicProducts([]);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
+      .then((products) => { if (active) setDynamicProducts(products); })
+      .catch(()        => { if (active) setDynamicProducts([]); });
+    return () => { active = false; };
   }, []);
 
-  const sourceProducts = dynamicProducts;
-  const styleFn = STYLE_PRODUCT_FILTER[sid] || (() => true);
-  const allStyle = sourceProducts.filter((product) => {
-    const styleSlug = 'styleSlug' in product ? product.styleSlug : '';
-    const styleName = 'style' in product ? product.style : '';
+  const styleFn   = STYLE_PRODUCT_FILTER[sid] || (() => true);
+  const allStyle  = dynamicProducts.filter((product) => {
+    const styleSlug = 'styleSlug' in product ? (product as any).styleSlug : '';
+    const styleName = 'style'     in product ? (product as any).style     : '';
     return styleSlug === sid || slugifyCatalog(styleName || '') === sid || styleFn(product);
   });
 
-  const products = useMemo(() => {
-    let list = [...allStyle];
-    if (filter !== 'all') list = list.filter(p => p.type === filter);
-    return list;
-  }, [allStyle, filter]);
+const products = useMemo(() => {
+  let list = [...allStyle];
+  if (filter !== 'all') list = list.filter(p => p.type === filter);
+  return sortProducts(list, sort);           // ← add this
+}, [allStyle, filter, sort]);               // ← add sort to deps
 
   const count = (type: string) =>
     type === 'all' ? allStyle.length : allStyle.filter(p => p.type === type).length;
@@ -214,45 +227,25 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
         }
 
         /* ─────────────────────────────────────────────
-          HERO — compact, full-width, atmospheric band
+          HERO — Using purely the image with no filters
         ───────────────────────────────────────────── */
         .hero {
           position: relative;
           width: 100%;
           padding: clamp(36px, 5vw, 60px) clamp(16px, 5vw, 64px) clamp(24px, 4vw, 48px);
-          
-          /* Space between Nav and Pill */
-          padding-top: calc(${navH}px + clamp(60px, 6vw, 80px));  
-          
-          background: linear-gradient(130deg, ${cfg.gradA} 0%, ${cfg.gradB} 100%);
+          padding-top: calc(${navH}px + clamp(60px, 6vw, 80px));
+          // background: url("${bgImage}") center/cover no-repeat;
           overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 20px;
         }
-        /* subtle grain */
-        .hero::after {
-          content:'';
-          position:absolute; inset:0;
-          background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
-          pointer-events:none; mix-blend-mode:overlay;
-          opacity:${isDark ? 0.07 : 0.04};
-        }
-        .hero-orb {
-          position:absolute;
-          width: min(360px,55vw); height: min(360px,55vw);
-          border-radius:50%;
-          background: radial-gradient(circle, ${theme.accent}1a 0%, transparent 70%);
-          right:-8%; top:-50%;
-          pointer-events:none;
-        }
 
         .hero-left {
           position:relative; z-index:2; flex:1; min-width:0;
         }
 
-        /* PILL CSS */
         .hero-pill {
           display:inline-flex; align-items:center; gap:6px;
           padding: 6px 14px 6px 10px;
@@ -273,6 +266,11 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           background:${theme.accent}; flex-shrink:0;
         }
 
+        /* Added text-shadow to ensure visibility on top of the raw image */
+        .hero-title, .hero-sub, .hero-count-num, .hero-count-lbl {
+          text-shadow: ${isDark ? '0 2px 10px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5)' : '0 2px 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.7)'};
+        }
+
         .hero-title {
           font-family: ${theme.displayFont};
           font-size: clamp(1.7rem, 4vw, 3.2rem);
@@ -285,11 +283,12 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           transition: opacity 0.55s ease 0.08s, transform 0.55s ease 0.08s;
         }
         .hero-title em { font-style:italic; color:${theme.accent}; }
+        
         .hero-sub {
           font-size: clamp(9px,1.3vw,11px);
           letter-spacing:0.22em; text-transform:uppercase;
-          color:${theme.textMuted}; margin-top:7px; font-weight:400;
-          opacity:${mounted ? 0.7 : 0};
+          color:${theme.textMuted}; margin-top:7px; font-weight:600; /* Bumped weight slightly for image contrast */
+          opacity:${mounted ? 0.9 : 0};
           transition: opacity 0.5s ease 0.16s;
         }
 
@@ -303,14 +302,14 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
         .hero-count-num {
           font-family: ${theme.displayFont};
           font-size: clamp(2rem,5vw,4rem);
-          font-weight: ${isDark ? 600 : 200};
+          font-weight: ${isDark ? 600 : 500};
           color: ${theme.text};
           line-height:1; letter-spacing:-0.03em;
-          opacity:0.14;
+          opacity:0.8; /* Increased opacity to read better over images */
         }
         .hero-count-lbl {
           font-size:8px; letter-spacing:0.3em; text-transform:uppercase;
-          color:${theme.textMuted}; opacity:0.4; margin-top:2px;
+          color:${theme.textMuted}; opacity:0.8; margin-top:2px; font-weight:700;
         }
         @media (max-width:480px) { .hero-count { display:none; } }
 
@@ -326,8 +325,22 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           overflow-x:auto; scrollbar-width:none;
           -webkit-overflow-scrolling:touch;
           padding: 0 clamp(16px, 5vw, 64px);
+          /* FIX 1: Allow sort dropdown to overflow the sticky bar */
+          overflow: visible;
         }
         .filters::-webkit-scrollbar { display:none; }
+
+        /* FIX 1: Inner scroll container for the tabs only, so overflow:visible works on .filters */
+        .filters-tabs {
+          display: flex;
+          align-items: center;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          flex: 1;
+          min-width: 0;
+        }
+        .filters-tabs::-webkit-scrollbar { display: none; }
 
         .ftab {
           flex-shrink:0;
@@ -365,13 +378,19 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           grid-template-columns: repeat(4, 1fr);
           gap: clamp(10px, 1.8vw, 18px);
           width:100%;
+          /* FIX 2 & 3: Align all cards to start so varying content heights don't stretch neighbours */
+          align-items: start;
         }
         @media (max-width:1024px) {
           .grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (max-width:640px) {
-          .grid { grid-template-columns: repeat(2, 1fr); gap:10px; }
-        }
+  .grid { grid-template-columns: repeat(2, 1fr); gap:10px; align-items: stretch; }
+  .c-link { height: 100%; }
+  .c-card { height: 100%; display: flex; flex-direction: column; }
+  .c-img-wrap { flex: 1 0 auto; }
+  .c-info { flex-shrink: 0; }
+}
 
         /* CARD */
         .c-link { display:block; text-decoration:none; animation: fadeUp 0.5s ease both; }
@@ -471,17 +490,13 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           font-style:italic; color:${theme.textMuted};
         }
 
-        /* * ── SOFT GIRL OVERRIDES ──
-         * Darkens the headings for better contrast against the light pink/peach bg
-         */
+        /* ── SOFT GIRL OVERRIDES ── */
         ${sid === 'soft-girl' ? `
           .hero-title, .hero-count-num { color: #2A110D !important; }
           .hero-sub, .hero-count-lbl { color: #5C3228 !important; }
         ` : ''}
 
-        /* * ── GLAM LOOK OVERRIDES ──
-         * Forces proper silver backgrounds and pitch-black, highly readable typography
-         */
+        /* ── GLAM LOOK OVERRIDES ── */
         ${sid === 'glam-look' ? `
           .pg { background: #D3D3D3 !important; color: #000 !important; }
           .hero-title { color: #000 !important; font-weight: 500 !important; }
@@ -493,16 +508,46 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
           .ftab.on { color: #000 !important; border-bottom-color: #000 !important; font-weight: 700 !important; }
           .ftab.on .fcount { background: #000 !important; color: #fff !important; }
         ` : ''}
+        /* ── SortFilter theme override — matches page accent ── */
+.filters .sf-trigger {
+  --sf-accent: ${theme.accent};
+  --sf-bdr: ${theme.accent}40;
+  --sf-bg: ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'};
+  --sf-bg-hover: ${isDark ? 'rgba(255,255,255,0.12)' : theme.accent + '15'};
+  --sf-txt: ${theme.text};
+  --sf-bdr-hover: ${theme.accent}80;
+  --sf-gold: ${theme.accent};
+}
+.filters .sf-trigger.sf-active {
+  background: ${theme.accent} !important;
+  color: ${isDark ? '#000' : '#fff'} !important;
+  border-color: ${theme.accent} !important;
+}
+.filters .sf-option.sf-option-active {
+  background: ${theme.accent} !important;
+  color: ${isDark ? '#000' : '#fff'} !important;
+}
+.filters .sf-option:hover:not(.sf-option-active) {
+  background: ${theme.accent}18 !important;
+  color: ${theme.accent} !important;
+}
+/* FIX 1: Ensure sort dropdown wrapper has high z-index and is not clipped */
+.filters .sf-wrap { position: relative; z-index: 9999; }
+.filters .sf-dropdown { z-index: 9999; }
       `}</style>
 
       <div className="pg">
+        {/* ── NAVBAR (always at the very top) ── */}
         <div ref={navRef}>
           <UpperNav />
         </div>
 
         {/* ── COMPACT HERO ── */}
-        <div className="hero">
-          <div className="hero-orb" />
+        <div className="hero"   style={{ 
+    backgroundImage: `url('/style-heroes/${sid}.jpg')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center 20%'  
+  }}>
           <div className="hero-left">
             <div className="hero-pill">
               <span className="hero-pill-dot" />
@@ -520,17 +565,28 @@ export default function StyleProductPage({ styleId = 'soft-girl' }) {
         </div>
 
         {/* ── FILTER BAR ── */}
+        {/* FIX 1: Tabs go inside .filters-tabs (scrollable), sort stays outside so dropdown can overflow */}
         <div className="filters">
-          {FILTER_TABS.map(tab => (
-            <button
-              key={tab.value}
-              className={`ftab ${filter === tab.value ? 'on' : ''}`}
-              onClick={() => setFilter(tab.value)}
-            >
-              {tab.label}
-              <span className="fcount">{count(tab.value)}</span>
-            </button>
-          ))}
+          <div className="filters-tabs">
+            {FILTER_TABS.map(tab => (
+              <button
+                key={tab.value}
+                className={`ftab ${filter === tab.value ? 'on' : ''}`}
+                onClick={() => setFilter(tab.value)}
+              >
+                {tab.label}
+                <span className="fcount">{count(tab.value)}</span>
+              </button>
+            ))}
+          </div>
+          {/* Sort — pushed to the right, outside the scrollable tabs so dropdown isn't clipped */}
+          <div style={{ flexShrink: 0, paddingLeft: '12px', paddingRight: 'clamp(16px, 5vw, 64px)', position: 'relative', zIndex: 9999 }}>
+            <SortFilter
+              value={sort}
+              onChange={setSort}
+              variant={isDark ? 'dark' : sid === 'glam-look' ? 'glam' : 'olive'}
+            />
+          </div>
         </div>
 
         {/* ── PRODUCT GRID ── */}

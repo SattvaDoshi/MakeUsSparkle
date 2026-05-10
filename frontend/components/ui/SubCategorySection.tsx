@@ -311,14 +311,14 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         .scp-title {
           font-family: 'Cormorant Garamond', serif;
           font-size: clamp(1.75rem, 3.8vw, 2.6rem);
-          font-weight: 300; letter-spacing: .02em; line-height: 1.1; color: var(--ink);
+          font-weight: 400; letter-spacing: .02em; line-height: 1.1; color: var(--ink);
         }
-        .scp-title em { font-style: italic; color: var(--sage); }
+        .scp-title em { font-style: italic; color: #1B5E20; font-weight: 400}
 
         .scp-desc {
           margin-top: 8px;
-          font-size: 12px; font-weight: 300; letter-spacing: .03em;
-          color: var(--ink-mid); line-height: 1.65; max-width: 360px;
+          font-size: 20px; font-weight: 300; letter-spacing: .03em;
+          color: #0f0d0d; line-height: 1.65; max-width: 360px;
         }
 
         .scp-ghost-num {
@@ -358,7 +358,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         /* ── Circles section ── */
         .circles-section {
-          padding: 28px 48px 24px;
+          padding: 20px 48px 4px;
           opacity: 0; transform: translateY(10px);
           transition: opacity .55s ease .14s, transform .55s ease .14s;
         }
@@ -366,11 +366,11 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         .circles-bar {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: 10px;
         }
         .circles-label {
-          font-size: 9px; letter-spacing: .42em; text-transform: uppercase;
-          color: var(--sage); font-weight: 400;
+          font-size: 11px; letter-spacing: .38em; text-transform: uppercase;
+          color: #1B5E20; font-weight: 400;
         }
 
         .circles-active-tag {
@@ -396,7 +396,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         .circles-clear:hover { background: var(--beige); color: #fff; }
 
         /* Circles row */
-        .circles-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .circles-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
         /* ── Circle button ── */
         .circle-btn {
@@ -441,7 +441,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         .circle-label {
           font-size: 9px; letter-spacing: .26em; text-transform: uppercase;
-          color: var(--ink-mid); font-weight: 400;
+          color: #101010; font-weight: 400;
           transition: color .2s;
         }
         .circle-btn:hover .circle-label,
@@ -455,8 +455,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         /* ── Divider ── */
         .scp-rule {
-          height: 1px; margin: 0 48px;
-          background: var(--border);
+          display: none;
         }
 
         /* ── Products section ── */
@@ -499,18 +498,20 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
           .marquee-wrap { margin-top: 20px; }
 
           /* Circles — horizontal scroll */
-          .circles-section { padding: 22px 0 18px; }
-          .circles-bar { padding: 0 16px; margin-bottom: 16px; }
+          .circles-section { padding: 12px 0 0; }
+          .circles-bar { padding: 0 16px; margin-bottom: 8px; }
           .circles-row {
             gap: 0;
             flex-wrap: nowrap;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            padding: 4px 16px 12px;
+            padding: 4px 0 10px 0;
           }
           .circles-row::-webkit-scrollbar { display: none; }
           .circle-btn { flex-shrink: 0; padding: 0 10px; }
+          .circle-btn:first-child { padding-left: 16px; }   
+.circle-btn:last-child  { padding-right: 16px; }  
           .circle-img-wrap { width: 60px; height: 60px; }
           .circle-label { font-size: 8px; letter-spacing: .2em; }
 
@@ -518,7 +519,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
           .scp-rule { margin: 0 16px; }
 
           /* Products */
-          .products-section { padding: 0; }
+          .products-section { padding: 0; margin-top: -12px}
         }
 
         /* ── Small mobile ── */

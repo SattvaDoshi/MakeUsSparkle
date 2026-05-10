@@ -160,7 +160,6 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
 type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "categories";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },

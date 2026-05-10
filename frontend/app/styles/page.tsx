@@ -44,7 +44,7 @@ export default function ShopByStylePage() {
             ...theme,
             id: slug,
             name: style.name,
-            image: style.image || null,
+            image: style.image || undefined,
           };
         });
 

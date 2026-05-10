@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
-export type SortOption = 'default' | 'price-asc' | 'price-desc' | 'alpha-asc';
+export type SortOption = 'default' | 'price-asc' | 'price-desc' | 'alpha-asc' | 'featured';
 
 export interface SortFilterProps {
   value: SortOption;

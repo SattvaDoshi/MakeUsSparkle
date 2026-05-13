@@ -1,74 +1,413 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/cartContext";
+import { useWishlist } from "@/lib/wishlistContext";
+import { useEffect} from "react";
+import { fetchCatalogProducts, type CatalogProduct } from "@/lib/catalogApi";
+/* ─────────────────────────────────────────
+   Types
+───────────────────────────────────────── */
+interface ProductColor {
+  label: string;
+  hex: string;
+  images?: string[];
+}
 
-const products = [
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  originalPrice?: number | null;
+  badge?: string | null;
+  images: string[];
+  colors: ProductColor[];
+  href: string;
+  rating?: number;
+  reviewCount?: number;
+}
+
+/* ─────────────────────────────────────────
+   Data
+───────────────────────────────────────── */
+const products: Product[] = [
   {
     id: 1,
     name: "Linen Tote Bag",
-    price: "$48",
-    tag: "Just In",
-    image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&q=80",
+    category: "Bags",
+    price: 3990,
+    originalPrice: 5500,
+    badge: "Just In",
+    images: [
+      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&q=80",
+      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80",
+    ],
+    colors: [{ label: "Natural", hex: "#d4c5a9" }],
+    href: "/products/linen-tote-bag",
+    rating: 4.5,
+    reviewCount: 128,
   },
   {
     id: 2,
     name: "Ceramic Planter",
-    price: "$35",
-    tag: "New",
-    image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=400&q=80",
+    category: "Home Décor",
+    price: 2850,
+    badge: "New",
+    images: [
+      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&q=80",
+      "https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=600&q=80",
+    ],
+    colors: [
+      { label: "White", hex: "#f5f0e8" },
+      { label: "Terracotta", hex: "#c1694f" },
+    ],
+    href: "/products/ceramic-planter",
+    rating: 4.7,
+    reviewCount: 89,
   },
   {
     id: 3,
     name: "Woven Throw Blanket",
-    price: "$89",
-    tag: "Trending",
-    image: "https://images.unsplash.com/photo-1580301762395-21ce84d00bc6?w=400&q=80",
+    category: "Textiles",
+    price: 7290,
+    originalPrice: 9500,
+    badge: "Trending",
+    images: [
+      "https://images.unsplash.com/photo-1580301762395-21ce84d00bc6?w=600&q=80",
+    ],
+    colors: [
+      { label: "Oat", hex: "#e8dcc8" },
+      { label: "Sage", hex: "#8aab8a" },
+      { label: "Clay", hex: "#c1694f" },
+    ],
+    href: "/products/woven-throw-blanket",
+    rating: 4.8,
+    reviewCount: 212,
   },
   {
     id: 4,
     name: "Soy Candle Set",
-    price: "$42",
-    tag: "Just In",
-    image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&q=80",
+    category: "Wellness",
+    price: 3450,
+    badge: "Just In",
+    images: [
+      "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
+      "https://images.unsplash.com/photo-1603006905393-2a9f25b2c0a4?w=600&q=80",
+    ],
+    colors: [{ label: "Cream", hex: "#f5f0e0" }],
+    href: "/products/soy-candle-set",
+    rating: 4.9,
+    reviewCount: 305,
   },
   {
     id: 5,
     name: "Rattan Side Table",
-    price: "$124",
-    tag: "New",
-    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80",
+    category: "Furniture",
+    price: 10290,
+    originalPrice: 13500,
+    badge: "New",
+    images: [
+      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
+    ],
+    colors: [{ label: "Natural", hex: "#c4a265" }],
+    href: "/products/rattan-side-table",
+    rating: 4.6,
+    reviewCount: 74,
   },
   {
     id: 6,
     name: "Handmade Soap Bar",
-    price: "$18",
-    tag: "Just In",
-    image: "https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=400&q=80",
+    category: "Wellness",
+    price: 1490,
+    badge: "Just In",
+    images: [
+      "https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&q=80",
+      "https://images.unsplash.com/photo-1573461160327-b450edd3e5b9?w=600&q=80",
+    ],
+    colors: [
+      { label: "Lavender", hex: "#b098c5" },
+      { label: "Citrus", hex: "#e8c44a" },
+    ],
+    href: "/products/handmade-soap-bar",
+    rating: 4.4,
+    reviewCount: 167,
   },
   {
     id: 7,
     name: "Bamboo Cutlery Set",
-    price: "$27",
-    tag: "Eco Pick",
-    image: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400&q=80",
+    category: "Kitchen",
+    price: 2250,
+    badge: "Eco Pick",
+    images: [
+      "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80",
+    ],
+    colors: [{ label: "Bamboo", hex: "#c8a96e" }],
+    href: "/products/bamboo-cutlery-set",
+    rating: 4.3,
+    reviewCount: 91,
   },
   {
     id: 8,
     name: "Dried Flower Wreath",
-    price: "$56",
-    tag: "New",
-    image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=400&q=80",
+    category: "Home Décor",
+    price: 4690,
+    originalPrice: 5800,
+    badge: "New",
+    images: [
+      "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=600&q=80",
+    ],
+    colors: [
+      { label: "Blush", hex: "#e8a0a0" },
+      { label: "Ivory", hex: "#f5f0e0" },
+    ],
+    href: "/products/dried-flower-wreath",
+    rating: 4.7,
+    reviewCount: 53,
   },
 ];
 
+/* ─────────────────────────────────────────
+   ProductCard
+───────────────────────────────────────── */
+function ProductCard({
+  product,
+  style,
+  className = "",
+}: {
+  product: Product;
+  style?: CSSProperties;
+  className?: string;
+}) {
+  const router = useRouter();
+  // addItem from cartContext — by default openDrawer=true, so the cart
+  // drawer slides open immediately after the item is added.
+  const { addItem } = useCart();
+  // toggleItem flips wishlist state; isWished drives the heart fill.
+  // The BottomNav reads wishlistItems.length for the badge count automatically.
+  const { toggleItem, isWished } = useWishlist();
+
+  const { name, price, originalPrice, badge, images, colors, href } = product;
+
+  const [activeImage, setActiveImage] = useState(0);
+  const [cartAnim, setCartAnim] = useState(false);
+  // Optimistic wishlist animation state (instant visual feedback before context updates)
+  const [wishAnim, setWishAnim] = useState(false);
+
+  const displayImage = images[activeImage] ?? images[0];
+
+  const discount = originalPrice
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : null;
+
+  // Build a wishlist-compatible item — shape matches WishlistItem interface
+  const wishlistItem = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    originalPrice: product.originalPrice ?? undefined,
+    image: images[0],
+    category: product.category,
+    href: product.href,
+    colors: product.colors,
+    badge: product.badge ?? null,
+    rating: product.rating ?? 0,
+    reviewCount: product.reviewCount ?? 0,
+  };
+
+  const wished = isWished(product.id);
+
+  // Wishlist toggle — stops card navigation, toggles item in context.
+  // The BottomNav /wishlist badge updates automatically because it reads
+  // items.length from the same WishlistContext.
+  const handleWish = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishAnim(true);
+    setTimeout(() => setWishAnim(false), 400);
+    toggleItem(wishlistItem);
+  };
+
+  // Add to Cart — stops card navigation, adds item to CartContext.
+  // CartContext reducer's ADD_ITEM action sets isDrawerOpen: true by default
+  // (openDrawer param defaults to true in addItem), so CartDrawer opens.
+  const handleAddToCart = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // addItem(item, openDrawer=true) — the second arg triggers isDrawerOpen
+    // in cartContext, which CartDrawer reads to slide open.
+    addItem(
+      {
+        id: String(product.id),
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice ?? undefined,
+        image: images[0],
+        color: colors[0]?.label ?? "",
+        colorHex: colors[0]?.hex ?? "#c9a84c",
+        href: product.href,
+        // sku is required by CartItem; use a slug-based fallback
+        sku: `NA-${product.id}`,
+      },
+      true, // openDrawer = true → CartDrawer slides open
+    );
+
+    setCartAnim(true);
+    setTimeout(() => setCartAnim(false), 700);
+  };
+
+  // Card click → navigate to Product Detail Page.
+  // The href in each product object maps to the PDP route, e.g.
+  // "/products/linen-tote-bag" which Next.js resolves to
+  // app/products/[slug]/page.tsx → ProductDetailPage component.
+  const handleCardClick = () => {
+    router.push(href);
+  };
+
+  return (
+    <div
+      className={`pc ${className}`}
+      style={style}
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") router.push(href);
+      }}
+      aria-label={`View ${name}`}
+    >
+      {/* IMAGE ZONE */}
+      <div className="pc-img-zone">
+        <img
+          className="pc-img"
+          src={displayImage}
+          alt={name}
+          loading="lazy"
+          width={400}
+          height={600}
+        />
+
+        <div className="pc-overlay" />
+
+        {badge && !discount && (
+          <span
+            className={`pc-badge${badge === "Sale" ? " pc-badge--sale" : ""}`}
+          >
+            {badge}
+          </span>
+        )}
+        {discount && (
+          <span className="pc-discount">−{discount}%</span>
+        )}
+
+        {/* Wishlist button — fills heart & increments BottomNav badge */}
+        <button
+          className={`pc-wish${wished ? " active" : ""}${wishAnim ? " pc-wish--pop" : ""}`}
+          onClick={handleWish}
+          aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={wished}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill={wished ? "#f7f2ea" : "none"}
+            stroke={wished ? "none" : "var(--olive)"}
+            strokeWidth="2"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+
+        {images.length > 1 && (
+          <div className="pc-dots">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                className={`pc-dot${activeImage === i ? " active" : ""}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveImage(i);
+                }}
+                aria-label={`Image ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* INFO STRIP */}
+      <div className="pc-info">
+        {/* <p className="pc-category">{product.category}</p> */}
+        <p className="pc-name">{name}</p>
+
+        {colors.length > 1 && (
+          <div className="pc-colors">
+            {colors.map((c) => (
+              <span
+                key={c.label}
+                className="pc-swatch"
+                style={{ background: c.hex }}
+                title={c.label}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="pc-price-row">
+          <span className="pc-price">₹{price.toLocaleString("en-IN")}</span>
+          {originalPrice && (
+            <span className="pc-original">
+              ₹{originalPrice.toLocaleString("en-IN")}
+            </span>
+          )}
+          {discount && (
+            <span className="pc-saving">{discount}% off</span>
+          )}
+        </div>
+
+        {/* {product.rating && (
+          <div className="pc-rating">
+            <span className="pc-stars">
+              {"★".repeat(Math.round(product.rating))}
+              {"☆".repeat(5 - Math.round(product.rating))}
+            </span>
+            <span className="pc-reviews">({product.reviewCount})</span>
+          </div>
+        )} */}
+
+        {/* Add to Cart button — triggers cart drawer open via CartContext */}
+        <button
+          className={`pc-cart-btn${cartAnim ? " pc-cart-btn--added" : ""}`}
+          onClick={handleAddToCart}
+          aria-label={`Add ${name} to cart`}
+        >
+          {cartAnim ? "Added ✓" : "Add to Cart"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   New Arrivals Section
+───────────────────────────────────────── */
 export default function NewArrivals() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  useEffect(() => {
+    fetchCatalogProducts().then((all) => {
+      // Take the 8 most recent, or filter by badge, etc.
+      setProducts(all.slice(0, 8));
+    });
+  }, []);
+ 
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollBy({
-      left: dir === "right" ? 320 : -320,
+      left: dir === "right" ? 300 : -300,
       behavior: "smooth",
     });
   };
@@ -76,41 +415,40 @@ export default function NewArrivals() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══════════════════════════════════════
+           SECTION SHELL
+        ══════════════════════════════════════ */
         .na-section {
           background-color: #f5f0e8;
-          padding: 64px 0 80px;
-          font-family: 'DM Sans', sans-serif;
+          padding: 72px 0 88px;
+          font-family: 'Jost', sans-serif;
           overflow: hidden;
         }
 
         .na-inner {
-          max-width: 1280px;
+          max-width: 1360px;
           margin: 0 auto;
-          padding: 0 32px;
+          padding: 0 40px;
         }
 
         .na-header {
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
-          margin-bottom: 40px;
+          margin-bottom: 44px;
           gap: 16px;
           flex-wrap: wrap;
         }
 
-        .na-title-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
+        .na-title-group { display: flex; flex-direction: column; gap: 8px; }
 
         .na-eyebrow {
           font-size: 11px;
-          letter-spacing: 0.18em;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
           color: #3d6b4f;
           font-weight: 500;
@@ -118,59 +456,47 @@ export default function NewArrivals() {
 
         .na-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(36px, 5vw, 56px);
+          font-size: clamp(38px, 5vw, 60px);
           font-weight: 600;
           color: #1a1a14;
           line-height: 1;
           letter-spacing: -0.01em;
         }
+        .na-title em { font-style: italic; color: #3d6b4f; }
 
-        .na-title em {
-          font-style: italic;
-          color: #3d6b4f;
-        }
-
-        .na-nav {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .na-nav { display: flex; align-items: center; gap: 10px; }
 
         .na-btn {
-          width: 44px;
-          height: 44px;
+          width: 46px; height: 46px;
           border-radius: 50%;
           border: 1.5px solid #3d6b4f;
           background: transparent;
           color: #3d6b4f;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.22s ease;
           font-size: 18px;
-          line-height: 1;
         }
-
-        .na-btn:hover {
-          background: #3d6b4f;
-          color: #f5f0e8;
-        }
+        .na-btn:hover { background: #3d6b4f; color: #f5f0e8; }
 
         .na-view-all {
-          font-size: 13px;
-          font-weight: 500;
+          font-size: 13px; font-weight: 500;
           color: #3d6b4f;
           text-decoration: none;
           letter-spacing: 0.04em;
           border-bottom: 1px solid #3d6b4f;
-          padding-bottom: 1px;
+          padding-bottom: 2px;
           transition: opacity 0.2s;
         }
         .na-view-all:hover { opacity: 0.6; }
 
+        /* ══════════════════════════════════════
+           TRACK
+        ══════════════════════════════════════ */
         .na-track-wrapper {
           position: relative;
+          margin-left: -40px;
+          margin-right: -40px;
         }
 
         .na-track {
@@ -179,160 +505,286 @@ export default function NewArrivals() {
           overflow-x: auto;
           scroll-snap-type: x mandatory;
           -webkit-overflow-scrolling: touch;
-          padding-bottom: 12px;
+          padding-bottom: 8px;
+          padding-left: 40px;
+          padding-right: 40px;
           scrollbar-width: none;
+          align-items: stretch;
         }
         .na-track::-webkit-scrollbar { display: none; }
-
-        .na-card {
-          flex: 0 0 260px;
-          scroll-snap-align: start;
-          background: #faf7f2;
-          border-radius: 16px;
-          overflow: hidden;
-          cursor: pointer;
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-          position: relative;
-        }
-
-        .na-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 48px rgba(61,107,79,0.15);
-        }
-
-        .na-card-img-wrap {
-          overflow: hidden;
-          position: relative;
-        }
-
-        .na-card-img {
-          width: 100%;
-          height: 280px;
-          object-fit: cover;
-          display: block;
-          transition: transform 0.5s ease;
-        }
-
-        .na-card:hover .na-card-img {
-          transform: scale(1.04);
-        }
-
-        .na-card-tag {
-          position: absolute;
-          top: 14px;
-          left: 14px;
-          background: #3d6b4f;
-          color: #f5f0e8;
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          padding: 5px 10px;
-          border-radius: 20px;
-          z-index: 2;
-        }
-
-        .na-card-wish {
-          position: absolute;
-          top: 12px;
-          right: 14px;
-          background: rgba(245,240,232,0.85);
-          border: none;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 15px;
-          backdrop-filter: blur(4px);
-          transition: transform 0.2s;
-          z-index: 2;
-        }
-        .na-card-wish:hover { transform: scale(1.15); }
-
-        .na-card-body {
-          padding: 18px 18px 20px;
-        }
-
-        .na-card-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 19px;
-          font-weight: 600;
-          color: #1a1a14;
-          margin-bottom: 10px;
-          line-height: 1.2;
-        }
-
-        .na-card-bottom {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .na-card-price {
-          font-size: 15px;
-          font-weight: 500;
-          color: #3d6b4f;
-        }
-
-        .na-card-add {
-          font-size: 11px;
-          font-weight: 500;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          color: #1a1a14;
-          background: none;
-          border: 1px solid #c8b99a;
-          padding: 7px 14px;
-          border-radius: 20px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .na-card-add:hover {
-          background: #1a1a14;
-          color: #f5f0e8;
-          border-color: #1a1a14;
-        }
 
         .na-track-wrapper::after {
           content: '';
           position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 12px;
-          width: 80px;
+          right: 0; top: 0; bottom: 8px;
+          width: 100px;
           background: linear-gradient(to left, #f5f0e8 10%, transparent);
           pointer-events: none;
+          z-index: 1;
         }
 
-        @media (max-width: 1024px) {
-          .na-card { flex: 0 0 240px; }
+        /* ══════════════════════════════════════
+           PRODUCT CARD (pc-*)
+        ══════════════════════════════════════ */
+        .pc {
+          --beige:    #f7f2ea;
+          --beige-dk: #ede5d5;
+          --olive:    #3d4a22;
+          --olive-md: #5a6b2e;
+          --ink:      #1e2310;
+          --mist:     rgba(30,35,16,.42);
+          --t: .24s cubic-bezier(.4,0,.2,1);
+
+          font-family: 'Jost', sans-serif;
+          background: var(--beige);
+          border-radius: 10px;
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+
+          flex: 0 0 260px;
+          scroll-snap-align: start;
+
+          box-shadow: 0 1px 4px rgba(61,74,34,.08);
+          transition: box-shadow var(--t), transform var(--t);
+          cursor: pointer;
+          user-select: none;
         }
 
-        @media (max-width: 768px) {
-          .na-section { padding: 48px 0 64px; }
-          .na-inner { padding: 0 20px; }
-          .na-header { margin-bottom: 28px; }
+        .pc:hover {
+          box-shadow: 0 8px 28px rgba(61,74,34,.16), 0 2px 6px rgba(61,74,34,.08);
+          transform: translateY(-4px);
+        }
+        .pc:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(61,74,34,.08); }
+
+        .pc-img-zone {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 2 / 3;
+          background: var(--beige-dk);
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+
+        .pc-img {
+          width: 100%; height: 100%;
+          object-fit: cover;
+          object-position: center top;
+          display: block;
+          transition: transform .5s cubic-bezier(.25,.46,.45,.94);
+        }
+        .pc:hover .pc-img { transform: scale(1.05); }
+
+        .pc-overlay {
+          position: absolute; inset: 0;
+          background: rgba(20,26,10,.1);
+          opacity: 0;
+          transition: opacity var(--t);
+          pointer-events: none;
+        }
+        .pc:hover .pc-overlay { opacity: 1; }
+
+        .pc-badge {
+          position: absolute; top: 10px; left: 10px; z-index: 2;
+          font-size: 8px; font-weight: 600; letter-spacing: .08em;
+          text-transform: uppercase;
+          color: var(--ink); background: var(--beige);
+          padding: 3px 9px 2px; border-radius: 2px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.1);
+        }
+        .pc-badge--sale { background: var(--olive); color: var(--beige); }
+
+        .pc-discount {
+          position: absolute; top: 10px; left: 10px; z-index: 2;
+          font-size: 8px; font-weight: 700; letter-spacing: .06em;
+          color: var(--beige); background: var(--olive-md);
+          padding: 3px 9px 2px; border-radius: 2px;
+        }
+
+        /* ── Wishlist heart button ──
+           .active  → product is in wishlist → olive background + cream heart
+           .pc-wish--pop → brief scale-pop animation on toggle for tactile feedback
+           The BottomNav /wishlist tab badge auto-updates because WishlistContext
+           items array length is read directly in BottomNav component.
+        ── */
+        .pc-wish {
+          position: absolute; top: 8px; right: 8px; z-index: 3;
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(247,242,234,.88);
+          border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 1px 4px rgba(0,0,0,.1);
+          transition: transform .18s, background .18s;
+          backdrop-filter: blur(4px);
+        }
+        .pc-wish:hover { transform: scale(1.12); background: var(--beige); }
+        .pc-wish.active { background: var(--olive); }
+        .pc-wish--pop { animation: wishPop .35s cubic-bezier(.34,1.56,.64,1) both; }
+        @keyframes wishPop {
+          0%   { transform: scale(1); }
+          50%  { transform: scale(1.35); }
+          100% { transform: scale(1); }
+        }
+        .pc-wish svg { width: 14px; height: 14px; }
+
+        /* Image dots */
+        .pc-dots {
+          position: absolute; bottom: 10px; left: 50%;
+          transform: translateX(-50%);
+          display: flex; gap: 5px;
+          z-index: 2; opacity: 0;
+          transition: opacity var(--t);
+        }
+        .pc:hover .pc-dots { opacity: 1; }
+        .pc-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          background: rgba(247,242,234,.5);
+          border: none; cursor: pointer; padding: 0;
+          transition: background .18s, width .18s;
+        }
+        .pc-dot.active { background: #f7f2ea; width: 14px; border-radius: 2px; }
+
+        /* Info strip */
+        .pc-info {
+          padding: 14px 14px 16px;
+          background: var(--beige);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+          border-top: 1px solid rgba(61,74,34,.06);
+        }
+
+        .pc-category {
+          font-size: 9px; font-weight: 500;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+          color: #3d6b4f;
+        }
+
+        .pc-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 17px; font-weight: 600;
+          color: var(--ink);
+          line-height: 1.2;
+          letter-spacing: -.01em;
+        }
+
+        .pc-colors { display: flex; gap: 5px; align-items: center; }
+        .pc-swatch {
+          width: 12px; height: 12px;
+          border-radius: 50%;
+          display: inline-block;
+          border: 1.5px solid rgba(0,0,0,.12);
+          flex-shrink: 0;
+        }
+
+        .pc-price-row {
+          display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+        }
+        .pc-price {
+          font-size: 14px; font-weight: 600;
+          color: var(--ink); letter-spacing: -.01em;
+        }
+        .pc-original {
+          font-size: 11px; font-weight: 400;
+          color: var(--mist); text-decoration: line-through;
+        }
+        .pc-saving {
+          font-size: 9px; font-weight: 600;
+          color: var(--olive-md); letter-spacing: .04em;
+        }
+
+        .pc-rating { display: flex; align-items: center; gap: 5px; }
+        .pc-stars { font-size: 10px; color: #c9a84c; letter-spacing: .04em; }
+        .pc-reviews { font-size: 10px; color: var(--mist); }
+
+        /* ── Add to Cart button ──
+           On click: addItem(item, openDrawer=true) triggers CartContext to set
+           isDrawerOpen: true, which CartDrawer reads and slides in from the right.
+           The .pc-cart-btn--added state gives a brief "Added ✓" confirmation.
+        ── */
+        .pc-cart-btn {
+          margin-top: 4px;
+          width: 100%;
+          padding: 9px 0;
+          border: 1.5px solid var(--olive);
+          background: transparent;
+          color: var(--olive);
+          font-family: 'Jost', sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background .22s, color .22s, border-color .22s;
+        }
+        .pc-cart-btn:hover { background: var(--olive); color: var(--beige); }
+        .pc-cart-btn--added {
+          background: var(--olive);
+          color: var(--beige);
+          border-color: var(--olive);
+        }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════ */
+        @media (min-width: 1280px) {
+          .pc { flex: 0 0 248px; }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1279px) {
+          .pc { flex: 0 0 240px; }
+          .na-inner { padding: 0 32px; }
+          .na-track-wrapper { margin-left: -32px; margin-right: -32px; }
+          .na-track { padding-left: 32px; padding-right: 32px; }
+        }
+
+        @media (min-width: 640px) and (max-width: 1023px) {
+          .na-section { padding: 56px 0 72px; }
+          .na-inner { padding: 0 28px; }
+          .na-header { margin-bottom: 32px; }
+          .pc { flex: 0 0 220px; }
           .na-view-all { display: none; }
-          .na-card { flex: 0 0 210px; }
-          .na-card-img { height: 220px; }
-          .na-track { gap: 14px; }
+          .na-track-wrapper { margin-left: -28px; margin-right: -28px; }
+          .na-track { padding-left: 28px; padding-right: 28px; }
         }
 
-        @media (max-width: 480px) {
-          .na-inner { padding: 0 16px; }
-          .na-card { flex: 0 0 175px; }
-          .na-card-img { height: 185px; }
-          .na-card-name { font-size: 16px; }
-          .na-card-add { font-size: 10px; padding: 5px 10px; }
+        @media (max-width: 639px) {
+          .na-section { padding: 40px 0 56px; }
+          .na-inner { padding: 0 18px; }
+          .na-header { margin-bottom: 24px; }
+          .na-view-all { display: none; }
+          .na-track { gap: 14px; }
+          .na-track-wrapper { margin-left: -18px; margin-right: -18px; }
+          .na-track { padding-left: 18px; padding-right: 18px; }
+          .pc { flex: 0 0 165px; border-radius: 8px; }
+          .pc-info { padding: 10px 10px 12px; gap: 5px; }
+          .pc-name { font-size: 14px; }
+          .pc-price { font-size: 12px; }
+          .pc-original { font-size: 10px; }
+          .pc-category { font-size: 8px; }
+          .pc-cart-btn { font-size: 10px; padding: 7px 0; }
+          .pc-badge, .pc-discount { font-size: 7px; top: 7px; left: 7px; padding: 2px 6px; }
+          .pc-wish { width: 26px; height: 26px; top: 6px; right: 6px; }
+          .pc-wish svg { width: 12px; height: 12px; }
           .na-btn { width: 38px; height: 38px; font-size: 15px; }
+          .pc-swatch { width: 10px; height: 10px; }
+        }
+
+        @media (max-width: 374px) {
+          .pc { flex: 0 0 150px; }
+          .na-inner { padding: 0 14px; }
+          .na-track-wrapper { margin-left: -14px; margin-right: -14px; }
+          .na-track { padding-left: 14px; padding-right: 14px; }
         }
       `}</style>
 
       <section className="na-section">
         <div className="na-inner">
+          {/* Header */}
           <div className="na-header">
             <div className="na-title-group">
               <span className="na-eyebrow">— Fresh off the shelf</span>
@@ -340,38 +792,33 @@ export default function NewArrivals() {
                 New <em>Arrivals</em>
               </h2>
             </div>
-           
+
+            {/* <div className="na-nav">
+              <a href="/new-arrivals" className="na-view-all">
+                View All
+              </a>
+              <button
+                className="na-btn"
+                aria-label="Scroll left"
+                onClick={() => scroll("left")}
+              >
+                ←
+              </button>
+              <button
+                className="na-btn"
+                aria-label="Scroll right"
+                onClick={() => scroll("right")}
+              >
+                →
+              </button>
+            </div> */}
           </div>
 
+          {/* Scrollable Product Cards */}
           <div className="na-track-wrapper">
             <div className="na-track" ref={scrollRef}>
               {products.map((p) => (
-                <div
-                  key={p.id}
-                  className="na-card"
-                  onMouseEnter={() => setHoveredId(p.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                >
-                  <div className="na-card-img-wrap">
-                    <span className="na-card-tag">{p.tag}</span>
-                    <button className="na-card-wish" aria-label="Wishlist">
-                      {hoveredId === p.id ? "♥" : "♡"}
-                    </button>
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="na-card-img"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="na-card-body">
-                    <div className="na-card-name">{p.name}</div>
-                    <div className="na-card-bottom">
-                      <span className="na-card-price">{p.price}</span>
-                      <button className="na-card-add">Add to cart</button>
-                    </div>
-                  </div>
-                </div>
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>

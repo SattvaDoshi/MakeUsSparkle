@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/lib/wishlistContext';
 import router from 'next/dist/shared/lib/router/router';
+import { useCart } from '@/lib/cartContext';
 
 /**
  * ProductCard — Rectangular, fully clickable card
@@ -53,7 +54,8 @@ export default function ProductCard({
 
   const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
-
+const { addItem } = useCart();
+const [added, setAdded] = useState(false);
   const [activeColor] = useState(0);
   const [activeImage, setActiveImage] = useState(0);
   const [wishAnim, setWishAnim] = useState(false);
@@ -69,7 +71,7 @@ export default function ProductCard({
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
-    : null;
+    : null; 
 
   const wishlistItem = {
     id: product.id,
@@ -90,7 +92,8 @@ export default function ProductCard({
 
   if (
     (e.target as HTMLElement).closest('.pc-wish') ||
-    (e.target as HTMLElement).closest('.pc-dots')
+    (e.target as HTMLElement).closest('.pc-dots') ||
+    (e.target as HTMLElement).closest('.pc-cart-btn')   
   ) return;
 
   const slug = (product.href ?? '').split('/').pop() 
@@ -111,7 +114,27 @@ export default function ProductCard({
     setWishAnim(true);
     setTimeout(() => setWishAnim(false), 600);
   };
-
+const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  addItem(
+    {
+      id: String(product.id),
+      sourceId: product.sku ?? String(product.id),
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice ?? null,
+      image: images?.[0] ?? '',
+      color: product.colors?.[0]?.label ?? 'Default',
+      colorHex: product.colors?.[0]?.hex ?? '#000000',
+      sku: product.sku ?? `SKU-${product.id}`,
+      href: product.href ?? '',
+    },
+    true,
+  );
+  setAdded(true);
+  setTimeout(() => setAdded(false), 1500);
+};
   return (
     <>
       <style>{`
@@ -246,7 +269,7 @@ export default function ProductCard({
 
         /* ─── Info strip ─── */
         .pc-info {
-          padding: 12px 12px 14px;
+          padding: 10px 12px 12px;
           background: var(--beige);
           display: flex;
           flex-direction: column;
@@ -268,7 +291,7 @@ export default function ProductCard({
 
         .pc-price-row {
           display: flex;
-          align-items: center;
+          align-items: baseline;
           gap: 7px;
         }
 
@@ -287,7 +310,42 @@ export default function ProductCard({
           color: var(--olive-md);
           letter-spacing: .04em;
         }
+.pc-cart-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 0;
+  border: 1.5px solid var(--olive);
+  background: transparent;
+  color: var(--olive);
+  font-family: 'Jost', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .22s, color .22s;
+  text-align: center;
+  white-space: nowrap;
+}
+.pc-cart-btn:hover  { background: var(--olive); color: var(--beige); }
+.pc-cart-btn--added { background: var(--olive); color: var(--beige); }
 
+/* Tablet */
+@media (min-width: 480px) and (max-width: 1023px) {
+  .pc-cart-btn { font-size: 9.5px; padding: 9px 0; margin-top: 9px; }
+}
+
+/* Mobile */
+@media (max-width: 479px) {
+  .pc-cart-btn { font-size: 8.5px; padding: 8px 0; margin-top: 7px; letter-spacing: .10em; }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .pc-cart-btn { font-size: 10.5px; padding: 11px 0; margin-top: 11px; }
+}
         /* ─── Responsive ─── */
 
         /* Mobile: ≤ 479px */
@@ -323,7 +381,7 @@ export default function ProductCard({
 
         /* Desktop: ≥ 1024px */
         @media (min-width: 1024px) {
-          .pc-info { padding: 13px 14px 16px; }
+          .pc-info { padding: 13px 14px 14px; }
           .pc-name  { font-size: 14px; }
           .pc-price { font-size: 14px; }
           .pc-original { font-size: 10.5px; }
@@ -398,22 +456,30 @@ export default function ProductCard({
         </div>
 
         {/* ── INFO STRIP ── */}
-        <div className="pc-info">
-          <p className="pc-name">{name}</p>
-          <div className="pc-price-row">
-            <span className="pc-price">₹{price.toLocaleString('en-IN')}</span>
-            {originalPrice && (
-              <span className="pc-original">
-                ₹{originalPrice.toLocaleString('en-IN')}
-              </span>
-            )}
-            {discount && (
-              <span className="pc-saving">{discount}% off</span>
-            )}
-          </div>
+<div className="pc-info">
+  <p className="pc-name">{name}</p>
+  <div className="pc-price-row">
+    <span className="pc-price">₹{price.toLocaleString('en-IN')}</span>
+    {originalPrice && (
+      <span className="pc-original">
+        ₹{originalPrice.toLocaleString('en-IN')}
+      </span>
+    )}
+    {discount && (
+      <span className="pc-saving">{discount}% off</span>
+    )}
+  </div>
+  <button
+    className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
+    onClick={handleAdd}
+    aria-label={`Add ${name} to cart`}
+  >
+    {added ? 'Added ✓' : 'Add to Cart'}
+  </button>
+</div>
+            
+      
         </div>
-
-      </div>
     </>
   );
 }

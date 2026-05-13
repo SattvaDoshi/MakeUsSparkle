@@ -104,24 +104,27 @@ function key(item: Partial<CartItem>) {
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
 
-   case 'ADD_ITEM': {
-  const payloadItem = { ...action.payload, cartItemId: action.payload.cartItemId || Date.now().toString() + Math.random().toString(36).substr(2, 9) };
-  const k   = key(payloadItem);
+case 'ADD_ITEM': {
   const idx = state.items.findIndex(
-    i => key(i) === k,
+    i => i.id === action.payload.id && i.colorHex === action.payload.colorHex
   );
 
-  const items =
-    idx >= 0
-      ? state.items.map((i, n) =>
-          n === idx ? { ...i, qty: i.qty + 1 } : i,
-        )
-      : [...state.items, { ...payloadItem, qty: 1 }];
+  if (idx >= 0) {
+    const items = state.items.map((i, n) =>
+      n === idx ? { ...i, qty: i.qty + 1 } : i
+    );
+    return { ...state, items, isDrawerOpen: action.openDrawer ?? true };
+  }
 
-  return { 
-    ...state, 
-    items, 
-    isDrawerOpen: action.openDrawer ?? true // ✅ THIS LINE FIXES EVERYTHING
+  const newItem = {
+    ...action.payload,
+    cartItemId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    qty: 1,
+  };
+  return {
+    ...state,
+    items: [...state.items, newItem],
+    isDrawerOpen: action.openDrawer ?? true,
   };
 }
 

@@ -625,6 +625,7 @@ import { fireConfetti } from '@/components/cart/ConfettiManager';
 import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
+import { useWishlist } from '@/lib/wishlistContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Product = CatalogProduct;
@@ -682,10 +683,14 @@ function resolveStyleId(raw: string | undefined | null): string {
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function Card({ product, index }: { product: Product; index: number }) {
   const { addItem } = useCart();
-  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const { toggleItem, isWished } = useWishlist();
+
   const [added, setAdded]     = useState(false);
+  const [wishAnim, setWishAnim] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [imgIdx, setImgIdx]   = useState(0);
+
+  const wished = isWished(product.id);
 
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -694,21 +699,43 @@ function Card({ product, index }: { product: Product; index: number }) {
   function handleAdd(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
-    addItem({
-      id: String(product.id),
-      sourceId: product.sourceId,
-      name: product.name,
-      price: product.price,
-      originalPrice: product.originalPrice ?? null,
-      image: product.images[0],
-      color: product.colors[0].label,
-      colorHex: product.colors[0].hex,
-      sku: product.sku ?? `SKU-${product.id}`,
-      href: product.href,
-    });
-    fireConfetti(btnRef.current);
+    addItem(
+      {
+        id: String(product.id),
+        sourceId: product.sourceId,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice ?? null,
+        image: product.images[0],
+       color: product.colors?.[0]?.label ?? 'Default',
+      colorHex: product.colors?.[0]?.hex ?? '#000000',
+        sku: product.sku ?? `SKU-${product.id}`,
+        href: product.href,
+      },
+      true, // openDrawer = true → CartDrawer slides open
+    );
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+  }
+
+  function handleWish(e: MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishAnim(true);
+    setTimeout(() => setWishAnim(false), 400);
+    toggleItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice ?? undefined,
+      image: product.images[0],
+      href: product.href,
+      colors: product.colors ?? [],
+      badge: null,
+      rating: 0,
+      reviewCount: 0,
+      category: product.type ?? 'Jewellery',
+    });
   }
 
   return (
@@ -731,23 +758,17 @@ function Card({ product, index }: { product: Product; index: number }) {
             loading="lazy"
           />
           {discount && <span className="c-disc">–{discount}%</span>}
-          <div className={`c-scrim${hovered ? ' on' : ''}`} />
+
+          {/* Wishlist heart */}
           <button
-            ref={btnRef}
-            className={`c-add-btn${hovered ? ' show' : ''}${added ? ' done' : ''}`}
-            onClick={handleAdd}
-            aria-label="Add to cart"
+            className={`c-wish${wished ? ' active' : ''}${wishAnim ? ' c-wish--pop' : ''}`}
+            onClick={handleWish}
+            aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={wished}
           >
-            {added ? (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            )}
+            <svg viewBox="0 0 24 24" fill={wished ? '#fff' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
           </button>
         </div>
 
@@ -759,6 +780,14 @@ function Card({ product, index }: { product: Product; index: number }) {
               <span className="c-orig">₹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
           </div>
+          {/* Add to Cart button */}
+          <button
+            className={`c-cart-btn${added ? ' c-cart-btn--added' : ''}`}
+            onClick={handleAdd}
+            aria-label={`Add ${product.name} to cart`}
+          >
+            {added ? 'Added ✓' : 'Add to Cart'}
+          </button>
         </div>
       </article>
     </Link>
@@ -1060,12 +1089,8 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
     }
     .c-card:hover .c-img { transform: scale(1.04); }
 
-    .c-scrim {
-      position: absolute; inset: 0;
-      background: linear-gradient(to top, rgba(28,43,30,0.36) 0%, transparent 50%);
-      opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
-    }
-    .c-scrim.on { opacity: 1; }
+    
+    
 
     .c-disc {
       position: absolute; top: 10px; left: 10px;
@@ -1074,22 +1099,49 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
       background: ${THEME.accent}; color: #fff;
       padding: 3px 8px 2px; border-radius: 3px;
     }
+/* Remove these blocks: .c-scrim { ... } and .c-add-btn { ... } and .c-scrim.on { ... } */
 
-    .c-add-btn {
-      position: absolute; bottom: 10px; right: 10px;
-      width: 32px; height: 32px; border-radius: 50%;
-      border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; transform: scale(0.8) translateY(4px);
-      transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s;
-      background: ${THEME.accent}; color: #fff;
-      box-shadow: 0 2px 12px rgba(74,124,89,0.35);
-    }
-    .c-add-btn.show  { opacity: 1; transform: scale(1) translateY(0); }
-    .c-add-btn.done  { background: #2e7d32; }
-    .c-add-btn:hover  { transform: scale(1.1) !important; }
-    .c-add-btn:active { transform: scale(0.94) !important; }
+/* ADD these instead: */
+.c-wish {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(253,252,249,0.88);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  transition: transform .18s, background .18s;
+  backdrop-filter: blur(4px);
+  color: ${THEME.accent};
+}
+.c-wish:hover { transform: scale(1.12); background: ${THEME.cardBg}; }
+.c-wish.active { background: ${THEME.accent}; color: #fff; }
+.c-wish--pop { animation: wishPop .35s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes wishPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.c-wish svg { width: 14px; height: 14px; }
 
+.c-cart-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 8px 0;
+  border: 1.5px solid ${THEME.accent};
+  background: transparent;
+  color: ${THEME.accent};
+  font-family: ${THEME.bodyFont};
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .22s, color .22s, border-color .22s;
+}
+.c-cart-btn:hover { background: ${THEME.accent}; color: #fff; }
+.c-cart-btn--added { background: ${THEME.accent}; color: #fff; border-color: ${THEME.accent}; }
+  
     .c-info { padding: 10px 12px 13px; }
 
     .c-name {

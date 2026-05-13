@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import { useGender } from '@/lib/genderContext';
 import { fetchCatalogCategories, fetchCatalogSubCategories } from '@/lib/catalogApi';
+import UpperNav from '@/components/ui/UpperNav';
 
 type Gender = 'women' | 'men';
 
@@ -80,17 +81,17 @@ const buildCategories = (gender: Gender): CategoryItem[] =>
         { name: 'Jewellery',              icon: '◈', img: IMG.necklace,  href: `/categories/women/jewellery`,        sub: womenJewellery },
         { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/women/gift-boxes`,       sub: [] },
         { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/women/fan-combos`,       sub: [] },
-        { name: 'Charm Jewellery',        icon: '◎', img: IMG.charm,     href: `/categories/women/charm-jewellery`,     sub: [] },
+        { name: 'Charm Jewellery',        icon: '◎', img: IMG.charm,     href: `/subcategory/charm-jewellery`,     sub: [] },
         { name: 'Hair Accessories',       icon: '⟡', img: IMG.hair,      href: `/categories/women/hair-accessories`, sub: [] },
-        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/women/keychains`,        sub: [] },
+        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/subcategory/keychains`,        sub: [] },
         { name: 'Curated Combos',         icon: '⊞', img: IMG.combo,     href: `/categories/women/curated-combos`,  sub: [] },
       ]
     : [
         { name: 'Jewellery',              icon: '◈', img: IMG.menChain,  href: `/categories/men/jewellery`,         sub: menJewellery },
         { name: 'Gift Boxes',             icon: '⊡', img: IMG.giftBox,   href: `/categories/men/gift-boxes`,        sub: [] },
         { name: 'Fan Combos',             icon: '✦', img: IMG.fanCombo,  href: `/categories/men/fan-combos`,        sub: [] },
-        { name: 'Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/categories/men/charm-jewellery`,      sub: [] },
-        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/categories/men/keychains`,         sub: [] },
+        { name: 'Charm Jewellery', icon: '◎', img: IMG.charm,     href: `/subcategory/charm-jewellery`,      sub: [] },
+        { name: 'Keychains',              icon: '⌖', img: IMG.keychain,  href: `/subcategory/keychains`,         sub: [] },
         { name: 'Watch Straps',           icon: '⊞', img: IMG.menWatch,  href: `/categories/men/watch-straps`,      sub: [] },
         { name: 'Curated Combos',         icon: '⊟', img: IMG.combo,     href: `/categories/men/curated-combos`,   sub: [] },
       ];
@@ -150,34 +151,61 @@ function MobileSplit({
 
   return (
     <div className="ms-root">
-      <div className="ms-top">
-        <div className="ms-top-left">
-          <p className="ms-eyebrow">Discover</p>
-          <h2 className="ms-title">Shop by <em>Category</em></h2>
-        </div>
-        <div className="ms-toggle">
-          <div className={`ms-pill${tab === 'men' ? ' right' : ''}`} />
-          <button className={`ms-tbtn${tab === 'women' ? ' on' : ''}`} onClick={() => setTab('women')}>Women</button>
-          <button className={`ms-tbtn${tab === 'men' ? ' on' : ''}`} onClick={() => setTab('men')}>Men</button>
-        </div>
-      </div>
+ <div className="ms-top">
+  <div className="ms-top-left">
+    <p className="ms-eyebrow">Discover</p>
+    <h2 className="ms-title">Shop by <em>Category</em></h2>
+  </div>
+</div>
+<div className="ms-gender-bar">
+  <button
+    className={`gender-btn-cat ${tab === 'women' ? 'active-btn-cat' : 'inactive-cat'}`}
+    onClick={() => setTab('women')}
+  >
+    Women
+  </button>
+  <button
+    className={`gender-btn-cat ${tab === 'men' ? 'active-btn-cat' : 'inactive-cat'}`}
+    onClick={() => setTab('men')}
+  >
+    Men
+  </button>
+  <button className="gender-btn-cat inactive-cat" disabled>
+    Kids
+  </button>
+</div>
 
       <div className="ms-pane">
         <nav className="ms-sb" aria-label="Category navigation">
-          {categories.map((cat, i) => (
-            <button
-              key={cat.name}
-              className={`ms-sbbtn${activeIdx === i ? ' on' : ''}`}
-              onClick={() => setActiveIdx(i)}
-              aria-current={activeIdx === i ? 'page' : undefined}
-            >
-              <div className="ms-sb-thumb">
-                <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
-              </div>
-              <span className="ms-sb-label">{cat.name}</span>
-              {activeIdx === i && <span className="ms-sb-dot" aria-hidden="true" />}
-            </button>
-          ))}
+ {categories.map((cat, i) => (
+  cat.sub.length === 0
+    ? (
+      <Link
+        key={cat.name}
+        href={cat.href}
+        className={`ms-sbbtn${activeIdx === i ? ' on' : ''}`}
+      >
+        <div className="ms-sb-thumb">
+          <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+        </div>
+        <span className="ms-sb-label">{cat.name}</span>
+      </Link>
+    )
+    : (
+      <button
+        key={cat.name}
+        className={`ms-sbbtn${activeIdx === i ? ' on' : ''}`}
+        onClick={() => setActiveIdx(i)}
+        aria-current={activeIdx === i ? 'page' : undefined}
+      >
+        <div className="ms-sb-thumb">
+          <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+        </div>
+        <span className="ms-sb-label">{cat.name}</span>
+        {activeIdx === i && <span className="ms-sb-dot" aria-hidden="true" />}
+      </button>
+    )
+))}
         </nav>
 
         <div className="ms-ct">
@@ -209,20 +237,21 @@ function MobileSplit({
               ))}
             </div>
           ) : (
-            <Link href={active.href} className="ms-solo">
-              <img src={active.img} alt={active.name} className="ms-solo-img" />
-              <div className="ms-solo-ov" />
-              <div className="ms-solo-body">
-                <span className="ms-solo-ttl">{active.name}</span>
-                <span className="ms-solo-cta">
-                  Explore
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-          )}
+  <Link href={active.href} className="ms-solo">
+    <img src={active.img} alt={active.name} className="ms-solo-img" />
+    <div className="ms-solo-ov" />
+    <div className="ms-solo-body">
+      <span className="ms-solo-ttl">{active.name}</span>
+      <span className="ms-solo-cta">
+        Explore
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </span>
+    </div>
+  </Link>
+)}
+          
         </div>
       </div>
     </div>
@@ -273,6 +302,7 @@ export default function CategorySection() {
           'gift-boxes': '⊡',
           'fan-combos': '✦',
           'charm-jewellery': '◎',
+          'custom-charm-jewellery': '◎',   
           'hair-accessories': '⟡',
           'keychains': '⌖',
           'watch-straps': '⊞',
@@ -283,15 +313,18 @@ export default function CategorySection() {
         const menExcludedSlugs = new Set(['hair-accessories']);
         const excludedSlugs = tab === 'men' ? menExcludedSlugs : womenExcludedSlugs;
 
-        const mapped: CategoryItem[] = categories
-          .filter((category) => !excludedSlugs.has(category.slug))
-          .map((category) => ({
-            name: category.name,
-            icon: ICONS[category.slug] || '◈',
-            img: category.image || IMG.combo,
-            href: `/categories/${tab}/${category.slug}`,
-            sub: category.slug === 'jewellery' ? jewellerySub : [],
-          }));
+const SUBCATEGORY_SLUGS = new Set(['keychains', 'charm-jewellery', 'custom-charm-jewellery']);
+const mapped: CategoryItem[] = categories
+  .filter((category) => !excludedSlugs.has(category.slug))
+  .map((category) => ({
+    name: category.name,
+    icon: ICONS[category.slug] || '◈',
+    img: category.image || IMG.combo,
+    href: SUBCATEGORY_SLUGS.has(category.slug)
+      ? `/subcategory/${category.slug}`
+      : `/categories/${tab}/${category.slug}`,
+    sub: category.slug === 'jewellery' ? jewellerySub : [],
+  }));
 
         setDynamicCategories(mapped.length > 0 ? mapped : templateCategories);
         setActiveIdx(0);
@@ -323,20 +356,33 @@ export default function CategorySection() {
   return (
     <>
       <style>{CSS}</style>
-      <section className="cs" id="categories" ref={sectionRef}>
-
+      <UpperNav/>
+      <section className="cs" id="categories" ref={sectionRef} style={{ marginTop: "60px"}}>
+       
         {/* DESKTOP + TABLET */}
-        <div className={`cs-hd${visible ? ' in' : ''}`}>
-          <div className="cs-hd-left">
-            <span className="cs-eyebrow">Discover</span>
-            <h2 className="cs-title">Shop by <em>Category</em></h2>
-          </div>
-          <div className="cs-toggle">
-            <div className={`cs-pill${tab === 'men' ? ' right' : ''}`} />
-            <button className={`cs-tbtn${tab === 'women' ? ' on' : ''}`} onClick={() => setTab('women')}>Women</button>
-            <button className={`cs-tbtn${tab === 'men' ? ' on' : ''}`}   onClick={() => setTab('men')}>Men</button>
-          </div>
-        </div>
+<div className={`cs-hd${visible ? ' in' : ''}`}>
+  <div className="cs-hd-left">
+    <span className="cs-eyebrow">Discover</span>
+    <h2 className="cs-title">Shop by <em>Category</em></h2>
+  </div>
+  <div className="cs-gender-bar">
+    <button
+      className={`gender-btn-cat ${tab === 'women' ? 'active-btn-cat' : 'inactive-cat'}`}
+      onClick={() => setTab('women')}
+    >
+      Women
+    </button>
+    <button
+      className={`gender-btn-cat ${tab === 'men' ? 'active-btn-cat' : 'inactive-cat'}`}
+      onClick={() => setTab('men')}
+    >
+      Men
+    </button>
+    <button className="gender-btn-cat inactive-cat" disabled>
+      Kids
+    </button>
+  </div>
+</div>
 
         <div className={`cs-wrap${visible ? ' in' : ''}`}>
           <div className="cs-panel">
@@ -347,23 +393,36 @@ export default function CategorySection() {
                 <span className="cs-sb-eyebrow">Collections</span>
               </div>
 
-              {categories.map((cat, i) => (
-                <button
-                  key={cat.name}
-                  className={`cs-sbbtn${activeIdx === i ? ' on' : ''}`}
-                  onClick={() => setActiveIdx(i)}
-                  aria-current={activeIdx === i ? 'page' : undefined}
-                >
-                  {/* Thumbnail image */}
-                  <div className="cs-sb-thumb">
-                    <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
-                  </div>
-                  <span className="cs-sb-txt">{cat.name}</span>
-                  {cat.sub.length > 0 && (
-                    <span className="cs-sb-count">{cat.sub.length}</span>
-                  )}
-                </button>
-              ))}
+  // AFTER
+{categories.map((cat, i) => (
+  cat.sub.length === 0
+    ? (
+      <Link
+        key={cat.name}
+        href={cat.href}
+        className={`cs-sbbtn${activeIdx === i ? ' on' : ''}`}
+      >
+        <div className="cs-sb-thumb">
+          <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+        </div>
+        <span className="cs-sb-txt">{cat.name}</span>
+      </Link>
+    )
+    : (
+      <button
+        key={cat.name}
+        className={`cs-sbbtn${activeIdx === i ? ' on' : ''}`}
+        onClick={() => setActiveIdx(i)}
+        aria-current={activeIdx === i ? 'page' : undefined}
+      >
+        <div className="cs-sb-thumb">
+          <img src={cat.img} alt="" aria-hidden="true" loading="lazy" />
+        </div>
+        <span className="cs-sb-txt">{cat.name}</span>
+        <span className="cs-sb-count">{cat.sub.length}</span>
+      </button>
+    )
+))}
             </nav>
 
             {/* ── RIGHT CONTENT ── */}
@@ -383,26 +442,15 @@ export default function CategorySection() {
               </div>
 
               {active.sub.length > 0 ? (
-                <div className="cs-grid">
-                  {active.sub.map((sub, i) => <ShineCard key={sub.name} sub={sub} index={i} />)}
-                </div>
-              ) : (
-                <Link href={active.href} className="cs-solo">
-                  <img src={active.img} alt={active.name} className="cs-solo-img" />
-                  <div className="cs-solo-ov" />
-                  <div className="cs-solo-inset" />
-                  <div className="cs-solo-body">
-                    <div className="cs-solo-ey">Collection</div>
-                    <span className="cs-solo-ttl">{active.name}</span>
-                    <span className="cs-solo-cta">
-                      Explore the edit
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-                </Link>
-              )}
+  <div className="cs-grid">
+    {active.sub.map((sub, i) => <ShineCard key={sub.name} sub={sub} index={i} />)}
+  </div>
+) : (
+  <div className="cs-solo-placeholder">
+    <p>Select a category from the left to explore.</p>
+  </div>
+)}
+  
             </div>
           </div>
         </div>
@@ -469,8 +517,9 @@ const CSS = `
 }
 
 /* ── Desktop header ── */
+/* ── Desktop header — stacked layout ── */
 .cs-hd {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 20px;
   padding: 0 48px 32px;
   position: relative; z-index: 1;
   opacity: 0; transform: translateY(14px);
@@ -479,6 +528,29 @@ const CSS = `
 .cs-hd.in { opacity: 1; transform: translateY(0); }
 .cs-hd-left { display: flex; flex-direction: column; gap: 5px; }
 
+/* Gender toggle bar — full width row below title */
+.cs-gender-bar {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.gender-btn-cat {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  cursor: pointer;
+  border: 1.5px solid var(--gd);
+  padding: 10px 36px;
+  transition: all 0.22s ease;
+  min-width: 110px; text-align: center;
+  background: transparent; color: var(--gd);
+  border-radius: 0;
+}
+
+.gender-btn-cat.inactive-cat { background: transparent; color: var(--gd); }
+.gender-btn-cat.inactive-cat:hover { background: var(--gt); }
+.gender-btn-cat.active-btn-cat { background: var(--gd); color: #fff; }
+.gender-btn-cat:disabled { opacity: 0.45; cursor: not-allowed; }
+.gender-btn-cat:disabled:hover { background: transparent; }
 .cs-eyebrow {
   font-size: 9px; font-weight: 700; letter-spacing: .46em; text-transform: uppercase;
   color: var(--gs); display: flex; align-items: center; gap: 8px;
@@ -496,28 +568,9 @@ const CSS = `
 }
 .cs-title em { font-style: italic; color: var(--gd); }
 
-.cs-toggle {
-  display: flex; align-items: center;
-  background: var(--white); border: 1.5px solid var(--bm);
-  border-radius: 100px; padding: 4px; position: relative;
-  box-shadow: var(--sxs);
-}
-.cs-pill {
-  position: absolute; top: 4px; bottom: 4px;
-  width: calc(50% - 4px); left: 4px;
-  background: var(--gd); border-radius: 100px;
-  transition: transform .36s cubic-bezier(.77,0,.18,1);
-  box-shadow: 0 2px 8px rgba(37,61,24,.3);
-}
-.cs-pill.right { transform: translateX(100%); }
-.cs-tbtn {
-  position: relative; z-index: 1; padding: 9px 26px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 10px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
-  background: transparent; border: none; cursor: pointer; border-radius: 100px;
-  color: var(--t3); transition: color .26s;
-}
-.cs-tbtn.on { color: #fff; }
+
+
+
 
 /* ── Desktop wrap + panel ── */
 .cs-wrap {
@@ -597,10 +650,11 @@ const CSS = `
 
 /* Category name */
 .cs-sb-txt {
-  font-size: 11.5px; font-weight: 500;
+  font-size: 13.5px; font-weight: 500;
   letter-spacing: .01em; line-height: 1.3;
   flex: 1;
   color: inherit;
+  text-decoration:none;
 }
 .cs-sbbtn.on .cs-sb-txt { font-weight: 700; }
 
@@ -810,12 +864,24 @@ const CSS = `
   .cs-wrap { display: none !important; }
   .ms-root { display: block; padding: 0 14px; position: relative; z-index: 1; }
 
-  .ms-top {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 12px; margin-bottom: 16px;
+    .ms-top {
+    display: flex; align-items: flex-start;
+    margin-bottom: 12px;
   }
   .ms-top-left { display: flex; flex-direction: column; gap: 4px; }
 
+.ms-gender-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+}
+.gender-btn-cat {
+  flex: 1; padding: 8px 0;
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  border: 1.5px solid var(--gd);
+  min-width: unset; border-radius: 0;
+}
+ 
   .ms-eyebrow {
     font-size: 8.5px; font-weight: 700; letter-spacing: .42em; text-transform: uppercase;
     color: var(--gs); display: flex; align-items: center; gap: 6px;
@@ -830,30 +896,52 @@ const CSS = `
   }
   .ms-title em { font-style: italic; color: var(--gd); }
 
-  .ms-toggle {
-    flex-shrink: 0; display: flex; align-items: center;
-    background: var(--white); border: 1.5px solid var(--bm);
-    border-radius: 100px; padding: 3px; position: relative;
-    box-shadow: var(--sxs); align-self: flex-start; margin-top: 3px;
-  }
-  .ms-pill {
-    position: absolute; top: 3px; bottom: 3px;
-    width: calc(50% - 3px); left: 3px;
-    background: var(--gd); border-radius: 100px;
-    transition: transform .34s cubic-bezier(.77,0,.18,1);
-    box-shadow: 0 2px 6px rgba(37,61,24,.28);
-  }
-  .ms-pill.right { transform: translateX(100%); }
-  .ms-tbtn {
-    position: relative; z-index: 1; padding: 7px 16px;
-    font-family: 'Nunito', sans-serif;
-    font-size: 9.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
-    background: transparent; border: none; cursor: pointer; border-radius: 100px;
-    color: var(--t3); transition: color .26s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .ms-tbtn.on { color: #fff; }
+/* ── Hero-style gender toggle (used in Category section) ── */
+.gender-toggle-bar-cat {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
 
+.gender-btn-cat {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1.5px solid var(--gd);
+  padding: 9px 32px;
+  transition: all 0.25s ease;
+  min-width: 100px;
+  text-align: center;
+  border-radius: 0;
+}
+
+.gender-btn-cat.inactive-cat {
+  background-color: transparent;
+  color: var(--gd);
+}
+
+.gender-btn-cat.inactive-cat:hover {
+  background-color: var(--gt);
+}
+
+.gender-btn-cat.active-btn-cat {
+  background-color: var(--gd);
+  color: #fff;
+  border-color: var(--gd);
+}
+
+/* Mobile sizing for toggle */
+@media (max-width: 660px) {
+  .gender-btn-cat {
+    padding: 7px 20px;
+    min-width: 72px;
+    font-size: 0.78rem;
+  }
+}
   .ms-pane {
     display: grid; grid-template-columns: 86px 1fr;
     background: var(--white); border: 1px solid var(--bs);
@@ -894,12 +982,13 @@ const CSS = `
     transition: transform .28s ease;
   }
   .ms-sbbtn.on .ms-sb-thumb img { transform: scale(1.05); }
-
+  
   .ms-sb-label {
-    font-size: 12px; font-weight: 600; letter-spacing: .01em;
+    font-size: 13px; font-weight: 600; letter-spacing: .01em;
     color: #101010; line-height: 1.3; text-align: center;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; width: 100%; padding: 0 2px;
+    text-decoration: none;
   }
   .ms-sb-dot {
     width: 4px; height: 4px; border-radius: 50%;
@@ -1020,5 +1109,14 @@ const CSS = `
   .ms-sb-label { font-size: 7px; }
   .ms-ct { padding: 10px 8px; }
   .ms-subcard-name { font-size: 0.74rem; padding: 8px 8px 8px; }
+}
+  .cs-solo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  color: var(--t4);
+  font-size: 12px;
+  letter-spacing: .1em;
 }
 `;

@@ -23,5 +23,8 @@ export function generateStaticParams() {
     { type: 'men-rings' },
     { type: 'men-earrings' },
     { type: 'men-pendants' },
+        { type: 'keychains' },        // ← add this
+    { type: 'charm-jewellery' },
+    { type: 'custom-charm-jewellery' },
   ];
 }

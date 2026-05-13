@@ -668,17 +668,8 @@ const banners: Banner[] = [
     imgAlt: 'Custom charm jewellery',
     textSide: 'right',
   },
-  {
-    id: 3,
-    tag: 'Bestseller',
-    headline: 'NEW\nARRIVALS',
-    cta: 'Discover',
-    href: '/categories/women/new-arrivals',
-    imgDesktop:
-      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=85&auto=format&fit=crop',
-    imgAlt: 'New jewellery arrivals',
-    textSide: 'right',
-  },
+  
+
 ];
 
 const marqueeItems = [
@@ -892,7 +883,7 @@ export default function BannerSection() {
 .bs-card:hover .bs-card-cta {
   background: rgba(201, 168, 76, 0.18);
   border-color: var(--gold);
-  color: var(--gold-light);
+  color: #101010;
 }
 .bs-card:hover .bs-card-cta::after {
   transform: translateX(3px);

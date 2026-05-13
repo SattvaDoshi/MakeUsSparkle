@@ -8,15 +8,19 @@ import Style from '@/components/home/StyleSection';
 import BottomNav from '@/components/ui/BottomNav';
 import PromoSection from '@/components/home/PromoSection';
 import TopNav from '@/components/ui/UpperNav';
-
+import SingleBanner from '@/components/home/SingleBanner'
+import Arrivals from '@/components/home/NewArrivals';
+import NewArrivals from '@/components/home/NewArrivals';
 export default function HomePage() {
   return (
     <main>
       <TopNav/>
       <HeroVideo />
       <PromoSection/>
+      <SingleBanner/>
       <BannerSection />
     <Style/>
+    <NewArrivals/>
       {/* <CategorySection /> */}
       {/* <TrustBadges /> */}
       <TestimonialsSection />

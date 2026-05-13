@@ -372,12 +372,15 @@ export default function ProductsPage({
   subtype,
   gender,
   embedded = false,
+  productLinkBase,
 }: {
   type: string;
   subtype?: string;
   gender?: string;
   embedded?: boolean;
+  productLinkBase?: string;
 }) {
+    
   const [activeTag, setActiveTag] = useState('All');
   const [search, setSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -800,7 +803,10 @@ const [sort, setSort] = useState<SortOption>('default');
                   className="pp-item"
                   style={{ animationDelay: `${Math.min(i * 0.04, 0.5)}s` }}
                 >
-                  <ProductCard product={product} />
+                  <ProductCard product={product} productLinkBase={productLinkBase} 
+                  
+                  
+              />
                 </div>
               ))
             )}

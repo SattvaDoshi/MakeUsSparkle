@@ -313,7 +313,7 @@ export default function BannerSlider() {
         /* ── Card ── */
         .bs-track {
           position: relative; width: 100%;
-          border-radius: 12px; overflow: hidden;
+         overflow: hidden;
           box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 24px 64px rgba(0,0,0,0.14);
         }
 

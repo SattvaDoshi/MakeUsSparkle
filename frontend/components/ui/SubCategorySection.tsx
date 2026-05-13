@@ -589,7 +589,12 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
             type={resolvedType}
             subtype={activeSubtype ?? undefined}
             embedded
-          />
+   productLinkBase={
+  resolvedType === 'charm-jewellery' || resolvedType === 'custom-charm-jewellery'
+    ? '/custom-charm'
+    : '/products'
+}
+  />
         </div>
 
       </div>

@@ -1,12 +1,11 @@
-
-
 'use client';
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useCart, GIFT_CHARGE } from '@/lib/cartContext';
+import { useCart } from '@/lib/cartContext';
 import ExitIntent from '@/components/cart/ExitIntent';
-import UpperNav from '@/components/ui/UpperNav'; // Replaced absolute D:\ path with standard Next.js alias
+import UpperNav from '@/components/ui/UpperNav';
+
 
 // ─── Offer milestones ─────────────────────────────────────────────────────────
 const OFFERS = [
@@ -15,16 +14,51 @@ const OFFERS = [
   { label: 'Free Organiser', threshold: 1199, emoji: '🛍️', short: 'Organiser' },
 ];
 
-// coupon map removed — use backend validation instead
+// ─── Gift Box Options ─────────────────────────────────────────────────────────
+// Replace `image` URLs with your own asset paths or CDN links
+export const GIFT_OPTIONS = [
+  {
+    id: 'classic',
+    title: 'Classic Gift Wrap',
+    sub: 'Kraft paper & satin ribbon',
+    price: 25,
+    image: '/smallerBox.png',
+  },
+  {
+    id: 'luxury',
+    title: 'Luxury Gift Hamper',
+    sub: 'Ideal for 4+ products',
+    price: 250,
+    image: '/Biggerbox.jpg',
+  },
+];
 
 export default function CartPage() {
   const {
     state, subtotal, savings, shipping, total,
     itemCount, removeItem, updateQty,
     toggleGift, setGiftMessage,
-    applyDiscount, removeDiscount, applyCouponCode,
+    removeDiscount, applyCouponCode,
   } = useCart();
   const { items, isGift, giftMessage, discountCode, discountAmount } = state;
+
+  // ── Gift box local state ──
+  // selectedGiftId drives both "is gift selected" and "which option"
+  const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
+
+  const handleSelectGift = (id: string) => {
+    if (selectedGiftId === id) {
+      // deselect → remove gift
+      setSelectedGiftId(null);
+      if (isGift) toggleGift();
+    } else {
+      setSelectedGiftId(id);
+      if (!isGift) toggleGift();
+    }
+  };
+
+  const activeGift = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
+  const giftCharge = activeGift?.price ?? 0;
 
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -45,10 +79,8 @@ export default function CartPage() {
     const code = couponInput.trim().toUpperCase();
     if (!code) { setCouponError('Enter a code first.'); return; }
     if (discountCode === code) { setCouponError('Already applied.'); return; }
-
     setCouponError('');
     setCouponSuccess('');
-
     try {
       const res = await applyCouponCode(code);
       if (res?.success) {
@@ -61,6 +93,9 @@ export default function CartPage() {
       setCouponError(err?.message || 'Failed to validate coupon');
     }
   }, [couponInput, discountCode, applyCouponCode]);
+
+  // Compute the displayed total factoring in the gift charge
+  const displayTotal = total + giftCharge;
 
   return (
     <>
@@ -238,34 +273,121 @@ export default function CartPage() {
           display: flex; align-items: center; gap: 8px;
         }
 
-        /* ── RIGHT PANEL ── */
+        /* ─────────────────────────────────────────────────────────────────────
+           GIFT BOX SELECTOR — side-by-side cards
+        ───────────────────────────────────────────────────────────────────── */
+        .cp-gift-header {
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .cp-gift-heading {
+          font-size: 10px; letter-spacing: .38em; text-transform: uppercase;
+          color: var(--mist); font-weight: 500;
+        }
+        .cp-gift-optional {
+          font-size: 10px; color: var(--mist); font-style: italic;
+        }
 
-        /* Gift toggle */
-        .cp-gift {
-          background: linear-gradient(135deg, #fdf6e7, #f5f0e8);
-          border: 2px dashed var(--gold);
-          border-radius: 18px; padding: 16px 18px;
-          display: flex; align-items: center; gap: 14px;
-          cursor: pointer; transition: all .22s;
+        .cp-gift-cards {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+          margin-bottom: 0;
         }
-        .cp-gift:hover { border-color: var(--olive-400); }
-        .cp-gift--selected { border-style: solid; border-color: var(--olive-500); background: linear-gradient(135deg, #f2f4e8, #f5f0e8); }
-        .cp-gift-icon { font-size: 36px; flex-shrink: 0; }
-        .cp-gift-body { flex: 1; }
-        .cp-gift-title { font-size: 14px; font-weight: 600; color: var(--olive-900); margin-bottom: 2px; }
-        .cp-gift-sub { font-size: 11px; color: var(--mist); line-height: 1.4; }
-        .cp-gift-price { font-size: 14px; font-weight: 700; color: var(--olive-600); flex-shrink: 0; }
-        .cp-gift-check {
-          width: 24px; height: 24px; border-radius: 50%;
+
+        /* Individual gift card */
+        .cp-gift-card {
+          position: relative;
           border: 2px solid var(--beige-dkr);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; transition: all .22s; flex-shrink: 0;
+          border-radius: 16px;
+          overflow: hidden;
+          cursor: pointer;
+          background: white;
+          transition: border-color .22s, box-shadow .22s, transform .15s;
+          outline: none;
         }
-        .cp-gift--selected .cp-gift-check { background: var(--olive-500); border-color: var(--olive-500); color: white; }
+        .cp-gift-card:hover {
+          border-color: var(--olive-400);
+          box-shadow: 0 4px 18px rgba(90,107,46,.12);
+          transform: translateY(-2px);
+        }
+        .cp-gift-card--selected {
+          border-color: var(--olive-500);
+          box-shadow: 0 6px 24px rgba(90,107,46,.22);
+        }
+
+        /* Box image */
+        .cp-gift-card-img {
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          object-fit: cover;
+          display: block;
+          background: var(--beige-dk);
+          /* Transition for image swap */
+          transition: opacity .3s ease;
+        }
+
+        /* Image upload overlay — appears on hover of selected card */
+        .cp-gift-card-img-wrap {
+          position: relative;
+          overflow: hidden;
+        }
+        .cp-gift-card-img-overlay {
+          position: absolute; inset: 0;
+          background: rgba(26,31,13,.45);
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 4px;
+          opacity: 0;
+          transition: opacity .22s;
+          cursor: pointer;
+        }
+        .cp-gift-card-img-wrap:hover .cp-gift-card-img-overlay { opacity: 1; }
+        .cp-gift-card-img-overlay span {
+          font-size: 10px; color: white; letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+        }
+        .cp-gift-card-img-overlay svg { color: white; }
+
+        .cp-gift-card-body {
+          padding: 10px 12px 12px;
+        }
+        .cp-gift-card-title {
+          font-size: 12.5px; font-weight: 600; color: var(--olive-900);
+          margin-bottom: 2px; line-height: 1.3;
+        }
+        .cp-gift-card-sub {
+          font-size: 11px; color: #101010; line-height: 1.4; margin-bottom: 8px;
+        }
+        .cp-gift-card-price {
+          font-size: 14px; font-weight: 700; color: var(--olive-600);
+        }
+
+        /* Selected checkmark badge */
+        .cp-gift-card-check {
+          position: absolute; top: 8px; right: 8px;
+          width: 22px; height: 22px; border-radius: 50%;
+          background: var(--olive-500); border: 2px solid white;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 11px; color: white;
+          opacity: 0;
+          transform: scale(.6);
+          transition: opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+          box-shadow: 0 2px 8px rgba(90,107,46,.35);
+          pointer-events: none;
+        }
+        .cp-gift-card--selected .cp-gift-card-check {
+          opacity: 1; transform: scale(1);
+        }
+
+        /* Hidden file input */
+        .cp-gift-img-upload { display: none; }
 
         /* Gift message */
-        .cp-gift-msg-wrap { padding: 14px 0 0; animation: cpFadeDown .3s ease; }
-        @keyframes cpFadeDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        .cp-gift-msg-wrap {
+          padding: 12px 0 0;
+          animation: cpFadeDown .3s ease;
+        }
+        @keyframes cpFadeDown {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .cp-gift-msg {
           width: 100%;
           padding: 11px 14px;
@@ -277,7 +399,15 @@ export default function CartPage() {
         .cp-gift-msg:focus { border-color: var(--olive-400); }
         .cp-gift-msg::placeholder { color: rgba(30,35,16,.3); }
 
-        /* Coupon */
+        /* Outer gift panel wrapper */
+        .cp-gift-panel {
+          background: white;
+          border-radius: 18px;
+          border: 1px solid rgba(61,74,34,.07);
+          padding: 16px 18px 18px;
+        }
+
+        /* ── Coupon ── */
         .cp-coupon-row { display: flex; gap: 8px; }
         .cp-coupon-input {
           flex: 1; padding: 11px 14px;
@@ -312,7 +442,7 @@ export default function CartPage() {
         }
         .cp-coupon-remove:hover { color: var(--red); }
 
-        /* Price summary */
+        /* ── Price summary ── */
         .cp-summary-row {
           display: flex; justify-content: space-between;
           font-size: 13px; color: var(--mist); margin-bottom: 10px;
@@ -326,12 +456,12 @@ export default function CartPage() {
         .cp-summary-row span:last-child { font-weight: 500; color: var(--ink); }
         .cp-summary-row--total span:last-child { font-weight: 800; font-size: 20px; }
         .cp-free-tag {
-          background: var(--green); color: white;
+          background: #bdd4bf; color: white;
           font-size: 9px; font-weight: 700; letter-spacing: .12em;
           padding: 2px 8px; border-radius: 3px; text-transform: uppercase;
         }
 
-        /* CTA */
+        /* ── CTA ── */
         .cp-checkout-btn {
           display: flex; align-items: center; justify-content: center; gap: 10px;
           width: 100%; padding: 17px;
@@ -349,7 +479,7 @@ export default function CartPage() {
           box-shadow: 0 10px 36px rgba(26,31,13,.28);
         }
 
-        /* Empty */
+        /* ── Empty ── */
         .cp-empty {
           text-align: center; padding: 80px 20px;
           grid-column: 1 / -1;
@@ -369,41 +499,33 @@ export default function CartPage() {
         }
         .cp-empty-link:hover { background: var(--olive-600); }
 
-        /* ── Responsiveness ── */
+        /* ── Responsive ── */
         @media (max-width: 1024px) {
           .cp-layout { padding: 32px 24px 72px; }
         }
-        
         @media (max-width: 900px) {
           .cp-layout { grid-template-columns: 1fr; padding: 24px; gap: 24px; }
           .cp-right { position: static; }
         }
-        
         @media (max-width: 540px) {
-          .cp-layout { padding: 16px; gap: 16px; margin-top: 45px}
+          .cp-layout { padding: 16px; gap: 16px; margin-top: 45px; }
           .cp-panel-head { padding: 14px 16px; }
-          
-          /* Adjust Progress Section */
           .cp-progress { padding: 14px 16px; }
           .cp-dots { padding: 0 16px 14px; }
           .cp-dot-circle { width: 28px; height: 28px; font-size: 13px; }
-          
-          /* Adjust Item Layout */
           .cp-item { padding: 14px 16px; gap: 10px; }
           .cp-item-img { width: 72px; height: 72px; }
           .cp-item-name { font-size: 13px; }
           .cp-item-price { font-size: 15px; }
           .cp-qty-btn { width: 28px; height: 28px; font-size: 16px; }
           .cp-qty-val { min-width: 28px; font-size: 12px; }
-          
-          /* Adjust Gift/Coupon/Summary panels */
-          .cp-gift { padding: 14px; }
-          .cp-panel[style] { padding: 16px !important; }
+          .cp-gift-panel { padding: 14px 14px 16px; }
+          .cp-gift-card-title { font-size: 11.5px; }
+          .cp-gift-card-sub { font-size: 9px; }
         }
       `}</style>
 
       <div className="cp-root">
-        {/* Navbar replacing the old custom header */}
         <UpperNav />
         <ExitIntent />
 
@@ -507,7 +629,6 @@ export default function CartPage() {
                           )}
                         </div>
                       </div>
-                      {/* Show individual charm pieces for custom charm/keychain items */}
                       {item.selectedCharms && item.selectedCharms.length > 0 && (
                         <div style={{ background: 'var(--olive-50)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
@@ -532,34 +653,14 @@ export default function CartPage() {
               {/* ── RIGHT ── */}
               <div className="cp-right">
 
-                {/* Make it a Gift */}
-                <div
-                  className={`cp-gift${isGift ? ' cp-gift--selected' : ''}`}
-                  onClick={() => toggleGift()}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && toggleGift()}
-                >
-                  <div className="cp-gift-icon">🎁</div>
-                  <div className="cp-gift-body">
-                    <div className="cp-gift-title">Make it a Gift</div>
-                    <div className="cp-gift-sub">Gift wrap + personalised message card</div>
-                  </div>
-                  <div className="cp-gift-price">+₹{GIFT_CHARGE}</div>
-                  <div className="cp-gift-check">{isGift ? '✓' : ''}</div>
-                </div>
-
-                {isGift && (
-                  <div className="cp-gift-msg-wrap">
-                    <textarea
-                      className="cp-gift-msg"
-                      placeholder="Write a gift message (optional)…"
-                      value={giftMessage}
-                      onChange={e => setGiftMessage(e.target.value)}
-                      maxLength={160}
-                    />
-                  </div>
-                )}
+                {/* ── GIFT BOX SELECTOR ── */}
+                <GiftBoxSelector
+                  selectedGiftId={selectedGiftId}
+                  onSelect={handleSelectGift}
+                  giftMessage={giftMessage}
+                  onMessageChange={setGiftMessage}
+                  isGift={isGift}
+                />
 
                 {/* Coupon */}
                 <div className="cp-panel" style={{ padding: '18px 20px' }}>
@@ -615,15 +716,15 @@ export default function CartPage() {
                       }
                     </span>
                   </div>
-                  {isGift && (
+                  {activeGift && (
                     <div className="cp-summary-row">
-                      <span>🎁 Gift wrap</span>
-                      <span>₹{GIFT_CHARGE}</span>
+                      <span>🎁 {activeGift.title}</span>
+                      <span>₹{activeGift.price}</span>
                     </div>
                   )}
                   <div className="cp-summary-row cp-summary-row--total">
                     <span>Total</span>
-                    <span>₹{total.toLocaleString('en-IN')}</span>
+                    <span>₹{displayTotal.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -641,5 +742,111 @@ export default function CartPage() {
         </div>
       </div>
     </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   GiftBoxSelector — extracted sub-component
+   Renders two side-by-side gift box cards with image-swap support
+───────────────────────────────────────────────────────────────────────────── */
+function GiftBoxSelector({
+  selectedGiftId,
+  onSelect,
+  giftMessage,
+  onMessageChange,
+  isGift,
+}: {
+  selectedGiftId: string | null;
+  onSelect: (id: string) => void;
+  giftMessage: string;
+  onMessageChange: (msg: string) => void;
+  isGift: boolean;
+}) {
+  // Allow per-card image override via local file upload
+
+
+
+  return (
+    <div className="cp-gift-panel">
+      <div className="cp-gift-header">
+        <span className="cp-gift-heading">Make it a Gift</span>
+        <span className="cp-gift-optional">optional</span>
+      </div>
+
+      <div className="cp-gift-cards">
+        {GIFT_OPTIONS.map(opt => {
+          const isSelected = selectedGiftId === opt.id;
+          const imgSrc = opt.image;
+
+          return (
+            <div
+              key={opt.id}
+              className={`cp-gift-card${isSelected ? ' cp-gift-card--selected' : ''}`}
+              onClick={() => onSelect(opt.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === 'Enter' && onSelect(opt.id)}
+              aria-pressed={isSelected}
+            >
+              {/* Image with upload overlay */}
+              <div className="cp-gift-card-img-wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="cp-gift-card-img"
+                  src={imgSrc}
+                  alt={opt.title}
+                />
+                {/* Upload overlay — click triggers file input */}
+                {/* <label */}
+                  {/* className="cp-gift-card-img-overlay"
+                  htmlFor={`gift-img-upload-${opt.id}`}
+                  onClick={e => e.stopPropagation()} // don't toggle selection
+                  title="Change image" */}
+                {/* > */}
+                  {/* <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <span>Change</span> */}
+                {/* </label> */}
+                {/* <input
+                  id={`gift-img-upload-${opt.id}`}
+                  type="file"
+                  accept="image/*"
+                  className="cp-gift-img-upload"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImgUpload(opt.id, file);
+                  }}
+                /> */}
+              </div>
+
+              <div className="cp-gift-card-body">
+                <div className="cp-gift-card-title">{opt.title}</div>
+                <div className="cp-gift-card-sub">{opt.sub}</div>
+                <div className="cp-gift-card-price">+₹{opt.price}</div>
+              </div>
+
+              {/* Selected badge */}
+              <div className="cp-gift-card-check" aria-hidden="true">✓</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Gift message — only shown when a box is selected */}
+      
+        <div className="cp-gift-msg-wrap">
+          <textarea
+            className="cp-gift-msg"
+            placeholder="Write a Message for us (optional)…"
+            value={giftMessage}
+            onChange={e => onMessageChange(e.target.value)}
+            maxLength={160}
+          />
+        </div>
+      
+    </div>
   );
 }

@@ -618,6 +618,8 @@ const CSS = `
   cursor: pointer; text-align: left;
   color: var(--t2);
   transition: color .18s, border-color .18s, background .18s;
+  text-decoration: none;
+
 }
 .cs-sbbtn:hover {
   background: var(--gt);
@@ -650,7 +652,7 @@ const CSS = `
 
 /* Category name */
 .cs-sb-txt {
-  font-size: 13.5px; font-weight: 500;
+  font-size: 15px; font-weight: 500;
   letter-spacing: .01em; line-height: 1.3;
   flex: 1;
   color: inherit;
@@ -967,6 +969,8 @@ const CSS = `
     color: var(--t3);
     transition: color .18s, background .18s, border-color .18s;
     -webkit-tap-highlight-color: transparent;
+    text-decoration: none;
+
   }
   .ms-sbbtn:active { background: var(--gt); }
   .ms-sbbtn.on { color: var(--gd); background: var(--gp); border-left-color: var(--gd); }
@@ -984,7 +988,7 @@ const CSS = `
   .ms-sbbtn.on .ms-sb-thumb img { transform: scale(1.05); }
   
   .ms-sb-label {
-    font-size: 13px; font-weight: 600; letter-spacing: .01em;
+    font-size: 11px !important;  font-weight: 500 !important; letter-spacing: .01em;
     color: #101010; line-height: 1.3; text-align: center;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; width: 100%; padding: 0 2px;

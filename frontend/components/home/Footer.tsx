@@ -30,24 +30,8 @@ const footerLinks = {
 export default function Footer() {
   return (
     <footer className={styles.footer}>
-      {/* Newsletter strip */}
-      <div className={styles.newsletter}>
-        <div className={styles.newsletterInner}>
-          <div>
-            <h3 className={styles.newsletterTitle}>Stay in the loop</h3>
-            <p className={styles.newsletterSub}>New arrivals, exclusive offers & stories — delivered to you.</p>
-          </div>
-          <div className={styles.newsletterForm}>
-            <input
-              type="email"
-              placeholder="Your email address"
-              className={styles.newsletterInput}
-            />
-            <button className={styles.newsletterBtn}>Subscribe</button>
-          </div>
-        </div>
-      </div>
-
+     
+      
       {/* Main footer */}
       <div className={styles.main}>
         <div className={styles.brand}>

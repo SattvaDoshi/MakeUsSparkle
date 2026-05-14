@@ -64,6 +64,7 @@ body {
   color: var(--charcoal);
   line-height: 1.6;
   overflow-x: hidden;
+  /* padding-bottom: 64px;  */
 }
 
 /* Scrollbar */

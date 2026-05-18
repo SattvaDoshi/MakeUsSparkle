@@ -1,4 +1,5 @@
 import styleService from "../services/style.service.js";
+import imageService from "../services/image.service.js";
 
 export async function getStyles(req, res) {
 	try {
@@ -22,7 +23,13 @@ export async function getStyleById(req, res) {
 
 export async function createStyle(req, res) {
 	try {
-		const result = await styleService.createStyle(req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "styles");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await styleService.createStyle(data);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create style error:", error);
@@ -32,7 +39,13 @@ export async function createStyle(req, res) {
 
 export async function updateStyle(req, res) {
 	try {
-		const result = await styleService.updateStyle(req.params.id, req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "styles");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await styleService.updateStyle(req.params.id, data);
 		res.json(result);
 	} catch (error) {
 		console.error("Update style error:", error);

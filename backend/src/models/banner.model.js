@@ -2,6 +2,12 @@ import mongoose from "mongoose";
 
 const bannerSchema = new mongoose.Schema(
   {
+    bannerType: {
+      type: String,
+      enum: ["promo", "main"],
+      default: "promo",
+      index: true,
+    },
     // Legacy/admin text field kept for compatibility.
     text: {
       type: String,

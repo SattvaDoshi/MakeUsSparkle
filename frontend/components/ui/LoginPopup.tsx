@@ -204,8 +204,8 @@ export default function LoginPopup() {
               </div>
               <select className={styles.input} value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
                 <option value="">Gender (optional)</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
+                <option value="women">Women</option>
+                <option value="men">Men</option>
                 <option value="other">Prefer not to say</option>
               </select>
               <input

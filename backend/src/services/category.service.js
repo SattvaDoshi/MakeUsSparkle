@@ -4,7 +4,7 @@ import SubCategory from "../models/subCategory.model.js";
 class CategoryService {
 	async getCategories() {
 		try {
-			const categories = await Category.find();
+			const categories = await Category.find().populate("gender").sort({ name: 1 });
 			return { success: true, categories };
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -61,7 +61,9 @@ class CategoryService {
 	async getSubCategories(categoryId) {
 		try {
 			const query = categoryId ? { category: categoryId } : {};
-			const subcategories = await SubCategory.find(query).populate("category");
+			const subcategories = await SubCategory.find(query)
+				.populate({ path: "category", populate: { path: "gender" } })
+				.sort({ name: 1 });
 			return { success: true, subcategories };
 		} catch (error) {
 			console.error("Error fetching subcategories:", error);

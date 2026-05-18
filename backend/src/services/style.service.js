@@ -3,7 +3,7 @@ import Style from "../models/style.model.js";
 class StyleService {
 	async getStyles() {
 		try {
-			const styles = await Style.find();
+			const styles = await Style.find().populate("gender").sort({ name: 1 });
 			return { success: true, styles };
 		} catch (error) {
 			throw new Error(error.message);

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/lib/authContext";
@@ -42,7 +43,7 @@ type AdminProduct = {
 	description?: string;
 	price?: number;
 	stock?: number;
-	gender?: "male" | "female" | "unisex";
+	gender?: "men" | "women" | "kids" | "unisex";
 	createdAt?: string;
 };
 
@@ -107,6 +108,7 @@ type AdminCoupon = {
 
 type AdminBanner = {
 	_id: string;
+	bannerType?: "promo" | "main";
 	text?: string;
 	title?: string;
 	subtitle?: string;
@@ -123,6 +125,14 @@ type AdminBanner = {
 		_id: string;
 		title?: string;
 	};
+};
+
+type MainBanner = {
+	_id: string;
+	bannerType?: "main";
+	image?: string;
+	link?: string;
+	isActive?: boolean;
 };
 
 type AdminReview = {
@@ -151,6 +161,36 @@ type AdminCharmItem = {
 	active?: boolean;
 };
 
+type AdminCategory = {
+	_id: string;
+	name?: string;
+	description?: string;
+	image?: string;
+	gender?: { _id?: string; name?: string } | string;
+};
+
+type AdminSubCategory = {
+	_id: string;
+	name?: string;
+	category?: { _id?: string; name?: string; gender?: { _id?: string; name?: string } | string } | string;
+	image?: string;
+};
+
+type AdminStyle = {
+	_id: string;
+	name?: string;
+	image?: string;
+	gender?: { _id?: string; name?: string } | string;
+};
+
+type AdminGender = {
+	_id: string;
+	name?: string;
+	slug?: string;
+	image?: string;
+	isActive?: boolean;
+};
+
 type PagedResponse<T, K extends string> = {
 	success: boolean;
 	pagination: {
@@ -175,27 +215,6 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 ];
 
 // order/payment status lists moved to dedicated tab components
-
-type ProductFormState = {
-	id: string;
-	title: string;
-	category: string;
-	subCategory: string;
-	style: string;
-	gender: "male" | "female" | "unisex";
-	price: string;
-	discountedPrice: string;
-	discountTag: string;
-	stock: string;
-	description: string;
-	about: string;
-	tags: string[];
-	mainImage: string | null;
-	images: string[];
-	colors: Array<{ name: string; hex: string }>;
-	sizes: string[];
-	variants: Array<{ color: string; size: string; stock: number; image?: string; imagePublicId?: string }>;
-};
 
 type UserFormState = {
 	id: string;
@@ -262,27 +281,6 @@ type CharmFormState = {
 };
 
 type ModalKind = "product" | "user" | "coupon" | "banner" | "charm" | null;
-
-const defaultProductForm: ProductFormState = {
-	id: "",
-	title: "",
-	category: "",
-	subCategory: "",
-	style: "",
-	gender: "unisex",
-	price: "",
-	discountedPrice: "",
-	discountTag: "",
-	stock: "",
-	description: "",
-	about: "",
-	tags: [],
-	mainImage: null,
-	images: [],
-	colors: [],
-	sizes: [],
-	variants: [],
-};
 
 const defaultUserForm: UserFormState = {
 	id: "",
@@ -356,14 +354,6 @@ const createActionsByTab: Partial<Record<TabKey, string>> = {
 	charms: "Add Charm",
 };
 
-const normalizeGender = (value?: string | null): ProductFormState["gender"] => {
-	if (value === "male" || value === "female" || value === "unisex") {
-		return value;
-	}
-
-	return "unisex";
-};
-
 export default function AdminDashboardPage() {
 	const router = useRouter();
 	const { user, signOut } = useAuth();
@@ -380,18 +370,19 @@ export default function AdminDashboardPage() {
 	const [payments, setPayments] = useState<AdminOrder[]>([]);
 	const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
 	const [banners, setBanners] = useState<AdminBanner[]>([]);
+	const [mainBanners, setMainBanners] = useState<MainBanner[]>([]);
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
 
-	const [categories, setCategories] = useState<Array<{ _id: string; name?: string; image?: string }>>([]);
-	const [subcategories, setSubCategories] = useState<Array<any>>([]);
-	const [styles, setStyles] = useState<Array<{ _id: string; name?: string }>>([]);
-	const [genders, setGenders] = useState<Array<{ _id: string; name?: string; isActive?: boolean }>>([]);
+	const [categories, setCategories] = useState<AdminCategory[]>([]);
+	const [subcategories, setSubCategories] = useState<AdminSubCategory[]>([]);
+	const [styles, setStyles] = useState<AdminStyle[]>([]);
+	const [genders, setGenders] = useState<AdminGender[]>([]);
 
-	const [productForm, setProductForm] = useState(defaultProductForm);
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
 	const [bannerForm, setBannerForm] = useState(defaultBannerForm);
+	const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 	const [charmForm, setCharmForm] = useState(defaultCharmForm);
 	const [modalKind, setModalKind] = useState<ModalKind>(null);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
@@ -456,6 +447,11 @@ export default function AdminDashboardPage() {
 		setBanners(bannersResult.banners);
 	}, []);
 
+	const loadMainBanners = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; banners: MainBanner[] }>("/admin/banners/main");
+		setMainBanners(result.banners || []);
+	}, []);
+
 	const loadReviews = useCallback(async () => {
 		const reviewsResult = await apiRequest<PagedResponse<AdminReview, "reviews">>("/admin/reviews?limit=100");
 		setReviews(reviewsResult.reviews);
@@ -467,22 +463,22 @@ export default function AdminDashboardPage() {
 	}, []);
 
 	const loadCategories = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; categories: Array<any> }>("/categories");
+		const result = await apiRequest<{ success: boolean; categories: AdminCategory[] }>("/categories");
 		setCategories(result.categories || []);
 	}, []);
 
 	const loadSubCategories = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; subcategories: Array<any> }>("/subcategories");
+		const result = await apiRequest<{ success: boolean; subcategories: AdminSubCategory[] }>("/subcategories");
 		setSubCategories(result.subcategories || []);
 	}, []);
 
 	const loadStyles = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; styles: Array<any> }>("/styles");
+		const result = await apiRequest<{ success: boolean; styles: AdminStyle[] }>("/styles");
 		setStyles(result.styles || []);
 	}, []);
 
 	const loadGenders = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; genders: Array<any> }>("/genders");
+		const result = await apiRequest<{ success: boolean; genders: AdminGender[] }>("/genders");
 		setGenders(result.genders || []);
 	}, []);
 
@@ -498,7 +494,7 @@ export default function AdminDashboardPage() {
 			if (tab === "orders") await loadOrders();
 			if (tab === "payments") await loadPayments();
 			if (tab === "coupons") await loadCoupons();
-			if (tab === "banners") await loadBanners();
+			if (tab === "banners") await Promise.all([loadBanners(), loadMainBanners()]);
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
@@ -507,7 +503,7 @@ export default function AdminDashboardPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders]);
+	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -525,7 +521,6 @@ export default function AdminDashboardPage() {
 
 	const openCreateModal = () => {
 		if (activeTab === "products") {
-			setProductForm(defaultProductForm);
 			setSelectedProduct(null);
 			setModalMode("create");
 			setModalKind("product");
@@ -545,6 +540,7 @@ export default function AdminDashboardPage() {
 
 		if (activeTab === "banners") {
 			setBannerForm(defaultBannerForm);
+			setBannerImageFile(null);
 			setModalMode("create");
 			setModalKind("banner");
 		}
@@ -610,37 +606,6 @@ export default function AdminDashboardPage() {
 			await loadOrders();
 			await loadHome();
 		}, "Order deleted");
-	};
-
-	const handleProductSubmit = async (event: FormEvent) => {
-		event.preventDefault();
-		const payload = {
-			title: productForm.title,
-			description: productForm.description,
-			price: Number(productForm.price),
-			stock: Number(productForm.stock),
-			gender: productForm.gender,
-		};
-
-		await runAction(async () => {
-			if (productForm.id) {
-				await apiRequest(`/admin/products/${productForm.id}`, {
-					method: "PUT",
-					body: JSON.stringify(payload),
-				});
-			} else {
-				await apiRequest("/admin/products", {
-					method: "POST",
-					body: JSON.stringify(payload),
-				});
-			}
-
-			setModalKind(null);
-			setModalMode("create");
-			setProductForm(defaultProductForm);
-			await loadProducts();
-			await loadHome();
-		}, productForm.id ? "Product updated" : "Product created");
 	};
 
 	const handleUserSubmit = async (event: FormEvent) => {
@@ -734,23 +699,22 @@ export default function AdminDashboardPage() {
 		}, "Coupon deleted");
 	};
 
-	// Categories CRUD
-	const handleCreateCategory = async (payload: { name: string; description?: string; image?: string }) => {
+	// Categories CRUD — all handlers accept FormData (supports image file upload)
+	const handleCreateCategory = async (formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest("/admin/categories", { method: "POST", body: JSON.stringify(payload) });
+			await apiRequest("/admin/categories", { method: "POST", body: formData });
 			await loadCategories();
 		}, "Category created");
 	};
 
-	const handleEditCategory = async (id: string, payload: any) => {
+	const handleEditCategory = async (id: string, formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest(`/admin/categories/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await apiRequest(`/admin/categories/${id}`, { method: "PUT", body: formData });
 			await loadCategories();
 		}, "Category updated");
 	};
 
 	const handleDeleteCategory = async (id: string) => {
-		if (!window.confirm("Delete this category?")) return;
 		await runAction(async () => {
 			await apiRequest(`/admin/categories/${id}`, { method: "DELETE" });
 			await loadCategories();
@@ -758,22 +722,21 @@ export default function AdminDashboardPage() {
 	};
 
 	// Subcategories CRUD
-	const handleCreateSubCategory = async (payload: { name: string; category: string; image?: string }) => {
+	const handleCreateSubCategory = async (formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest("/admin/subcategories", { method: "POST", body: JSON.stringify(payload) });
+			await apiRequest("/admin/subcategories", { method: "POST", body: formData });
 			await loadSubCategories();
 		}, "Subcategory created");
 	};
 
-	const handleEditSubCategory = async (id: string, payload: any) => {
+	const handleEditSubCategory = async (id: string, formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest(`/admin/subcategories/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await apiRequest(`/admin/subcategories/${id}`, { method: "PUT", body: formData });
 			await loadSubCategories();
 		}, "Subcategory updated");
 	};
 
 	const handleDeleteSubCategory = async (id: string) => {
-		if (!window.confirm("Delete this subcategory?")) return;
 		await runAction(async () => {
 			await apiRequest(`/admin/subcategories/${id}`, { method: "DELETE" });
 			await loadSubCategories();
@@ -781,22 +744,21 @@ export default function AdminDashboardPage() {
 	};
 
 	// Styles CRUD
-	const handleCreateStyle = async (payload: { name: string; image?: string }) => {
+	const handleCreateStyle = async (formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest("/admin/styles", { method: "POST", body: JSON.stringify(payload) });
+			await apiRequest("/admin/styles", { method: "POST", body: formData });
 			await loadStyles();
 		}, "Style created");
 	};
 
-	const handleEditStyle = async (id: string, payload: any) => {
+	const handleEditStyle = async (id: string, formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest(`/admin/styles/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await apiRequest(`/admin/styles/${id}`, { method: "PUT", body: formData });
 			await loadStyles();
 		}, "Style updated");
 	};
 
 	const handleDeleteStyle = async (id: string) => {
-		if (!window.confirm("Delete this style?")) return;
 		await runAction(async () => {
 			await apiRequest(`/admin/styles/${id}`, { method: "DELETE" });
 			await loadStyles();
@@ -804,22 +766,21 @@ export default function AdminDashboardPage() {
 	};
 
 	// Genders CRUD
-	const handleCreateGender = async (payload: { name: string; slug?: string; image?: string }) => {
+	const handleCreateGender = async (formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest("/admin/genders", { method: "POST", body: JSON.stringify(payload) });
+			await apiRequest("/admin/genders", { method: "POST", body: formData });
 			await loadGenders();
 		}, "Gender created");
 	};
 
-	const handleEditGender = async (id: string, payload: any) => {
+	const handleEditGender = async (id: string, formData: FormData) => {
 		await runAction(async () => {
-			await apiRequest(`/admin/genders/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+			await apiRequest(`/admin/genders/${id}`, { method: "PUT", body: formData });
 			await loadGenders();
 		}, "Gender updated");
 	};
 
 	const handleDeleteGender = async (id: string) => {
-		if (!window.confirm("Delete this gender?")) return;
 		await runAction(async () => {
 			await apiRequest(`/admin/genders/${id}`, { method: "DELETE" });
 			await loadGenders();
@@ -829,38 +790,46 @@ export default function AdminDashboardPage() {
 
 	const handleBannerSubmit = async (event: FormEvent) => {
 		event.preventDefault();
-		const payload = {
-			text: bannerForm.text,
-			title: bannerForm.title,
-			subtitle: bannerForm.subtitle,
-			tag: bannerForm.tag,
-			cta: bannerForm.cta,
-			link: bannerForm.link,
-			description: bannerForm.description,
-			product: bannerForm.product || undefined,
-			tags: bannerForm.tags.split(",").map((item) => item.trim()).filter(Boolean),
-			image: bannerForm.image,
-			imageAlt: bannerForm.imageAlt,
-			isActive: bannerForm.isActive,
-			sortOrder: Number(bannerForm.sortOrder || 0),
-		};
+		const formData = new FormData();
+		formData.append("text", bannerForm.text);
+		formData.append("title", bannerForm.title);
+		formData.append("subtitle", bannerForm.subtitle);
+		formData.append("tag", bannerForm.tag);
+		formData.append("cta", bannerForm.cta);
+		formData.append("link", bannerForm.link);
+		formData.append("description", bannerForm.description);
+		if (bannerForm.product) {
+			formData.append("product", bannerForm.product);
+		}
+		formData.append(
+			"tags",
+			JSON.stringify(bannerForm.tags.split(",").map((item) => item.trim()).filter(Boolean))
+		);
+		formData.append("imageAlt", bannerForm.imageAlt);
+		formData.append("isActive", String(bannerForm.isActive));
+		formData.append("sortOrder", String(Number(bannerForm.sortOrder || 0)));
+
+		if (bannerImageFile) {
+			formData.append("image", bannerImageFile);
+		}
 
 		await runAction(async () => {
 			if (bannerForm.id) {
 				await apiRequest(`/admin/banners/${bannerForm.id}`, {
 					method: "PUT",
-					body: JSON.stringify(payload),
+					body: formData,
 				});
 			} else {
 				await apiRequest("/admin/banners", {
 					method: "POST",
-					body: JSON.stringify(payload),
+					body: formData,
 				});
 			}
 
 			setModalKind(null);
 			setModalMode("create");
 			setBannerForm(defaultBannerForm);
+			setBannerImageFile(null);
 			await loadBanners();
 		}, bannerForm.id ? "Banner updated" : "Banner created");
 	};
@@ -874,6 +843,37 @@ export default function AdminDashboardPage() {
 			await apiRequest(`/admin/banners/${id}`, { method: "DELETE" });
 			await loadBanners();
 		}, "Banner deleted");
+	};
+
+	const handleCreateMainBanner = async (payload: FormData) => {
+		await runAction(async () => {
+			await apiRequest("/admin/banners/main", {
+				method: "POST",
+				body: payload,
+			});
+			await loadMainBanners();
+		}, "Main banner created");
+	};
+
+	const handleUpdateMainBanner = async (id: string, payload: FormData) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/banners/main/${id}`, {
+				method: "PUT",
+				body: payload,
+			});
+			await loadMainBanners();
+		}, "Main banner updated");
+	};
+
+	const handleDeleteMainBanner = async (id: string) => {
+		if (!window.confirm("Delete this main banner?")) {
+			return;
+		}
+
+		await runAction(async () => {
+			await apiRequest(`/admin/banners/main/${id}`, { method: "DELETE" });
+			await loadMainBanners();
+		}, "Main banner deleted");
 	};
 
 	const handleDeleteReview = async (productId: string, reviewId: string) => {
@@ -1000,7 +1000,7 @@ export default function AdminDashboardPage() {
 			setModalMode("edit");
 			setModalKind("coupon");
 		}} onDelete={handleDeleteCoupon} 	/>;
-		if (activeTab === "banners") return <AdminBannersTab banners={banners} onEdit={(entry) => {
+		if (activeTab === "banners") return <AdminBannersTab banners={banners} mainBanners={mainBanners} onEdit={(entry) => {
 			setBannerForm({
 				id: entry._id,
 				text: entry.text ?? "",
@@ -1017,9 +1017,10 @@ export default function AdminDashboardPage() {
 				isActive: entry.isActive !== false,
 				sortOrder: String(entry.sortOrder ?? 0),
 			});
+			setBannerImageFile(null);
 			setModalMode("edit");
 			setModalKind("banner");
-		}} onDelete={handleDeleteBanner} />;
+		}} onDelete={handleDeleteBanner} onCreateMainBanner={handleCreateMainBanner} onUpdateMainBanner={handleUpdateMainBanner} onDeleteMainBanner={handleDeleteMainBanner} />;
 		if (activeTab === "charms") return <AdminCharmsTab charms={charms} onEdit={(entry) => {
 			setCharmForm({
 				id: entry._id,
@@ -1067,6 +1068,7 @@ export default function AdminDashboardPage() {
 		const closeModal = () => {
 			setModalKind(null);
 			setModalMode("create");
+			setBannerImageFile(null);
 		};
 
 		if (modalKind === "product") {
@@ -1144,7 +1146,7 @@ export default function AdminDashboardPage() {
 							<input placeholder="Subcategory IDs (comma separated)" value={couponForm.applicableSubCategories ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableSubCategories: event.target.value }))} />
 							<input placeholder="Style IDs (comma separated)" value={couponForm.applicableStyles ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableStyles: event.target.value }))} />
 							<input placeholder="Product IDs (comma separated)" value={couponForm.applicableProducts ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProducts: event.target.value }))} />
-							<input placeholder="Types: male,female,unisex" value={couponForm.applicableProductTypes ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProductTypes: event.target.value }))} />
+							<input placeholder="Types: men,women,kids,unisex" value={couponForm.applicableProductTypes ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProductTypes: event.target.value }))} />
 							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
 							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isFeatured} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFeatured: event.target.checked }))} />Featured (show New badge)</label>
 							<div className="admin-inline-actions">
@@ -1185,7 +1187,15 @@ export default function AdminDashboardPage() {
 								const file = event.target.files?.[0] || null;
 								setCharmForm((prev) => ({ ...prev, imageFile: file }));
 							}} />
-							{charmForm.imageUrl && !charmForm.imageFile && <img src={charmForm.imageUrl} alt="Charm Preview" style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8 }} />}
+							{charmForm.imageUrl && !charmForm.imageFile && (
+								<Image
+									src={charmForm.imageUrl}
+									alt="Charm Preview"
+									width={60}
+									height={60}
+									style={{ objectFit: "contain", borderRadius: 8 }}
+								/>
+							)}
 							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.customisable} onChange={(event) => setCharmForm((prev) => ({ ...prev, customisable: event.target.checked }))} />Customisable Text?</label>
 							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.hasPhotoUpload} onChange={(event) => setCharmForm((prev) => ({ ...prev, hasPhotoUpload: event.target.checked }))} />Has Photo Upload?</label>
 							<label className="admin-checkbox"><input type="checkbox" checked={charmForm.active} onChange={(event) => setCharmForm((prev) => ({ ...prev, active: event.target.checked }))} />Active</label>
@@ -1212,12 +1222,12 @@ export default function AdminDashboardPage() {
 						<input placeholder="CTA Text" value={bannerForm.cta ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, cta: event.target.value }))} />
 						<input placeholder="Banner Text" value={bannerForm.text ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, text: event.target.value }))} required />
 						<input placeholder="Link" value={bannerForm.link ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, link: event.target.value }))} />
-						<input placeholder="Image URL" value={bannerForm.image ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, image: event.target.value }))} />
+						<input type="file" accept="image/*" onChange={(event) => {
+							const file = event.target.files?.[0] || null;
+							setBannerImageFile(file);
+						}} />
 						<input placeholder="Image Alt" value={bannerForm.imageAlt ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, imageAlt: event.target.value }))} />
 						<input placeholder="Sort Order" type="number" value={bannerForm.sortOrder ?? "0"} onChange={(event) => setBannerForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
-						<input placeholder="Product Id (optional)" value={bannerForm.product ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, product: event.target.value }))} />
-						<input placeholder="Tags comma separated" value={bannerForm.tags ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, tags: event.target.value }))} />
-						<textarea placeholder="Description" value={bannerForm.description ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, description: event.target.value }))} />
 						<label className="admin-checkbox"><input type="checkbox" checked={bannerForm.isActive} onChange={(event) => setBannerForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
 						<div className="admin-inline-actions">
 							<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Banner" : "Create Banner"}</button>

@@ -23,6 +23,14 @@ export interface CatalogStyle {
   slug: string;
 }
 
+export interface CatalogGender {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  isActive: boolean;
+}
+
 export interface CatalogColor {
   label: string;
   hex: string;
@@ -50,7 +58,7 @@ export interface CatalogProduct {
   styleSlug: string;
   type: string;
   subtype?: string;
-  gender: "male" | "female" | "unisex";
+  gender: "men" | "women" | "kids" | "unisex";
   stock: number;
   badge: string | null;
   offer: string | null;
@@ -91,6 +99,14 @@ interface BackendStyle {
   image?: string;
 }
 
+interface BackendGender {
+  _id: string;
+  name?: string;
+  slug?: string;
+  image?: string;
+  isActive?: boolean;
+}
+
 interface BackendReview {
   rating?: number;
 }
@@ -118,7 +134,7 @@ interface BackendProduct {
   category?: BackendMaybeRef;
   subCategory?: BackendMaybeRef;
   style?: BackendMaybeRef;
-  gender?: "male" | "female" | "unisex";
+  gender?: "men" | "women" | "kids" | "unisex";
   stock?: number;
   tags?: string[];
   faqs?: Array<{ question: string; answer: string }>;
@@ -190,6 +206,17 @@ function toStyle(item: BackendStyle): CatalogStyle {
     name,
     image: item.image,
     slug: toSlug(name),
+  };
+}
+
+function toGender(item: BackendGender): CatalogGender {
+  const name = item.name || "Gender";
+  return {
+    id: item._id,
+    name,
+    slug: item.slug || toSlug(name),
+    image: item.image,
+    isActive: item.isActive !== false,
   };
 }
 
@@ -313,6 +340,11 @@ export async function fetchCatalogSubCategories(categoryId?: string): Promise<Ca
 export async function fetchCatalogStyles(): Promise<CatalogStyle[]> {
   const data = await apiRequest<{ success: boolean; styles?: BackendStyle[] }>("/styles");
   return (data.styles || []).map(toStyle);
+}
+
+export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
+  const data = await apiRequest<{ success: boolean; genders?: BackendGender[] }>("/genders");
+  return (data.genders || []).map(toGender).filter((gender) => gender.isActive);
 }
 
 export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {

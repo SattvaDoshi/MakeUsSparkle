@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useGender } from '@/lib/genderContext';
 import UpperNav from '@/components/ui/UpperNav';
 import ProductsPage from '@/components/product/ProductPage';
 import { fetchCatalogProducts } from '@/lib/catalogApi';
@@ -176,6 +177,7 @@ function CircleFilter({
 export default function SubcategoryPage({ type = 'necklace' }: { type?: string }) {
   const resolvedType = (type || 'necklace').toLowerCase();
   const [dynamicItems, setDynamicItems] = useState<SubcategoryItem[]>([]);
+  const { gender } = useGender();
 
   const displayLabel = resolvedType
     .replace(/-/g, ' ')
@@ -187,7 +189,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
     heading: displayLabel.split(' ')[0] || 'Subcategory',
     tagline: 'Edit',
     desc: 'Curated live from the latest catalog data.',
-    backHref: '/categories/women/jewellery',
+    backHref: `/categories/${gender || 'women'}/jewellery`,
     items: dynamicItems,
   };
 

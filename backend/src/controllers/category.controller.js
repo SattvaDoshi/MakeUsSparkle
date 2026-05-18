@@ -1,4 +1,5 @@
 import categoryService from "../services/category.service.js";
+import imageService from "../services/image.service.js";
 
 export async function getCategories(req, res) {
 	try {
@@ -22,7 +23,13 @@ export async function getCategoryById(req, res) {
 
 export async function createCategory(req, res) {
 	try {
-		const result = await categoryService.createCategory(req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "categories");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await categoryService.createCategory(data);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create category error:", error);
@@ -32,7 +39,13 @@ export async function createCategory(req, res) {
 
 export async function updateCategory(req, res) {
 	try {
-		const result = await categoryService.updateCategory(req.params.id, req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "categories");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await categoryService.updateCategory(req.params.id, data);
 		res.json(result);
 	} catch (error) {
 		console.error("Update category error:", error);
@@ -63,7 +76,13 @@ export async function getSubCategories(req, res) {
 
 export async function createSubCategory(req, res) {
 	try {
-		const result = await categoryService.createSubCategory(req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "subcategories");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await categoryService.createSubCategory(data);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create subcategory error:", error);
@@ -73,7 +92,13 @@ export async function createSubCategory(req, res) {
 
 export async function updateSubCategory(req, res) {
 	try {
-		const result = await categoryService.updateSubCategory(req.params.id, req.body);
+		const data = { ...req.body };
+		if (req.file) {
+			const uploaded = await imageService.uploadImage(req.file.buffer, "subcategories");
+			data.image = uploaded.url;
+			data.imagePublicId = uploaded.publicId;
+		}
+		const result = await categoryService.updateSubCategory(req.params.id, data);
 		res.json(result);
 	} catch (error) {
 		console.error("Update subcategory error:", error);

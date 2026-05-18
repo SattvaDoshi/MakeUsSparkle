@@ -76,7 +76,7 @@ const OFFERS = [
   {
     code: "MEN12",
     name: "12% off Mens Collection",
-    description: "Valid on male/unisex products",
+    description: "Valid on men/unisex products",
     discountType: "percentage",
     discountValue: 12,
     maxDiscount: 500,
@@ -84,7 +84,7 @@ const OFFERS = [
     usageLimit: 300,
     offerCategory: "all",
     image: "/images/newHero.png",
-    applicableProductTypes: ["male", "unisex"],
+    applicableProductTypes: ["men", "unisex"],
   },
 ];
 

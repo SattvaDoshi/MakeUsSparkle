@@ -384,8 +384,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										<option value="">Select Gender...</option>
 										{(genders.length > 0 ? genders : [
 											{ _id: "unisex", title: "Unisex" },
-											{ _id: "female", title: "Female" },
-											{ _id: "male", title: "Male" },
+											{ _id: "women", title: "Women" },
+											{ _id: "men", title: "Men" },
 										]).map((g: any) => (
 											<option key={g._id} value={g._id}>
 												{g.name || g.title}

@@ -414,17 +414,24 @@ const [sort, setSort] = useState<SortOption>('default');
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
-    
 
-    if (gender === 'women') {
+    if (gender) {
       list = list.filter((p) => {
-        const productGender = (p as Product & { gender?: string }).gender;
-        return productGender === 'female' || productGender === 'unisex';
-      });
-    } else if (gender === 'men') {
-      list = list.filter((p) => {
-        const productGender = (p as Product & { gender?: string }).gender;
-        return productGender === 'male' || productGender === 'unisex';
+        const productGender = (p as Product & { gender?: string }).gender || 'unisex';
+
+        if (gender === 'women') {
+          return productGender === 'women' || productGender === 'unisex';
+        }
+
+        if (gender === 'men') {
+          return productGender === 'men' || productGender === 'unisex';
+        }
+
+        if (gender === 'kids') {
+          return productGender === 'unisex' || (p.tags || []).some((tag) => /kid|child|children/i.test(tag));
+        }
+
+        return true;
       });
     }
 

@@ -114,7 +114,7 @@ function ReviewModal({ itemName, onClose, onSubmit }: ReviewModalProps) {
   );
 }
 
-function LegacyProfileSection() {
+export function LegacyProfileSection() {
   const [view, setView] = useState<View>('main');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
@@ -553,7 +553,6 @@ export default function ProfileSection() {
 
   const addresses = user?.addresses ?? [];
   const rewardPoints = useMemo(() => Math.max(120, orders.length * 40 + addresses.length * 10), [orders.length, addresses.length]);
-  const totalReviewed = 0;
   const pendingReviews = orders.reduce((count, order) => count + order.items.length, 0);
 
   const tier =

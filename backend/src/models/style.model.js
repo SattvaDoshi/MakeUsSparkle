@@ -5,7 +5,7 @@ const styleSchema = new mongoose.Schema({
   image: String,
   slug: { type: String, trim: true, lowercase: true, index: true },
   gender: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed,
     ref: "Gender",
   },
 });

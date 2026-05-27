@@ -33,6 +33,8 @@ export function GenderProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedGender = window.localStorage.getItem("selectedGender");
     if (storedGender) {
+      // eslint-disable-next-line no-console
+      console.log("GenderProvider: loaded selectedGender from localStorage:", storedGender);
       setGenderState(storedGender);
     }
   }, []);
@@ -46,11 +48,13 @@ export function GenderProvider({ children }: { children: ReactNode }) {
 
         const nextGenders = items.length > 0 ? items : DEFAULT_GENDERS;
         setGenders(nextGenders);
-        setGenderState((currentGender) =>
-          nextGenders.some((item) => item.slug === currentGender)
-            ? currentGender
-            : nextGenders[0]?.slug || "women"
-        );
+        setGenderState((currentGender) => {
+          const keep = nextGenders.some((item) => item.slug === currentGender);
+          const chosen = keep ? currentGender : nextGenders[0]?.slug || "women";
+          // eslint-disable-next-line no-console
+          console.log("GenderProvider: genders fetched; current:", currentGender, "-> chosen:", chosen, "available:", nextGenders.map(g=>g.slug));
+          return chosen;
+        });
       })
       .catch(() => {
         if (mounted) {
@@ -74,10 +78,14 @@ export function GenderProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setGender = (nextGender: Gender) => {
+    // eslint-disable-next-line no-console
+    console.log("GenderProvider.setGender ->", nextGender);
     setGenderState(nextGender);
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("selectedGender", nextGender);
+      // eslint-disable-next-line no-console
+      console.log("GenderProvider: stored selectedGender:", nextGender);
     }
   };
 

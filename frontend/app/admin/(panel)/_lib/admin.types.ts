@@ -19,7 +19,6 @@ export type AdminUser = {
 
 export type AdminProduct = {
 	_id: string;
-	category?: { _id?: string; name?: string; gender?: AdminGenderRef } | string;
 	title: string;
 	description?: string;
 	about?: string;
@@ -27,7 +26,6 @@ export type AdminProduct = {
 	subCategory?: { _id: string; name?: string; title?: string } | string;
 	style?: { _id: string; name?: string; title?: string } | string;
 	price?: number;
-	gender?: AdminGenderRef;
 	discountedPrice?: number;
 	discountTag?: string;
 	stock?: number;

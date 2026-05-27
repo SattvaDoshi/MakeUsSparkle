@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { fetchCatalogStyles, slugifyCatalog } from "@/lib/catalogApi";
 
@@ -14,52 +15,92 @@ import "swiper/css";
 import "swiper/css/effect-coverflow";
 import "swiper/css/navigation";
 
-const womenStyles = [
-  { id: 1, name: "Soft Girl",          slug: "soft-girl",       img: "/images/IslandGirl.jpg",  fallback: "/images/IslandGirl.jpg" },
-  { id: 2, name: "Glam Look",          slug: "glam-look",       img: "/images/GlamLook.jpg",    fallback: "/images/GlamLook.jpg" },
-  { id: 3, name: "Island Girl",        slug: "island-girl",     img: "/images/IslandGirl.jpg",  fallback: "/images/IslandGirl.jpg" },
-  { id: 4, name: "Office Jewellery",   slug: "office-jewellery",img: "/images/GlamLook.jpg",    fallback: "/images/hero1.png" },
-  { id: 5, name: "Maximalist",         slug: "maximalist",      img: "/images/Maximalist.jpg",  fallback: "/images/FairyCoded.jpg" },
-  { id: 6, name: "Fairy Coded",        slug: "fairy-coded",     img: "/images/FairyCoded.jpg",  fallback: "/images/FairyCoded.jpg" },
-];
-
-const menStyles = [
-  { id: 1, name: "Street Edge",     slug: "men-street-edge", img: "/images/men-street.jpg",    fallback: "/images/FairyCoded.jpg" },
-  { id: 2, name: "Corporate Sharp", slug: "men-corporate",   img: "/images/men-corporate.jpg", fallback: "/images/GlamLook.jpg" },
-  { id: 3, name: "Island King",     slug: "men-island",      img: "/images/men-island.jpg",    fallback: "/images/IslandGirl.jpg" },
-  { id: 4, name: "Minimal Stack",   slug: "men-minimal",     img: "/images/men-minimal.jpg",   fallback: "/images/FairyCoded.jpg" },
-  { id: 5, name: "Rocker Noir",     slug: "men-rocker",      img: "/images/men-rocker.jpg",    fallback: "/images/Maximalist.jpg" },
-  { id: 6, name: "Gold Royalty",    slug: "men-gold",        img: "/images/men-gold.jpg",      fallback: "/images/hero.png" },
-];
-
-type StyleItem = (typeof womenStyles)[number];
+type StyleItem = {
+  id: number;
+  name: string;
+  slug: string;
+  img?: string;
+  fallback?: string;
+  gender?: unknown;
+};
 
 export default function ShopByStyle() {
   const router = useRouter();
   const { gender } = useGender();
   const [dynamicStyles, setDynamicStyles] = useState<StyleItem[]>([]);
-  const base: StyleItem[] = gender === "men" ? menStyles : womenStyles;
-  const styles: StyleItem[] = dynamicStyles.length > 0 ? dynamicStyles : base;
+  const [loading, setLoading] = useState(true);
+  // show only backend-provided styles; do not fall back to local templates
+  const styles: StyleItem[] = dynamicStyles;
 
   // Fetch catalog
   useEffect(() => {
     let alive = true;
-    const tmpl = gender === "men" ? menStyles : womenStyles;
+    // eslint-disable-next-line no-console
+    console.log("StyleSection effect running, selected gender:", gender);
     fetchCatalogStyles()
       .then((api) => {
         if (!alive) return;
-        const bySlug = new Map(api.map((s) => [s.slug || slugifyCatalog(s.name), s]));
-        setDynamicStyles(
-          tmpl.map((t, i) => {
-            const m = bySlug.get(t.slug) || bySlug.get(slugifyCatalog(t.name));
-            return { ...t, id: i + 1, name: m?.name || t.name, slug: m?.slug || t.slug, img: m?.image || t.img };
-          }) as StyleItem[]
-        );
+        if (!Array.isArray(api) || api.length === 0) {
+          setDynamicStyles([] as StyleItem[]);
+          setLoading(false);
+          return;
+        }
+        // If any returned style is missing a name, show an empty section (no fallback)
+        if (api.some((s) => !s.name || !String(s.name).trim())) {
+          setDynamicStyles([] as StyleItem[]);
+          return;
+        }
+        function genderMatches(raw: unknown, selected: string) {
+          const sel = String(selected || "").toLowerCase();
+          if (!raw) return false;
+          if (typeof raw === "string") return String(raw).toLowerCase() === sel;
+          if (typeof raw === "object" && raw !== null) {
+            const obj = raw as { slug?: unknown; name?: unknown };
+            const slug = (obj.slug || "").toString().toLowerCase();
+            const name = (obj.name || "").toString().toLowerCase();
+            if (slug === sel) return true;
+            if (name === sel) return true;
+          }
+          return false;
+        }
+
+        const mapped = api.map((s, i) => {
+          const name = s.name as string;
+          const slug = s.slug || slugifyCatalog(name);
+          return {
+            id: i + 1,
+            name,
+            slug,
+            img: (s as any).image || "",
+            fallback: "",
+            gender: (s as any).gender,
+          } as StyleItem;
+        });
+        // filter by selected gender (if any) using the mapped item's gender
+        const filtered = mapped.filter((m) => genderMatches(m.gender, gender));
+        // debug logs to help diagnose empty state
+        // eslint-disable-next-line no-console
+        console.log("StyleSection — api:", api);
+        // eslint-disable-next-line no-console
+        console.log("StyleSection — mapped:", mapped);
+        // eslint-disable-next-line no-console
+        console.log("StyleSection — selected gender:", gender);
+        // eslint-disable-next-line no-console
+        console.log("StyleSection — filtered:", filtered);
+
+        // show only backend data (no local fallbacks)
+        setDynamicStyles(filtered as StyleItem[]);
+        setLoading(false);
       })
-      .catch(() => { if (alive) setDynamicStyles(tmpl as StyleItem[]); });
+      .catch(() => {
+        if (alive) setDynamicStyles([] as StyleItem[]);
+        if (alive) setLoading(false);
+      });
     return () => { alive = false; };
   }, [gender]);
-
+  
+  // If we've finished loading and there are no styles, hide the whole section
+  if (!loading && styles.length === 0) return null;
   return (
     <>
       <style>{`
@@ -213,7 +254,10 @@ export default function ShopByStyle() {
             grabCursor={true}
             centeredSlides={true}
             slidesPerView={"auto"}
-            loop={true}
+            preventClicks={false}
+            preventClicksPropagation={false}
+            // enable loop only if there are at least 2 slides
+            loop={styles.length > 1}
             coverflowEffect={{
               rotate: 15,
               stretch: 0,
@@ -232,26 +276,44 @@ export default function ShopByStyle() {
             modules={[EffectCoverflow, Navigation, Autoplay]}
             className="styleSwiper"
           >
-            {styles.map((card) => (
+            {styles.filter(card => Boolean(card.img)).map((card) => (
               <SwiperSlide
                 key={card.id}
                 className="swiper-slide-custom"
-                onClick={() => router.push(`/styles/${card.slug}`)}
+                onClick={() => {
+                  console.log(`[SwiperSlide] Clicked on style: ${card.name} (${card.slug})`);
+                  router.push(`/styles/${card.slug}`);
+                }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={card.img}
-                  alt={card.name}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = card.fallback;
+                <div 
+                  style={{ display: "block", width: "100%", height: "100%", zIndex: 10, position: "relative" }} 
+                  onClick={(e) => {
+                    console.log(`[Inner Div] Clicked on style: ${card.name} (${card.slug})`);
                   }}
-                />
-                <div className="sbs__lbl">
-                  <span>{card.name}</span>
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={card.img}
+                    alt={card.name}
+                    // no fallback — only show backend images
+                  />
+                  <div className="sbs__lbl">
+                    <span>{card.name}</span>
+                  </div>
                 </div>
               </SwiperSlide>
             ))}
           </Swiper>
+
+          {/* Debug helper: show backend data when no styles render */}
+          {styles.length === 0 && (
+            <div style={{ padding: 16, textAlign: "center", color: "#666" }}>
+              <strong>No styles to show.</strong>
+              <div style={{ marginTop: 8, fontSize: 12, whiteSpace: "pre-wrap", textAlign: "left", maxWidth: 800, margin: "8px auto" }}>
+                {JSON.stringify(dynamicStyles, null, 2)}
+              </div>
+            </div>
+          )}
 
           {/* Custom Navigation Arrows */}
           <div className="custom-swiper-button-prev">❮</div>

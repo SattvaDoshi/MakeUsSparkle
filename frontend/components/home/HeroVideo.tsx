@@ -335,6 +335,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useGender } from "@/lib/genderContext";
 
 type Category = "women" | "men" | "kids";
 
@@ -363,7 +364,8 @@ const heroContent = {
 };
 
 export default function Hero() {
-  const [activeCategory, setActiveCategory] = useState<Category>("women");
+  const { gender: rawCategory, setGender: setActiveCategory } = useGender();
+  const activeCategory = (["women", "men", "kids"].includes(rawCategory) ? rawCategory : "women") as Category;
   const content = heroContent[activeCategory];
 
   return (

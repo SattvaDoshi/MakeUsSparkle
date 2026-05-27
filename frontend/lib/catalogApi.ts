@@ -6,6 +6,7 @@ export interface CatalogCategory {
   description?: string;
   image?: string;
   slug: string;
+  genderSlug?: string;
 }
 
 export interface CatalogSubCategory {
@@ -21,6 +22,8 @@ export interface CatalogStyle {
   name: string;
   image?: string;
   slug: string;
+  // gender can be a string slug/id or an object returned from the backend
+  gender?: string | BackendGender;
 }
 
 export interface CatalogGender {
@@ -84,6 +87,7 @@ interface BackendCategory {
   name?: string;
   description?: string;
   image?: string;
+  gender?: BackendGender | BackendMaybeRef;
 }
 
 interface BackendSubCategory {
@@ -97,6 +101,7 @@ interface BackendStyle {
   _id: string;
   name?: string;
   image?: string;
+  gender?: BackendMaybeRef;
 }
 
 interface BackendGender {
@@ -141,6 +146,23 @@ interface BackendProduct {
   reviews?: BackendReview[];
 }
 
+interface BackendHomeSection {
+  _id?: string;
+  key: string;
+  eyebrow?: string;
+  title?: string;
+  products?: BackendProduct[];
+  isActive?: boolean;
+}
+
+export interface CatalogHomeSection {
+  key: string;
+  eyebrow: string;
+  title: string;
+  products: CatalogProduct[];
+  isActive: boolean;
+}
+
 const FALLBACK_IMAGE = "/images/hero.png";
 
 function toSlug(value: string): string {
@@ -179,12 +201,20 @@ function uniqueStrings(values: Array<string | undefined | null>): string[] {
 
 function toCategory(item: BackendCategory): CatalogCategory {
   const name = item.name || "Category";
+  const rawGender = item.gender;
+  const genderSlug =
+    typeof rawGender === "string"
+      ? rawGender
+      : rawGender && typeof rawGender === "object"
+        ? (rawGender as BackendGender).slug || ((rawGender as BackendGender).name ? toSlug((rawGender as BackendGender).name || "") : undefined)
+        : undefined;
   return {
     id: item._id,
     name,
     description: item.description,
     image: item.image,
     slug: toSlug(name),
+    genderSlug,
   };
 }
 
@@ -206,6 +236,7 @@ function toStyle(item: BackendStyle): CatalogStyle {
     name,
     image: item.image,
     slug: toSlug(name),
+    gender: (item.gender as any) ?? undefined,
   };
 }
 
@@ -344,7 +375,18 @@ export async function fetchCatalogStyles(): Promise<CatalogStyle[]> {
 
 export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
   const data = await apiRequest<{ success: boolean; genders?: BackendGender[] }>("/genders");
-  return (data.genders || []).map(toGender).filter((gender) => gender.isActive);
+  const allowed = new Set(["men", "women", "kids"]);
+  return (data.genders || [])
+    .map(toGender)
+    .map((g) => {
+      const raw = (g.slug || "").toLowerCase();
+      let slug = raw;
+      if (raw === "male" || raw === "man" || raw === "m") slug = "men";
+      if (raw === "female" || raw === "woman" || raw === "f" || raw === "female") slug = "women";
+      if (raw === "kid" || raw === "child") slug = "kids";
+      return { ...g, slug, isActive: g.isActive !== false };
+    })
+    .filter((gender) => allowed.has(gender.slug) && gender.isActive);
 }
 
 export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
@@ -362,6 +404,32 @@ export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   return (productsResponse.products || []).map((item) =>
     normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
   );
+}
+
+export async function fetchNewArrivalsSection(): Promise<CatalogHomeSection | null> {
+  const [categories, subCategories, styles, sectionResponse] = await Promise.all([
+    fetchCatalogCategories(),
+    fetchCatalogSubCategories(),
+    fetchCatalogStyles(),
+    apiRequest<{ success: boolean; section?: BackendHomeSection }>("/home-sections/new-arrivals"),
+  ]);
+
+  const section = sectionResponse.section;
+  if (!section || section.isActive === false) return null;
+
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
+  const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+  const styleMap = new Map(styles.map((item) => [item.id, item]));
+
+  return {
+    key: section.key,
+    eyebrow: section.eyebrow || "",
+    title: section.title || "New Arrivals",
+    products: (section.products || []).map((item) =>
+      normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
+    ),
+    isActive: true,
+  };
 }
 
 /**

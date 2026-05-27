@@ -7,8 +7,6 @@ import UpperNav from '@/components/ui/UpperNav';
 import { fetchCatalogCategories, fetchCatalogSubCategories } from '@/lib/catalogApi';
 import { useGender } from '@/lib/genderContext';
 
-type Gender = string;
-
 interface SubCategoryItem {
   name: string;
   img: string;
@@ -44,52 +42,8 @@ const IMG = {
   menPendant: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
 };
 
-const womenJewellery: SubCategoryItem[] = [
-  { name: 'Necklaces', img: IMG.necklace, href: '/subcategory/necklace' },
-  { name: 'Earrings', img: IMG.earrings, href: '/subcategory/earrings' },
-  { name: 'Rings', img: IMG.rings, href: '/subcategory/rings' },
-  { name: 'Bracelets', img: IMG.bracelets, href: '/subcategory/bracelets' },
-  { name: 'Waist Chains', img: IMG.waistChain, href: '/subcategory/waist-chains' },
-  { name: 'Couple Sets', img: IMG.couple, href: '/subcategory/couple-sets' },
-];
-
-const menJewellery: SubCategoryItem[] = [
-  { name: 'Chains', img: IMG.menChain, href: '/subcategory/men-chains' },
-  { name: 'Bracelets', img: IMG.menBracelet, href: '/subcategory/men-bracelets' },
-  { name: 'Rings', img: IMG.menRing, href: '/subcategory/men-rings' },
-  { name: 'Earrings', img: IMG.menEarring, href: '/subcategory/men-earrings' },
-  { name: 'Pendants', img: IMG.menPendant, href: '/subcategory/men-pendants' },
-  { name: 'Couple Sets', img: IMG.couple, href: '/subcategory/couple-sets' },
-];
-
-const KIDS_JEWELLERY = new Set(['Necklaces', 'Earrings', 'Rings', 'Bracelets', 'Couple Sets']);
-
-function buildCategories(gender: Gender): CategoryItem[] {
-  const isMen = gender === 'men';
-  const isKids = gender === 'kids';
-  const routePrefix = isKids ? 'kids' : isMen ? 'men' : 'women';
-  const jewellerySubcategories = isMen
-    ? menJewellery
-    : isKids
-      ? womenJewellery.filter((item) => KIDS_JEWELLERY.has(item.name))
-      : womenJewellery;
-
-  return [
-    { name: 'Jewellery', icon: '◈', img: isMen ? IMG.menChain : IMG.necklace, href: `/categories/${routePrefix}/jewellery`, sub: jewellerySubcategories },
-    { name: 'Gift Boxes', icon: '⊡', img: IMG.giftBox, href: `/categories/${routePrefix}/gift-boxes`, sub: [] },
-    { name: 'Fan Combos', icon: '✦', img: IMG.fanCombo, href: `/categories/${routePrefix}/fan-combos`, sub: [] },
-    { name: 'Charm Jewellery', icon: '◎', img: IMG.charm, href: '/subcategory/charm-jewellery', sub: [] },
-    {
-      name: isMen ? 'Watch Straps' : 'Hair Accessories',
-      icon: isMen ? '⊞' : '⟡',
-      img: isMen ? IMG.menWatch : IMG.hair,
-      href: isMen ? `/categories/${routePrefix}/watch-straps` : `/categories/${routePrefix}/hair-accessories`,
-      sub: [],
-    },
-    { name: 'Keychains', icon: '⌖', img: IMG.keychain, href: '/subcategory/keychains', sub: [] },
-    { name: 'Curated Combos', icon: isMen ? '⊟' : '⊞', img: IMG.combo, href: `/categories/${routePrefix}/curated-combos`, sub: [] },
-  ];
-}
+const FALLBACK_CATEGORY_IMAGE = IMG.combo;
+const FALLBACK_SUBCATEGORY_IMAGE = IMG.necklace;
 
 function ShineCard({ sub, index }: { sub: SubCategoryItem; index: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
@@ -154,6 +108,8 @@ export default function CategorySection() {
 
   useEffect(() => {
     if (tab !== selectedGender) {
+      // eslint-disable-next-line no-console
+      console.log("CategorySection: tab differs from selectedGender, setting global gender ->", tab, "(selectedGender:", selectedGender, ", genderTabs:", genderTabs.map(g=>g.slug));
       setGender(tab);
     }
   }, [selectedGender, setGender, tab]);
@@ -165,21 +121,23 @@ export default function CategorySection() {
       .then(([catalogCategories, subcategories]) => {
         if (!mounted) return;
 
-        const templateCategories = buildCategories(tab);
-        const jewelleryCategory = catalogCategories.find((category) => category.slug === 'jewellery');
-        const allowedSubcategories = tab === 'men'
-          ? new Set(['Men Chains', 'Men Bracelets', 'Men Rings', 'Men Earrings', 'Men Pendants', 'Couple Sets'])
-          : tab === 'kids'
-            ? KIDS_JEWELLERY
-            : new Set(['Necklaces', 'Earrings', 'Rings', 'Bracelets', 'Waist Chains', 'Couple Sets']);
+        const routePrefix = tab;
+        const filteredCategories = catalogCategories.filter(
+          (category) => !category.genderSlug || category.genderSlug === tab
+        );
+        const filteredIds = new Set(filteredCategories.map((category) => category.id));
+        const subcategoriesByCategory = new Map<string, SubCategoryItem[]>();
 
-        const jewellerySub = subcategories
-          .filter((sub) => sub.categoryId && sub.categoryId === jewelleryCategory?.id && allowedSubcategories.has(sub.name))
-          .map((sub) => ({
+        subcategories.forEach((sub) => {
+          if (!sub.categoryId || !filteredIds.has(sub.categoryId)) return;
+          const list = subcategoriesByCategory.get(sub.categoryId) || [];
+          list.push({
             name: sub.name,
-            img: sub.image || IMG.necklace,
+            img: sub.image || FALLBACK_SUBCATEGORY_IMAGE,
             href: `/subcategory/${sub.slug}`,
-          }));
+          });
+          subcategoriesByCategory.set(sub.categoryId, list);
+        });
 
         const iconMap: Record<string, string> = {
           jewellery: '◈',
@@ -193,32 +151,24 @@ export default function CategorySection() {
           'curated-combos': '⊟',
         };
 
-        const excludedSlugs = tab === 'men'
-          ? new Set(['hair-accessories'])
-          : tab === 'kids'
-            ? new Set(['hair-accessories', 'watch-straps'])
-            : new Set(['watch-straps']);
-
         const subcategorySlugs = new Set(['keychains', 'charm-jewellery', 'custom-charm-jewellery']);
 
-        const nextCategories = catalogCategories
-          .filter((category) => !excludedSlugs.has(category.slug))
-          .map((category) => ({
-            name: category.name,
-            icon: iconMap[category.slug] || '◈',
-            img: category.image || IMG.combo,
-            href: subcategorySlugs.has(category.slug)
-              ? `/subcategory/${category.slug}`
-              : `/categories/${tab}/${category.slug}`,
-            sub: category.slug === 'jewellery' ? jewellerySub : [],
-          }));
+        const nextCategories = filteredCategories.map((category) => ({
+          name: category.name,
+          icon: iconMap[category.slug] || '◈',
+          img: category.image || FALLBACK_CATEGORY_IMAGE,
+          href: subcategorySlugs.has(category.slug)
+            ? `/subcategory/${category.slug}`
+            : `/categories/${routePrefix}/${category.slug}`,
+          sub: subcategoriesByCategory.get(category.id) || [],
+        }));
 
-        setCategories(nextCategories.length > 0 ? nextCategories : templateCategories);
+        setCategories(nextCategories);
         setActiveIdx(0);
       })
       .catch(() => {
         if (mounted) {
-          setCategories(buildCategories(tab));
+          setCategories([]);
           setActiveIdx(0);
         }
       });

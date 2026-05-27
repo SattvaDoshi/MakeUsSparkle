@@ -17,6 +17,7 @@ import AdminBannersTab from "./_components/tabs/AdminBannersTab";
 import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
 import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
+import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -44,7 +45,18 @@ type AdminProduct = {
 	price?: number;
 	stock?: number;
 	gender?: "men" | "women" | "kids" | "unisex";
+	mainImage?: string;
+	images?: string[];
 	createdAt?: string;
+};
+
+type AdminHomeSection = {
+	_id?: string;
+	key: string;
+	eyebrow?: string;
+	title?: string;
+	products?: Array<{ _id: string; title?: string } | string>;
+	isActive?: boolean;
 };
 
 type AdminOrder = {
@@ -200,11 +212,12 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "categories";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "categories", label: "Categories" },
+	{ key: "newArrivals", label: "New Arrivals" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
@@ -346,6 +359,13 @@ const defaultCharmForm: CharmFormState = {
 	imageUrl: "",
 };
 
+const defaultNewArrivalsForm = {
+	eyebrow: "Fresh off the shelf",
+	title: "New Arrivals",
+	products: [] as string[],
+	isActive: true,
+};
+
 const createActionsByTab: Partial<Record<TabKey, string>> = {
 	products: "Add Product",
 	users: "Add User",
@@ -373,6 +393,7 @@ export default function AdminDashboardPage() {
 	const [mainBanners, setMainBanners] = useState<MainBanner[]>([]);
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
+	const [newArrivalsForm, setNewArrivalsForm] = useState(defaultNewArrivalsForm);
 
 	const [categories, setCategories] = useState<AdminCategory[]>([]);
 	const [subcategories, setSubCategories] = useState<AdminSubCategory[]>([]);
@@ -423,7 +444,7 @@ export default function AdminDashboardPage() {
 	}, []);
 
 	const loadProducts = useCallback(async () => {
-		const productsResult = await apiRequest<PagedResponse<AdminProduct, "products">>("/admin/products?limit=50");
+		const productsResult = await apiRequest<PagedResponse<AdminProduct, "products">>("/admin/products?limit=500");
 		setProducts(productsResult.products);
 	}, []);
 
@@ -482,6 +503,17 @@ export default function AdminDashboardPage() {
 		setGenders(result.genders || []);
 	}, []);
 
+	const loadNewArrivals = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; section?: AdminHomeSection }>("/admin/home-sections/new-arrivals");
+		const section = result.section;
+		setNewArrivalsForm({
+			eyebrow: section?.eyebrow || "Fresh off the shelf",
+			title: section?.title || "New Arrivals",
+			products: (section?.products || []).map((item) => typeof item === "string" ? item : item._id).filter(Boolean),
+			isActive: section?.isActive !== false,
+		});
+	}, []);
+
 	const loadActiveTab = useCallback(async (tab: TabKey) => {
 		setLoading(true);
 		setError(null);
@@ -498,12 +530,13 @@ export default function AdminDashboardPage() {
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
+			if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load admin data");
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders]);
+	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -954,6 +987,18 @@ export default function AdminDashboardPage() {
 		}, "Review updated");
 	};
 
+	const handleNewArrivalsSubmit = async (event: FormEvent) => {
+		event.preventDefault();
+
+		await runAction(async () => {
+			await apiRequest("/admin/home-sections/new-arrivals", {
+				method: "PUT",
+				body: JSON.stringify(newArrivalsForm),
+			});
+			await loadNewArrivals();
+		}, "New arrivals updated");
+	};
+
 	const handleSignOut = () => {
 		signOut();
 		router.push("/admin/login");
@@ -1039,6 +1084,12 @@ export default function AdminDashboardPage() {
 			setModalMode("edit");
 			setModalKind("charm");
 		}} onDelete={handleDeleteCharm} />;
+	if (activeTab === "newArrivals") return <AdminNewArrivalsTab
+		form={newArrivalsForm}
+		products={products}
+		onChange={setNewArrivalsForm}
+		onSubmit={handleNewArrivalsSubmit}
+	/>;
 	if (activeTab === "categories") return <AdminCategoriesTab
 		categories={categories}
 		subcategories={subcategories}

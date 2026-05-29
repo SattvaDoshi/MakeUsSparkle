@@ -372,12 +372,14 @@ export default function ProductsPage({
   subtype,
   gender,
   embedded = false,
+  products,
   productLinkBase,
 }: {
   type: string;
   subtype?: string;
   gender?: string;
   embedded?: boolean;
+  products?: Product[];
   productLinkBase?: string;
 }) {
     
@@ -395,6 +397,13 @@ const [sort, setSort] = useState<SortOption>('default');
   useEffect(() => {
     let mounted = true;
 
+    if (products) {
+      setDynamicProducts(products);
+      return () => {
+        mounted = false;
+      };
+    }
+
     fetchCatalogProducts()
       .then((products) => {
         if (mounted) {
@@ -410,7 +419,7 @@ const [sort, setSort] = useState<SortOption>('default');
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [products]);
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];

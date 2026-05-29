@@ -1,9 +1,18 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
-type TaxonomyItem = { _id: string; title: string; category?: { _id: string } | string };
+type GenderValue = "men" | "women" | "kids" | "unisex";
+type GenderRef = { _id?: string; name?: string; slug?: string } | string;
+type TaxonomyItem = {
+	_id: string;
+	name?: string;
+	title?: string;
+	slug?: string;
+	gender?: GenderRef;
+	category?: { _id: string; gender?: GenderRef } | string;
+};
 
 type Color = { name: string; hex: string };
 type Variant = {
@@ -23,10 +32,57 @@ type AdminProductModalProps = {
 	onSuccess: (message: string) => void;
 };
 
+const VALID_GENDERS: GenderValue[] = ["women", "men", "kids", "unisex"];
+const FALLBACK_GENDERS: TaxonomyItem[] = [
+	{ _id: "women", name: "Women", slug: "women" },
+	{ _id: "men", name: "Men", slug: "men" },
+	{ _id: "kids", name: "Kids", slug: "kids" },
+	{ _id: "unisex", name: "Unisex", slug: "unisex" },
+];
+
+const slugify = (value = "") =>
+	value
+		.toLowerCase()
+		.trim()
+		.replace(/&/g, " and ")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+
+const getGenderSlug = (gender: GenderRef | undefined): GenderValue | "" => {
+	const raw = typeof gender === "string" ? gender : gender?.slug || gender?.name || "";
+	const slug = slugify(raw);
+	return VALID_GENDERS.includes(slug as GenderValue) ? (slug as GenderValue) : "";
+};
+
+const getGenderLabel = (gender: TaxonomyItem) => gender.name || gender.title || gender.slug || gender._id;
+
+const getTaxonomyGender = (item: TaxonomyItem): GenderRef | undefined => item.gender;
+
+const matchesGender = (itemGender: GenderRef | undefined, selected: TaxonomyItem | undefined, selectedSlug: string) => {
+	if (!selectedSlug) return false;
+	if (!itemGender) return selectedSlug === "unisex";
+	const rawId = typeof itemGender === "string" ? itemGender : itemGender?._id || "";
+	const rawSlug = getGenderSlug(itemGender);
+	return rawSlug === selectedSlug || rawId === selected?._id || rawId === selected?.slug;
+};
+
+const toPlainText = (value = "") =>
+	value
+		.replace(/<br\s*\/?>/gi, "\n")
+		.replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+		.replace(/<[^>]*>/g, "")
+		.replace(/&nbsp;/gi, " ")
+		.replace(/&amp;/gi, "&")
+		.replace(/&lt;/gi, "<")
+		.replace(/&gt;/gi, ">")
+		.replace(/\r\n/g, "\n")
+		.replace(/\n{3,}/g, "\n\n");
+
 export default function AdminProductModal({ mode, initialData, onClose, onSuccess }: AdminProductModalProps) {
 	const [step, setStep] = useState(1);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const productId = initialData?._id || initialData?.id || "";
 
 	const [categories, setCategories] = useState<TaxonomyItem[]>([]);
 	const [subCategories, setSubCategories] = useState<TaxonomyItem[]>([]);
@@ -34,6 +90,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	const [genders, setGenders] = useState<TaxonomyItem[]>([]);
 	const [allTags, setAllTags] = useState<string[]>([]);
 	const [newTagInput, setNewTagInput] = useState("");
+	const [newSeoTagInput, setNewSeoTagInput] = useState("");
 
 	// Main form state
 	const [form, setForm] = useState({
@@ -41,14 +98,16 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		category: initialData?.category?._id || initialData?.category || "",
 		subCategory: initialData?.subCategory?._id || initialData?.subCategory || "",
 		style: initialData?.style?._id || initialData?.style || "",
-		gender: initialData?.gender || "",
+		gender: getGenderSlug(initialData?.gender),
 		price: initialData?.price?.toString() || "",
 		discountedPrice: initialData?.discountedPrice?.toString() || "",
 		discountTag: initialData?.discountTag || "",
+		allowCustomization: Boolean(initialData?.allowCustomization),
 		stock: initialData?.stock?.toString() || "",
 		description: initialData?.description || "",
-		about: initialData?.about || "",
+		about: toPlainText(initialData?.about || ""),
 		tags: initialData?.tags || [],
+		seoTags: initialData?.seoTags || [],
 		mainImage: initialData?.mainImage || null,
 		galleryImages: initialData?.images || [],
 	});
@@ -103,6 +162,27 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		};
 		void fetchTaxonomy();
 	}, []);
+
+	const genderOptions = useMemo(() => {
+		const bySlug = new Map<string, TaxonomyItem>();
+		[...genders, ...FALLBACK_GENDERS].forEach((gender) => {
+			const slug = getGenderSlug(gender);
+			if (slug && !bySlug.has(slug)) {
+				bySlug.set(slug, { ...gender, slug });
+			}
+		});
+		return Array.from(bySlug.values());
+	}, [genders]);
+
+	const selectedGender = genderOptions.find((gender) => getGenderSlug(gender) === form.gender);
+
+	const filteredCategories = categories.filter((category) =>
+		matchesGender(getTaxonomyGender(category), selectedGender, form.gender)
+	);
+
+	const filteredStyles = styles.filter((style) =>
+		matchesGender(getTaxonomyGender(style), selectedGender, form.gender)
+	);
 
 	const filteredSubCategories = subCategories.filter((sc) => {
 		if (!form.category) return true;
@@ -172,6 +252,17 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		setForm((prev) => ({ ...prev, tags: prev.tags.filter((t: string) => t !== tag) }));
 	};
 
+	const addSeoTag = (tag: string) => {
+		const trimmed = tag.trim();
+		if (!trimmed || form.seoTags.includes(trimmed)) return;
+		setForm((prev) => ({ ...prev, seoTags: [...prev.seoTags, trimmed] }));
+		setNewSeoTagInput("");
+	};
+
+	const removeSeoTag = (tag: string) => {
+		setForm((prev) => ({ ...prev, seoTags: prev.seoTags.filter((t: string) => t !== tag) }));
+	};
+
 	// Form submission
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -181,19 +272,21 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		try {
 			const formData = new FormData();
 			formData.append("title", form.title);
-			formData.append("description", form.description);
-			formData.append("about", form.about);
+			formData.append("description", toPlainText(form.description));
+			formData.append("about", toPlainText(form.about));
 			formData.append("price", String(form.price));
 			if (form.discountedPrice) formData.append("discountedPrice", String(form.discountedPrice));
 			if (form.discountTag) formData.append("discountTag", form.discountTag);
+			formData.append("allowCustomization", String(form.allowCustomization));
 			formData.append("stock", String(form.stock));
-			formData.append("gender", form.gender);
+			if (form.gender) formData.append("gender", form.gender);
 
 			if (form.category) formData.append("category", form.category);
 			if (form.subCategory) formData.append("subCategory", form.subCategory);
 			if (form.style) formData.append("style", form.style);
 
 			form.tags.forEach((t: string) => formData.append("tags", t));
+			form.seoTags.forEach((t: string) => formData.append("seoTags", t));
 
 			// Colors & Sizes
 			if (colors.length > 0) formData.append("colors", JSON.stringify(colors));
@@ -224,8 +317,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				formData.append(`variantImage_${varIndex}`, file);
 			});
 
-			if (mode === "edit" && initialData?.id) {
-				await apiRequest(`/admin/products/${initialData.id}`, {
+			if (mode === "edit" && productId) {
+				await apiRequest(`/admin/products/${productId}`, {
 					method: "PUT",
 					body: formData,
 				});
@@ -372,7 +465,15 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									</label>
 									<select
 										value={form.gender}
-										onChange={(e) => setForm({ ...form, gender: e.target.value })}
+										onChange={(e) =>
+											setForm({
+												...form,
+												gender: e.target.value as GenderValue | "",
+												category: "",
+												subCategory: "",
+												style: "",
+											})
+										}
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
@@ -382,13 +483,9 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										}}
 									>
 										<option value="">Select Gender...</option>
-										{(genders.length > 0 ? genders : [
-											{ _id: "unisex", title: "Unisex" },
-											{ _id: "women", title: "Women" },
-											{ _id: "men", title: "Men" },
-										]).map((g: any) => (
-											<option key={g._id} value={g._id}>
-												{g.name || g.title}
+										{genderOptions.map((g) => (
+											<option key={g._id} value={getGenderSlug(g)}>
+												{getGenderLabel(g)}
 											</option>
 										))}
 									</select>
@@ -403,16 +500,20 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										onChange={(e) => {
 											setForm({ ...form, category: e.target.value, subCategory: "" });
 										}}
+										disabled={!form.gender}
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
 											borderRadius: "6px",
 											fontSize: "0.95rem",
 											background: "#fff",
+											opacity: !form.gender ? 0.6 : 1,
 										}}
 									>
-										<option value="">Select Category...</option>
-										{categories.map((c: any) => (
+										<option value="">
+											{form.gender ? "Select Category..." : "Select gender first"}
+										</option>
+										{filteredCategories.map((c) => (
 											<option key={c._id} value={c._id}>
 												{c.name || c.title}
 											</option>
@@ -427,17 +528,19 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									<select
 										value={form.subCategory}
 										onChange={(e) => setForm({ ...form, subCategory: e.target.value })}
-										disabled={!form.category && filteredSubCategories.length === 0}
+										disabled={!form.category}
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
 											borderRadius: "6px",
 											fontSize: "0.95rem",
 											background: "#fff",
-											opacity: !form.category && filteredSubCategories.length === 0 ? 0.6 : 1,
+											opacity: !form.category ? 0.6 : 1,
 										}}
 									>
-										<option value="">Select Sub Category...</option>
+										<option value="">
+											{form.category ? "Select Sub Category..." : "Select category first"}
+										</option>
 										{filteredSubCategories.map((c: any) => (
 											<option key={c._id} value={c._id}>
 												{c.name || c.title}
@@ -451,16 +554,20 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									<select
 										value={form.style}
 										onChange={(e) => setForm({ ...form, style: e.target.value })}
+										disabled={!form.gender}
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
 											borderRadius: "6px",
 											fontSize: "0.95rem",
 											background: "#fff",
+											opacity: !form.gender ? 0.6 : 1,
 										}}
 									>
-										<option value="">Select Style...</option>
-										{styles.map((c: any) => (
+										<option value="">
+											{form.gender ? "Select Style..." : "Select gender first"}
+										</option>
+										{filteredStyles.map((c) => (
 											<option key={c._id} value={c._id}>
 												{c.name || c.title}
 											</option>
@@ -489,12 +596,12 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-										Detailed About (HTML)
+										Detailed About
 									</label>
 									<textarea
-										placeholder="Write full details..."
+										placeholder="Write full details. Use Enter for new lines."
 										value={form.about}
-										onChange={(e) => setForm({ ...form, about: e.target.value })}
+										onChange={(e) => setForm({ ...form, about: toPlainText(e.target.value) })}
 										rows={4}
 										style={{
 											padding: "0.7rem",
@@ -505,6 +612,62 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										}}
 									/>
 								</div>
+
+								<label
+									style={{
+										gridColumn: "1 / -1",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "space-between",
+										gap: "1rem",
+										padding: "0.9rem 1rem",
+										border: "1px solid #d4d4c8",
+										borderRadius: "8px",
+										background: "#f9f9f7",
+										cursor: "pointer",
+									}}
+								>
+									<span style={{ display: "grid", gap: "0.2rem" }}>
+										<span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#3d4a20" }}>
+											Allow Customization
+										</span>
+										<span style={{ fontSize: "0.78rem", color: "#6b6b60" }}>
+											Show the customization and gift message box on this product detail page.
+										</span>
+									</span>
+									<span
+										style={{
+											position: "relative",
+											width: 46,
+											height: 26,
+											borderRadius: 999,
+											background: form.allowCustomization ? "#4a5c22" : "#d4d4c8",
+											flex: "0 0 auto",
+											transition: "background 0.2s ease",
+										}}
+									>
+										<input
+											type="checkbox"
+											checked={form.allowCustomization}
+											onChange={(e) => setForm({ ...form, allowCustomization: e.target.checked })}
+											style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
+										/>
+										<span
+											style={{
+												position: "absolute",
+												top: 3,
+												left: form.allowCustomization ? 23 : 3,
+												width: 20,
+												height: 20,
+												borderRadius: "50%",
+												background: "#fff",
+												boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+												transition: "left 0.2s ease",
+												pointerEvents: "none",
+											}}
+										/>
+									</span>
+								</label>
 							</div>
 						)}
 
@@ -776,18 +939,96 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										</button>
 									</div>
 								</div>
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>SEO Tags</label>
+									<div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+										{form.seoTags.map((t: string) => (
+											<span
+												key={t}
+												style={{
+													background: "#f5f4ef",
+													color: "#2d3318",
+													padding: "0.3rem 0.6rem",
+													borderRadius: "100px",
+													border: "1px solid #d4d4c8",
+													fontSize: "0.85rem",
+													display: "flex",
+													alignItems: "center",
+													gap: "0.4rem",
+													fontWeight: 500,
+												}}
+											>
+												{t}
+												<button
+													type="button"
+													onClick={() => removeSeoTag(t)}
+													style={{
+														background: "none",
+														border: "none",
+														cursor: "pointer",
+														color: "#943b2a",
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "center",
+													}}
+												>
+													×
+												</button>
+											</span>
+										))}
+									</div>
+									<div style={{ display: "flex", gap: "0.5rem" }}>
+										<input
+											placeholder="Type SEO keyword and press enter..."
+											value={newSeoTagInput}
+											onChange={(e) => setNewSeoTagInput(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") {
+													e.preventDefault();
+													addSeoTag(newSeoTagInput);
+												}
+											}}
+											style={{
+												flex: 1,
+												padding: "0.7rem",
+												border: "1px solid #d4d4c8",
+												borderRadius: "6px",
+												fontSize: "0.95rem",
+											}}
+										/>
+										<button
+											type="button"
+											onClick={() => addSeoTag(newSeoTagInput)}
+											style={{
+												padding: "0.7rem",
+												background: "#4a5c22",
+												color: "#fff",
+												border: "none",
+												borderRadius: "6px",
+												fontWeight: 500,
+												cursor: "pointer",
+											}}
+										>
+											Add SEO Tag
+										</button>
+									</div>
+									<small style={{ color: "#6b6b60" }}>
+										Used as product page SEO keywords. Example: gold necklace, gift jewellery, party earrings.
+									</small>
+								</div>
 							</div>
 						)}
 
 						{/* Step 3: Colors & Sizes */}
 						{step === 3 && (
-							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+							<div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1.5rem", alignItems: "start" }}>
 								{/* Colors Section */}
-								<div style={{ display: "grid", gap: "0.8rem" }}>
+								<div style={{ display: "grid", gap: "0.9rem", alignContent: "start", background: "#f9f9f7", border: "1px solid #e2e2d8", borderRadius: "8px", padding: "1rem" }}>
 									<h4 style={{ margin: 0, fontSize: "1rem", color: "#3d4a20", fontWeight: 600 }}>
 										Colors
 									</h4>
-									<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+									<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", minHeight: 40, alignItems: "flex-start" }}>
 										{colors.map((color, idx) => (
 											<div
 												key={idx}
@@ -795,10 +1036,11 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 													display: "flex",
 													alignItems: "center",
 													gap: "0.5rem",
-													background: "#f5f4ef",
-													padding: "0.5rem",
+													background: "#fff",
+													padding: "0.45rem 0.6rem",
 													borderRadius: "6px",
 													border: "1px solid #d4d4c8",
+													minHeight: 40,
 												}}
 											>
 												<div
@@ -828,7 +1070,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										))}
 									</div>
 
-									<div style={{ display: "grid", gap: "0.6rem", background: "#f9f9f7", padding: "0.8rem", borderRadius: "6px" }}>
+									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 64px", gap: "0.7rem", alignItems: "stretch" }}>
 										<input
 											placeholder="e.g. Gold, Silver, Red"
 											value={newColor.name}
@@ -844,6 +1086,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												border: "1px solid #d4d4c8",
 												borderRadius: "4px",
 												fontSize: "0.9rem",
+												minHeight: 44,
+												boxSizing: "border-box",
 											}}
 										/>
 										<input
@@ -851,11 +1095,14 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											value={newColor.hex}
 											onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })}
 											style={{
-												padding: "0.3rem",
+												padding: "0.25rem",
 												border: "1px solid #d4d4c8",
 												borderRadius: "4px",
 												cursor: "pointer",
-												height: "40px",
+												width: "64px",
+												height: "44px",
+												background: "#fff",
+												boxSizing: "border-box",
 											}}
 										/>
 										<button
@@ -869,6 +1116,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												borderRadius: "4px",
 												fontWeight: 500,
 												cursor: "pointer",
+												gridColumn: "1 / -1",
+												minHeight: 44,
 											}}
 										>
 											Add Color
@@ -877,24 +1126,26 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 								</div>
 
 								{/* Sizes Section */}
-								<div style={{ display: "grid", gap: "0.8rem" }}>
+								<div style={{ display: "grid", gap: "0.9rem", alignContent: "start", background: "#f9f9f7", border: "1px solid #e2e2d8", borderRadius: "8px", padding: "1rem" }}>
 									<h4 style={{ margin: 0, fontSize: "1rem", color: "#3d4a20", fontWeight: 600 }}>
 										Sizes
 									</h4>
-									<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+									<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", minHeight: 40, alignItems: "flex-start" }}>
 										{sizes.map((size, idx) => (
 											<span
 												key={idx}
 												style={{
 													background: "#e8ead0",
 													color: "#2d3318",
-													padding: "0.5rem 0.8rem",
+													padding: "0.45rem 0.65rem",
 													borderRadius: "4px",
 													fontSize: "0.9rem",
 													display: "flex",
 													alignItems: "center",
 													gap: "0.4rem",
 													fontWeight: 500,
+													minHeight: 40,
+													boxSizing: "border-box",
 												}}
 											>
 												{size}
@@ -915,7 +1166,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										))}
 									</div>
 
-									<div style={{ display: "flex", gap: "0.6rem", background: "#f9f9f7", padding: "0.8rem", borderRadius: "6px" }}>
+									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 78px", gap: "0.7rem", alignItems: "stretch" }}>
 										<input
 											placeholder="e.g. XS, S, M, L, XL, XXL"
 											value={newSize}
@@ -927,18 +1178,20 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												}
 											}}
 											style={{
-												flex: 1,
 												padding: "0.6rem",
 												border: "1px solid #d4d4c8",
 												borderRadius: "4px",
 												fontSize: "0.9rem",
+												minHeight: 44,
+												boxSizing: "border-box",
+												width: "100%",
 											}}
 										/>
 										<button
 											type="button"
 											onClick={addSize}
 											style={{
-												padding: "0.6rem 1.2rem",
+												padding: "0.6rem 1rem",
 												background: "#4a5c22",
 												color: "#fff",
 												border: "none",
@@ -946,6 +1199,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												fontWeight: 500,
 												cursor: "pointer",
 												whiteSpace: "nowrap",
+												minHeight: 44,
 											}}
 										>
 											Add
@@ -977,9 +1231,10 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 													borderRadius: "6px",
 													border: "1px solid #d4d4c8",
 													display: "grid",
-													gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+													gridTemplateColumns: "minmax(130px, 1.1fr) minmax(105px, 0.9fr) minmax(90px, 0.7fr) minmax(150px, 1fr) 96px",
 													gap: "0.8rem",
 													alignItems: "end",
+													overflowX: "auto",
 												}}
 											>
 												<div style={{ display: "grid", gap: "0.4rem" }}>
@@ -995,6 +1250,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															borderRadius: "4px",
 															fontSize: "0.9rem",
 															background: "#fff",
+															width: "100%",
 														}}
 													>
 														<option value="">Select Color</option>
@@ -1019,6 +1275,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															borderRadius: "4px",
 															fontSize: "0.9rem",
 															background: "#fff",
+															width: "100%",
 														}}
 													>
 														<option value="">Select Size</option>
@@ -1044,6 +1301,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															border: "1px solid #d4d4c8",
 															borderRadius: "4px",
 															fontSize: "0.9rem",
+															width: "100%",
+															boxSizing: "border-box",
 														}}
 													/>
 												</div>
@@ -1068,6 +1327,9 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															border: "1px solid #d4d4c8",
 															borderRadius: "4px",
 															fontSize: "0.8rem",
+															width: "100%",
+															maxWidth: "100%",
+															boxSizing: "border-box",
 														}}
 													/>
 													{variantImageFile[variant.variantIndex] && (
@@ -1095,6 +1357,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														borderRadius: "4px",
 														fontWeight: 500,
 														cursor: "pointer",
+														width: "100%",
 													}}
 												>
 													Remove

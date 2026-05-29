@@ -48,6 +48,7 @@ export interface CatalogProduct {
   price: number;
   discountedPrice?: number | null;
   discountTag?: string | null;
+  allowCustomization?: boolean;
   originalPrice: number | null;
   rating: number;
   reviewCount: number;
@@ -78,6 +79,7 @@ export interface CatalogProduct {
   }>;
   faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
+  seoTags: string[];
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -124,6 +126,7 @@ interface BackendProduct {
   price?: number;
   discountedPrice?: number;
   discountTag?: string;
+  allowCustomization?: boolean;
   rating?: number;
   images?: string[];
   mainImage?: string;
@@ -142,6 +145,7 @@ interface BackendProduct {
   gender?: "men" | "women" | "kids" | "unisex";
   stock?: number;
   tags?: string[];
+  seoTags?: string[];
   faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
 }
@@ -326,6 +330,7 @@ function normalizeProduct(
     price,
     discountedPrice,
     discountTag: item.discountTag || null,
+    allowCustomization: item.allowCustomization === true,
     originalPrice,
     rating,
     reviewCount,
@@ -350,6 +355,7 @@ function normalizeProduct(
     mainImage: item.mainImage || null,
     faqs: Array.isArray(item.faqs) ? item.faqs : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
+    seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
   };
 }
 
@@ -389,13 +395,27 @@ export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
     .filter((gender) => allowed.has(gender.slug) && gender.isActive);
 }
 
-export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
-  const [categories, subCategories, styles, productsResponse] = await Promise.all([
+export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {
+  const [categories, subCategories, styles] = await Promise.all([
     fetchCatalogCategories(),
     fetchCatalogSubCategories(),
     fetchCatalogStyles(),
-    apiRequest<{ success: boolean; products?: BackendProduct[] }>("/products"),
   ]);
+
+  const params = new URLSearchParams();
+  if (filters.subCategorySlug) {
+    const targetSlug = toSlug(filters.subCategorySlug);
+    const matchedSubCategory = subCategories.find(
+      (subCategory) => subCategory.slug === targetSlug || toSlug(subCategory.name) === targetSlug,
+    );
+    if (matchedSubCategory?.id) {
+      params.set("subCategory", matchedSubCategory.id);
+    }
+  }
+
+  const productsResponse = await apiRequest<{ success: boolean; products?: BackendProduct[] }>(
+    `/products${params.toString() ? `?${params.toString()}` : ""}`
+  );
 
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));

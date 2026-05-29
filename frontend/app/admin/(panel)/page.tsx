@@ -47,6 +47,7 @@ type AdminProduct = {
 	gender?: "men" | "women" | "kids" | "unisex";
 	mainImage?: string;
 	images?: string[];
+	seoTags?: string[];
 	createdAt?: string;
 };
 

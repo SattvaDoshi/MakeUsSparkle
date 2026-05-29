@@ -738,7 +738,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const description = product.description || '';
 
   const dynamicAccordionItems: AccordionData[] = [
-    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about, isHtml: true }] : []),
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once dispatched.' },

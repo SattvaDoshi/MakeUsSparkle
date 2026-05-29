@@ -1,12 +1,71 @@
 import Product from "../models/product.model.js";
+import Gender from "../models/gender.model.js";
 import imageService from "./image.service.js";
+import mongoose from "mongoose";
+
+const PRODUCT_GENDERS = ["men", "women", "kids", "unisex"];
+
+const toSlug = (value = "") =>
+	String(value)
+		.toLowerCase()
+		.trim()
+		.replace(/&/g, " and ")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+
+const stripHtml = (value = "") =>
+	String(value)
+		.replace(/<br\s*\/?>/gi, "\n")
+		.replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+		.replace(/<[^>]*>/g, "")
+		.replace(/&nbsp;/gi, " ")
+		.replace(/&amp;/gi, "&")
+		.replace(/&lt;/gi, "<")
+		.replace(/&gt;/gi, ">")
+		.replace(/\r\n/g, "\n")
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
+
+const escapeRegExp = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parseBoolean = (value) => value === true || value === "true" || value === "1" || value === 1;
+
+const normalizeStringArray = (value) => {
+	if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+	if (!value) return [];
+	return String(value)
+		.split(",")
+		.map((item) => item.trim())
+		.filter(Boolean);
+};
 
 class ProductService {
+	async _normalizeProductGender(value) {
+		if (!value) return undefined;
+		const raw = String(value).trim();
+		const directSlug = toSlug(raw);
+		if (PRODUCT_GENDERS.includes(directSlug)) return directSlug;
+
+		let genderDoc = null;
+		if (mongoose.Types.ObjectId.isValid(raw)) {
+			genderDoc = await Gender.findById(raw).lean();
+		}
+		if (!genderDoc) {
+			genderDoc = await Gender.findOne({
+				$or: [{ slug: directSlug }, { name: new RegExp(`^${escapeRegExp(raw)}$`, "i") }],
+			}).lean();
+		}
+
+		const resolvedSlug = toSlug(genderDoc?.slug || genderDoc?.name || "");
+		return PRODUCT_GENDERS.includes(resolvedSlug) ? resolvedSlug : undefined;
+	}
+
 	buildProductQuery(queryParams) {
-		const { category, style, gender, minPrice, maxPrice, rating } = queryParams;
+		const { category, subCategory, style, gender, minPrice, maxPrice, rating } = queryParams;
 		const query = {};
 
 		if (category) query.category = category;
+		if (subCategory) query.subCategory = subCategory;
 		if (style) query.style = style;
 		if (gender) query.gender = gender;
 		if (rating) query.rating = { $gte: Number(rating) };
@@ -127,6 +186,7 @@ class ProductService {
 
 	async createProduct(productData, filesMap = {}) {
 		try {
+			const gender = await this._normalizeProductGender(productData.gender);
 			// --- Main image ---
 			let mainImage = productData.mainImage || null;
 			let mainImagePublicId = null;
@@ -187,17 +247,19 @@ class ProductService {
 
 			const product = await Product.create({
 				title: productData.title,
-				description: productData.description,
-				about: productData.about,
+				description: stripHtml(productData.description),
+				about: stripHtml(productData.about),
 				price: productData.price ? Number(productData.price) : undefined,
 				discountedPrice: productData.discountedPrice ? Number(productData.discountedPrice) : undefined,
 				discountTag: productData.discountTag,
+				allowCustomization: parseBoolean(productData.allowCustomization),
 				stock: productData.stock ? Number(productData.stock) : undefined,
-				gender: productData.gender,
+				gender,
 				category: productData.category || undefined,
 				subCategory: productData.subCategory || undefined,
 				style: productData.style || undefined,
-				tags: Array.isArray(productData.tags) ? productData.tags : productData.tags ? [productData.tags] : [],
+				tags: normalizeStringArray(productData.tags),
+				seoTags: normalizeStringArray(productData.seoTags),
 				mainImage,
 				mainImagePublicId,
 				images: imageUrls,
@@ -216,6 +278,7 @@ class ProductService {
 
 	async updateProduct(productId, updateData, filesMap = {}) {
 		try {
+			const gender = await this._normalizeProductGender(updateData.gender);
 			const product = await Product.findById(productId);
 			if (!product) {
 				throw new Error("Product not found");
@@ -331,17 +394,19 @@ class ProductService {
 				productId,
 				{
 					title: updateData.title,
-					description: updateData.description,
-					about: updateData.about,
+					description: stripHtml(updateData.description),
+					about: stripHtml(updateData.about),
 					price: updateData.price ? Number(updateData.price) : undefined,
 					discountedPrice: updateData.discountedPrice ? Number(updateData.discountedPrice) : undefined,
 					discountTag: updateData.discountTag,
+					allowCustomization: updateData.allowCustomization === undefined ? product.allowCustomization : parseBoolean(updateData.allowCustomization),
 					stock: updateData.stock ? Number(updateData.stock) : undefined,
-					gender: updateData.gender,
+					gender: updateData.gender === undefined ? product.gender : gender,
 					category: updateData.category || undefined,
 					subCategory: updateData.subCategory || undefined,
 					style: updateData.style || undefined,
-					tags: Array.isArray(updateData.tags) ? updateData.tags : updateData.tags ? [updateData.tags] : [],
+					tags: normalizeStringArray(updateData.tags),
+					seoTags: normalizeStringArray(updateData.seoTags),
 					mainImage,
 					mainImagePublicId,
 					images: imageUrls,

@@ -28,11 +28,13 @@ export type AdminProduct = {
 	price?: number;
 	discountedPrice?: number;
 	discountTag?: string;
+	allowCustomization?: boolean;
 	stock?: number;
 	gender?: "men" | "women" | "kids" | "unisex";
 	mainImage?: string;
 	images?: string[];
 	tags?: string[];
+	seoTags?: string[];
 	colors?: Array<{ name: string; hex: string }>;
 	sizes?: string[];
 	variants?: Array<{

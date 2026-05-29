@@ -30,6 +30,7 @@ interface ProductCardProduct {
   price: number;
   originalPrice?: number | null;
   badge?: string | null;
+  mainImage?: string | null;
   images: string[];
   colors: ProductColor[];
   href: string;
@@ -62,10 +63,14 @@ const [added, setAdded] = useState(false);
 
   const wished = isWished(product.id);
 
+  const baseImages = [product.mainImage, ...(images ?? [])].filter(
+    (image): image is string => Boolean(image),
+  );
+
   const currentImages =
     colors?.[activeColor]?.images?.length
       ? colors[activeColor].images!
-      : images ?? [];
+      : baseImages;
 
   const displayImage = currentImages[activeImage] ?? currentImages[0];
 
@@ -78,7 +83,7 @@ const [added, setAdded] = useState(false);
     name: product.name,
     price: product.price,
     originalPrice: product.originalPrice ?? null,
-    image: images?.[0] ?? '',
+    image: product.mainImage ?? images?.[0] ?? '',
     category: product.category,
     href: product.href ?? '',
     colors: product.colors,
@@ -124,7 +129,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
-      image: images?.[0] ?? '',
+      image: product.mainImage ?? images?.[0] ?? '',
       color: product.colors?.[0]?.label ?? 'Default',
       colorHex: product.colors?.[0]?.hex ?? '#000000',
       sku: product.sku ?? `SKU-${product.id}`,

@@ -19,6 +19,7 @@ const productSchema = new mongoose.Schema(
     price: Number,
     discountedPrice: Number,
     discountTag: String,
+    allowCustomization: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
 
     // Main hero image (first image shown)
@@ -61,6 +62,7 @@ const productSchema = new mongoose.Schema(
     },
     stock: Number,
     tags: [String],
+    seoTags: [String],
     faqs: [
       {
         question: String,

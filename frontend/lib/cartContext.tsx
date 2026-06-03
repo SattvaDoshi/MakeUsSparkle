@@ -27,12 +27,39 @@ export interface CartItem {
   cartItemId?: string;
   customNote?: string;
   customImages?: string[];
-  selectedCharms?: Array<{
+  selectedCharms?: Array<string | {
+    _id?: string;
     id?: string;
+    sourceId?: string;
     name?: string;
     price?: number;
     image?: string;
     emoji?: string;
+    quantity?: number;
+    images?: string[];
+    customText?: string;
+    customData?: Record<string, unknown>;
+  }>;
+  selectionGroups?: Array<{
+    type?: string;
+    category?: string;
+    label?: string;
+    selectionKey?: string;
+    itemRefModel?: string;
+    items: Array<{
+      id?: string;
+      item?: string;
+      sourceId?: string;
+      name?: string;
+      quantity?: number;
+      price?: number;
+      image?: string;
+      images?: string[];
+      emoji?: string;
+      customText?: string;
+      customData?: Record<string, unknown>;
+    }>;
+    metadata?: Record<string, unknown>;
   }>;
   category?: string;
   style?: string;

@@ -950,17 +950,43 @@ export default function CheckoutPage() {
         items: items.map(item => {
           const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
           const mappedProduct = (!item.id.startsWith('custom-') && isValidObjectId) ? item.id : undefined;
+          const selectedCharms = item.selectedCharms?.map((c: { id?: string; _id?: string } | string) => {
+            if (typeof c === 'string') return c;
+            return c.id || c._id || '';
+          }).filter(Boolean);
+          const selectionGroups = item.selectionGroups || (item.selectedCharms?.length ? [{
+            type: 'multi_item_selection',
+            category: item.category || item.sourceId,
+            label: item.name,
+            selectionKey: 'selectedCharms',
+            itemRefModel: 'CharmItem',
+            items: item.selectedCharms.map((c) => {
+              if (typeof c === 'string') return { id: c, quantity: 1 };
+              return {
+                id: c.id,
+                sourceId: c.sourceId,
+                name: c.name,
+                quantity: c.quantity || 1,
+                price: c.price,
+                image: c.image,
+                images: c.images,
+                emoji: c.emoji,
+                customText: c.customText,
+                customData: c.customData,
+              };
+            }),
+          }] : undefined);
           return {
             product: mappedProduct,
+            sourceId: item.sourceId,
             name: item.name,
+            category: item.category,
             quantity: item.qty,
             price: item.price,
             customNote: item.customNote,
             customImages: item.customImages,
-            selectedCharms: item.selectedCharms?.map((c: { id?: string; _id?: string } | string) => {
-              if (typeof c === 'string') return c;
-              return c.id || c._id || c;
-            }),
+            selectedCharms,
+            selectionGroups,
           };
         }),
         shippingAddress: currentAddress,
@@ -1965,7 +1991,9 @@ export default function CheckoutPage() {
                     </div>
                     {item.selectedCharms && item.selectedCharms.length > 0 && (
                       <div className="ck-charms">
-                        {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                        {item.selectedCharms.map((selection, idx: number) => {
+                          const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                          return (
                           <div key={charm.id || charm._id || idx} className="ck-charm-row">
                             <span className="ck-charm-name">
                               <span>{charm.emoji || '◈'}</span>
@@ -1973,7 +2001,8 @@ export default function CheckoutPage() {
                             </span>
                             <span className="ck-charm-price">₹{(charm.price || 0).toLocaleString('en-IN')}</span>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

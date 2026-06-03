@@ -80,6 +80,8 @@ export interface CatalogProduct {
   faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
   seoTags: string[];
+  charmPieceOptions?: number[];
+  totalCharms?: number;
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -148,6 +150,8 @@ interface BackendProduct {
   seoTags?: string[];
   faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
+  charmPieceOptions?: number[];
+  totalCharms?: number;
 }
 
 interface BackendHomeSection {
@@ -356,6 +360,8 @@ function normalizeProduct(
     faqs: Array.isArray(item.faqs) ? item.faqs : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
     seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
+    charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
+    totalCharms: Number(item.totalCharms ?? 0),
   };
 }
 
@@ -556,5 +562,108 @@ export async function applyCouponToCart(code: string, payload: { cartTotal: numb
   return apiRequest(`/coupons/apply`, {
     method: "POST",
     body: JSON.stringify({ code, ...payload }),
+  });
+}
+
+// ─── Orders ────────────────────────────────────────────────────────────────
+
+export interface OrderItemPayload {
+  /** MongoDB _id of the product, or its sourceId / frontend id */
+  id?: string;
+  sourceId?: string;
+  name: string;
+  price: number;
+  quantity: number;
+  category?: string;
+  color?: string;
+  size?: string;
+  sku?: string;
+  customNote?: string;
+  customImages?: string[];
+  /** Full selectionGroups array produced by CharmKeyChainProductPage / CharmProductDetailPage */
+  selectionGroups?: Array<{
+    type?: string;
+    category?: string;
+    label?: string;
+    selectionKey?: string;
+    itemRefModel?: string;
+    items: Array<{
+      id?: string;
+      sourceId?: string;
+      name?: string;
+      quantity?: number;
+      price?: number;
+      image?: string;
+      images?: string[];
+      emoji?: string;
+      customText?: string;
+    }>;
+    metadata?: Record<string, unknown>;
+  }>;
+  /** Legacy flat array — the backend will synthesise a selectionGroup from this */
+  selectedCharms?: Array<string | {
+    id?: string;
+    name?: string;
+    price?: number;
+    image?: string;
+    emoji?: string;
+    quantity?: number;
+    images?: string[];
+    customText?: string;
+  }>;
+}
+
+export interface OrderPayload {
+  items: OrderItemPayload[];
+  totalAmount: number;
+  advanceAmount?: number;
+  balanceAmount?: number;
+  paidAmount?: number;
+  paymentMode?: "COD" | "ONLINE" | "PARTIAL_COD";
+  shippingAddress: {
+    fullAddress: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  isGift?: boolean;
+  giftMessage?: string;
+  couponCode?: string;
+  deliveryCharge?: number;
+}
+
+export interface OrderResult {
+  success: boolean;
+  order?: {
+    _id: string;
+    status: string;
+    totalAmount: number;
+    paymentMode: string;
+    paymentStatus: string;
+    createdAt: string;
+  };
+  message?: string;
+}
+
+/**
+ * Submit an order to the backend.
+ *
+ * Passes the full cart payload — including `selectionGroups` for charm /
+ * keychain products — through to `POST /orders/create`.
+ *
+ * @param payload   The complete order payload (items, address, totals, etc.)
+ * @param token     JWT access token from the auth context.
+ */
+export async function createOrder(
+  payload: OrderPayload,
+  token: string
+): Promise<OrderResult> {
+  return apiRequest<OrderResult>("/orders/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   });
 }

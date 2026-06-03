@@ -239,6 +239,7 @@ const [sortOption, setSortOption] = useState<SortOption>('default');
       colorHex: '#d9cdb8',
       sku: `CUST-${parentCategory.toUpperCase()}`,
       href: '#',
+      category: parentCategory,
       // Store full charm objects so cart can display each piece with name & price
       // Backend mapping to IDs happens at checkout
       selectedCharms: selectedCharms.map(c => ({
@@ -247,7 +248,24 @@ const [sortOption, setSortOption] = useState<SortOption>('default');
         price: c.price,
         image: c.image,
         emoji: c.emoji,
+        quantity: 1,
       })),
+      selectionGroups: [{
+        type: 'multi_item_selection',
+        category: parentCategory,
+        label: `${config.title} ${config.titleEm}`,
+        selectionKey: 'selectedCharms',
+        itemRefModel: 'CharmItem',
+        items: selectedCharms.map(c => ({
+          id: c.id,
+          name: c.name,
+          quantity: 1,
+          price: c.price,
+          image: c.image,
+          images: c.image ? [c.image] : [],
+          emoji: c.emoji,
+        })),
+      }],
     };
     
     addItem(cartItem, false);

@@ -12,11 +12,13 @@ const charmItemSchema = new mongoose.Schema(
       enum: ["initials", "symbols", "birthstones", "custom", "designs", "characters"],
       default: "designs",
     },
-    // Which product category this charm belongs to: "custom-charm-jewellery" or "keychains"
+    // Which product category this charm belongs to.
+    // No enum restriction — new categories (e.g. "bracelets", "anklets") can be added
+    // via the admin panel without requiring code changes.
     parentCategory: {
       type: String,
-      enum: ["custom-charm-jewellery", "keychains"],
       required: true,
+      trim: true,
     },
     customisable: { type: Boolean, default: false },
     hasPhotoUpload: { type: Boolean, default: false },

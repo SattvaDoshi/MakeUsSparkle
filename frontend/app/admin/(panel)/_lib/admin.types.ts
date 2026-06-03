@@ -46,6 +46,8 @@ export type AdminProduct = {
 	}>;
 	createdAt?: string;
 	updatedAt?: string;
+	totalCharms?: number;
+	charmPieceOptions?: number[];
 };
 
 export type AdminOrder = {

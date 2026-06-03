@@ -110,7 +110,14 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		seoTags: initialData?.seoTags || [],
 		mainImage: initialData?.mainImage || null,
 		galleryImages: initialData?.images || [],
+		totalCharms: initialData?.totalCharms?.toString() || "0",
 	});
+
+	// Charm piece-count options (e.g. [3, 5, 7])
+	const [charmPieceOptions, setCharmPieceOptions] = useState<number[]>(
+		Array.isArray(initialData?.charmPieceOptions) ? initialData.charmPieceOptions : []
+	);
+	const [newPieceInput, setNewPieceInput] = useState("");
 
 	// Colors management
 	const [colors, setColors] = useState<Color[]>(initialData?.colors || []);
@@ -175,6 +182,30 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	}, [genders]);
 
 	const selectedGender = genderOptions.find((gender) => getGenderSlug(gender) === form.gender);
+
+	// Detect if selected category is a charm/keychain selectable-item category
+	const CHARM_KEYCHAIN_CATEGORY_NAMES = useMemo(() => new Set([
+		"custom charms", "custom charm", "keychains", "keychain", "key chain",
+	]), []);
+
+	const isCharmOrKeychain = useMemo(() => {
+		if (!form.category) return false;
+		const selectedCat = categories.find(c => c._id === form.category);
+		if (!selectedCat) return false;
+		const nameSlug = (selectedCat.name || selectedCat.title || "").toLowerCase().trim();
+		return CHARM_KEYCHAIN_CATEGORY_NAMES.has(nameSlug);
+	}, [form.category, categories, CHARM_KEYCHAIN_CATEGORY_NAMES]);
+
+	const addPieceOption = () => {
+		const n = parseInt(newPieceInput, 10);
+		if (!Number.isFinite(n) || n <= 0 || charmPieceOptions.includes(n)) return;
+		setCharmPieceOptions(prev => [...prev, n].sort((a, b) => a - b));
+		setNewPieceInput("");
+	};
+
+	const removePieceOption = (value: number) => {
+		setCharmPieceOptions(prev => prev.filter(v => v !== value));
+	};
 
 	const filteredCategories = categories.filter((category) =>
 		matchesGender(getTaxonomyGender(category), selectedGender, form.gender)
@@ -278,6 +309,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			if (form.discountedPrice) formData.append("discountedPrice", String(form.discountedPrice));
 			if (form.discountTag) formData.append("discountTag", form.discountTag);
 			formData.append("allowCustomization", String(form.allowCustomization));
+			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
+			formData.append("totalCharms", String(form.totalCharms || "0"));
 			formData.append("stock", String(form.stock));
 			if (form.gender) formData.append("gender", form.gender);
 
@@ -668,6 +701,149 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										/>
 									</span>
 								</label>
+
+								{/* Number of Pieces — only for Custom Charms / Keychains */}
+								{isCharmOrKeychain && (
+									<div
+										style={{
+											gridColumn: "1 / -1",
+											border: "1.5px solid #b5c27a",
+											borderRadius: "10px",
+											padding: "1rem 1.1rem",
+											background: "linear-gradient(135deg, #f4f7e8 0%, #fafbf2 100%)",
+											display: "grid",
+											gap: "0.75rem",
+										}}
+									>
+										<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+											<span style={{ fontSize: "1rem" }}>💎</span>
+											<span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#3d4a20" }}>
+												Number of Pieces Options
+											</span>
+											<span style={{ fontSize: "0.75rem", color: "#6b6b60", marginLeft: 4 }}>
+												— customers pick one (e.g. 3, 5, 7)
+											</span>
+										</div>
+
+										{/* Current options as chips */}
+										{charmPieceOptions.length > 0 ? (
+											<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+												{charmPieceOptions.map((val) => (
+													<span
+														key={val}
+														style={{
+															display: "inline-flex",
+															alignItems: "center",
+															gap: "0.35rem",
+															padding: "0.35rem 0.85rem",
+															borderRadius: "999px",
+															background: "#4a5c22",
+															color: "#fff",
+															fontSize: "0.88rem",
+															fontWeight: 700,
+															letterSpacing: "0.04em",
+														}}
+													>
+														{val} pcs
+														<button
+															type="button"
+															onClick={() => removePieceOption(val)}
+															style={{
+																background: "rgba(255,255,255,0.25)",
+																border: "none",
+																borderRadius: "50%",
+																width: 18,
+																height: 18,
+																cursor: "pointer",
+																color: "#fff",
+																fontSize: 13,
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																padding: 0,
+																lineHeight: 1,
+															}}
+															aria-label={`Remove ${val}`}
+														>
+															×
+														</button>
+													</span>
+												))}
+											</div>
+										) : (
+											<p style={{ fontSize: "0.8rem", color: "#9b9b8c", margin: 0 }}>
+												No options added yet. Add at least one (e.g. 3, 5, 7).
+											</p>
+										)}
+
+										{/* Add new option */}
+										<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+											<input
+												type="number"
+												min={1}
+												max={99}
+												placeholder="e.g. 3"
+												value={newPieceInput}
+												onChange={(e) => setNewPieceInput(e.target.value)}
+												onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPieceOption(); } }}
+												style={{
+													width: 90,
+													padding: "0.5rem 0.7rem",
+													border: "1px solid #b5c27a",
+													borderRadius: "6px",
+													fontSize: "0.95rem",
+													background: "#fff",
+												}}
+											/>
+											<button
+												type="button"
+												onClick={addPieceOption}
+												style={{
+													padding: "0.5rem 1rem",
+													background: "#4a5c22",
+													color: "#fff",
+													border: "none",
+													borderRadius: "6px",
+													fontWeight: 600,
+													fontSize: "0.85rem",
+													cursor: "pointer",
+													whiteSpace: "nowrap",
+												}}
+											>
+												+ Add Option
+											</button>
+											<span style={{ fontSize: "0.78rem", color: "#9b9b8c" }}>
+												Press Enter or click Add
+											</span>
+										</div>
+
+										{/* Total number of charms available */}
+										<div style={{ display: "grid", gap: "0.4rem", marginTop: "0.5rem" }}>
+											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+												Total Available Charms in Reference Image
+											</label>
+											<input
+												type="number"
+												min={1}
+												value={form.totalCharms}
+												onChange={(e) => setForm(f => ({ ...f, totalCharms: e.target.value }))}
+												placeholder="e.g. 42"
+												style={{
+													width: "100%",
+													padding: "0.6rem 0.8rem",
+													border: "1.5px solid #d9cdb8",
+													borderRadius: "8px",
+													fontSize: "0.95rem",
+													background: "#fff",
+												}}
+											/>
+											<span style={{ fontSize: "0.75rem", color: "#6b6b60" }}>
+												— Customers will choose their charms from Charm 1 to Charm N based on this count
+											</span>
+										</div>
+									</div>
+								)}
+
 							</div>
 						)}
 

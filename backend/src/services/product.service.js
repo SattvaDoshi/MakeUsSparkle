@@ -184,6 +184,23 @@ class ProductService {
 		return [];
 	}
 
+	/**
+	 * Parse charmPieceOptions – can be a JSON array string or repeated form fields.
+	 * e.g. "[3,5,7]" or ["3","5","7"] → [3, 5, 7]
+	 */
+	_parseCharmPieceOptions(productData) {
+		try {
+			if (typeof productData.charmPieceOptions === "string") {
+				try { return JSON.parse(productData.charmPieceOptions).map(Number).filter(n => Number.isFinite(n) && n > 0); } catch (_) {}
+				return productData.charmPieceOptions.split(",").map(s => Number(s.trim())).filter(n => Number.isFinite(n) && n > 0);
+			}
+			if (Array.isArray(productData.charmPieceOptions)) {
+				return productData.charmPieceOptions.map(Number).filter(n => Number.isFinite(n) && n > 0);
+			}
+		} catch (_) {}
+		return [];
+	}
+
 	async createProduct(productData, filesMap = {}) {
 		try {
 			const gender = await this._normalizeProductGender(productData.gender);
@@ -244,6 +261,7 @@ class ProductService {
 			// --- Colors & Sizes ---
 			const colors = this._parseColors(productData);
 			const sizes = this._parseSizes(productData);
+			const charmPieceOptions = this._parseCharmPieceOptions(productData);
 
 			const product = await Product.create({
 				title: productData.title,
@@ -253,6 +271,8 @@ class ProductService {
 				discountedPrice: productData.discountedPrice ? Number(productData.discountedPrice) : undefined,
 				discountTag: productData.discountTag,
 				allowCustomization: parseBoolean(productData.allowCustomization),
+				charmPieceOptions,
+				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
 				stock: productData.stock ? Number(productData.stock) : undefined,
 				gender,
 				category: productData.category || undefined,
@@ -389,6 +409,7 @@ class ProductService {
 			// --- Colors & Sizes ---
 			const colors = this._parseColors(updateData);
 			const sizes = this._parseSizes(updateData);
+			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
 
 			const updatedProduct = await Product.findByIdAndUpdate(
 				productId,
@@ -400,6 +421,8 @@ class ProductService {
 					discountedPrice: updateData.discountedPrice ? Number(updateData.discountedPrice) : undefined,
 					discountTag: updateData.discountTag,
 					allowCustomization: updateData.allowCustomization === undefined ? product.allowCustomization : parseBoolean(updateData.allowCustomization),
+					charmPieceOptions,
+					totalCharms: updateData.totalCharms !== undefined ? Number(updateData.totalCharms) : product.totalCharms,
 					stock: updateData.stock ? Number(updateData.stock) : undefined,
 					gender: updateData.gender === undefined ? product.gender : gender,
 					category: updateData.category || undefined,

@@ -208,6 +208,8 @@ class AdminService {
 			const orders = await Order.find()
 				.populate("user", "name email")
 				.populate("items.product", "name images")
+				.populate("items.selectedCharms")
+				.populate("items.selectionGroups.items.item")
 				.sort({ createdAt: -1 })
 				.skip(skip)
 				.limit(limit);

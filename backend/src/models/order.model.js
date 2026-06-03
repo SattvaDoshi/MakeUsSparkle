@@ -6,11 +6,43 @@ const orderSchema = new mongoose.Schema(
     items: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        sourceId: String,
+        name: String,
+        category: String,
         quantity: Number,
         price: Number,
         customNote: String,
         customImages: [String],
         selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }],
+        selectionGroups: [
+          {
+            type: { type: String, default: "multi_item_selection" },
+            category: String,
+            label: String,
+            selectionKey: String,
+            // itemRefModel stored for metadata / future multi-model support
+            itemRefModel: { type: String, default: "CharmItem" },
+            items: [
+              {
+                // ObjectId reference — currently always a CharmItem.
+                // Using ref: "CharmItem" directly (refPath on a nested subdoc field
+                // requires the refPath field to be on the same subdocument, which
+                // Mongoose does not support reliably across nested arrays).
+                item: { type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" },
+                sourceId: String,
+                name: String,
+                quantity: { type: Number, default: 1 },
+                price: { type: Number, default: 0 },
+                image: String,
+                images: [String],
+                emoji: String,
+                customText: String,
+                customData: mongoose.Schema.Types.Mixed,
+              },
+            ],
+            metadata: mongoose.Schema.Types.Mixed,
+          },
+        ],
       },
     ],
     totalAmount: Number,

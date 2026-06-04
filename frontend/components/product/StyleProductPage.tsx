@@ -6,7 +6,7 @@
 // } from 'react';
 // import { FILTER_TABS } from '@/lib/products';
 // import { STYLE_THEMES, STYLE_PRODUCT_FILTER } from '@/lib/styleThemes';
-// import { fetchCatalogProducts, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
+// import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
 // import { useCart } from '@/lib/cartContext';
 // import { fireConfetti } from '@/components/cart/ConfettiManager';
 // import UpperNav from '@/components/ui/UpperNav';
@@ -17,7 +17,7 @@
 // type StyleTheme = (typeof STYLE_THEMES)[StyleId];
 // type Product = CatalogProduct;
 
-// // ─── Robust style resolver ────────────────────────────────────────────────────
+// // â”€â”€â”€ Robust style resolver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // const ALL_STYLE_IDS = Object.keys(STYLE_THEMES) as StyleId[];
 
 // function resolveStyleId(raw: string | undefined | null): StyleId {
@@ -40,7 +40,7 @@
 //   );
 //   if (fuzzy) return fuzzy;
 
-//   console.warn(`[StyleProductPage] Unknown styleId "${raw}" — falling back to "soft-girl".`);
+//   console.warn(`[StyleProductPage] Unknown styleId "${raw}" â€” falling back to "soft-girl".`);
 //   return 'soft-girl' as StyleId;
 // }
 
@@ -82,7 +82,7 @@
 // // Dark-background styles that need inverted UI chrome
 // const DARK_STYLES = new Set(['maximalist', 'men-street-edge', 'street-edge', 'men-rocker', 'rocker-noir', 'men-gold', 'gold-royalty']);
 
-// // ─── Product Card ─────────────────────────────────────────────────────────────
+// // â”€â”€â”€ Product Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // function Card({ product, theme, index, isDark, sid }: {
 //   product: Product; theme: StyleTheme; index: number; isDark: boolean; sid: string;
 // }) {
@@ -150,9 +150,9 @@
 //         <div className="c-info">
 //           <p className="c-name">{product.name}</p>
 //           <div className="c-prow">
-//             <span className="c-price">₹{product.price.toLocaleString('en-IN')}</span>
+//             <span className="c-price">â‚¹{product.price.toLocaleString('en-IN')}</span>
 //             {product.originalPrice && (
-//               <span className="c-orig">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+//               <span className="c-orig">â‚¹{product.originalPrice.toLocaleString('en-IN')}</span>
 //             )}
 //           </div>
 //         </div>
@@ -161,7 +161,7 @@
 //   );
 // }
 
-// // ─── Main Page ────────────────────────────────────────────────────────────────
+// // â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // export default function StyleProductPage({ styleId = 'soft-girl' }) {
 //   const sid    = resolveStyleId(styleId);
 //   const theme  = STYLE_THEMES[sid];
@@ -205,8 +205,8 @@
 // const products = useMemo(() => {
 //   let list = [...allStyle];
 //   if (filter !== 'all') list = list.filter(p => p.type === filter);
-//   return sortProducts(list, sort);           // ← add this
-// }, [allStyle, filter, sort]);               // ← add sort to deps
+//   return sortProducts(list, sort);           // â† add this
+// }, [allStyle, filter, sort]);               // â† add sort to deps
 
 //   const count = (type: string) =>
 //     type === 'all' ? allStyle.length : allStyle.filter(p => p.type === type).length;
@@ -226,9 +226,9 @@
 //           overflow-x: hidden;
 //         }
 
-//         /* ─────────────────────────────────────────────
-//           HERO — Using purely the image with no filters
-//         ───────────────────────────────────────────── */
+//         /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//           HERO â€” Using purely the image with no filters
+//         â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 //         .hero {
 //           position: relative;
 //           width: 100%;
@@ -313,9 +313,9 @@
 //         }
 //         @media (max-width:480px) { .hero-count { display:none; } }
 
-//         /* ─────────────────────────────────────────────
+//         /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //           FILTER BAR
-//         ───────────────────────────────────────────── */
+//         â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 //         .filters {
 //           position:sticky; top:${navH}px; z-index:40;
 //           background: ${isDark ? 'rgba(9,8,12,0.92)' : 'rgba(251,249,247,0.92)'};
@@ -367,9 +367,9 @@
 //           color:${isDark ? '#000' : '#fff'};
 //         }
 
-//         /* ─────────────────────────────────────────────
+//         /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //           PRODUCT GRID
-//         ───────────────────────────────────────────── */
+//         â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 //         .grid-wrap {
 //           padding: clamp(20px,3.5vw,44px) clamp(16px,5vw,64px) clamp(44px,6vw,80px);
 //         }
@@ -490,13 +490,13 @@
 //           font-style:italic; color:${theme.textMuted};
 //         }
 
-//         /* ── SOFT GIRL OVERRIDES ── */
+//         /* â”€â”€ SOFT GIRL OVERRIDES â”€â”€ */
 //         ${sid === 'soft-girl' ? `
 //           .hero-title, .hero-count-num { color: #2A110D !important; }
 //           .hero-sub, .hero-count-lbl { color: #5C3228 !important; }
 //         ` : ''}
 
-//         /* ── GLAM LOOK OVERRIDES ── */
+//         /* â”€â”€ GLAM LOOK OVERRIDES â”€â”€ */
 //         ${sid === 'glam-look' ? `
 //           .pg { background: #D3D3D3 !important; color: #000 !important; }
 //           .hero-title { color: #000 !important; font-weight: 500 !important; }
@@ -508,7 +508,7 @@
 //           .ftab.on { color: #000 !important; border-bottom-color: #000 !important; font-weight: 700 !important; }
 //           .ftab.on .fcount { background: #000 !important; color: #fff !important; }
 //         ` : ''}
-//         /* ── SortFilter theme override — matches page accent ── */
+//         /* â”€â”€ SortFilter theme override â€” matches page accent â”€â”€ */
 // .filters .sf-trigger {
 //   --sf-accent: ${theme.accent};
 //   --sf-bdr: ${theme.accent}40;
@@ -537,12 +537,12 @@
 //       `}</style>
 
 //       <div className="pg">
-//         {/* ── NAVBAR (always at the very top) ── */}
+//         {/* â”€â”€ NAVBAR (always at the very top) â”€â”€ */}
 //         <div ref={navRef}>
 //           <UpperNav />
 //         </div>
 
-//         {/* ── COMPACT HERO ── */}
+//         {/* â”€â”€ COMPACT HERO â”€â”€ */}
 //         <div className="hero"   style={{ 
 //     backgroundImage: `url('/style-heroes/${sid}.jpg')`,
 //     backgroundSize: 'cover',
@@ -564,7 +564,7 @@
 //           </div>
 //         </div>
 
-//         {/* ── FILTER BAR ── */}
+//         {/* â”€â”€ FILTER BAR â”€â”€ */}
 //         {/* FIX 1: Tabs go inside .filters-tabs (scrollable), sort stays outside so dropdown can overflow */}
 //         <div className="filters">
 //           <div className="filters-tabs">
@@ -579,7 +579,7 @@
 //               </button>
 //             ))}
 //           </div>
-//           {/* Sort — pushed to the right, outside the scrollable tabs so dropdown isn't clipped */}
+//           {/* Sort â€” pushed to the right, outside the scrollable tabs so dropdown isn't clipped */}
 //           <div style={{ flexShrink: 0, paddingLeft: '12px', paddingRight: 'clamp(16px, 5vw, 64px)', position: 'relative', zIndex: 9999 }}>
 //             <SortFilter
 //               value={sort}
@@ -589,7 +589,7 @@
 //           </div>
 //         </div>
 
-//         {/* ── PRODUCT GRID ── */}
+//         {/* â”€â”€ PRODUCT GRID â”€â”€ */}
 //         <div className="grid-wrap">
 //           <div className="grid">
 //             {products.length === 0 ? (
@@ -619,7 +619,7 @@ import {
   type MouseEvent
 } from 'react';
 import { FILTER_TABS } from '@/lib/products';
-import { fetchCatalogProducts, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import UpperNav from '@/components/ui/UpperNav';
@@ -627,10 +627,10 @@ import Link from 'next/link';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 import { useWishlist } from '@/lib/wishlistContext';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type Product = CatalogProduct;
 
-// ─── Unified Design Tokens — Green & Beige Pastel ────────────────────────────
+// â”€â”€â”€ Unified Design Tokens â€” Green & Beige Pastel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const THEME = {
   bg:          '#F5F2EC',
   bgAlt:       '#EDEAE2',
@@ -646,7 +646,7 @@ const THEME = {
   bodyFont:    "'DM Sans', sans-serif",
 };
 
-// ─── Style label lookup (hero pill only) ─────────────────────────────────────
+// â”€â”€â”€ Style label lookup (hero pill only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STYLE_LABELS: Record<string, { name: string; tagline: string; sub: string }> = {
   'soft-girl':        { name: 'Soft Girl',        tagline: 'Bloom Into You',     sub: 'Soft. Sweet. Eternal.'       },
   'glam-look':        { name: 'Glam Look',        tagline: 'Own The Room',       sub: 'Gilded. Bold. Unapologetic.' },
@@ -664,7 +664,6 @@ const STYLE_LABELS: Record<string, { name: string; tagline: string; sub: string 
 
 const DEFAULT_LABEL = {
   name: 'Collection', tagline: 'Curated For You',
-  sub: 'Handpicked. Crafted. Yours.', emoji: '🌿',
 };
 
 const ALL_STYLE_IDS = Object.keys(STYLE_LABELS);
@@ -677,10 +676,11 @@ function resolveStyleId(raw: string | undefined | null): string {
     .replace(/[\s_]+/g, '-').replace(/-+/g, '-').trim();
   if (ALL_STYLE_IDS.includes(kebab)) return kebab;
   const lower = raw.toLowerCase();
-  return ALL_STYLE_IDS.find(id => id.split('-').every(w => lower.includes(w))) ?? 'soft-girl';
+  const match = ALL_STYLE_IDS.find(id => id.split('-').every(w => lower.includes(w)));
+  return match ?? kebab; // return dynamic slug if not in hardcoded lists
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Product Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Card({ product, index }: { product: Product; index: number }) {
   const { addItem } = useCart();
   const { toggleItem, isWished } = useWishlist();
@@ -712,7 +712,7 @@ function Card({ product, index }: { product: Product; index: number }) {
         sku: product.sku ?? `SKU-${product.id}`,
         href: product.href,
       },
-      true, // openDrawer = true → CartDrawer slides open
+      true, // openDrawer = true â†’ CartDrawer slides open
     );
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -749,7 +749,7 @@ function Card({ product, index }: { product: Product; index: number }) {
         onMouseEnter={() => { setHovered(true); if (product.images[1]) setImgIdx(1); }}
         onMouseLeave={() => { setHovered(false); setImgIdx(0); }}
       >
-        {/* 4:6 ratio → aspect-ratio: 2/3 */}
+        {/* 4:6 ratio â†’ aspect-ratio: 2/3 */}
         <div className="c-img-wrap">
           <img
             src={product.images[imgIdx] || product.images[0]}
@@ -757,7 +757,7 @@ function Card({ product, index }: { product: Product; index: number }) {
             className="c-img"
             loading="lazy"
           />
-          {discount && <span className="c-disc">–{discount}%</span>}
+          {discount && <span className="c-disc">â€“{discount}%</span>}
 
           {/* Wishlist heart */}
           <button
@@ -775,9 +775,9 @@ function Card({ product, index }: { product: Product; index: number }) {
         <div className="c-info">
           <p className="c-name">{product.name}</p>
           <div className="c-prow">
-            <span className="c-price">₹{product.price.toLocaleString('en-IN')}</span>
+            <span className="c-price">â‚¹{product.price.toLocaleString('en-IN')}</span>
             {product.originalPrice && (
-              <span className="c-orig">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+              <span className="c-orig">â‚¹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
           </div>
           {/* Add to Cart button */}
@@ -786,7 +786,7 @@ function Card({ product, index }: { product: Product; index: number }) {
             onClick={handleAdd}
             aria-label={`Add ${product.name} to cart`}
           >
-            {added ? 'Added ✓' : 'Add to Cart'}
+            {added ? 'Added âœ“' : 'Add to Cart'}
           </button>
         </div>
       </article>
@@ -794,10 +794,10 @@ function Card({ product, index }: { product: Product; index: number }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: string }) {
   const sid   = resolveStyleId(styleId);
-  const label = STYLE_LABELS[sid] ?? DEFAULT_LABEL;
+  const [label, setLabel] = useState(STYLE_LABELS[sid] ?? DEFAULT_LABEL);
 
   const [sort, setSort]       = useState<SortOption>('default');
   const [filter, setFilter]   = useState('all');
@@ -805,6 +805,22 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
   const [navH, setNavH]       = useState(64);
   const navRef                = useRef<HTMLDivElement>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchCatalogStyles().then((styles) => {
+      if (!active) return;
+      const found = styles.find((s: any) => String(s.slug || slugifyCatalog(s.name)).toLowerCase() === sid);
+      if (found) {
+        setLabel({
+           name: found.name,
+           tagline: STYLE_LABELS[sid]?.tagline || 'Curated For You',
+           sub: STYLE_LABELS[sid]?.sub || 'Handpicked from our catalog.',
+        });
+      }
+    }).catch(console.error);
+    return () => { active = false; };
+  }, [sid]);
 
   useEffect(() => {
     setMounted(true);
@@ -839,7 +855,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
   const count = (type: string) =>
     type === 'all' ? allStyle.length : allStyle.filter(p => p.type === type).length;
 
-  // CSS injected as a template literal — fully static, no per-style variation
+  // CSS injected as a template literal â€” fully static, no per-style variation
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
@@ -1268,7 +1284,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
             {products.length === 0 ? (
               <div className="empty">
                 {/* <span className="empty-icon">{label.emoji}</span> */}
-                <p className="empty-msg">Nothing here yet — check back soon</p>
+                <p className="empty-msg">Nothing here yet â€” check back soon</p>
               </div>
             ) : (
               products.map((p, i) => (

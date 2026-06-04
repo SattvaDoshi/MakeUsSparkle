@@ -1,4 +1,5 @@
 import genderService from "../services/gender.service.js";
+import imageService from "../services/image.service.js";
 
 export async function getGenders(req, res) {
   try {
@@ -22,7 +23,13 @@ export async function getGenderById(req, res) {
 
 export async function createGender(req, res) {
   try {
-    const result = await genderService.createGender(req.body);
+    const data = { ...req.body };
+    if (req.file) {
+      const uploaded = await imageService.uploadImage(req.file.buffer, "genders");
+      data.image = uploaded.url;
+      data.imagePublicId = uploaded.publicId;
+    }
+    const result = await genderService.createGender(data);
     res.status(201).json(result);
   } catch (error) {
     console.error("Create gender error:", error);
@@ -32,7 +39,13 @@ export async function createGender(req, res) {
 
 export async function updateGender(req, res) {
   try {
-    const result = await genderService.updateGender(req.params.id, req.body);
+    const data = { ...req.body };
+    if (req.file) {
+      const uploaded = await imageService.uploadImage(req.file.buffer, "genders");
+      data.image = uploaded.url;
+      data.imagePublicId = uploaded.publicId;
+    }
+    const result = await genderService.updateGender(req.params.id, data);
     res.json(result);
   } catch (error) {
     console.error("Update gender error:", error);

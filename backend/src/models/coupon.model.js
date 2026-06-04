@@ -33,7 +33,7 @@ const couponSchema = new mongoose.Schema(
     applicableSubCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }],
     applicableStyles: [{ type: mongoose.Schema.Types.ObjectId, ref: "Style" }],
     applicableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
-    applicableProductTypes: [{ type: String, enum: ["male", "female", "unisex"] }],
+    applicableProductTypes: [{ type: String, enum: ["men", "women", "kids", "unisex"] }],
 
     issuedForEmail: String,
     issuedForUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

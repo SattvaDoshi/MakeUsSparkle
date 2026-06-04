@@ -36,6 +36,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 	}
 
 	const response = await fetch(getApiUrl(path), {
+		// avoid 304 Not Modified causing response.ok === false by default
+		cache: (requestOptions as any).cache ?? "no-store",
 		...requestOptions,
 		headers,
 	});

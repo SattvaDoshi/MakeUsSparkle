@@ -19,7 +19,6 @@ export type AdminUser = {
 
 export type AdminProduct = {
 	_id: string;
-	id?: string;
 	title: string;
 	description?: string;
 	about?: string;
@@ -29,11 +28,13 @@ export type AdminProduct = {
 	price?: number;
 	discountedPrice?: number;
 	discountTag?: string;
+	allowCustomization?: boolean;
 	stock?: number;
-	gender?: "male" | "female" | "unisex";
+	gender?: "men" | "women" | "kids" | "unisex";
 	mainImage?: string;
 	images?: string[];
 	tags?: string[];
+	seoTags?: string[];
 	colors?: Array<{ name: string; hex: string }>;
 	sizes?: string[];
 	variants?: Array<{
@@ -45,6 +46,8 @@ export type AdminProduct = {
 	}>;
 	createdAt?: string;
 	updatedAt?: string;
+	totalCharms?: number;
+	charmPieceOptions?: number[];
 };
 
 export type AdminOrder = {
@@ -108,6 +111,7 @@ export type AdminCoupon = {
 
 export type AdminBanner = {
 	_id: string;
+	bannerType?: "promo" | "main";
 	text?: string;
 	title?: string;
 	subtitle?: string;
@@ -124,6 +128,14 @@ export type AdminBanner = {
 		_id: string;
 		title?: string;
 	};
+};
+
+export type MainBanner = {
+	_id: string;
+	bannerType?: "main";
+	image?: string;
+	link?: string;
+	isActive?: boolean;
 };
 
 export type AdminReview = {
@@ -168,7 +180,7 @@ export type ProductFormState = {
 	title: string;
 	price: string;
 	stock: string;
-	gender: "male" | "female" | "unisex";
+	gender: "men" | "women" | "kids" | "unisex";
 	description: string;
 };
 

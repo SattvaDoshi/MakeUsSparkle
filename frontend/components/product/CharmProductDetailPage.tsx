@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchProductById, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchProductById, fetchCharmItems, type CatalogProduct, type CharmItemData } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
@@ -147,33 +147,66 @@ const GOES_WELL_WITH = [
 ];
 
 /* ─── CHARM SELECTOR COMPONENT ─── */
-/* ─── CHARM SELECTOR COMPONENT ─── */
-function CharmSelector({ onChange }: { onChange: (data: { count: number; charms: string[] }) => void }) {
-  const [charmCount, setCharmCount] = useState(1);
+function CharmSelector({
+  onChange,
+  charmPieceOptions = [],
+  totalCharms = 0
+}: {
+  onChange: (data: { count: number; charms: string[] }) => void;
+  charmPieceOptions?: number[];
+  totalCharms?: number;
+}) {
+  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const [charmCount, setCharmCount] = useState(() => optionsList[0] || 1);
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
-  const [pickerValue, setPickerValue] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync count when options change
+  useEffect(() => {
+    if (charmPieceOptions && charmPieceOptions.length > 0) {
+      setCharmCount(charmPieceOptions[0]);
+      setSelectedCharms([]);
+    }
+  }, [charmPieceOptions]);
+
+  // Adjust selection if charmCount decreases
+  useEffect(() => {
+    if (selectedCharms.length > charmCount) {
+      setSelectedCharms(prev => prev.slice(0, charmCount));
+    }
+  }, [charmCount, selectedCharms.length]);
 
   useEffect(() => {
     onChange({ count: charmCount, charms: selectedCharms });
   }, [charmCount, selectedCharms, onChange]);
 
-  const addCharm = () => {
-    if (!pickerValue || selectedCharms.length >= charmCount) return;
-    setSelectedCharms(prev => [...prev, pickerValue]);
-    setPickerValue('');
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const toggleSelectCharm = (charmName: string) => {
+    setSelectedCharms(prev => {
+      if (prev.includes(charmName)) {
+        return prev.filter(c => c !== charmName);
+      }
+      if (prev.length >= charmCount) {
+        // Can't select more than the limit
+        return prev;
+      }
+      return [...prev, charmName];
+    });
   };
 
-  const removeCharm = (index: number) => {
-    setSelectedCharms(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const getCharmLabel = (value: string) => {
-    const opt = CHARM_OPTIONS.find(o => o.value === value);
-    return opt ? opt.label : value;
-  };
-
-  const remaining = charmCount - selectedCharms.length;
-  const allFilled = remaining === 0;
+  const totalOptions = totalCharms > 0 ? totalCharms : 42; // default to 42 if not configured
+  const charmOptions = Array.from({ length: totalOptions }, (_, i) => `Charm ${i + 1}`);
 
   return (
     <div className="charm-selector">
@@ -186,14 +219,13 @@ function CharmSelector({ onChange }: { onChange: (data: { count: number; charms:
           Number of Charms
         </p>
         <div className="charm-count-grid">
-          {Array.from({ length: MAX_CHARM_COUNT }, (_, i) => i + 1).map(n => (
+          {optionsList.map(n => (
             <button
               key={n}
               type="button"
               className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
               onClick={() => {
                 setCharmCount(n);
-                setSelectedCharms(prev => prev.slice(0, n));
               }}
             >
               {n}
@@ -202,63 +234,132 @@ function CharmSelector({ onChange }: { onChange: (data: { count: number; charms:
         </div>
       </div>
 
-      {/* Single picker + add button */}
-      <div className="charm-dropdowns" style={{ marginTop: 18 }}>
+      {/* Checkbox Dropdown */}
+      <div className="charm-dropdown-container" ref={dropdownRef} style={{ marginTop: 18, position: 'relative' }}>
         <p className="charm-section-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
             <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
           </svg>
-          Choose a Charm
-          <span className="charm-filled-badge">{selectedCharms.length}/{charmCount} added</span>
+          Select Charms
+          <span className="charm-filled-badge">{selectedCharms.length}/{charmCount} selected</span>
         </p>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="charm-select-inner" style={{ flex: 1 }}>
-            <select
-              className={`charm-select${pickerValue ? ' charm-select--filled' : ''}`}
-              value={pickerValue}
-              onChange={e => setPickerValue(e.target.value)}
-              disabled={allFilled}
-            >
-              {CHARM_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <svg className="charm-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-          <button
-            type="button"
-            onClick={addCharm}
-            disabled={!pickerValue || allFilled}
+        <button
+          type="button"
+          className="charm-dropdown-btn"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'white',
+            border: '1.5px solid var(--beige-dkr)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            fontFamily: "'Jost', sans-serif",
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--olive-600)',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            {selectedCharms.length > 0
+              ? selectedCharms.join(', ')
+              : 'SELECT CHARMS'}
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
             style={{
+              width: 14,
+              height: 14,
+              color: 'var(--mist)',
+              transition: 'transform 0.2s',
+              transform: isOpen ? 'rotate(180deg)' : 'none',
               flexShrink: 0,
-              padding: '10px 16px',
-              borderRadius: 10,
-              border: '1.5px solid var(--olive-400)',
-              background: !pickerValue || allFilled ? 'var(--beige-dk)' : 'var(--olive-600)',
-              color: !pickerValue || allFilled ? 'var(--mist)' : 'var(--beige)',
-              fontFamily: "'Jost', sans-serif",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: '.1em',
-              textTransform: 'uppercase' as const,
-              cursor: !pickerValue || allFilled ? 'not-allowed' : 'pointer',
-              transition: 'all .2s',
-              whiteSpace: 'nowrap' as const,
             }}
           >
-            + Add
-          </button>
-        </div>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
 
-        {allFilled && (
-          <p style={{ fontSize: 10.5, color: 'var(--olive-500)', fontWeight: 500, marginTop: 8, letterSpacing: '.03em' }}>
-            All {charmCount} charm{charmCount !== 1 ? 's' : ''} added. Remove one to swap it.
-          </p>
+        {isOpen && (
+          <div
+            className="charm-dropdown-list-wrapper"
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: 6,
+              background: 'white',
+              border: '1.5px solid var(--beige-dkr)',
+              borderRadius: 12,
+              maxHeight: 240,
+              overflowY: 'auto',
+              boxShadow: '0 8px 30px rgba(61,74,34,0.15)',
+              zIndex: 100,
+              animation: 'charmPop 0.25s ease both',
+            }}
+          >
+            {charmOptions.map(option => {
+              const isChecked = selectedCharms.includes(option);
+              const isMaxReached = selectedCharms.length >= charmCount;
+              const disabled = isMaxReached && !isChecked;
+
+              return (
+                <label
+                  key={option}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '10px 16px',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    background: isChecked ? 'var(--olive-50)' : 'transparent',
+                    borderBottom: '1px solid rgba(61,74,34,0.06)',
+                    transition: 'background 0.15s',
+                    opacity: disabled ? 0.5 : 1,
+                  }}
+                  className="charm-dropdown-option"
+                  onClick={(e) => {
+                    if (disabled) e.preventDefault();
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    disabled={disabled}
+                    onChange={() => toggleSelectCharm(option)}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      accentColor: 'var(--olive-600)',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 13.5,
+                      fontWeight: isChecked ? 600 : 400,
+                      color: isChecked ? 'var(--olive-900)' : 'var(--ink)',
+                    }}
+                  >
+                    {option}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      {/* Added charms list */}
+      {/* Summary / selected display */}
       {selectedCharms.length > 0 && (
         <div className="charm-summary-strip" style={{ animation: 'charmFadeUp .35s ease both', marginTop: 16 }}>
           <div className="charm-summary-header">
@@ -266,18 +367,40 @@ function CharmSelector({ onChange }: { onChange: (data: { count: number; charms:
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <span>
-              <strong>{selectedCharms.length}</strong> of <strong>{charmCount}</strong> charm{charmCount !== 1 ? 's' : ''} selected
-              {allFilled && <span className="charm-all-done"> — all set! ✨</span>}
+              <strong>{selectedCharms.length}</strong> of <strong>{charmCount}</strong> selected
+              {selectedCharms.length === charmCount && <span className="charm-all-done"> — all set! ✨</span>}
             </span>
           </div>
-          <div className="charm-summary-list">
+          <div className="charm-summary-list" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {selectedCharms.map((c, i) => (
-              <span key={i} className="charm-summary-pill">
-                <span className="charm-summary-num">{i + 1}</span>
-                {getCharmLabel(c)}
+              <span key={c} className="charm-summary-pill" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 10.5,
+                fontWeight: 500,
+                color: 'var(--ink)',
+                background: 'white',
+                border: '1px solid rgba(61,74,34,0.12)',
+                padding: '4px 10px 4px 4px',
+                borderRadius: 50,
+              }}>
+                <span className="charm-summary-num" style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: 'var(--olive-600)',
+                  color: 'var(--beige)',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>{i + 1}</span>
+                {c}
                 <button
                   type="button"
-                  onClick={() => removeCharm(i)}
+                  onClick={() => toggleSelectCharm(c)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', color: 'var(--mist)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
                   title="Remove"
                 >
@@ -285,19 +408,7 @@ function CharmSelector({ onChange }: { onChange: (data: { count: number; charms:
                 </button>
               </span>
             ))}
-            {/* Empty slots */}
-            {Array.from({ length: remaining }, (_, i) => (
-              <span key={`empty-${i}`} className="charm-summary-pill charm-summary-pill--empty">
-                <span className="charm-summary-num">{selectedCharms.length + i + 1}</span>
-                Not selected
-              </span>
-            ))}
           </div>
-          {!allFilled && (
-            <p className="charm-remaining-note">
-              {remaining} more charm{remaining !== 1 ? 's' : ''} to go.
-            </p>
-          )}
         </div>
       )}
     </div>
@@ -666,31 +777,64 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const currentStock = matchingVariant?.stock ?? stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
+  const selectedCharmCount = charmData.count;
+  const unitCharmPrice = discountedPrice || price;
+  const unitOriginalCharmPrice = originalPrice || price;
+  const totalCharmPrice = unitCharmPrice * selectedCharmCount;
+  const totalCharmOriginalPrice = unitOriginalCharmPrice * selectedCharmCount;
 
   const wished = product ? isWished(product.id) : false;
 
   const handleWishToggle = useCallback(() => {
     if (!product) return;
-    toggleItem({ id: product.id, name: product.name || 'Product', price: discountedPrice || price, originalPrice: price, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
-  }, [toggleItem, product, discountedPrice, price, displayImg, normalizedColors]);
+    toggleItem({ id: product.id, name: product.name || 'Product', price: totalCharmPrice, originalPrice: totalCharmOriginalPrice, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
+  }, [toggleItem, product, totalCharmPrice, totalCharmOriginalPrice, displayImg, normalizedColors]);
 
   const buildCartItem = useCallback(() => ({
     id: String(product!.sourceId),
     name: product!.name || '',
-    price: discountedPrice || price,
-    originalPrice: price,
+    price: totalCharmPrice,
+    originalPrice: totalCharmOriginalPrice,
     image: displayImg,
     color: currentColor?.label || '',
     colorHex: currentColor?.hex || '#c9a84c',
     size: activeSize || undefined,
     sku: product!.sku,
     href: product!.href || `/products/${product!.sourceId}`,
+    sourceId: String(product!.sourceId),
+    category,
     customNote: customData.wantCustom ? customData.globalNote : undefined,
     customImages: customData.wantCustom ? customData.uploads : undefined,
     giftMessage: giftMessage.customMessage || undefined,
+    selectedCharms: charmData.charms.filter(Boolean).map(charm => ({
+      sourceId: charm,
+      name: charm,
+      quantity: 1,
+      price: unitCharmPrice,
+      images: customData.wantCustom ? customData.uploads : [],
+      customText: customData.wantCustom ? customData.globalNote : undefined,
+    })),
+    selectionGroups: [{
+      type: 'multi_item_selection',
+      category,
+      label: 'Charm Selection',
+      selectionKey: 'selectedCharms',
+      itemRefModel: 'CharmItem',
+      items: charmData.charms.filter(Boolean).map(charm => ({
+        sourceId: charm,
+        name: charm,
+        quantity: 1,
+        price: unitCharmPrice,
+        images: customData.wantCustom ? customData.uploads : [],
+        customText: customData.wantCustom ? customData.globalNote : undefined,
+      })),
+      metadata: {
+        requestedCount: selectedCharmCount,
+      },
+    }],
     charms: charmData.charms.filter(Boolean),
-    charmCount: charmData.count,
-  }), [product, discountedPrice, price, displayImg, currentColor, activeSize, customData, giftMessage, charmData]);
+    charmCount: selectedCharmCount,
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, unitCharmPrice, selectedCharmCount]);
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
@@ -738,7 +882,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const description = product.description || '';
 
   const dynamicAccordionItems: AccordionData[] = [
-    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about, isHtml: true }] : []),
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once dispatched.' },
@@ -1235,14 +1379,19 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             </div>
 
             <div className="pdp-price-row">
-              <span className="pdp-price">₹{(discountedPrice || price).toLocaleString('en-IN')}</span>
+              <span className="pdp-price">₹{totalCharmPrice.toLocaleString('en-IN')}</span>
               {(discountedPrice || originalPrice) && (
                 <>
-                  <span className="pdp-original">₹{(originalPrice || price).toLocaleString('en-IN')}</span>
+                  <span className="pdp-original">₹{totalCharmOriginalPrice.toLocaleString('en-IN')}</span>
                   <span className="pdp-discount">{discount}% off</span>
                 </>
               )}
             </div>
+            {selectedCharmCount > 0 && (
+              <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
+                ₹{unitCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} pieces
+              </p>
+            )}
             {discountTag && (
               <div className="pdp-offer">
                 <span className="pdp-offer-icon">🏷️</span>
@@ -1308,7 +1457,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <p className="charm-selector-sub">
                 Pick how many charms you'd like, then choose each one individually. You can mix initials, symbols, birthstones, and more.
               </p>
-              <CharmSelector onChange={handleCharmChange} />
+              <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} />
             </div>
 
             <div className="pdp-divider" />

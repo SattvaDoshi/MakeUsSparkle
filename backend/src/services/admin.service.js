@@ -208,6 +208,8 @@ class AdminService {
 			const orders = await Order.find()
 				.populate("user", "name email")
 				.populate("items.product", "name images")
+				.populate("items.selectedCharms")
+				.populate("items.selectionGroups.items.item")
 				.sort({ createdAt: -1 })
 				.skip(skip)
 				.limit(limit);
@@ -310,8 +312,9 @@ class AdminService {
 	async getBanners(page = 1, limit = 20) {
 		try {
 			const skip = (page - 1) * limit;
-			const banners = await Banner.find().populate("product", "title").sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limit);
-			const total = await Banner.countDocuments();
+			const filter = { $or: [{ bannerType: "promo" }, { bannerType: { $exists: false } }] };
+			const banners = await Banner.find(filter).populate("product", "title").sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limit);
+			const total = await Banner.countDocuments(filter);
 
 			return {
 				success: true,

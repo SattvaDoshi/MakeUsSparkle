@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cartContext";
 import { useWishlist } from "@/lib/wishlistContext";
-import { useEffect} from "react";
-import { fetchCatalogProducts, type CatalogProduct } from "@/lib/catalogApi";
+import { fetchNewArrivalsSection, type CatalogProduct } from "@/lib/catalogApi";
 /* ─────────────────────────────────────────
    Types
 ───────────────────────────────────────── */
@@ -32,141 +31,6 @@ interface Product {
 /* ─────────────────────────────────────────
    Data
 ───────────────────────────────────────── */
-const products: Product[] = [
-  {
-    id: 1,
-    name: "Linen Tote Bag",
-    category: "Bags",
-    price: 3990,
-    originalPrice: 5500,
-    badge: "Just In",
-    images: [
-      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&q=80",
-      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80",
-    ],
-    colors: [{ label: "Natural", hex: "#d4c5a9" }],
-    href: "/products/linen-tote-bag",
-    rating: 4.5,
-    reviewCount: 128,
-  },
-  {
-    id: 2,
-    name: "Ceramic Planter",
-    category: "Home Décor",
-    price: 2850,
-    badge: "New",
-    images: [
-      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&q=80",
-      "https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=600&q=80",
-    ],
-    colors: [
-      { label: "White", hex: "#f5f0e8" },
-      { label: "Terracotta", hex: "#c1694f" },
-    ],
-    href: "/products/ceramic-planter",
-    rating: 4.7,
-    reviewCount: 89,
-  },
-  {
-    id: 3,
-    name: "Woven Throw Blanket",
-    category: "Textiles",
-    price: 7290,
-    originalPrice: 9500,
-    badge: "Trending",
-    images: [
-      "https://images.unsplash.com/photo-1580301762395-21ce84d00bc6?w=600&q=80",
-    ],
-    colors: [
-      { label: "Oat", hex: "#e8dcc8" },
-      { label: "Sage", hex: "#8aab8a" },
-      { label: "Clay", hex: "#c1694f" },
-    ],
-    href: "/products/woven-throw-blanket",
-    rating: 4.8,
-    reviewCount: 212,
-  },
-  {
-    id: 4,
-    name: "Soy Candle Set",
-    category: "Wellness",
-    price: 3450,
-    badge: "Just In",
-    images: [
-      "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
-      "https://images.unsplash.com/photo-1603006905393-2a9f25b2c0a4?w=600&q=80",
-    ],
-    colors: [{ label: "Cream", hex: "#f5f0e0" }],
-    href: "/products/soy-candle-set",
-    rating: 4.9,
-    reviewCount: 305,
-  },
-  {
-    id: 5,
-    name: "Rattan Side Table",
-    category: "Furniture",
-    price: 10290,
-    originalPrice: 13500,
-    badge: "New",
-    images: [
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
-    ],
-    colors: [{ label: "Natural", hex: "#c4a265" }],
-    href: "/products/rattan-side-table",
-    rating: 4.6,
-    reviewCount: 74,
-  },
-  {
-    id: 6,
-    name: "Handmade Soap Bar",
-    category: "Wellness",
-    price: 1490,
-    badge: "Just In",
-    images: [
-      "https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&q=80",
-      "https://images.unsplash.com/photo-1573461160327-b450edd3e5b9?w=600&q=80",
-    ],
-    colors: [
-      { label: "Lavender", hex: "#b098c5" },
-      { label: "Citrus", hex: "#e8c44a" },
-    ],
-    href: "/products/handmade-soap-bar",
-    rating: 4.4,
-    reviewCount: 167,
-  },
-  {
-    id: 7,
-    name: "Bamboo Cutlery Set",
-    category: "Kitchen",
-    price: 2250,
-    badge: "Eco Pick",
-    images: [
-      "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80",
-    ],
-    colors: [{ label: "Bamboo", hex: "#c8a96e" }],
-    href: "/products/bamboo-cutlery-set",
-    rating: 4.3,
-    reviewCount: 91,
-  },
-  {
-    id: 8,
-    name: "Dried Flower Wreath",
-    category: "Home Décor",
-    price: 4690,
-    originalPrice: 5800,
-    badge: "New",
-    images: [
-      "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=600&q=80",
-    ],
-    colors: [
-      { label: "Blush", hex: "#e8a0a0" },
-      { label: "Ivory", hex: "#f5f0e0" },
-    ],
-    href: "/products/dried-flower-wreath",
-    rating: 4.7,
-    reviewCount: 53,
-  },
-];
 
 /* ─────────────────────────────────────────
    ProductCard
@@ -396,12 +260,34 @@ function ProductCard({
 export default function NewArrivals() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [eyebrow, setEyebrow] = useState("");
+  const [title, setTitle] = useState("New Arrivals");
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetchCatalogProducts().then((all) => {
-      // Take the 8 most recent, or filter by badge, etc.
-      setProducts(all.slice(0, 8));
-    });
+    let alive = true;
+
+    fetchNewArrivalsSection()
+      .then((section) => {
+        if (!alive) return;
+        setEyebrow(section?.eyebrow || "");
+        setTitle(section?.title || "New Arrivals");
+        setProducts(section?.products || []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setProducts([]);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  if (!loading && products.length === 0) return null;
  
 
   const scroll = (dir: "left" | "right") => {
@@ -787,10 +673,8 @@ export default function NewArrivals() {
           {/* Header */}
           <div className="na-header">
             <div className="na-title-group">
-              <span className="na-eyebrow">— Fresh off the shelf</span>
-              <h2 className="na-title">
-                New <em>Arrivals</em>
-              </h2>
+              {eyebrow ? <span className="na-eyebrow">{eyebrow}</span> : null}
+              <h2 className="na-title">{title}</h2>
             </div>
 
             {/* <div className="na-nav">

@@ -1,10 +1,42 @@
 import Category from "../models/category.model.js";
 import SubCategory from "../models/subCategory.model.js";
+import Gender from "../models/gender.model.js";
+import mongoose from "mongoose";
+
+function toTitleCase(value = "") {
+	return value
+		.toString()
+		.trim()
+		.replace(/[-_]+/g, " ")
+		.replace(/\s+/g, " ")
+		.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+async function normalizeGenderId(data) {
+	if (!data || !data.gender || typeof data.gender !== "string") return;
+	const raw = String(data.gender).trim();
+	if (!raw) return;
+	let genderDoc = null;
+	if (mongoose.Types.ObjectId.isValid(raw)) {
+		genderDoc = await Gender.findById(raw);
+	}
+	if (!genderDoc) {
+		const slug = raw.toLowerCase();
+		genderDoc =
+			(await Gender.findOne({ slug })) ||
+			(await Gender.findOne({ name: new RegExp(`^${raw}$`, "i") }));
+	}
+	if (!genderDoc) {
+		const slug = raw.toLowerCase();
+		genderDoc = await Gender.create({ name: toTitleCase(raw), slug, isActive: true });
+	}
+	data.gender = genderDoc._id;
+}
 
 class CategoryService {
 	async getCategories() {
 		try {
-			const categories = await Category.find();
+			const categories = await Category.find().populate("gender").sort({ name: 1 });
 			return { success: true, categories };
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -27,6 +59,7 @@ class CategoryService {
 
 	async createCategory(categoryData) {
 		try {
+			await normalizeGenderId(categoryData);
 			const category = await Category.create(categoryData);
 			return { success: true, category };
 		} catch (error) {
@@ -37,6 +70,7 @@ class CategoryService {
 
 	async updateCategory(categoryId, updateData) {
 		try {
+			await normalizeGenderId(updateData);
 			const category = await Category.findByIdAndUpdate(categoryId, updateData, { returnDocument: "after" });
 			if (!category) {
 				throw new Error("Category not found");
@@ -61,7 +95,9 @@ class CategoryService {
 	async getSubCategories(categoryId) {
 		try {
 			const query = categoryId ? { category: categoryId } : {};
-			const subcategories = await SubCategory.find(query).populate("category");
+			const subcategories = await SubCategory.find(query)
+				.populate({ path: "category", populate: { path: "gender" } })
+				.sort({ name: 1 });
 			return { success: true, subcategories };
 		} catch (error) {
 			console.error("Error fetching subcategories:", error);

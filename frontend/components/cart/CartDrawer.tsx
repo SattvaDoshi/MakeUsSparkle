@@ -927,7 +927,9 @@ export default function CartDrawer() {
                       <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
                         {item.selectedCharms.length} Pieces
                       </div>
-                      {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                      {item.selectedCharms.map((selection, idx: number) => {
+                        const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                        return (
                         <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
                           <span style={{ color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ fontSize: 12 }}>{charm.emoji || '◈'}</span>
@@ -935,7 +937,8 @@ export default function CartDrawer() {
                           </span>
                           <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 10 }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

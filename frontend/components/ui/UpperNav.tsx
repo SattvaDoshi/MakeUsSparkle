@@ -1425,14 +1425,12 @@
 "use client";
 import { useCart } from "@/lib/cartContext";
 import { useAuth } from "@/lib/authContext";
-import { useGender } from "@/lib/genderContext";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function TopNav() {
   const { itemCount } = useCart();
   const { isAuthenticated, signOut } = useAuth();
-  const { gender, setGender } = useGender();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
@@ -1878,27 +1876,11 @@ export default function TopNav() {
       <nav ref={navRef} className="k-nav" data-theme={theme}>
         <div className="k-nav-inner">
 
-          {/* ── LEFT: desktop links + desktop gender toggle / mobile hamburger ── */}
+          {/* ── LEFT: desktop links + mobile hamburger ── */}
           <div className="k-nav-left">
             <a className="k-link" href="#">Collections</a>
             <a className="k-link" href="#">New In</a>
             <a className="k-link" href="#">Bridal</a>
-            {/* Desktop-only gender toggle (hidden on mobile via CSS) */}
-            <div className="k-gender-toggle">
-              <div className={`k-gender-pill${gender === "men" ? " men" : ""}`} />
-              <button
-                className={`k-gender-btn${gender === "women" ? " active" : ""}`}
-                onClick={() => setGender("women")}
-              >
-                Women
-              </button>
-              <button
-                className={`k-gender-btn${gender === "men" ? " active" : ""}`}
-                onClick={() => setGender("men")}
-              >
-                Men
-              </button>
-            </div>
           </div>
 
           {/* On mobile, hamburger replaces the whole left nav.
@@ -1916,30 +1898,6 @@ export default function TopNav() {
           <a href="/" className="k-logo">
             k<span className="k-logo-dot" />
           </a>
-
-          {/*
-            ── MOBILE INLINE GENDER TOGGLE ──
-            Only visible on mobile (≤768px). Sits between logo and right icons
-            in the 4-column grid. Uses the same k-gender-toggle / k-gender-pill /
-            k-gender-btn classes so theme-aware colours apply automatically.
-          */}
-          <div className="k-mobile-gender-inline" aria-label="Shop by gender">
-            <div className="k-gender-toggle">
-              <div className={`k-gender-pill${gender === "men" ? " men" : ""}`} />
-              <button
-                className={`k-gender-btn${gender === "women" ? " active" : ""}`}
-                onClick={() => setGender("women")}
-              >
-                Women
-              </button>
-              <button
-                className={`k-gender-btn${gender === "men" ? " active" : ""}`}
-                onClick={() => setGender("men")}
-              >
-                Men
-              </button>
-            </div>
-          </div>
 
           {/* ── RIGHT: search, profile, cart ── */}
           <div className="k-nav-right">

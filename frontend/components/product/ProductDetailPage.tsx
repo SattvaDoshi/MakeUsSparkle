@@ -45,8 +45,6 @@ function dedupeImages(values: Array<string | undefined | null>) {
   return uniqueValues(values);
 }
 
-const CUSTOMISABLE_CATEGORIES = ['Gift Boxes', 'Fan Box', 'Key Chain/Charm'];
-
 const TRUST_BADGES = [
   {
     icon: (
@@ -456,7 +454,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const discountedPrice = product?.discountedPrice ?? null;
   const discountTag     = product?.discountTag ?? null;
   const stock           = product?.stock ?? 0;
-  const tags            = product?.tags ?? [];
+  const tags            = product?.seoTags ?? [];
   const faqs            = product?.faqs ?? [];
   const about           = product?.about ?? '';
 
@@ -466,7 +464,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const mainImage = product?.mainImage;
   const images   = product?.images ?? [];
 
-  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
+  const allowCustomization = product?.allowCustomization === true;
 
   useEffect(() => {
     if (!product) return;
@@ -516,11 +514,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       originalPrice: price, image: displayImg, color: currentColor?.label || '',
       colorHex: currentColor?.hex || '#c9a84c', size: activeSize || undefined, sku: product.sku,
       href: product.href || `/products/${product.sourceId}`,
-      customNote: customData.wantCustom ? customData.globalNote : undefined,
-      customImages: customData.wantCustom ? customData.uploads : undefined,
-      giftMessage: giftMessage.customMessage || undefined,
+      customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
+      customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
+      giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
     };
-  }, [product, discountedPrice, price, displayImg, currentColor, activeSize, customData, giftMessage]);
+  }, [product, discountedPrice, price, displayImg, currentColor, activeSize, customData, giftMessage, allowCustomization]);
 
   const handleBuyNow = useCallback(() => {
     const item = buildCartItem(); if (!item) return;
@@ -572,7 +570,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   // CHANGE 1: Shipping and Returns are now TWO separate accordion items,
   //           each with a linkHref pointing to the respective policy page.
   const dynamicAccordionItems: AccordionData[] = [
-    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about, isHtml: true }] : []),
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once the order is dispatched. For damaged or wrong items received, contact us within 48 hours of delivery.' },
@@ -1010,7 +1008,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
             )}
             <div className="pdp-divider" />
 
-            {isCustomisable && (
+            {allowCustomization && (
               <>
                 <div className="pdp-cust-banner">
                   <div className="pdp-cust-banner-head">
@@ -1036,9 +1034,13 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
 
             <div className="pdp-divider" />
             <CompleteTheLookStrip />
-            <div className="pdp-divider" />
-            <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
-            <div className="pdp-divider" />
+            {allowCustomization && (
+              <>
+                <div className="pdp-divider" />
+                <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
+                <div className="pdp-divider" />
+              </>
+            )}
 
             <div className="pdp-cta-row">
               <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">

@@ -372,12 +372,14 @@ export default function ProductsPage({
   subtype,
   gender,
   embedded = false,
+  products,
   productLinkBase,
 }: {
   type: string;
   subtype?: string;
   gender?: string;
   embedded?: boolean;
+  products?: Product[];
   productLinkBase?: string;
 }) {
     
@@ -395,6 +397,13 @@ const [sort, setSort] = useState<SortOption>('default');
   useEffect(() => {
     let mounted = true;
 
+    if (products) {
+      setDynamicProducts(products);
+      return () => {
+        mounted = false;
+      };
+    }
+
     fetchCatalogProducts()
       .then((products) => {
         if (mounted) {
@@ -410,21 +419,28 @@ const [sort, setSort] = useState<SortOption>('default');
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [products]);
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
-    
 
-    if (gender === 'women') {
+    if (gender) {
       list = list.filter((p) => {
-        const productGender = (p as Product & { gender?: string }).gender;
-        return productGender === 'female' || productGender === 'unisex';
-      });
-    } else if (gender === 'men') {
-      list = list.filter((p) => {
-        const productGender = (p as Product & { gender?: string }).gender;
-        return productGender === 'male' || productGender === 'unisex';
+        const productGender = (p as Product & { gender?: string }).gender || 'unisex';
+
+        if (gender === 'women') {
+          return productGender === 'women' || productGender === 'unisex';
+        }
+
+        if (gender === 'men') {
+          return productGender === 'men' || productGender === 'unisex';
+        }
+
+        if (gender === 'kids') {
+          return productGender === 'unisex' || (p.tags || []).some((tag) => /kid|child|children/i.test(tag));
+        }
+
+        return true;
       });
     }
 

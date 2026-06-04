@@ -1,27 +1,19 @@
 import Order from "../models/order.model.js";
-import Product from "../models/product.model.js";
 import emailService from "./email.service.js";
+import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {
-		const directId = String(item.product || item.sourceId || item.id || "").trim();
-		if (/^[0-9a-fA-F]{24}$/.test(directId)) {
-			return directId;
-		}
-
-		const title = String(item.name || "").trim();
-		if (!title) {
-			return undefined;
-		}
-
-		const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		const product = await Product.findOne({ title: new RegExp(`^${escaped}$`, "i") }).select("_id").lean();
-		return product ? String(product._id) : undefined;
+		return resolveProductId(item);
 	}
 
 	async getOrders(userId) {
 		try {
-			const orders = await Order.find({ user: userId }).populate("items.product").sort({ createdAt: -1 });
+			const orders = await Order.find({ user: userId })
+				.populate("items.product")
+				.populate("items.selectedCharms")
+				.populate("items.selectionGroups.items.item")
+				.sort({ createdAt: -1 });
 			return { success: true, orders };
 		} catch (error) {
 			console.error("Error fetching orders:", error);
@@ -31,7 +23,10 @@ class OrderService {
 
 	async getOrderById(orderId, userId) {
 		try {
-			const order = await Order.findOne({ _id: orderId, user: userId }).populate("items.product");
+			const order = await Order.findOne({ _id: orderId, user: userId })
+				.populate("items.product")
+				.populate("items.selectedCharms")
+				.populate("items.selectionGroups.items.item");
 			if (!order) {
 				throw new Error("Order not found");
 			}
@@ -44,14 +39,22 @@ class OrderService {
 
 	async createOrder(userId, orderData) {
 		try {
-			const orderItems = await Promise.all(orderData.items.map(async (item) => ({
-				product: await this.resolveProductId(item),
-				quantity: item.quantity,
-				price: item.price,
-				customNote: item.customNote,
-				customImages: item.customImages,
-				selectedCharms: item.selectedCharms,
-			})));
+			// Validate: warn (don't block) when a selectable-category item has no selections
+			for (const item of orderData.items || []) {
+				const cat = item.category || item.parentCategory || item.sourceId || "";
+				if (isSelectableCategory(cat)) {
+					const hasSelections =
+						(Array.isArray(item.selectionGroups) && item.selectionGroups.some((g) => g.items?.length > 0)) ||
+						(Array.isArray(item.selectedCharms) && item.selectedCharms.length > 0);
+					if (!hasSelections) {
+						console.warn(
+							`[Order] Item "${item.name || cat}" belongs to selectable category "${cat}" but has no selectionGroups or selectedCharms.`
+						);
+					}
+				}
+			}
+
+			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
 			const order = await Order.create({
 				user: userId,
@@ -71,7 +74,9 @@ class OrderService {
 			if (orderData.paymentMode === 'COD') {
 				const populatedOrder = await order.populate([
 					{ path: "user" },
-					{ path: "items.product", select: "title" }
+					{ path: "items.product", select: "title" },
+					{ path: "items.selectedCharms" },
+					{ path: "items.selectionGroups.items.item" },
 				]);
 				await emailService.sendOrderConfirmationEmail(populatedOrder.user.email, populatedOrder._id, populatedOrder.items, populatedOrder.totalAmount);
 			}

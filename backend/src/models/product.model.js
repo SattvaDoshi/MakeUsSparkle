@@ -19,6 +19,14 @@ const productSchema = new mongoose.Schema(
     price: Number,
     discountedPrice: Number,
     discountTag: String,
+    allowCustomization: { type: Boolean, default: false },
+
+    // For "Custom Charms" and "Keychains" categories:
+    // The selectable number-of-pieces options shown to the user (e.g. [3, 5, 7]).
+    // An empty array means no piece-count selection is required.
+    charmPieceOptions: { type: [Number], default: [] },
+    totalCharms: { type: Number, default: 0 },
+
     rating: { type: Number, default: 0 },
 
     // Main hero image (first image shown)
@@ -57,10 +65,11 @@ const productSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      enum: ["male", "female", "unisex"],
+      enum: ["men", "women", "kids", "unisex"],
     },
     stock: Number,
     tags: [String],
+    seoTags: [String],
     faqs: [
       {
         question: String,

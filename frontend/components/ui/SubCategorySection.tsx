@@ -2,9 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useGender } from '@/lib/genderContext';
 import UpperNav from '@/components/ui/UpperNav';
 import ProductsPage from '@/components/product/ProductPage';
-import { fetchCatalogProducts } from '@/lib/catalogApi';
+import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubcategoryItem {
@@ -176,6 +177,8 @@ function CircleFilter({
 export default function SubcategoryPage({ type = 'necklace' }: { type?: string }) {
   const resolvedType = (type || 'necklace').toLowerCase();
   const [dynamicItems, setDynamicItems] = useState<SubcategoryItem[]>([]);
+  const [scopedProducts, setScopedProducts] = useState<CatalogProduct[]>([]);
+  const { gender } = useGender();
 
   const displayLabel = resolvedType
     .replace(/-/g, ' ')
@@ -187,7 +190,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
     heading: displayLabel.split(' ')[0] || 'Subcategory',
     tagline: 'Edit',
     desc: 'Curated live from the latest catalog data.',
-    backHref: '/categories/women/jewellery',
+    backHref: `/categories/${gender || 'women'}/jewellery`,
     items: dynamicItems,
   };
 
@@ -198,13 +201,14 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
   useEffect(() => {
     let mounted = true;
 
-    fetchCatalogProducts()
+    fetchCatalogProducts({ subCategorySlug: resolvedType })
       .then((products) => {
         if (!mounted) {
           return;
         }
 
-        const scoped = products.filter((product) => product.type === resolvedType);
+        setScopedProducts(products);
+        const scoped = products;
         const tagMap = new Map<string, { count: number; img: string }>();
 
         scoped.forEach((product) => {
@@ -217,7 +221,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
             const prev = tagMap.get(key);
             tagMap.set(key, {
               count: (prev?.count || 0) + 1,
-              img: prev?.img || product.images[0],
+              img: prev?.img || product.mainImage || product.images[0],
             });
           });
         });
@@ -238,6 +242,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
       .catch(() => {
         if (mounted) {
           setDynamicItems([]);
+          setScopedProducts([]);
         }
       });
 
@@ -589,6 +594,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
             type={resolvedType}
             subtype={activeSubtype ?? undefined}
             embedded
+            products={scopedProducts}
    productLinkBase={
   resolvedType === 'charm-jewellery' || resolvedType === 'custom-charm-jewellery'
     ? '/custom-charm'

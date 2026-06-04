@@ -1,23 +1,11 @@
 import { createRazorpayOrder, verifyRazorpaySignature } from "../config/payment.config.js";
 import Order from "../models/order.model.js";
-import Product from "../models/product.model.js";
 import emailService from "./email.service.js";
+import { normalizeOrderItem, resolveProductId } from "./orderItemSelection.service.js";
 
 class PaymentService {
 	async resolveProductId(item = {}) {
-		const directId = String(item.product || item.sourceId || item.id || "").trim();
-		if (/^[0-9a-fA-F]{24}$/.test(directId)) {
-			return directId;
-		}
-
-		const title = String(item.name || "").trim();
-		if (!title) {
-			return undefined;
-		}
-
-		const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		const product = await Product.findOne({ title: new RegExp(`^${escaped}$`, "i") }).select("_id").lean();
-		return product ? String(product._id) : undefined;
+		return resolveProductId(item);
 	}
 
 	async createPaymentOrder(userId, orderData) {
@@ -36,14 +24,7 @@ class PaymentService {
 			const razorpayOrder = await createRazorpayOrder(orderData.amount);
 
 			// Create order record in database
-			const orderItems = await Promise.all(orderData.items.map(async (item) => ({
-				product: await this.resolveProductId(item),
-				quantity: item.quantity,
-				price: item.price,
-				customNote: item.customNote,
-				customImages: item.customImages,
-				selectedCharms: item.selectedCharms,
-			})));
+			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
 			const order = await Order.create({
 				user: userId,
@@ -110,7 +91,9 @@ class PaymentService {
 			// Send order confirmation email
 			const user = await order.populate([
 				{ path: "user" },
-				{ path: "items.product", select: "title" }
+				{ path: "items.product", select: "title" },
+				{ path: "items.selectedCharms" },
+				{ path: "items.selectionGroups.items.item" },
 			]);
 			await emailService.sendOrderConfirmationEmail(user.user.email, order._id, order.items, order.totalAmount);
 

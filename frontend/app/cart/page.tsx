@@ -1285,15 +1285,23 @@ export default function CartPage() {
                           <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
                             Selected Pieces ({item.selectedCharms.length})
                           </div>
-                          {item.selectedCharms.map((charm: { id?: string; _id?: string; name?: string; price?: number; emoji?: string }, idx: number) => (
+                          {item.selectedCharms.map((selection, idx: number) => {
+                            const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                            const charmPrice = typeof charm.price === 'number' && Number.isFinite(charm.price)
+                              ? charm.price
+                              : item.selectedCharms?.length
+                                ? item.price / item.selectedCharms.length
+                                : 0;
+                            return (
                             <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: idx < (item.selectedCharms?.length || 0) - 1 ? '1px solid rgba(61,74,34,.08)' : 'none' }}>
                               <span style={{ fontSize: 12, color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span style={{ fontSize: 14 }}>{charm.emoji || '◈'}</span>
                                 {charm.name || 'Charm'}
                               </span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{charmPrice.toLocaleString('en-IN')}</span>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

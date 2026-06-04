@@ -6,6 +6,7 @@ export interface CatalogCategory {
   description?: string;
   image?: string;
   slug: string;
+  genderSlug?: string;
 }
 
 export interface CatalogSubCategory {
@@ -21,6 +22,16 @@ export interface CatalogStyle {
   name: string;
   image?: string;
   slug: string;
+  // gender can be a string slug/id or an object returned from the backend
+  gender?: string | BackendGender;
+}
+
+export interface CatalogGender {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  isActive: boolean;
 }
 
 export interface CatalogColor {
@@ -37,6 +48,7 @@ export interface CatalogProduct {
   price: number;
   discountedPrice?: number | null;
   discountTag?: string | null;
+  allowCustomization?: boolean;
   originalPrice: number | null;
   rating: number;
   reviewCount: number;
@@ -50,7 +62,7 @@ export interface CatalogProduct {
   styleSlug: string;
   type: string;
   subtype?: string;
-  gender: "male" | "female" | "unisex";
+  gender: "men" | "women" | "kids" | "unisex";
   stock: number;
   badge: string | null;
   offer: string | null;
@@ -67,6 +79,9 @@ export interface CatalogProduct {
   }>;
   faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
+  seoTags: string[];
+  charmPieceOptions?: number[];
+  totalCharms?: number;
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -76,6 +91,7 @@ interface BackendCategory {
   name?: string;
   description?: string;
   image?: string;
+  gender?: BackendGender | BackendMaybeRef;
 }
 
 interface BackendSubCategory {
@@ -89,6 +105,15 @@ interface BackendStyle {
   _id: string;
   name?: string;
   image?: string;
+  gender?: BackendMaybeRef;
+}
+
+interface BackendGender {
+  _id: string;
+  name?: string;
+  slug?: string;
+  image?: string;
+  isActive?: boolean;
 }
 
 interface BackendReview {
@@ -103,6 +128,7 @@ interface BackendProduct {
   price?: number;
   discountedPrice?: number;
   discountTag?: string;
+  allowCustomization?: boolean;
   rating?: number;
   images?: string[];
   mainImage?: string;
@@ -118,11 +144,31 @@ interface BackendProduct {
   category?: BackendMaybeRef;
   subCategory?: BackendMaybeRef;
   style?: BackendMaybeRef;
-  gender?: "male" | "female" | "unisex";
+  gender?: "men" | "women" | "kids" | "unisex";
   stock?: number;
   tags?: string[];
+  seoTags?: string[];
   faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
+  charmPieceOptions?: number[];
+  totalCharms?: number;
+}
+
+interface BackendHomeSection {
+  _id?: string;
+  key: string;
+  eyebrow?: string;
+  title?: string;
+  products?: BackendProduct[];
+  isActive?: boolean;
+}
+
+export interface CatalogHomeSection {
+  key: string;
+  eyebrow: string;
+  title: string;
+  products: CatalogProduct[];
+  isActive: boolean;
 }
 
 const FALLBACK_IMAGE = "/images/hero.png";
@@ -163,12 +209,20 @@ function uniqueStrings(values: Array<string | undefined | null>): string[] {
 
 function toCategory(item: BackendCategory): CatalogCategory {
   const name = item.name || "Category";
+  const rawGender = item.gender;
+  const genderSlug =
+    typeof rawGender === "string"
+      ? rawGender
+      : rawGender && typeof rawGender === "object"
+        ? (rawGender as BackendGender).slug || ((rawGender as BackendGender).name ? toSlug((rawGender as BackendGender).name || "") : undefined)
+        : undefined;
   return {
     id: item._id,
     name,
     description: item.description,
     image: item.image,
     slug: toSlug(name),
+    genderSlug,
   };
 }
 
@@ -190,6 +244,18 @@ function toStyle(item: BackendStyle): CatalogStyle {
     name,
     image: item.image,
     slug: toSlug(name),
+    gender: (item.gender as any) ?? undefined,
+  };
+}
+
+function toGender(item: BackendGender): CatalogGender {
+  const name = item.name || "Gender";
+  return {
+    id: item._id,
+    name,
+    slug: item.slug || toSlug(name),
+    image: item.image,
+    isActive: item.isActive !== false,
   };
 }
 
@@ -268,6 +334,7 @@ function normalizeProduct(
     price,
     discountedPrice,
     discountTag: item.discountTag || null,
+    allowCustomization: item.allowCustomization === true,
     originalPrice,
     rating,
     reviewCount,
@@ -292,6 +359,9 @@ function normalizeProduct(
     mainImage: item.mainImage || null,
     faqs: Array.isArray(item.faqs) ? item.faqs : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
+    seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
+    charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
+    totalCharms: Number(item.totalCharms ?? 0),
   };
 }
 
@@ -315,13 +385,43 @@ export async function fetchCatalogStyles(): Promise<CatalogStyle[]> {
   return (data.styles || []).map(toStyle);
 }
 
-export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
-  const [categories, subCategories, styles, productsResponse] = await Promise.all([
+export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
+  const data = await apiRequest<{ success: boolean; genders?: BackendGender[] }>("/genders");
+  const allowed = new Set(["men", "women", "kids"]);
+  return (data.genders || [])
+    .map(toGender)
+    .map((g) => {
+      const raw = (g.slug || "").toLowerCase();
+      let slug = raw;
+      if (raw === "male" || raw === "man" || raw === "m") slug = "men";
+      if (raw === "female" || raw === "woman" || raw === "f" || raw === "female") slug = "women";
+      if (raw === "kid" || raw === "child") slug = "kids";
+      return { ...g, slug, isActive: g.isActive !== false };
+    })
+    .filter((gender) => allowed.has(gender.slug) && gender.isActive);
+}
+
+export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {
+  const [categories, subCategories, styles] = await Promise.all([
     fetchCatalogCategories(),
     fetchCatalogSubCategories(),
     fetchCatalogStyles(),
-    apiRequest<{ success: boolean; products?: BackendProduct[] }>("/products"),
   ]);
+
+  const params = new URLSearchParams();
+  if (filters.subCategorySlug) {
+    const targetSlug = toSlug(filters.subCategorySlug);
+    const matchedSubCategory = subCategories.find(
+      (subCategory) => subCategory.slug === targetSlug || toSlug(subCategory.name) === targetSlug,
+    );
+    if (matchedSubCategory?.id) {
+      params.set("subCategory", matchedSubCategory.id);
+    }
+  }
+
+  const productsResponse = await apiRequest<{ success: boolean; products?: BackendProduct[] }>(
+    `/products${params.toString() ? `?${params.toString()}` : ""}`
+  );
 
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
@@ -330,6 +430,32 @@ export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   return (productsResponse.products || []).map((item) =>
     normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
   );
+}
+
+export async function fetchNewArrivalsSection(): Promise<CatalogHomeSection | null> {
+  const [categories, subCategories, styles, sectionResponse] = await Promise.all([
+    fetchCatalogCategories(),
+    fetchCatalogSubCategories(),
+    fetchCatalogStyles(),
+    apiRequest<{ success: boolean; section?: BackendHomeSection }>("/home-sections/new-arrivals"),
+  ]);
+
+  const section = sectionResponse.section;
+  if (!section || section.isActive === false) return null;
+
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
+  const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+  const styleMap = new Map(styles.map((item) => [item.id, item]));
+
+  return {
+    key: section.key,
+    eyebrow: section.eyebrow || "",
+    title: section.title || "New Arrivals",
+    products: (section.products || []).map((item) =>
+      normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
+    ),
+    isActive: true,
+  };
 }
 
 /**
@@ -436,5 +562,108 @@ export async function applyCouponToCart(code: string, payload: { cartTotal: numb
   return apiRequest(`/coupons/apply`, {
     method: "POST",
     body: JSON.stringify({ code, ...payload }),
+  });
+}
+
+// ─── Orders ────────────────────────────────────────────────────────────────
+
+export interface OrderItemPayload {
+  /** MongoDB _id of the product, or its sourceId / frontend id */
+  id?: string;
+  sourceId?: string;
+  name: string;
+  price: number;
+  quantity: number;
+  category?: string;
+  color?: string;
+  size?: string;
+  sku?: string;
+  customNote?: string;
+  customImages?: string[];
+  /** Full selectionGroups array produced by CharmKeyChainProductPage / CharmProductDetailPage */
+  selectionGroups?: Array<{
+    type?: string;
+    category?: string;
+    label?: string;
+    selectionKey?: string;
+    itemRefModel?: string;
+    items: Array<{
+      id?: string;
+      sourceId?: string;
+      name?: string;
+      quantity?: number;
+      price?: number;
+      image?: string;
+      images?: string[];
+      emoji?: string;
+      customText?: string;
+    }>;
+    metadata?: Record<string, unknown>;
+  }>;
+  /** Legacy flat array — the backend will synthesise a selectionGroup from this */
+  selectedCharms?: Array<string | {
+    id?: string;
+    name?: string;
+    price?: number;
+    image?: string;
+    emoji?: string;
+    quantity?: number;
+    images?: string[];
+    customText?: string;
+  }>;
+}
+
+export interface OrderPayload {
+  items: OrderItemPayload[];
+  totalAmount: number;
+  advanceAmount?: number;
+  balanceAmount?: number;
+  paidAmount?: number;
+  paymentMode?: "COD" | "ONLINE" | "PARTIAL_COD";
+  shippingAddress: {
+    fullAddress: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  isGift?: boolean;
+  giftMessage?: string;
+  couponCode?: string;
+  deliveryCharge?: number;
+}
+
+export interface OrderResult {
+  success: boolean;
+  order?: {
+    _id: string;
+    status: string;
+    totalAmount: number;
+    paymentMode: string;
+    paymentStatus: string;
+    createdAt: string;
+  };
+  message?: string;
+}
+
+/**
+ * Submit an order to the backend.
+ *
+ * Passes the full cart payload — including `selectionGroups` for charm /
+ * keychain products — through to `POST /orders/create`.
+ *
+ * @param payload   The complete order payload (items, address, totals, etc.)
+ * @param token     JWT access token from the auth context.
+ */
+export async function createOrder(
+  payload: OrderPayload,
+  token: string
+): Promise<OrderResult> {
+  return apiRequest<OrderResult>("/orders/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   });
 }

@@ -777,19 +777,24 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const currentStock = matchingVariant?.stock ?? stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
+  const selectedCharmCount = charmData.count;
+  const unitCharmPrice = discountedPrice || price;
+  const unitOriginalCharmPrice = originalPrice || price;
+  const totalCharmPrice = unitCharmPrice * selectedCharmCount;
+  const totalCharmOriginalPrice = unitOriginalCharmPrice * selectedCharmCount;
 
   const wished = product ? isWished(product.id) : false;
 
   const handleWishToggle = useCallback(() => {
     if (!product) return;
-    toggleItem({ id: product.id, name: product.name || 'Product', price: (discountedPrice || price) * charmData.count, originalPrice: (originalPrice || price) * charmData.count, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
-  }, [toggleItem, product, discountedPrice, price, originalPrice, displayImg, normalizedColors, charmData.count]);
+    toggleItem({ id: product.id, name: product.name || 'Product', price: totalCharmPrice, originalPrice: totalCharmOriginalPrice, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
+  }, [toggleItem, product, totalCharmPrice, totalCharmOriginalPrice, displayImg, normalizedColors]);
 
   const buildCartItem = useCallback(() => ({
     id: String(product!.sourceId),
     name: product!.name || '',
-    price: (discountedPrice || price) * charmData.count,
-    originalPrice: (originalPrice || price) * charmData.count,
+    price: totalCharmPrice,
+    originalPrice: totalCharmOriginalPrice,
     image: displayImg,
     color: currentColor?.label || '',
     colorHex: currentColor?.hex || '#c9a84c',
@@ -805,6 +810,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       sourceId: charm,
       name: charm,
       quantity: 1,
+      price: unitCharmPrice,
       images: customData.wantCustom ? customData.uploads : [],
       customText: customData.wantCustom ? customData.globalNote : undefined,
     })),
@@ -818,16 +824,17 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         sourceId: charm,
         name: charm,
         quantity: 1,
+        price: unitCharmPrice,
         images: customData.wantCustom ? customData.uploads : [],
         customText: customData.wantCustom ? customData.globalNote : undefined,
       })),
       metadata: {
-        requestedCount: charmData.count,
+        requestedCount: selectedCharmCount,
       },
     }],
     charms: charmData.charms.filter(Boolean),
-    charmCount: charmData.count,
-  }), [product, discountedPrice, price, originalPrice, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData]);
+    charmCount: selectedCharmCount,
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, unitCharmPrice, selectedCharmCount]);
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
@@ -1372,14 +1379,19 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             </div>
 
             <div className="pdp-price-row">
-              <span className="pdp-price">₹{((discountedPrice || price) * charmData.count).toLocaleString('en-IN')}</span>
+              <span className="pdp-price">₹{totalCharmPrice.toLocaleString('en-IN')}</span>
               {(discountedPrice || originalPrice) && (
                 <>
-                  <span className="pdp-original">₹{((originalPrice || price) * charmData.count).toLocaleString('en-IN')}</span>
+                  <span className="pdp-original">₹{totalCharmOriginalPrice.toLocaleString('en-IN')}</span>
                   <span className="pdp-discount">{discount}% off</span>
                 </>
               )}
             </div>
+            {selectedCharmCount > 0 && (
+              <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
+                ₹{unitCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} pieces
+              </p>
+            )}
             {discountTag && (
               <div className="pdp-offer">
                 <span className="pdp-offer-icon">🏷️</span>

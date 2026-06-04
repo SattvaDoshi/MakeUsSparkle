@@ -1287,13 +1287,18 @@ export default function CartPage() {
                           </div>
                           {item.selectedCharms.map((selection, idx: number) => {
                             const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                            const charmPrice = typeof charm.price === 'number' && Number.isFinite(charm.price)
+                              ? charm.price
+                              : item.selectedCharms?.length
+                                ? item.price / item.selectedCharms.length
+                                : 0;
                             return (
                             <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: idx < (item.selectedCharms?.length || 0) - 1 ? '1px solid rgba(61,74,34,.08)' : 'none' }}>
                               <span style={{ fontSize: 12, color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span style={{ fontSize: 14 }}>{charm.emoji || '◈'}</span>
                                 {charm.name || 'Charm'}
                               </span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{charmPrice.toLocaleString('en-IN')}</span>
                             </div>
                             );
                           })}

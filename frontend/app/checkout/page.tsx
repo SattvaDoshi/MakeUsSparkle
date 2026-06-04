@@ -961,13 +961,14 @@ export default function CheckoutPage() {
             selectionKey: 'selectedCharms',
             itemRefModel: 'CharmItem',
             items: item.selectedCharms.map((c) => {
-              if (typeof c === 'string') return { id: c, quantity: 1 };
+              const fallbackCharmPrice = item.selectedCharms?.length ? item.price / item.selectedCharms.length : 0;
+              if (typeof c === 'string') return { id: c, quantity: 1, price: fallbackCharmPrice };
               return {
                 id: c.id,
                 sourceId: c.sourceId,
                 name: c.name,
                 quantity: c.quantity || 1,
-                price: c.price,
+                price: typeof c.price === 'number' && Number.isFinite(c.price) ? c.price : fallbackCharmPrice,
                 image: c.image,
                 images: c.images,
                 emoji: c.emoji,
@@ -1993,13 +1994,18 @@ export default function CheckoutPage() {
                       <div className="ck-charms">
                         {item.selectedCharms.map((selection, idx: number) => {
                           const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                          const charmPrice = typeof charm.price === 'number' && Number.isFinite(charm.price)
+                            ? charm.price
+                            : item.selectedCharms?.length
+                              ? item.price / item.selectedCharms.length
+                              : 0;
                           return (
                           <div key={charm.id || charm._id || idx} className="ck-charm-row">
                             <span className="ck-charm-name">
                               <span>{charm.emoji || '◈'}</span>
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{charm.name}</span>
                             </span>
-                            <span className="ck-charm-price">₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                            <span className="ck-charm-price">₹{charmPrice.toLocaleString('en-IN')}</span>
                           </div>
                           );
                         })}

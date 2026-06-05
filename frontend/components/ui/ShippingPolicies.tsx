@@ -20,6 +20,16 @@ const shippingSections: PolicySection[] = [
         <p style={{ marginTop: 10 }}>
           <strong>International Orders:</strong> We do ship internationally! If you are located outside India, please contact us directly and we will assist you with a custom shipping quote and delivery details.
         </p>
+           <div className="sp-contact-row">
+          <a href="https://wa.me/918356939586" className="sp-contact-btn sp-contact-btn--wa">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            +91 8356939586
+          </a>
+          <a href="mailto:makeyousparkle5@gmail.com" className="sp-contact-btn sp-contact-btn--email">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            makeyousparkle5@gmail.com
+          </a>
+        </div>
       </>
     ),
   },
@@ -43,13 +53,13 @@ const shippingSections: PolicySection[] = [
             <tbody>
               <tr>
                 <td><span className="sp-badge sp-badge--std">Standard</span></td>
-                <td>₹60</td>
+                <td className="sp-table-weight">₹60</td>
                 <td>3–5 Business Days</td>
                 <td>4–7 Business Days</td>
               </tr>
               <tr>
                 <td><span className="sp-badge sp-badge--exp">Express</span></td>
-                <td>₹110</td>
+                <td className="sp-table-weight">₹110</td>
                 <td>2–3 Business Days</td>
                 <td>3–4 Business Days</td>
               </tr>
@@ -106,11 +116,11 @@ const shippingSections: PolicySection[] = [
         <div className="sp-contact-row">
           <a href="https://wa.me/918356939586" className="sp-contact-btn sp-contact-btn--wa">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            WhatsApp Us
+            +91 8356939586
           </a>
           <a href="mailto:makeyousparkle5@gmail.com" className="sp-contact-btn sp-contact-btn--email">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            Email Us
+            makeyousparkle5@gmail.com
           </a>
         </div>
       </>
@@ -139,7 +149,8 @@ function AccordionSection({ section, open, onToggle }: { section: PolicySection;
   );
 }
 
-export default function ShippingPolicies() {
+// Next.js expects this function to match your page route name and be the default export
+export default function ShippingPolicyPage() {
   const [openId, setOpenId] = useState<string | null>('rates');
 
   return (
@@ -213,30 +224,14 @@ export default function ShippingPolicies() {
           line-height: 1.7;
         }
 
-        /* Back link */
-        .sp-back {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: .1em;
-          text-transform: uppercase;
-          color: var(--sp-green-600);
-          text-decoration: none;
-          padding: 20px 24px 0;
-          transition: color .2s;
-        }
-        .sp-back:hover { color: var(--sp-green-400); }
-
-        /* Content */
+        /* Content Wrapper */
         .sp-content {
           max-width: 760px;
           margin: 0 auto;
           padding: 32px 24px 64px;
         }
 
-        /* Quick info cards */
+        /* Quick summary cards - Always 1 Row */
         .sp-quick-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -253,7 +248,7 @@ export default function ShippingPolicies() {
         }
         .sp-quick-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 8px 24px rgba(61,107,41,.1);
+          box-shadow: 0 8px 24 rgba(61,107,41,.1);
         }
         .sp-quick-icon { font-size: 22px; margin-bottom: 8px; }
         .sp-quick-title {
@@ -265,12 +260,12 @@ export default function ShippingPolicies() {
           margin-bottom: 4px;
         }
         .sp-quick-val {
-          font-size: 14px;
+          font-size: 13px;
           color: #101010;
           font-weight: 400;
         }
 
-        /* Accordion */
+        /* Accordion Structure */
         .sp-acc-item {
           background: white;
           border: 1px solid var(--sp-green-100);
@@ -326,43 +321,54 @@ export default function ShippingPolicies() {
         }
         .sp-acc-body-inner strong { font-weight: 600; color: var(--sp-ink); }
 
-        /* Table */
-        .sp-table-wrap { overflow-x: auto; margin-bottom: 14px; }
+        /* Elegant Table Design */
+        .sp-table-wrap { 
+          overflow-x: auto; 
+          margin-bottom: 18px; 
+          border: 1px solid var(--sp-green-100);
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(61,107,41,.03);
+          background: #ffffff;
+        }
         .sp-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 12px;
+          font-size: 13px;
         }
         .sp-table th {
           background: var(--sp-green-50);
-          color: var(--sp-green-600);
-          font-size: 9.5px;
-          letter-spacing: .18em;
+          color: var(--sp-green-700);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: .12em;
           text-transform: uppercase;
-          padding: 10px 14px;
+          padding: 14px 16px;
           text-align: left;
-          border-bottom: 1px solid var(--sp-green-100);
+          border-bottom: 2px solid var(--sp-green-100);
         }
         .sp-table td {
-          padding: 12px 14px;
-          border-bottom: 1px solid rgba(61,107,41,.06);
-          color: var(--sp-ink);
+          padding: 14px 16px;
+          border-bottom: 1px solid var(--sp-green-50);
+          color: #2b2b2b;
           font-weight: 400;
         }
         .sp-table tr:last-child td { border-bottom: none; }
+        .sp-table tr:hover td { background-color: rgba(240,245,236,0.4); }
+        .sp-table-weight { font-weight: 500 !important; color: var(--sp-ink) !important; }
+        
         .sp-badge {
           display: inline-block;
-          font-size: 9px;
-          font-weight: 700;
-          letter-spacing: .08em;
+          font-size: 9.5px;
+          font-weight: 600;
+          letter-spacing: .06em;
           text-transform: uppercase;
-          padding: 3px 10px;
-          border-radius: 50px;
+          padding: 4px 12px;
+          border-radius: 6px;
         }
-        .sp-badge--std { background: var(--sp-green-100); color: var(--sp-green-600); }
-        .sp-badge--exp { background: rgba(201,168,76,.15); color: #8c6b20; }
+        .sp-badge--std { background: #eaf2e6; color: var(--sp-green-600); border: 1px solid var(--sp-green-100); }
+        .sp-badge--exp { background: rgba(201,168,76,.08); color: #8c6b20; border: 1px solid rgba(201,168,76,.25); }
 
-        /* Note chips */
+        /* Notes and Banners */
         .sp-note-chip {
           display: flex;
           align-items: flex-start;
@@ -371,13 +377,12 @@ export default function ShippingPolicies() {
           border: 1px solid var(--sp-green-100);
           border-radius: 10px;
           padding: 12px 14px;
-          font-size: 14px;
-          font-weight: 400
+          font-size: 13px;
           color: #101010;
         }
         .sp-note-chip strong { color: var(--sp-green-600); font-weight: 600; }
 
-        /* Channels */
+        /* Communication Channels */
         .sp-channel-grid {
           display: flex;
           gap: 8px;
@@ -394,7 +399,7 @@ export default function ShippingPolicies() {
           border-radius: 50px;
         }
 
-        /* List */
+        /* Custom Lists */
         .sp-list {
           list-style: none;
           padding: 0;
@@ -415,7 +420,7 @@ export default function ShippingPolicies() {
           flex-shrink: 0;
         }
 
-        /* Contact buttons */
+        /* Action Row and Actions */
         .sp-contact-row {
           display: flex;
           gap: 10px;
@@ -437,17 +442,16 @@ export default function ShippingPolicies() {
           transition: all .2s;
         }
         .sp-contact-btn--wa {
-          background: #25d366;
-          color: white;
+          background: #97e2b35a;
+          color: black;
         }
-        .sp-contact-btn--wa:hover { background: #1ebe5d; }
+        .sp-contact-btn--wa:hover { background: #659e7c; }
         .sp-contact-btn--email {
-          background: var(--sp-green-600);
-          color: white;
+          background: var(--sp-green-200);
+          color: black;
         }
-        .sp-contact-btn--email:hover { background: var(--sp-green-500); }
+        .sp-contact-btn--email:hover { background: var(--sp-green-200); }
 
-        /* Footer note */
         .sp-footer-note {
           text-align: center;
           font-size: 11px;
@@ -457,23 +461,28 @@ export default function ShippingPolicies() {
           margin-top: 32px;
         }
 
-        /* Responsive */
+        /* Screen Adaptation Settings */
         @media (max-width: 600px) {
-          .sp-quick-grid { grid-template-columns: repeat(2, 1fr); }
           .sp-hero { padding: 48px 20px 36px; }
           .sp-content { padding: 24px 16px 48px; }
           .sp-acc-body-inner { padding: 4px 16px 18px 16px; }
-          .sp-table { font-size: 11px; }
-          .sp-table th, .sp-table td { padding: 8px 10px; }
-        }
-        @media (max-width: 380px) {
-          .sp-quick-grid { grid-template-columns: 1fr; }
+          
+          /* Force Summary Grid to scale down horizontally without folding */
+          .sp-quick-grid { gap: 6px; margin-bottom: 24px; }
+          .sp-quick-card { padding: 12px 6px; border-radius: 10px; }
+          .sp-quick-icon { font-size: 18px; margin-bottom: 4px; }
+          .sp-quick-title { font-size: 8px; letter-spacing: .05em; }
+          .sp-quick-val { font-size: 10.5px; }
+
+          /* Mobile Table Optimization */
+          .sp-table { font-size: 12px; }
+          .sp-table th { padding: 10px 12px; font-size: 9px; }
+          .sp-table td { padding: 10px 12px; }
+          .sp-badge { padding: 3px 8px; font-size: 8.5px; }
         }
       `}</style>
 
       <div className="sp-page">
-     
-
         <div className="sp-hero">
           <span className="sp-hero-eyebrow">make you sparkle</span>
           <h1 className="sp-hero-title">Shipping & <em>Delivery</em> Policy</h1>
@@ -481,7 +490,7 @@ export default function ShippingPolicies() {
         </div>
 
         <div className="sp-content">
-          {/* Quick summary cards */}
+          {/* Layout Row - Locked into 1 Row */}
           <div className="sp-quick-grid">
             <div className="sp-quick-card">
               <div className="sp-quick-icon">🚚</div>
@@ -496,11 +505,11 @@ export default function ShippingPolicies() {
             <div className="sp-quick-card">
               <div className="sp-quick-icon">🎁</div>
               <div className="sp-quick-title">Free Shipping</div>
-              <div className="sp-quick-val">Orders above ₹999</div>
+              <div className="sp-quick-val">Above ₹999</div>
             </div>
           </div>
 
-          {/* Accordion sections */}
+          {/* Render Active Accordions */}
           {shippingSections.map(section => (
             <AccordionSection
               key={section.id}

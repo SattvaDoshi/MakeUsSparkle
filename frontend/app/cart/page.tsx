@@ -1245,10 +1245,14 @@ export default function CartPage() {
                     >
                       <div style={{ display: 'flex', gap: 14 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img className="cp-item-img" src={item.image} alt={item.name} />
-                        <div className="cp-item-body">
-                          <div className="cp-item-name">{item.name}</div>
-                          {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
+                         <Link href={item.href|| `/products/${item.id}`} style={{ flexShrink: 0 }}>
+    <img className="cp-item-img" src={item.image} alt={item.name} />
+  </Link>
+  <div className="cp-item-body">
+    <Link href={item.href || `/products/${item.id}`}  style={{ textDecoration: 'none' }}>
+      <div className="cp-item-name">{item.name}</div>
+    </Link>
+                          {!item.selectedCharms?.length && (
                             <div className="cp-item-color">
                               <span className="cp-item-color-dot" style={{ background: item.colorHex }} />
                               {item.color}

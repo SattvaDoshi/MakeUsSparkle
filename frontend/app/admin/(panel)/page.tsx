@@ -7,6 +7,7 @@ import Image from "next/image";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/lib/authContext";
 import AdminProductModal from "./AdminProductModal";
+import type { SalesAnalyticsItem, ProductAnalyticsItem, OrderAnalyticsItem } from "./_lib/admin.types";
 import AdminHomeTab from "./_components/tabs/AdminHomeTab";
 import AdminProductsTab from "./_components/tabs/AdminProductsTab";
 import AdminUsersTab from "./_components/tabs/AdminUsersTab";

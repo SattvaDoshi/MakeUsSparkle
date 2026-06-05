@@ -73,7 +73,7 @@ export default function AdminHomeTab({ stats, totalManagedItems, salesAnalytics,
 									fill="#8884d8"
 									dataKey="count"
 									nameKey="_id"
-									label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+									label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
 								>
 									{orderAnalytics.map((entry, index) => (
 										<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

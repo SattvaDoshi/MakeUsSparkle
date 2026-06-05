@@ -6,6 +6,7 @@ import {
 	deleteReview,
 	getAnalyticsProducts,
 	getAnalyticsSales,
+	getAnalyticsOrders,
 	getBanners,
 	getCoupons,
 	getDashboard,
@@ -41,5 +42,6 @@ router.put("/reviews/:productId/:reviewId", updateReview);
 router.delete("/reviews/:productId/:reviewId", deleteReview);
 router.get("/analytics/sales", getAnalyticsSales);
 router.get("/analytics/products", getAnalyticsProducts);
+router.get("/analytics/orders", getAnalyticsOrders);
 
 export default router;

@@ -1,5 +1,7 @@
 import Product from "../models/product.model.js";
 import Gender from "../models/gender.model.js";
+import Category from "../models/category.model.js";
+import Style from "../models/style.model.js";
 import imageService from "./image.service.js";
 import mongoose from "mongoose";
 
@@ -123,8 +125,15 @@ class ProductService {
 	async searchProducts(searchQuery) {
 		try {
 			const q = searchQuery || "";
-			const products = await Product.find({ title: new RegExp(q, "i") });
-			return { success: true, products };
+			const regex = new RegExp(q, "i");
+			
+			const [products, categories, styles] = await Promise.all([
+				Product.find({ title: regex }).limit(10),
+				Category.find({ name: regex }).limit(5),
+				Style.find({ name: regex }).limit(5)
+			]);
+
+			return { success: true, products, categories, styles };
 		} catch (error) {
 			console.error("Error searching products:", error);
 			throw error;

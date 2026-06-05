@@ -30,6 +30,7 @@ import adminCouponRoutes from "./routes/admin/adminCoupon.routes.js";
 import adminBannerRoutes from "./routes/admin/adminBanner.routes.js";
 import adminHomeSectionRoutes from "./routes/admin/adminHomeSection.routes.js";
 import adminCharmItemRoutes from "./routes/admin/adminCharmItem.routes.js";
+import adminOfferRoutes from "./routes/admin/adminOffer.routes.js";
 
 const app = express();
 
@@ -124,6 +125,7 @@ app.use("/admin/coupons", adminCouponRoutes);
 app.use("/admin/banners", adminBannerRoutes);
 app.use("/admin/home-sections", adminHomeSectionRoutes);
 app.use("/admin/charm-items", adminCharmItemRoutes);
+app.use("/admin/offers", adminOfferRoutes);
 app.use("/genders", genderRoutes);
 app.use("/admin/genders", adminGenderRoutes);
 app.use("/abandoned", abandonedRoutes);

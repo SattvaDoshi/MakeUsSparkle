@@ -45,7 +45,11 @@ export async function validateCoupon(req, res) {
 
 export async function createCoupon(req, res) {
 	try {
-		const result = await couponService.createCoupon(req.body);
+		const payload = { ...req.body };
+		if (req.file) {
+			payload.image = req.file.path;
+		}
+		const result = await couponService.createCoupon(payload);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create coupon error:", error);
@@ -55,7 +59,11 @@ export async function createCoupon(req, res) {
 
 export async function updateCoupon(req, res) {
 	try {
-		const result = await couponService.updateCoupon(req.params.id, req.body);
+		const payload = { ...req.body };
+		if (req.file) {
+			payload.image = req.file.path;
+		}
+		const result = await couponService.updateCoupon(req.params.id, payload);
 		res.json(result);
 	} catch (error) {
 		console.error("Update coupon error:", error);

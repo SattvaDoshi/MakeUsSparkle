@@ -437,6 +437,7 @@ import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function TopNav() {
   const { itemCount } = useCart();
@@ -444,7 +445,57 @@ export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const navRef = useRef<HTMLElement | null>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Search State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<{ products: any[], categories: any[], styles: any[] } | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchResults(null);
+      setShowDropdown(false);
+      return;
+    }
+
+    setShowDropdown(true);
+    setIsSearching(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/products/search?q=${encodeURIComponent(searchTerm)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setSearchResults({
+              products: data.products || [],
+              categories: data.categories || [],
+              styles: data.styles || [],
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     type RGBA = { r: number; g: number; b: number; a: number };
@@ -572,6 +623,7 @@ export default function TopNav() {
         .sparkle-search-wrap {
           display: flex;
           align-items: center;
+          position: relative;
         }
         .sparkle-search-box {
           display: flex;
@@ -709,6 +761,84 @@ export default function TopNav() {
           to   { opacity: 1; transform: translateY(0); }
         }
 
+        /* ── SEARCH DROPDOWN ── */
+        .sparkle-search-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          width: 340px;
+          max-height: 450px;
+          overflow-y: auto;
+          background: rgba(10,28,14,0.98);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(201,168,76,0.3);
+          border-radius: 4px;
+          margin-top: 10px;
+          padding: 8px 0;
+          display: flex;
+          flex-direction: column;
+          z-index: 201;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+          animation: slideDown 0.2s ease forwards;
+        }
+        .sparkle-search-section-title {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: #c9a84c;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 12px 16px 6px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          margin-bottom: 4px;
+        }
+        .sparkle-search-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 16px;
+          color: rgba(255,255,255,0.85);
+          text-decoration: none;
+          transition: background 0.2s, color 0.2s;
+        }
+        .sparkle-search-item:hover {
+          background: rgba(201,168,76,0.15);
+          color: #fff;
+        }
+        .sparkle-search-item-img {
+          width: 32px;
+          height: 32px;
+          border-radius: 4px;
+          object-fit: cover;
+          background: rgba(255,255,255,0.1);
+        }
+        .sparkle-search-item-info {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
+        .sparkle-search-item-title {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 0.75rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .sparkle-search-item-price {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 0.65rem;
+          color: #c9a84c;
+          margin-top: 2px;
+        }
+        .sparkle-search-message {
+          padding: 16px;
+          text-align: center;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 0.75rem;
+          color: rgba(255,255,255,0.6);
+        }
+
         /* ── RESPONSIVE BREAKPOINTS ── */
         @media (max-width: 768px) {
           .sparkle-search-box { width: 160px; }
@@ -717,8 +847,9 @@ export default function TopNav() {
           .sparkle-nav { padding: 0 16px; }
           .sparkle-nav-inner { height: 64px; gap: 8px; }
           .sparkle-menu-dropdown { top: 64px; max-height: calc(100vh - 64px); }
-          .sparkle-search-box { width: 115px; height: 32px; }
+          .sparkle-search-box { width: 135px; height: 32px; }
           .sparkle-search-box input { padding: 0 8px; font-size: 0.65rem; }
+          .sparkle-search-dropdown { width: 280px; right: -40px; }
           .sparkle-search-icon-inline { padding-right: 6px; }
           .sparkle-search-icon-inline svg { width: 14px; height: 14px; }
           .sparkle-icon-btn { width: 34px; height: 34px; }
@@ -743,9 +874,18 @@ export default function TopNav() {
 
           {/* RIGHT: Combined Utilities (Inline Search, Profile, Cart) */}
           <div className="sparkle-nav-right">
-            <div className="sparkle-search-wrap">
+            <div className="sparkle-search-wrap" ref={searchDropdownRef}>
               <div className="sparkle-search-box">
-                <input type="text" placeholder="Search jewels…" aria-label="Search jewels" />
+                <input 
+                  type="text" 
+                  placeholder="Search jewels…" 
+                  aria-label="Search jewels" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => {
+                    if (searchTerm.trim()) setShowDropdown(true);
+                  }}
+                />
                 <div className="sparkle-search-icon-inline">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="7" />
@@ -753,6 +893,90 @@ export default function TopNav() {
                   </svg>
                 </div>
               </div>
+
+              {/* SEARCH DROPDOWN */}
+              {showDropdown && (
+                <div className="sparkle-search-dropdown">
+                  {isSearching ? (
+                    <div className="sparkle-search-message">Searching...</div>
+                  ) : searchResults ? (
+                    <>
+                      {/* Categories */}
+                      {searchResults.categories.length > 0 && (
+                        <div>
+                          <div className="sparkle-search-section-title">Categories</div>
+                          {searchResults.categories.map((cat) => (
+                            <Link 
+                              key={cat._id} 
+                              href={`/categories/${cat._id}`} 
+                              className="sparkle-search-item"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              <div className="sparkle-search-item-info">
+                                <span className="sparkle-search-item-title">{cat.name}</span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Styles */}
+                      {searchResults.styles.length > 0 && (
+                        <div>
+                          <div className="sparkle-search-section-title">Styles</div>
+                          {searchResults.styles.map((style) => (
+                            <Link 
+                              key={style._id} 
+                              href={`/styles/${style._id}`} 
+                              className="sparkle-search-item"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              <div className="sparkle-search-item-info">
+                                <span className="sparkle-search-item-title">{style.name}</span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Products */}
+                      {searchResults.products.length > 0 && (
+                        <div>
+                          <div className="sparkle-search-section-title">Products</div>
+                          {searchResults.products.map((product) => (
+                            <Link 
+                              key={product._id} 
+                              href={`/products/${product._id}`} 
+                              className="sparkle-search-item"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              {product.mainImage && (
+                                <Image 
+                                  src={product.mainImage} 
+                                  alt={product.title} 
+                                  width={32} height={32} 
+                                  className="sparkle-search-item-img" 
+                                />
+                              )}
+                              <div className="sparkle-search-item-info">
+                                <span className="sparkle-search-item-title">{product.title}</span>
+                                {product.price && (
+                                  <span className="sparkle-search-item-price">₹{product.price}</span>
+                                )}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* No Results */}
+                      {searchResults.categories.length === 0 && searchResults.styles.length === 0 && searchResults.products.length === 0 && (
+                        <div className="sparkle-search-message">No matching results found.</div>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="sparkle-divider" />

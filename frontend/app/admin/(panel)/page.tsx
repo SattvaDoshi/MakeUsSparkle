@@ -120,6 +120,24 @@ type AdminCoupon = {
 	applicableProductTypes?: string[];
 };
 
+type AdminOffer = {
+	_id: string;
+	title: string;
+	description?: string;
+	offerType: "bogo" | "percentage" | "fixed";
+	discountValue: number;
+	buyQuantity: number;
+	getQuantity: number;
+	startsAt?: string;
+	expiryDate?: string;
+	isActive: boolean;
+	usageLimit: number;
+	usedCount: number;
+	image?: string;
+	applicableCategories?: Array<{ _id: string; name?: string } | string>;
+	applicableProducts?: Array<{ _id: string; title?: string } | string>;
+};
+
 type AdminBanner = {
 	_id: string;
 	bannerType?: "promo" | "main";
@@ -245,7 +263,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
-	{ key: "coupons", label: "Coupons" },
+	{ key: "coupons", label: "Offers & Coupons" },
 	{ key: "banners", label: "Banners" },
 	{ key: "reviews", label: "Reviews" },
 ];
@@ -275,13 +293,32 @@ type CouponFormState = {
 	expiryDate: string;
 	isActive: boolean;
 	offerCategory: "jewellery" | "combo" | "gift" | "all";
-	image: string;
 	isFeatured: boolean;
 	applicableCategories: string;
 	applicableSubCategories: string;
 	applicableStyles: string;
 	applicableProducts: string;
 	applicableProductTypes: string;
+	imageFile: File | null;
+	imageUrl: string;
+};
+
+type OfferFormState = {
+	id: string;
+	title: string;
+	description: string;
+	offerType: "bogo" | "percentage" | "fixed";
+	discountValue: string;
+	buyQuantity: string;
+	getQuantity: string;
+	startsAt: string;
+	expiryDate: string;
+	isActive: boolean;
+	usageLimit: string;
+	applicableCategories: string;
+	applicableProducts: string;
+	imageFile: File | null;
+	imageUrl: string;
 };
 
 type BannerFormState = {
@@ -316,7 +353,7 @@ type CharmFormState = {
 	imageUrl: string;
 };
 
-type ModalKind = "product" | "user" | "coupon" | "banner" | "charm" | null;
+type ModalKind = "product" | "user" | "coupon" | "offer" | "banner" | "charm" | null;
 
 const defaultUserForm: UserFormState = {
 	id: "",
@@ -341,13 +378,32 @@ const defaultCouponForm: CouponFormState = {
 	expiryDate: "",
 	isActive: true,
 	offerCategory: "all",
-	image: "",
 	isFeatured: false,
 	applicableCategories: "",
 	applicableSubCategories: "",
 	applicableStyles: "",
 	applicableProducts: "",
 	applicableProductTypes: "",
+	imageFile: null,
+	imageUrl: "",
+};
+
+const defaultOfferForm: OfferFormState = {
+	id: "",
+	title: "",
+	description: "",
+	offerType: "percentage",
+	discountValue: "0",
+	buyQuantity: "1",
+	getQuantity: "1",
+	startsAt: "",
+	expiryDate: "",
+	isActive: true,
+	usageLimit: "0",
+	applicableCategories: "",
+	applicableProducts: "",
+	imageFile: null,
+	imageUrl: "",
 };
 
 const defaultBannerForm: BannerFormState = {
@@ -392,7 +448,7 @@ const defaultNewArrivalsForm = {
 const createActionsByTab: Partial<Record<TabKey, string>> = {
 	products: "Add Product",
 	users: "Add User",
-	coupons: "Add Coupon",
+	coupons: "Add Coupon or Offer",
 	banners: "Add Banner",
 	charms: "Add Charm",
 };
@@ -402,15 +458,20 @@ export default function AdminDashboardPage() {
 	const { user, signOut } = useAuth();
 
 	const [activeTab, setActiveTab] = useState<TabKey>("home");
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 
 	const [stats, setStats] = useState<DashboardStatsResponse["stats"] | null>(null);
+	const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalyticsItem[]>([]);
+	const [productAnalytics, setProductAnalytics] = useState<ProductAnalyticsItem[]>([]);
+	const [orderAnalytics, setOrderAnalytics] = useState<OrderAnalyticsItem[]>([]);
 	const [users, setUsers] = useState<AdminUser[]>([]);
 	const [products, setProducts] = useState<AdminProduct[]>([]);
 	const [orders, setOrders] = useState<AdminOrder[]>([]);
 	const [payments, setPayments] = useState<AdminOrder[]>([]);
+	const [offers, setOffers] = useState<AdminOffer[]>([]);
 	const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
 	const [banners, setBanners] = useState<AdminBanner[]>([]);
 	const [mainBanners, setMainBanners] = useState<MainBanner[]>([]);
@@ -425,6 +486,7 @@ export default function AdminDashboardPage() {
 	const [combos, setCombos] = useState<AdminCombo[]>([]);
 
 	const [userForm, setUserForm] = useState(defaultUserForm);
+	const [offerForm, setOfferForm] = useState(defaultOfferForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
 	const [bannerForm, setBannerForm] = useState(defaultBannerForm);
 	const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
@@ -436,8 +498,8 @@ export default function AdminDashboardPage() {
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
 
 	const totalManagedItems = useMemo(
-		() => users.length + products.length + orders.length + payments.length + coupons.length + banners.length + reviews.length + charms.length + combos.length,
-		[users, products, orders, payments, coupons, banners, reviews, charms, combos]
+		() => users.length + products.length + orders.length + payments.length + offers.length + coupons.length + banners.length + reviews.length + charms.length + combos.length,
+		[users, products, orders, payments, offers, coupons, banners, reviews, charms, combos]
 	);
 
 	const resetMessages = () => {
@@ -460,6 +522,19 @@ export default function AdminDashboardPage() {
 	const loadHome = useCallback(async () => {
 		const dashboard = await apiRequest<DashboardStatsResponse>("/admin/dashboard");
 		setStats(dashboard.stats);
+
+		try {
+			const [sales, products, orders] = await Promise.all([
+				apiRequest<{ success: boolean; analytics: SalesAnalyticsItem[] }>("/admin/analytics/sales"),
+				apiRequest<{ success: boolean; analytics: ProductAnalyticsItem[] }>("/admin/analytics/products"),
+				apiRequest<{ success: boolean; analytics: OrderAnalyticsItem[] }>("/admin/analytics/orders")
+			]);
+			setSalesAnalytics(sales.analytics || []);
+			setProductAnalytics(products.analytics || []);
+			setOrderAnalytics(orders.analytics || []);
+		} catch (error) {
+			console.error("Error loading analytics:", error);
+		}
 	}, []);
 
 	const loadUsers = useCallback(async () => {
@@ -485,6 +560,11 @@ export default function AdminDashboardPage() {
 	const loadCoupons = useCallback(async () => {
 		const couponsResult = await apiRequest<PagedResponse<AdminCoupon, "coupons">>("/admin/coupons?limit=50");
 		setCoupons(couponsResult.coupons);
+	}, []);
+
+	const loadOffers = useCallback(async () => {
+		const offersResult = await apiRequest<{ success: boolean; offers: AdminOffer[] }>("/admin/offers");
+		setOffers(offersResult.offers);
 	}, []);
 
 	const loadBanners = useCallback(async () => {
@@ -554,19 +634,22 @@ export default function AdminDashboardPage() {
 			if (tab === "products") await loadProducts();
 			if (tab === "orders") await loadOrders();
 			if (tab === "payments") await loadPayments();
-			if (tab === "coupons") await loadCoupons();
+			if (tab === "coupons") {
+				await loadCoupons();
+				await loadOffers();
+			}
 			if (tab === "banners") await Promise.all([loadBanners(), loadMainBanners()]);
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
 			if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load admin data");
+		} catch (error) {
+			console.error("Error loading tab data:", error);
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
+	}, [loadBanners, loadMainBanners, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -708,39 +791,41 @@ export default function AdminDashboardPage() {
 
 	const handleCouponSubmit = async (event: FormEvent) => {
 		event.preventDefault();
-		const parseCsv = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
-		const payload = {
-			code: couponForm.code,
-			name: couponForm.name,
-			description: couponForm.description,
-			discountType: couponForm.discountType,
-			discountValue: Number(couponForm.discountValue),
-			maxDiscount: couponForm.maxDiscount ? Number(couponForm.maxDiscount) : undefined,
-			minOrderValue: Number(couponForm.minOrderValue || 0),
-			usageLimit: Number(couponForm.usageLimit),
-			startsAt: couponForm.startsAt ? new Date(couponForm.startsAt).toISOString() : undefined,
-			expiryDate: couponForm.expiryDate ? new Date(couponForm.expiryDate).toISOString() : undefined,
-			isActive: couponForm.isActive,
-			offerCategory: couponForm.offerCategory,
-			image: couponForm.image,
-			isFeatured: couponForm.isFeatured,
-			applicableCategories: parseCsv(couponForm.applicableCategories),
-			applicableSubCategories: parseCsv(couponForm.applicableSubCategories),
-			applicableStyles: parseCsv(couponForm.applicableStyles),
-			applicableProducts: parseCsv(couponForm.applicableProducts),
-			applicableProductTypes: parseCsv(couponForm.applicableProductTypes),
-		};
+		const formData = new FormData();
+		formData.append("code", couponForm.code);
+		formData.append("name", couponForm.name);
+		formData.append("description", couponForm.description);
+		formData.append("discountType", couponForm.discountType);
+		formData.append("discountValue", couponForm.discountValue);
+		if (couponForm.maxDiscount) formData.append("maxDiscount", couponForm.maxDiscount);
+		formData.append("minOrderValue", couponForm.minOrderValue || "0");
+		formData.append("usageLimit", couponForm.usageLimit);
+		if (couponForm.startsAt) formData.append("startsAt", new Date(couponForm.startsAt).toISOString());
+		if (couponForm.expiryDate) formData.append("expiryDate", new Date(couponForm.expiryDate).toISOString());
+		formData.append("isActive", String(couponForm.isActive));
+		formData.append("offerCategory", couponForm.offerCategory);
+		formData.append("isFeatured", String(couponForm.isFeatured));
+		
+		if (couponForm.applicableCategories) formData.append("applicableCategories", couponForm.applicableCategories);
+		if (couponForm.applicableSubCategories) formData.append("applicableSubCategories", couponForm.applicableSubCategories);
+		if (couponForm.applicableStyles) formData.append("applicableStyles", couponForm.applicableStyles);
+		if (couponForm.applicableProducts) formData.append("applicableProducts", couponForm.applicableProducts);
+		if (couponForm.applicableProductTypes) formData.append("applicableProductTypes", couponForm.applicableProductTypes);
+
+		if (couponForm.imageFile) {
+			formData.append("image", couponForm.imageFile);
+		}
 
 		await runAction(async () => {
 			if (couponForm.id) {
 				await apiRequest(`/admin/coupons/${couponForm.id}`, {
 					method: "PUT",
-					body: JSON.stringify(payload),
+					body: formData,
 				});
 			} else {
 				await apiRequest("/admin/coupons", {
 					method: "POST",
-					body: JSON.stringify(payload),
+					body: formData,
 				});
 			}
 
@@ -760,6 +845,58 @@ export default function AdminDashboardPage() {
 			await apiRequest(`/admin/coupons/${id}`, { method: "DELETE" });
 			await loadCoupons();
 		}, "Coupon deleted");
+	};
+
+	const handleOfferSubmit = async (event: FormEvent) => {
+		event.preventDefault();
+		const formData = new FormData();
+		formData.append("title", offerForm.title);
+		formData.append("description", offerForm.description);
+		formData.append("offerType", offerForm.offerType);
+		formData.append("discountValue", offerForm.discountValue);
+		formData.append("buyQuantity", offerForm.buyQuantity);
+		formData.append("getQuantity", offerForm.getQuantity);
+		formData.append("usageLimit", offerForm.usageLimit);
+		if (offerForm.startsAt) formData.append("startsAt", new Date(offerForm.startsAt).toISOString());
+		if (offerForm.expiryDate) formData.append("expiryDate", new Date(offerForm.expiryDate).toISOString());
+		formData.append("isActive", String(offerForm.isActive));
+
+		if (offerForm.applicableCategories) formData.append("applicableCategories", offerForm.applicableCategories);
+		if (offerForm.applicableProducts) formData.append("applicableProducts", offerForm.applicableProducts);
+
+		if (offerForm.imageFile) {
+			formData.append("image", offerForm.imageFile);
+		}
+
+		await runAction(async () => {
+			if (offerForm.id) {
+				await apiRequest(`/admin/offers/${offerForm.id}`, {
+					method: "PUT",
+					body: formData,
+				});
+			} else {
+				await apiRequest("/admin/offers", {
+					method: "POST",
+					body: formData,
+				});
+			}
+
+			setModalKind(null);
+			setModalMode("create");
+			setOfferForm(defaultOfferForm);
+			await loadOffers();
+		}, offerForm.id ? "Offer updated" : "Offer created");
+	};
+
+	const handleDeleteOffer = async (id: string) => {
+		if (!window.confirm("Delete this offer?")) {
+			return;
+		}
+
+		await runAction(async () => {
+			await apiRequest(`/admin/offers/${id}`, { method: "DELETE" });
+			await loadOffers();
+		}, "Offer deleted");
 	};
 
 	// Categories CRUD — all handlers accept FormData (supports image file upload)
@@ -1064,9 +1201,15 @@ export default function AdminDashboardPage() {
 	};
 
 	const renderTabContent = () => {
-		if (activeTab === "home") return <AdminHomeTab stats={stats} totalManagedItems={totalManagedItems} />;
-		    if (activeTab === "products") return <AdminProductsTab products={products} onEdit={(entry) => {
-			    setSelectedProduct(entry);
+		if (activeTab === "home") return <AdminHomeTab 
+			stats={stats} 
+			totalManagedItems={totalManagedItems} 
+			salesAnalytics={salesAnalytics} 
+			productAnalytics={productAnalytics} 
+			orderAnalytics={orderAnalytics} 
+		/>;
+		if (activeTab === "products") return <AdminProductsTab products={products} onEdit={(entry) => {
+			setSelectedProduct(entry);
 			setModalMode("edit");
 			setModalKind("product");
 		}} onDelete={handleDeleteProduct} />;
@@ -1077,33 +1220,64 @@ export default function AdminDashboardPage() {
 		}} onDelete={handleDeleteUser} />;
 		if (activeTab === "orders") return <AdminOrdersTab orders={orders} onStatusChange={handleOrderStatus} onDelete={handleDeleteOrder} />;
 		if (activeTab === "payments") return <AdminPaymentsTab payments={payments} onStatusChange={handlePaymentStatus} />;
-		if (activeTab === "coupons") return <AdminCouponsTab coupons={coupons} onEdit={(entry) => {
-			const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
-			setCouponForm({
-				id: entry._id,
-				code: entry.code ?? "",
-				name: entry.name ?? "",
-				description: entry.description ?? "",
-				discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
-				discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
-				maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
-				minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
-				usageLimit: entry.usageLimit != null ? String(entry.usageLimit) : "1",
-				startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
-				expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
-				isActive: Boolean(entry.isActive),
-				offerCategory: entry.offerCategory || "all",
-				image: entry.image || "",
-				isFeatured: Boolean(entry.isFeatured),
-				applicableCategories: mapIds(entry.applicableCategories),
-				applicableSubCategories: mapIds(entry.applicableSubCategories),
-				applicableStyles: mapIds(entry.applicableStyles),
-				applicableProducts: mapIds(entry.applicableProducts),
-				applicableProductTypes: (entry.applicableProductTypes || []).join(", "),
-			});
-			setModalMode("edit");
-			setModalKind("coupon");
-		}} onDelete={handleDeleteCoupon} 	/>;
+		if (activeTab === "coupons") return <AdminCouponsTab 
+			coupons={coupons}
+			offers={offers}
+			onEditCoupon={(entry) => {
+				const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
+				setCouponForm({
+					id: entry._id,
+					code: entry.code ?? "",
+					name: entry.name ?? "",
+					description: entry.description ?? "",
+					discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
+					discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
+					maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
+					minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
+					usageLimit: entry.usageLimit != null ? String(entry.usageLimit) : "1",
+					startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
+					expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
+					isActive: Boolean(entry.isActive),
+					offerCategory: entry.offerCategory || "all",
+					isFeatured: Boolean(entry.isFeatured),
+					applicableCategories: mapIds(entry.applicableCategories),
+					applicableSubCategories: mapIds(entry.applicableSubCategories),
+					applicableStyles: mapIds(entry.applicableStyles),
+					applicableProducts: mapIds(entry.applicableProducts),
+					applicableProductTypes: (entry.applicableProductTypes || []).join(", "),
+					imageFile: null,
+					imageUrl: entry.image || "",
+				});
+				setModalMode("edit");
+				setModalKind("coupon");
+			}} 
+			onDeleteCoupon={handleDeleteCoupon}
+			onEditOffer={(entry) => {
+				const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
+				setOfferForm({
+					id: entry._id,
+					title: entry.title,
+					description: entry.description || "",
+					offerType: entry.offerType,
+					discountValue: String(entry.discountValue),
+					buyQuantity: String(entry.buyQuantity),
+					getQuantity: String(entry.getQuantity),
+					startsAt: entry.startsAt ? String(entry.startsAt).slice(0, 10) : "",
+					expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
+					isActive: entry.isActive,
+					usageLimit: String(entry.usageLimit),
+					applicableCategories: mapIds(entry.applicableCategories),
+					applicableProducts: mapIds(entry.applicableProducts),
+					imageFile: null,
+					imageUrl: entry.image || "",
+				});
+				setModalMode("edit");
+				setModalKind("offer");
+			}}
+			onDeleteOffer={handleDeleteOffer}
+			onAddCoupon={() => { setModalMode("create"); setModalKind("coupon"); setCouponForm(defaultCouponForm); }}
+			onAddOffer={() => { setModalMode("create"); setModalKind("offer"); setOfferForm(defaultOfferForm); }}
+		/>;
 		if (activeTab === "banners") return <AdminBannersTab banners={banners} mainBanners={mainBanners} onEdit={(entry) => {
 			setBannerForm({
 				id: entry._id,
@@ -1180,6 +1354,14 @@ export default function AdminDashboardPage() {
 		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};
 
+	const handleCsvToggle = (id: string, currentCsv: string) => {
+		const list = currentCsv.split(",").map((s) => s.trim()).filter(Boolean);
+		if (list.includes(id)) {
+			return list.filter((i) => i !== id).join(", ");
+		}
+		return [...list, id].join(", ");
+	};
+
 	const renderModal = () => {
 		if (!modalKind) {
 			return null;
@@ -1242,35 +1424,243 @@ export default function AdminDashboardPage() {
 							<button className="admin-btn admin-btn-muted" type="button" onClick={closeModal}>Close</button>
 						</div>
 						<form className="admin-form-grid" onSubmit={handleCouponSubmit}>
-							<input placeholder="Code" value={couponForm.code ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value }))} required />
-							<input placeholder="Name" value={couponForm.name ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, name: event.target.value }))} required />
-							<textarea placeholder="Description" value={couponForm.description ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, description: event.target.value }))} />
-							<select value={couponForm.discountType ?? "percentage"} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as "percentage" | "fixed" }))}>
-								<option value="percentage">Percentage</option>
-								<option value="fixed">Fixed</option>
-							</select>
-							<input placeholder="Discount Value" type="number" value={couponForm.discountValue ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} required />
-							<input placeholder="Max Discount (for %)" type="number" value={couponForm.maxDiscount ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxDiscount: event.target.value }))} />
-							<input placeholder="Min Order Value" type="number" value={couponForm.minOrderValue ?? "0"} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderValue: event.target.value }))} />
-							<input placeholder="Usage Limit" type="number" value={couponForm.usageLimit ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, usageLimit: event.target.value }))} />
-							<input placeholder="Starts At" type="date" value={couponForm.startsAt ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
-							<input placeholder="Expiry" type="date" value={couponForm.expiryDate ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, expiryDate: event.target.value }))} />
-							<select value={couponForm.offerCategory} onChange={(event) => setCouponForm((prev) => ({ ...prev, offerCategory: event.target.value as "jewellery" | "combo" | "gift" | "all" }))}>
-								<option value="all">Sitewide</option>
-								<option value="jewellery">Jewellery</option>
-								<option value="combo">Combos</option>
-								<option value="gift">Gift</option>
-							</select>
-							<input placeholder="Offer Image URL" value={couponForm.image ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, image: event.target.value }))} />
-							<input placeholder="Category IDs (comma separated)" value={couponForm.applicableCategories ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableCategories: event.target.value }))} />
-							<input placeholder="Subcategory IDs (comma separated)" value={couponForm.applicableSubCategories ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableSubCategories: event.target.value }))} />
-							<input placeholder="Style IDs (comma separated)" value={couponForm.applicableStyles ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableStyles: event.target.value }))} />
-							<input placeholder="Product IDs (comma separated)" value={couponForm.applicableProducts ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProducts: event.target.value }))} />
-							<input placeholder="Types: men,women,kids,unisex" value={couponForm.applicableProductTypes ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, applicableProductTypes: event.target.value }))} />
-							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
-							<label className="admin-checkbox"><input type="checkbox" checked={couponForm.isFeatured} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFeatured: event.target.checked }))} />Featured (show New badge)</label>
-							<div className="admin-inline-actions">
+							<div className="admin-form-group">
+								<label>Coupon Code</label>
+								<input placeholder="E.g. SAVE20" value={couponForm.code ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))} required />
+							</div>
+							
+							<div className="admin-form-group">
+								<label>Name</label>
+								<input placeholder="Summer Sale" value={couponForm.name ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, name: event.target.value }))} required />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Description</label>
+								<textarea placeholder="Describe this coupon..." value={couponForm.description ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, description: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Discount Type</label>
+								<select value={couponForm.discountType ?? "percentage"} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as "percentage" | "fixed" }))}>
+									<option value="percentage">Percentage Off (%)</option>
+									<option value="fixed">Fixed Amount Off (₹)</option>
+								</select>
+							</div>
+
+							<div className="admin-form-group">
+								<label>Discount Value</label>
+								<input type="number" min="0" step="any" value={couponForm.discountValue ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} required />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Max Discount Amount (₹)</label>
+								<input type="number" min="0" value={couponForm.maxDiscount ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxDiscount: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Min Order Value (₹)</label>
+								<input type="number" min="0" value={couponForm.minOrderValue ?? "0"} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderValue: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Usage Limit (0 for unlimited)</label>
+								<input type="number" min="0" value={couponForm.usageLimit ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, usageLimit: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Starts At</label>
+								<input type="date" value={couponForm.startsAt ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Expiry Date</label>
+								<input type="date" value={couponForm.expiryDate ?? ""} onChange={(event) => setCouponForm((prev) => ({ ...prev, expiryDate: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Offer Category (Visual Tag)</label>
+								<select value={couponForm.offerCategory} onChange={(event) => setCouponForm((prev) => ({ ...prev, offerCategory: event.target.value as "jewellery" | "combo" | "gift" | "all" }))}>
+									<option value="all">Sitewide</option>
+									<option value="jewellery">Jewellery</option>
+									<option value="combo">Combos</option>
+									<option value="gift">Gift</option>
+								</select>
+							</div>
+
+							<div className="admin-form-group">
+								<label>Coupon Banner Image</label>
+								<input type="file" accept="image/*" onChange={(e) => setCouponForm((prev) => ({ ...prev, imageFile: e.target.files?.[0] || null }))} />
+								{couponForm.imageUrl && !couponForm.imageFile && (
+									<Image src={couponForm.imageUrl} alt="Preview" width={80} height={80} style={{ objectFit: 'cover', borderRadius: '4px', marginTop: '0.5rem' }} />
+								)}
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label>Applicable Categories</label>
+								<div className="admin-checkbox-list">
+									{categories.map((cat) => (
+										<label key={cat._id} className="admin-checkbox" style={{ margin: 0 }}>
+											<input 
+												type="checkbox" 
+												checked={couponForm.applicableCategories.includes(cat._id)} 
+												onChange={() => setCouponForm(prev => ({ ...prev, applicableCategories: handleCsvToggle(cat._id, prev.applicableCategories) }))} 
+											/>
+											{cat.name}
+										</label>
+									))}
+									{categories.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No categories found</span>}
+								</div>
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label>Applicable Products</label>
+								<div className="admin-checkbox-list">
+									{products.map((prod) => (
+										<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
+											<input 
+												type="checkbox" 
+												checked={couponForm.applicableProducts.includes(prod._id)} 
+												onChange={() => setCouponForm(prev => ({ ...prev, applicableProducts: handleCsvToggle(prod._id, prev.applicableProducts) }))} 
+											/>
+											{prod.title}
+										</label>
+									))}
+									{products.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
+								</div>
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label className="admin-checkbox">
+									<input type="checkbox" checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
+									<strong>Coupon is Active</strong>
+								</label>
+								<label className="admin-checkbox">
+									<input type="checkbox" checked={couponForm.isFeatured} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFeatured: event.target.checked }))} />
+									<strong>Featured (show New badge)</strong>
+								</label>
+							</div>
+
+							<div className="admin-inline-actions" style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
 								<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Coupon" : "Create Coupon"}</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			);
+		}
+
+		if (modalKind === "offer") {
+			return (
+				<div className="admin-modal-backdrop" onClick={closeModal}>
+					<div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+						<div className="admin-modal-header">
+							<h3>{modalMode === "edit" ? "Edit Offer" : "Add Offer"}</h3>
+							<button className="admin-btn admin-btn-muted" type="button" onClick={closeModal}>Close</button>
+						</div>
+						<form className="admin-form-grid" onSubmit={handleOfferSubmit}>
+							<div className="admin-form-group">
+								<label>Offer Title</label>
+								<input placeholder="E.g. Summer Sale" value={offerForm.title ?? ""} onChange={(event) => setOfferForm((prev) => ({ ...prev, title: event.target.value }))} required />
+							</div>
+							
+							<div className="admin-form-group">
+								<label>Description</label>
+								<textarea placeholder="Describe this offer..." value={offerForm.description ?? ""} onChange={(event) => setOfferForm((prev) => ({ ...prev, description: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Offer Type</label>
+								<select value={offerForm.offerType ?? "percentage"} onChange={(event) => setOfferForm((prev) => ({ ...prev, offerType: event.target.value as "bogo" | "percentage" | "fixed" }))}>
+									<option value="percentage">Percentage Off (%)</option>
+									<option value="fixed">Fixed Amount Off (₹)</option>
+									<option value="bogo">Buy X Get Y Free</option>
+								</select>
+							</div>
+
+							{offerForm.offerType === "bogo" ? (
+								<>
+									<div className="admin-form-group">
+										<label>Buy Quantity</label>
+										<input type="number" min="1" value={offerForm.buyQuantity} onChange={(event) => setOfferForm((prev) => ({ ...prev, buyQuantity: event.target.value }))} required />
+									</div>
+									<div className="admin-form-group">
+										<label>Get Quantity Free</label>
+										<input type="number" min="1" value={offerForm.getQuantity} onChange={(event) => setOfferForm((prev) => ({ ...prev, getQuantity: event.target.value }))} required />
+									</div>
+								</>
+							) : (
+								<div className="admin-form-group">
+									<label>Discount Value</label>
+									<input type="number" min="0" step="any" value={offerForm.discountValue} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))} required />
+								</div>
+							)}
+							
+							<div className="admin-form-group">
+								<label>Usage Limit (0 for unlimited)</label>
+								<input type="number" min="0" value={offerForm.usageLimit} onChange={(event) => setOfferForm((prev) => ({ ...prev, usageLimit: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Starts At</label>
+								<input type="date" value={offerForm.startsAt ?? ""} onChange={(event) => setOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+							</div>
+
+							<div className="admin-form-group">
+								<label>Expiry Date</label>
+								<input type="date" value={offerForm.expiryDate ?? ""} onChange={(event) => setOfferForm((prev) => ({ ...prev, expiryDate: event.target.value }))} />
+							</div>
+							
+							<div className="admin-form-group">
+								<label>Offer Image</label>
+								<input type="file" accept="image/*" onChange={(e) => setOfferForm((prev) => ({ ...prev, imageFile: e.target.files?.[0] || null }))} />
+								{offerForm.imageUrl && !offerForm.imageFile && (
+									<Image src={offerForm.imageUrl} alt="Offer Preview" width={80} height={80} style={{ objectFit: 'cover', borderRadius: '4px', marginTop: '0.5rem' }} />
+								)}
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label>Applicable Categories</label>
+								<div className="admin-checkbox-list">
+									{categories.map((cat) => (
+										<label key={cat._id} className="admin-checkbox" style={{ margin: 0 }}>
+											<input 
+												type="checkbox" 
+												checked={offerForm.applicableCategories.includes(cat._id)} 
+												onChange={() => setOfferForm(prev => ({ ...prev, applicableCategories: handleCsvToggle(cat._id, prev.applicableCategories) }))} 
+											/>
+											{cat.name}
+										</label>
+									))}
+									{categories.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No categories found</span>}
+								</div>
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label>Applicable Products</label>
+								<div className="admin-checkbox-list">
+									{products.map((prod) => (
+										<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
+											<input 
+												type="checkbox" 
+												checked={offerForm.applicableProducts.includes(prod._id)} 
+												onChange={() => setOfferForm(prev => ({ ...prev, applicableProducts: handleCsvToggle(prod._id, prev.applicableProducts) }))} 
+											/>
+											{prod.title}
+										</label>
+									))}
+									{products.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
+								</div>
+							</div>
+
+							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+								<label className="admin-checkbox">
+									<input type="checkbox" checked={offerForm.isActive} onChange={(event) => setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
+									<strong>Offer is Active</strong>
+								</label>
+							</div>
+
+							<div className="admin-inline-actions" style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
+								<button className="admin-btn" type="submit">{modalMode === "edit" ? "Update Offer" : "Create Offer"}</button>
 							</div>
 						</form>
 					</div>
@@ -1360,14 +1750,22 @@ export default function AdminDashboardPage() {
 
 	return (
 		<main className="admin-page">
-			<aside className="admin-sidebar">
+			<div className={`admin-sidebar-backdrop ${isSidebarOpen ? "sidebar-open" : ""}`} onClick={() => setIsSidebarOpen(false)} />
+			<aside className={`admin-sidebar ${isSidebarOpen ? "sidebar-open" : ""}`}>
 				<div className="admin-brand">
 					<p>MakeUsSparkle</p>
 					<h1>Admin</h1>
 				</div>
 				<nav>
 					{tabs.map((tab) => (
-						<button key={tab.key} className={`admin-side-link ${activeTab === tab.key ? "active" : ""}`} onClick={() => setActiveTab(tab.key)}>
+						<button 
+							key={tab.key} 
+							className={`admin-side-link ${activeTab === tab.key ? "active" : ""}`} 
+							onClick={() => {
+								setActiveTab(tab.key);
+								setIsSidebarOpen(false);
+							}}
+						>
 							{tab.label}
 						</button>
 					))}
@@ -1377,7 +1775,16 @@ export default function AdminDashboardPage() {
 			<section className="admin-main">
 				<header className="admin-topbar">
 					<div>
-						<p className="admin-login-kicker">CONTROL CENTER</p>
+						<div className="admin-mobile-header" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.5rem' }}>
+							<button 
+								className="admin-btn admin-sidebar-toggle" 
+								onClick={() => setIsSidebarOpen(true)}
+								aria-label="Toggle Sidebar"
+							>
+								☰
+							</button>
+							<p className="admin-login-kicker" style={{ marginBottom: 0 }}>CONTROL CENTER</p>
+						</div>
 						<h2>{tabs.find((entry) => entry.key === activeTab)?.label || "Dashboard"}</h2>
 						<p>Signed in as {user?.email || "admin"}</p>
 					</div>

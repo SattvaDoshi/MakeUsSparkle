@@ -8,6 +8,25 @@ export type DashboardStatsResponse = {
 	};
 };
 
+export type SalesAnalyticsItem = {
+	_id: string;
+	totalSales: number;
+	totalOrders: number;
+};
+
+export type ProductAnalyticsItem = {
+	_id: string;
+	name: string;
+	price: number;
+	ordersCount: number;
+};
+
+export type OrderAnalyticsItem = {
+	_id: string;
+	count: number;
+	total: number;
+};
+
 export type AdminUser = {
 	_id: string;
 	name: string;
@@ -108,6 +127,24 @@ export type AdminCoupon = {
 	applicableStyles?: Array<{ _id: string; name?: string } | string>;
 	applicableProducts?: Array<{ _id: string; title?: string } | string>;
 	applicableProductTypes?: string[];
+};
+
+export type AdminOffer = {
+	_id: string;
+	title: string;
+	description?: string;
+	offerType: "bogo" | "percentage" | "fixed";
+	discountValue: number;
+	buyQuantity: number;
+	getQuantity: number;
+	startsAt?: string;
+	expiryDate?: string;
+	isActive: boolean;
+	usageLimit: number;
+	usedCount: number;
+	image?: string;
+	applicableCategories?: Array<{ _id: string; name?: string } | string>;
+	applicableProducts?: Array<{ _id: string; title?: string } | string>;
 };
 
 export type AdminBanner = {
@@ -215,6 +252,8 @@ export type CouponFormState = {
 	applicableStyles: string;
 	applicableProducts: string;
 	applicableProductTypes: string;
+	imageFile: File | null;
+	imageUrl: string;
 };
 
 export type BannerFormState = {
@@ -245,6 +284,24 @@ export type CharmFormState = {
 	hasPhotoUpload: boolean;
 	sortOrder: string;
 	active: boolean;
+	imageFile: File | null;
+	imageUrl: string;
+};
+
+export type OfferFormState = {
+	id: string;
+	title: string;
+	description: string;
+	offerType: "bogo" | "percentage" | "fixed";
+	discountValue: string;
+	buyQuantity: string;
+	getQuantity: string;
+	startsAt: string;
+	expiryDate: string;
+	isActive: boolean;
+	usageLimit: string;
+	applicableCategories: string;
+	applicableProducts: string;
 	imageFile: File | null;
 	imageUrl: string;
 };
@@ -288,6 +345,8 @@ export const defaultCouponForm: CouponFormState = {
 	applicableStyles: "",
 	applicableProducts: "",
 	applicableProductTypes: "",
+	imageFile: null,
+	imageUrl: "",
 };
 
 export const defaultBannerForm: BannerFormState = {
@@ -322,13 +381,31 @@ export const defaultCharmForm: CharmFormState = {
 	imageUrl: "",
 };
 
+export const defaultOfferForm: OfferFormState = {
+	id: "",
+	title: "",
+	description: "",
+	offerType: "percentage",
+	discountValue: "0",
+	buyQuantity: "1",
+	getQuantity: "1",
+	startsAt: "",
+	expiryDate: "",
+	isActive: true,
+	usageLimit: "0",
+	applicableCategories: "",
+	applicableProducts: "",
+	imageFile: null,
+	imageUrl: "",
+};
+
 export const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
-	{ key: "coupons", label: "Coupons" },
+	{ key: "coupons", label: "Offers & Coupons" },
 	{ key: "banners", label: "Banners" },
 	{ key: "reviews", label: "Reviews" },
 	{ key: "charms", label: "Charms" },

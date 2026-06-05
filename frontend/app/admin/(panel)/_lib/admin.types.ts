@@ -78,6 +78,7 @@ export type AdminOrder = {
 		customNote?: string;
 		customImages?: string[];
 		selectedCharms?: Array<{ _id: string; name?: string } | string>;
+		selectionGroups?: Array<any>;
 	}>;
 	isGift?: boolean;
 	giftMessage?: string;

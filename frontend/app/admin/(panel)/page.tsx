@@ -248,7 +248,6 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "coupons", label: "Coupons" },
 	{ key: "banners", label: "Banners" },
 	{ key: "reviews", label: "Reviews" },
-	{ key: "charms", label: "Charms" },
 ];
 
 // order/payment status lists moved to dedicated tab components

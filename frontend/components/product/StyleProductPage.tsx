@@ -757,7 +757,7 @@ function Card({ product, index }: { product: Product; index: number }) {
             className="c-img"
             loading="lazy"
           />
-          {discount && <span className="c-disc">â€“{discount}%</span>}
+          {discount && <span className="c-disc">{discount}% off</span>}
 
           {/* Wishlist heart */}
           <button
@@ -775,9 +775,9 @@ function Card({ product, index }: { product: Product; index: number }) {
         <div className="c-info">
           <p className="c-name">{product.name}</p>
           <div className="c-prow">
-            <span className="c-price">â‚¹{product.price.toLocaleString('en-IN')}</span>
+            <span className="c-price">₹{product.price.toLocaleString('en-IN')}</span>
             {product.originalPrice && (
-              <span className="c-orig">â‚¹{product.originalPrice.toLocaleString('en-IN')}</span>
+              <span className="c-orig">₹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
           </div>
           {/* Add to Cart button */}

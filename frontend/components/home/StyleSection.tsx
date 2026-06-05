@@ -280,16 +280,10 @@ export default function ShopByStyle() {
               <SwiperSlide
                 key={card.id}
                 className="swiper-slide-custom"
-                onClick={() => {
-                  console.log(`[SwiperSlide] Clicked on style: ${card.name} (${card.slug})`);
-                  router.push(`/styles/${card.slug}`);
-                }}
               >
-                <div 
-                  style={{ display: "block", width: "100%", height: "100%", zIndex: 10, position: "relative" }} 
-                  onClick={(e) => {
-                    console.log(`[Inner Div] Clicked on style: ${card.name} (${card.slug})`);
-                  }}
+                <Link
+                  href={`/styles/${card.slug}`}
+                  style={{ display: "block", width: "100%", height: "100%", zIndex: 10, position: "relative" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -300,7 +294,7 @@ export default function ShopByStyle() {
                   <div className="sbs__lbl">
                     <span>{card.name}</span>
                   </div>
-                </div>
+                </Link>
               </SwiperSlide>
             ))}
           </Swiper>

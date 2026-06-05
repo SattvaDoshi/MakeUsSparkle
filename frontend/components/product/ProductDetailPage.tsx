@@ -1,7 +1,8 @@
 'use client';   
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchProductById, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
+import { useAuth } from '@/lib/authContext';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
@@ -83,24 +84,7 @@ const TRUST_BADGES = [
   },
 ];
 
-const REVIEWS_DATA = [
-  { id: 1, name: 'Priya Sharma', initials: 'PS', rating: 5, date: '12 Apr 2025', title: 'Absolutely stunning piece!', body: 'I gifted this to my sister and she was in tears. The quality is exceptional — it looks far more expensive than it actually is. The packaging was gorgeous too. Will definitely be ordering again.', verified: true, helpful: 24, colorHex: '#c9a84c' },
-  { id: 2, name: 'Anika Reddy', initials: 'AR', rating: 5, date: '3 Apr 2025', title: 'Perfect everyday necklace', body: 'Wore it every day for a month and it still looks brand new. The layered design is so elegant and gets so many compliments. Highly recommend for anyone looking for something that looks luxe but is affordable.', verified: true, helpful: 18, colorHex: '#5a6b2e' },
-  { id: 3, name: 'Meera Joshi', initials: 'MJ', rating: 4, date: '28 Mar 2025', title: 'Beautiful but clasp is slightly fiddly', body: 'The necklace itself is gorgeous — love the delicate layered look. My only minor complaint is the lobster clasp is a tiny bit tricky to fasten solo. Once on though, it stays perfectly and looks stunning.', verified: true, helpful: 11, colorHex: '#3d4a22' },
-  { id: 4, name: 'Divya Nair', initials: 'DN', rating: 5, date: '19 Mar 2025', title: 'Fast delivery, premium quality', body: 'Ordered on a whim and received it in 2 days. The moment I opened the box I knew it was worth every rupee. The gold plating is even and the chains lay perfectly. Zero tarnishing so far.', verified: false, helpful: 8, colorHex: '#c9a84c' },
-  { id: 5, name: 'Roshni Kapoor', initials: 'RK', rating: 5, date: '10 Mar 2025', title: 'My go-to jewellery shop now', body: 'Third order from Maison and they never disappoint. This layered necklace is my favourite so far. It transitions effortlessly from casual daywear to evenings. The rose gold variant I got is dreamy.', verified: true, helpful: 31, colorHex: '#7a8e3c' },
-];
-
-const RATING_DISTRIBUTION = [
-  { stars: 5, count: 148, pct: 74 },
-  { stars: 4, count: 32, pct: 16 },
-  { stars: 3, count: 12, pct: 6 },
-  { stars: 2, count: 4, pct: 2 },
-  { stars: 1, count: 4, pct: 2 },
-];
-
-const OVERALL_RATING = 4.8;
-const TOTAL_REVIEWS = 200;
+// Static reviews data replaced by dynamic backend integration.
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
@@ -117,12 +101,51 @@ const PRESET_MESSAGES = [
 ];
 
 // ─── Reviews Section ──────────────────────────────────────────────────────────
-function ReviewsSection() {
+function ReviewsSection({ productId }: { productId: string }) {
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [visibleCount, setVisibleCount] = useState(3);
   const [filterStar, setFilterStar] = useState<number | null>(null);
-  const filtered = REVIEWS_DATA.filter(r => filterStar === null || r.rating === filterStar);
+  const [showForm, setShowForm] = useState(false);
+  const [formState, setFormState] = useState({ rating: 5, title: '', body: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  const { user, token } = useAuth();
+
+  useEffect(() => {
+    fetchProductReviews(productId).then(setReviews);
+  }, [productId]);
+
+  const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) {
+      setErrorMsg('You must be logged in to review.');
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMsg('');
+    const res = await submitProductReview({ productId, ...formState }, token);
+    setIsSubmitting(false);
+    if (res.success && res.review) {
+      setReviews([res.review, ...reviews]);
+      setShowForm(false);
+      setFormState({ rating: 5, title: '', body: '' });
+    } else {
+      setErrorMsg(res.message || 'Failed to submit review.');
+    }
+  };
+
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
+  const ratingDist = [5,4,3,2,1].map(stars => {
+    const count = reviews.filter(r => r.rating === stars).length;
+    const pct = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+    return { stars, count, pct };
+  });
 
   return (
     <div className="rev-section">
@@ -134,14 +157,15 @@ function ReviewsSection() {
         </div>
         <div className="rev-header-line" />
       </div>
+
       <div className="rev-summary">
         <div className="rev-summary-score">
-          <span className="rev-big-num">{OVERALL_RATING}</span>
-          <div className="rev-big-stars">{'★'.repeat(Math.round(OVERALL_RATING))}{'☆'.repeat(5 - Math.round(OVERALL_RATING))}</div>
-          <span className="rev-total-cnt">Based on {TOTAL_REVIEWS} reviews</span>
+          <span className="rev-big-num">{avgRating}</span>
+          <div className="rev-big-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
+          <span className="rev-total-cnt">Based on {totalReviews} reviews</span>
         </div>
         <div className="rev-bars">
-          {RATING_DISTRIBUTION.map(d => (
+          {ratingDist.map(d => (
             <button key={d.stars} className={`rev-bar-row${filterStar === d.stars ? ' rev-bar-row--active' : ''}`} onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}>
               <span className="rev-bar-label">{d.stars}★</span>
               <div className="rev-bar-track"><div className="rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
@@ -150,35 +174,57 @@ function ReviewsSection() {
           ))}
         </div>
       </div>
-      <div className="rev-controls">
-        {filterStar !== null && <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>}
+
+      <div className="rev-controls" style={{ justifyContent: 'space-between' }}>
+        <div>
+          {filterStar !== null && <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>}
+        </div>
+        {!showForm && (
+          <button className="rev-helpful-btn" style={{ background: 'var(--olive-600)', color: 'white' }} onClick={() => setShowForm(true)}>
+            Write a Review
+          </button>
+        )}
       </div>
-      {visible.length === 0 && <p className="rev-empty">No reviews match this filter. <button className="rev-clear-link" onClick={() => setFilterStar(null)}>Clear filter</button></p>}
+
+      {showForm && (
+        <form onSubmit={handleSubmit} style={{ background: 'white', padding: 24, borderRadius: 18, border: '1px solid rgba(61,74,34,.07)', marginBottom: 20, animation: 'fadeUp .3s ease both' }}>
+          <h3 style={{ fontSize: 16, color: 'var(--olive-900)', marginBottom: 16 }}>Write a Review</h3>
+          {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+             {[1,2,3,4,5].map(star => (
+               <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
+             ))}
+          </div>
+          <input required placeholder="Review Title" value={formState.title} onChange={e => setFormState(s => ({ ...s, title: e.target.value }))} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 12, fontSize: 13, outline: 'none' }} />
+          <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 13, outline: 'none', resize: 'vertical' }} />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
+            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'transparent', color: 'var(--mist)', border: 'none', padding: '10px 24px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {visible.length === 0 && !showForm && <p className="rev-empty">No reviews match this filter. <button className="rev-clear-link" onClick={() => setFilterStar(null)}>Clear filter</button></p>}
       <div className="rev-list">
         {visible.map((r, i) => (
-          <div key={r.id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
+          <div key={r._id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
             <div className="rev-card-top">
-              <div className="rev-avatar" style={{ background: r.colorHex + '22', color: r.colorHex }}>{r.initials}</div>
+              <div className="rev-avatar" style={{ background: '#c9a84c22', color: '#c9a84c' }}>
+                {r.user?.firstName?.[0] || 'A'}
+              </div>
               <div className="rev-meta">
                 <div className="rev-meta-row">
-                  <span className="rev-name">{r.name}</span>
-                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
+                  <span className="rev-name">{r.user?.firstName} {r.user?.lastName}</span>
+                  {r.isVerifiedPurchase && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
                 </div>
                 <div className="rev-meta-row" style={{ marginTop: 3 }}>
                   <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                  <span className="rev-date">{r.date}</span>
+                  <span className="rev-date">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 </div>
               </div>
             </div>
             <p className="rev-card-title">{r.title}</p>
             <p className="rev-card-body">{r.body}</p>
-            <div className="rev-card-foot">
-              <span className="rev-helpful-label">Helpful?</span>
-              <button className="rev-helpful-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                {r.helpful}
-              </button>
-            </div>
           </div>
         ))}
       </div>
@@ -1090,7 +1136,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
           </div>
         </div>
 
-        <ReviewsSection />
+        <ReviewsSection productId={product.sourceId} />
       </div>
     </>
   );

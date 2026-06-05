@@ -1241,14 +1241,14 @@ export default function CartPage() {
                     <div
                       className="cp-item"
                       key={`${item.id}-${item.colorHex}`}
-                      style={item.selectedCharms?.length ? { flexDirection: 'column', gap: 10 } : undefined}
+                      style={(item.selectedCharms?.length || item.selectionGroups?.length) ? { flexDirection: 'column', gap: 10 } : undefined}
                     >
                       <div style={{ display: 'flex', gap: 14 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img className="cp-item-img" src={item.image} alt={item.name} />
                         <div className="cp-item-body">
                           <div className="cp-item-name">{item.name}</div>
-                          {!item.selectedCharms?.length && (
+                          {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                             <div className="cp-item-color">
                               <span className="cp-item-color-dot" style={{ background: item.colorHex }} />
                               {item.color}
@@ -1260,7 +1260,7 @@ export default function CartPage() {
                               <span className="cp-item-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
                             )}
                           </div>
-                          {!item.selectedCharms?.length && (
+                          {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                             <p className="cp-item-per">₹{item.price.toLocaleString('en-IN')} per item</p>
                           )}
                         </div>
@@ -1270,7 +1270,7 @@ export default function CartPage() {
                             onClick={() => removeItem(item.id, item.colorHex)}
                             aria-label={`Remove ${item.name}`}
                           >×</button>
-                          {!item.selectedCharms?.length && (
+                          {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                             <div className="cp-qty">
                               <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
                               <span className="cp-qty-val">{item.qty}</span>
@@ -1302,6 +1302,27 @@ export default function CartPage() {
                             </div>
                             );
                           })}
+                        </div>
+                      )}
+
+                      {!item.selectedCharms?.length && item.selectionGroups && item.selectionGroups.length > 0 && (
+                        <div style={{ background: 'var(--olive-50)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
+                            Included Items
+                          </div>
+                          {item.selectionGroups.flatMap((group) => 
+                            group.items.map((selection, idx) => (
+                              <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.08)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />}
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
+                                    <span style={{ fontSize: 12, color: 'var(--olive-900)' }}>{selection.name}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>

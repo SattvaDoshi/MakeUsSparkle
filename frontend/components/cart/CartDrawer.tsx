@@ -886,14 +886,14 @@ export default function CartDrawer() {
                 <div
                   className="di-card"
                   key={item.cartItemId ?? `${item.id}-${item.colorHex}`}
-                  style={item.selectedCharms?.length ? { flexDirection: 'column', gap: 8 } : undefined}
+                  style={(item.selectedCharms?.length || item.selectionGroups?.length) ? { flexDirection: 'column', gap: 8 } : undefined}
                 >
                   <div style={{ display: 'flex', gap: 12 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="di-img" src={item.image} alt={item.name} />
                     <div className="di-body">
                       <div className="di-name">{item.name}</div>
-                      {!item.selectedCharms?.length && (
+                      {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                         <div className="di-color">
                           <span className="di-color-dot" style={{ background: item.colorHex }} />
                           {item.color}
@@ -912,7 +912,7 @@ export default function CartDrawer() {
                         onClick={() => removeItem(item.id, item.colorHex)}
                         aria-label={`Remove ${item.name}`}
                       >×</button>
-                      {!item.selectedCharms?.length && (
+                      {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                         <div className="di-qty">
                           <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
                           <span className="di-qty-val">{item.qty}</span>
@@ -939,6 +939,27 @@ export default function CartDrawer() {
                         </div>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {!item.selectedCharms?.length && item.selectionGroups && item.selectionGroups.length > 0 && (
+                    <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
+                        Included Items
+                      </div>
+                      {item.selectionGroups.flatMap((group) => 
+                        group.items.map((selection, idx) => (
+                          <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(61,74,34,.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }} />}
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: 9, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
+                                <span style={{ fontSize: 11, color: 'var(--olive-900)' }}>{selection.name}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>

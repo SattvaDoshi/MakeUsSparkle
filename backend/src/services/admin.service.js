@@ -3,6 +3,7 @@ import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import Coupon from "../models/coupon.model.js";
 import Banner from "../models/banner.model.js";
+import Review from "../models/review.model.js";
 import bcrypt from "bcryptjs";
 
 class AdminService {
@@ -330,31 +331,38 @@ class AdminService {
 	async getReviews(page = 1, limit = 30) {
 		try {
 			const skip = (page - 1) * limit;
-			const products = await Product.find({ "reviews.0": { $exists: true } })
-				.select("title reviews")
-				.populate("reviews.user", "name email")
-				.sort({ updatedAt: -1 })
+			const reviewsData = await Review.find()
+				.populate("user", "firstName lastName name email")
+				.populate("product", "title")
+				.sort({ createdAt: -1 })
 				.skip(skip)
 				.limit(limit);
 
-			const reviews = [];
-			for (const product of products) {
-				for (const review of product.reviews || []) {
-					reviews.push({
-						productId: String(product._id),
-						productTitle: product.title,
-						reviewId: String(review._id),
-						rating: review.rating,
-						comment: review.comment,
-						user: review.user,
-					});
+			const reviews = reviewsData.map((review) => {
+				const user = review.user;
+				let userName = "Unknown";
+				if (user) {
+					userName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || "Unknown";
 				}
-			}
+				return {
+					productId: String(review.product?._id || ""),
+					productTitle: review.product?.title || "Unknown",
+					reviewId: String(review._id),
+					rating: review.rating,
+					comment: review.body,
+					user: {
+						name: userName,
+						email: user?.email || "",
+					},
+				};
+			});
+			
+			const total = await Review.countDocuments();
 
 			return {
 				success: true,
 				reviews,
-				pagination: { page, limit, total: reviews.length },
+				pagination: { page, limit, total },
 			};
 		} catch (error) {
 			console.error("Error fetching reviews:", error);
@@ -364,24 +372,19 @@ class AdminService {
 
 	async updateReview(productId, reviewId, reviewData) {
 		try {
-			const product = await Product.findById(productId);
-			if (!product) {
-				throw new Error("Product not found");
-			}
-
-			const review = product.reviews.id(reviewId);
+			const review = await Review.findById(reviewId);
 			if (!review) {
 				throw new Error("Review not found");
 			}
 
 			if (reviewData.comment !== undefined) {
-				review.comment = reviewData.comment;
+				review.body = reviewData.comment;
 			}
 			if (reviewData.rating !== undefined) {
 				review.rating = reviewData.rating;
 			}
 
-			await product.save();
+			await review.save();
 			return { success: true, review };
 		} catch (error) {
 			console.error("Error updating review:", error);
@@ -391,18 +394,10 @@ class AdminService {
 
 	async deleteReview(productId, reviewId) {
 		try {
-			const product = await Product.findById(productId);
-			if (!product) {
-				throw new Error("Product not found");
-			}
-
-			const review = product.reviews.id(reviewId);
+			const review = await Review.findByIdAndDelete(reviewId);
 			if (!review) {
 				throw new Error("Review not found");
 			}
-
-			review.deleteOne();
-			await product.save();
 
 			return { success: true, message: "Review deleted successfully" };
 		} catch (error) {

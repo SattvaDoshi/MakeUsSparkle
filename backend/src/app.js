@@ -16,6 +16,7 @@ import bannerRoutes from "./routes/banner.routes.js";
 import homeSectionRoutes from "./routes/homeSection.routes.js";
 import abandonedRoutes from "./routes/abandoned.routes.js";
 import charmItemRoutes from "./routes/charmItem.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
 import adminRoutes from "./routes/admin/admin.routes.js";
 import adminProductRoutes from "./routes/admin/adminProduct.routes.js";
 import adminCategoryRoutes from "./routes/admin/adminCategory.routes.js";
@@ -126,5 +127,6 @@ app.use("/admin/charm-items", adminCharmItemRoutes);
 app.use("/genders", genderRoutes);
 app.use("/admin/genders", adminGenderRoutes);
 app.use("/abandoned", abandonedRoutes);
+app.use("/reviews", reviewRoutes);
 
 export default app;

@@ -1606,7 +1606,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             id: p._id,
             name: p.title,
             price: p.price || 0,
-            image: p.mainImage || '',
+            image: p.mainImage || (p.images && p.images[0]) || '',
             customisable: !!p.isCustomisable
           });
         });
@@ -1638,7 +1638,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                         id: prodInfo._id,
                         name: prodInfo.title,
                         price: prodInfo.price || 0,
-                        image: prodInfo.mainImage || '',
+                        image: prodInfo.mainImage || (prodInfo.images && prodInfo.images[0]) || '',
                         customisable: !!prodInfo.isCustomisable
                       });
                     }

@@ -667,3 +667,47 @@ export async function createOrder(
     body: JSON.stringify(payload),
   });
 }
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export interface ReviewData {
+  _id: string;
+  user?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  rating: number;
+  title: string;
+  body: string;
+  isVerifiedPurchase: boolean;
+  createdAt: string;
+}
+
+export async function fetchProductReviews(productId: string): Promise<ReviewData[]> {
+  try {
+    const data = await apiRequest<{ success: boolean; reviews?: ReviewData[] }>(`/reviews/product/${productId}`);
+    return data.reviews || [];
+  } catch (error) {
+    console.error("Failed to fetch reviews:", error);
+    return [];
+  }
+}
+
+export async function submitProductReview(
+  payload: { productId: string; rating: number; title: string; body: string },
+  token: string
+): Promise<{ success: boolean; message?: string; review?: ReviewData }> {
+  try {
+    return await apiRequest<{ success: boolean; message?: string; review?: ReviewData }>("/reviews", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error: any) {
+    return { success: false, message: error?.message || "Failed to submit review" };
+  }
+}

@@ -150,7 +150,7 @@ function ProductCard({
           alt={name}
           loading="lazy"
           width={400}
-          height={600}
+          height={500}
         />
 
         <div className="pc-overlay" />
@@ -447,7 +447,7 @@ export default function NewArrivals() {
         .pc-img-zone {
           position: relative;
           width: 100%;
-          aspect-ratio: 2 / 3;
+          aspect-ratio: 4 / 5;
           background: var(--beige-dk);
           overflow: hidden;
           flex-shrink: 0;

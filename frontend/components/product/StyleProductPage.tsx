@@ -1089,10 +1089,10 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
       border-color: ${THEME.accentMist};
     }
 
-    /* 4:6 = width:height = 2:3 */
+    /* 4:5 = width:height = 4:5 */
     .c-img-wrap {
       position: relative;
-      aspect-ratio: 2 / 3;
+      aspect-ratio: 4 / 5;
       overflow: hidden;
       background: ${THEME.bgAlt};
     }

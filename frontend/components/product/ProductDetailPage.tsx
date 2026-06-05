@@ -656,7 +656,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
         .pdp-size-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
         .pdp-size-btn.active{border-color:var(--olive-600);background:var(--olive-600);color:var(--beige)}
         .pdp-size-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
-        .pdp-desc{font-size:13px;font-weight:300;line-height:1.85;color:var(--mist);letter-spacing:.03em;margin-bottom:20px}
+        .pdp-desc{font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
         .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
         .pdp-qty{display:flex;align-items:center;border:1.5px solid var(--beige-dkr);border-radius:50px;overflow:hidden}
         .pdp-qty-btn{width:36px;height:36px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--olive-600);display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -716,7 +716,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
         .acc-emoji{font-size:16px}
         .acc-chevron{color:var(--mist);flex-shrink:0;transition:transform .32s ease}
         .acc-item--open .acc-chevron{transform:rotate(180deg)}
-        .acc-body{padding:2px 4px 18px 36px;font-size:12px;font-weight:300;line-height:1.85;color:var(--mist);letter-spacing:.03em}
+        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em}
         .acc-body p{margin-bottom:4px}
 
         /* CHANGE 1: Policy link inside accordion body */
@@ -973,7 +973,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
 
             <div className="pdp-divider" />
 
-            <p className="pdp-section-label">Colour: <span>{currentColor?.label || 'Default'}</span></p>
+            {/* <p className="pdp-section-label">Colour: <span>{currentColor?.label || 'Default'}</span></p> */}
             <div className="pdp-swatches">
               {normalizedColors.map((c, i) => (
                 <button key={c.hex} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>

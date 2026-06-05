@@ -960,7 +960,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         .pdp-size-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
         .pdp-size-btn.active{border-color:var(--olive-600);background:var(--olive-600);color:var(--beige)}
         .pdp-size-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
-        .pdp-desc{font-size:13px;font-weight:300;line-height:1.85;color:var(--mist);letter-spacing:.03em;margin-bottom:20px}
+        .pdp-desc{font-size:13px;font-weight:300;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
         .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
         .pdp-qty{display:flex;align-items:center;border:1.5px solid var(--beige-dkr);border-radius:50px;overflow:hidden}
         .pdp-qty-btn{width:36px;height:36px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--olive-600);display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -1188,7 +1188,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         .acc-emoji{font-size:16px}
         .acc-chevron{color:var(--mist);flex-shrink:0;transition:transform .32s ease}
         .acc-item--open .acc-chevron{transform:rotate(180deg)}
-        .acc-body{padding:2px 4px 18px 36px;font-size:12px;font-weight:300;line-height:1.85;color:var(--mist);letter-spacing:.03em}
+        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em}
         .acc-body p{margin-bottom:4px}
         .acc-delivery-estimate{display:flex;align-items:flex-start;gap:9px;margin-top:16px;background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.07));border:1px solid rgba(90,110,35,.15);border-radius:0;padding:12px 14px}
         .acc-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive-600);margin-bottom:8px}

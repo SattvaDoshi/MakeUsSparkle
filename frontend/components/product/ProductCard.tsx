@@ -183,7 +183,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
         .pc-img-zone {
           position: relative;
           width: 100%;
-          aspect-ratio: 2 / 3;   /* ← 4:6 portrait ratio */
+          aspect-ratio: 4 / 5;   /* ← 4:6 portrait ratio */
           background: var(--beige-dk);
           overflow: hidden;
           flex-shrink: 0;
@@ -415,7 +415,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
             alt={name}
             loading="lazy"
             width={400}
-            height={600}
+            height={500}
           />
 
           <div className="pc-overlay" />

@@ -1234,19 +1234,20 @@
 
 'use client';
 
-import { useState, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCart } from '@/lib/cartContext';
 import UpperNav from '@/components/ui/UpperNav';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
+import { apiRequest } from '@/lib/api';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
-type CategoryKey =
-  | 'necklace' | 'earrings' | 'bracelets' | 'rings'
-  | 'gift-boxes' | 'keychains' | 'hair-accessories';
+type CategoryKey = string;
 
 interface ComboProduct {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;
@@ -1263,90 +1264,15 @@ interface PresetCombo {
   badge: string;
   tint: string;
   includedCategories: CategoryKey[];
-  defaultSelections: Partial<Record<CategoryKey, number>>;
+  defaultSelections: Partial<Record<CategoryKey, string>>;
 }
 
 /* ─────────────────────────────────────────────────────────────
    DATA
 ───────────────────────────────────────────────────────────── */
-const PRODUCTS_BY_CATEGORY: Record<CategoryKey, ComboProduct[]> = {
-  necklace: [
-    { id: 1, name: 'Dainty Layered Necklace', price: 1299, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80', customisable: false },
-    { id: 2, name: 'Pearl Pendant Necklace',  price: 2499, image: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=400&q=80', customisable: false },
-    { id: 3, name: 'Layered Gold Chain',       price: 1599, image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&q=80', customisable: false },
-  ],
-  earrings: [
-    { id: 4, name: 'Gold Hoop Earrings',    price: 899,  image: 'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=400&q=80', customisable: false },
-    { id: 5, name: 'Minimal Stud Earrings', price: 549,  image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80', customisable: false },
-    { id: 6, name: 'Korean Ear Cuffs',      price: 699,  image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&q=80', customisable: false },
-  ],
-  bracelets: [
-    { id: 7,  name: 'Beaded Charm Bracelet',  price: 749,  image: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=400&q=80', customisable: false },
-    { id: 8,  name: 'Kada Bangle Set',         price: 1899, image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400&q=80', customisable: false },
-    { id: 9,  name: 'Minimal Chain Bracelet',  price: 999,  image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400&q=80', customisable: false },
-  ],
-  rings: [
-    { id: 10, name: 'Diamond Ring',      price: 2999, image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80', customisable: false },
-    { id: 11, name: 'Minimal Gold Ring', price: 999,  image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80', customisable: false },
-    { id: 12, name: 'Couple Rings Set',  price: 1999, image: 'https://images.unsplash.com/photo-1588444650733-d0f07d323dde?w=400&q=80', customisable: false },
-  ],
-  'gift-boxes': [
-    { id: 16, name: 'Luxury Gift Box',   price: 2499, image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&q=80', customisable: true },
-    { id: 17, name: 'Birthday Gift Box', price: 1999, image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&q=80', customisable: true },
-  ],
-  keychains: [
-    { id: 18, name: 'Personalised Keychain', price: 399, image: 'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=400&q=80', customisable: true },
-    { id: 19, name: 'Metal Charm Keychain',  price: 499, image: 'https://images.unsplash.com/photo-1582143570735-ebf7c44a5c54?w=400&q=80', customisable: true },
-  ],
-  'hair-accessories': [
-    { id: 13, name: 'Elegant Hair Clip', price: 499, image: 'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=400&q=80', customisable: false },
-    { id: 14, name: 'Pearl Hair Band',   price: 799, image: 'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=400&q=80', customisable: false },
-    { id: 15, name: 'Floral Hair Pins',  price: 599, image: 'https://images.unsplash.com/photo-1591206422576-7e00ff5f7db7?w=400&q=80', customisable: false },
-  ],
-};
-
-const PRESET_COMBOS: PresetCombo[] = [
-  {
-    id: 'festive', name: 'Festive Glow', tagline: 'Celebrate every moment',
-    price: 2999, originalPrice: 4500,
-    image: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=90',
-    badge: 'Most Loved', tint: '#c8a84b',
-    includedCategories: ['necklace', 'earrings', 'bracelets'],
-    defaultSelections: { necklace: 1, earrings: 4, bracelets: 7 },
-  },
-  {
-    id: 'bridal', name: 'Bridal Radiance', tagline: 'For your most beautiful day',
-    price: 5999, originalPrice: 8800,
-    image: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=90',
-    badge: 'Premium', tint: '#b07d62',
-    includedCategories: ['necklace', 'earrings', 'rings', 'bracelets'],
-    defaultSelections: { necklace: 2, earrings: 4, rings: 10, bracelets: 8 },
-  },
-  {
-    id: 'minimal', name: 'Minimal Edit', tagline: 'Less is more, always',
-    price: 1999, originalPrice: 2800,
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=90',
-    badge: 'New', tint: '#6b7c45',
-    includedCategories: ['necklace', 'earrings'],
-    defaultSelections: { necklace: 1, earrings: 5 },
-  },
-  {
-    id: 'gifting', name: 'Gifting Special', tagline: 'Curated with love',
-    price: 3499, originalPrice: 5200,
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=90',
-    badge: 'Gift Ready', tint: '#8a6fa8',
-    includedCategories: ['necklace', 'earrings', 'bracelets', 'gift-boxes'],
-    defaultSelections: { necklace: 3, earrings: 6, bracelets: 9, 'gift-boxes': 16 },
-  },
-];
-
-const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  necklace: 'Necklace', earrings: 'Earrings', bracelets: 'Bracelet',
-  rings: 'Ring', 'gift-boxes': 'Gift Box', keychains: 'Keychain',
-  'hair-accessories': 'Hair Accessory',
-};
-
-const ALL_CATEGORIES = Object.keys(PRODUCTS_BY_CATEGORY) as CategoryKey[];
+/* ─────────────────────────────────────────────────────────────
+   DATA (Now dynamic)
+───────────────────────────────────────────────────────────── */
 
 /* ─────────────────────────────────────────────────────────────
    PERSONALISE PANEL
@@ -1398,7 +1324,7 @@ function ProdCard({ product, selected, onToggle }: {
   return (
     <button className={`pcard${selected ? ' on' : ''}`} onClick={onToggle}>
       <div className="pcard-img">
-        <img src={product.image} alt={product.name} />
+        <img src={product.image || '/images/hero.png'} alt={product.name} />
         {selected && (
           <span className="pcard-tick">
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5">
@@ -1418,9 +1344,9 @@ function ProdCard({ product, selected, onToggle }: {
 /* ─────────────────────────────────────────────────────────────
    ACCORDION — single-select (desktop)
 ───────────────────────────────────────────────────────────── */
-function Accordion({ catKey, products, selectedId, onSelect, sortOption }: {
-  catKey: CategoryKey; products: ComboProduct[];
-  selectedId?: number; onSelect: (k: CategoryKey, id: number) => void;
+function Accordion({ catKey, categoryLabels, products, selectedId, onSelect, sortOption }: {
+  catKey: CategoryKey; categoryLabels: Record<string, string>; products: ComboProduct[];
+  selectedId?: string; onSelect: (k: CategoryKey, id: string) => void;
   sortOption: SortOption;
 }) {
   const [open, setOpen] = useState(false);
@@ -1430,7 +1356,7 @@ function Accordion({ catKey, products, selectedId, onSelect, sortOption }: {
   return (
     <div className="acc">
       <button className="acc-head" onClick={() => setOpen(o => !o)}>
-        <span className="acc-cat">{CATEGORY_LABELS[catKey]}</span>
+        <span className="acc-cat">{categoryLabels[catKey] || catKey}</span>
         <span className={`acc-info${!sel ? ' dim' : ''}`}>
           {sel ? <>{sel.name} · <strong>₹{sel.price.toLocaleString('en-IN')}</strong></> : 'Select one'}
         </span>
@@ -1455,9 +1381,9 @@ function Accordion({ catKey, products, selectedId, onSelect, sortOption }: {
 /* ─────────────────────────────────────────────────────────────
    ACCORDION — multi-select (desktop)
 ───────────────────────────────────────────────────────────── */
-function AccordionMulti({ catKey, products, selectedIds, onToggle, sortOption }: {
-  catKey: CategoryKey; products: ComboProduct[];
-  selectedIds: number[]; onToggle: (k: CategoryKey, id: number) => void;
+function AccordionMulti({ catKey, categoryLabels, products, selectedIds, onToggle, sortOption }: {
+  catKey: CategoryKey; categoryLabels: Record<string, string>; products: ComboProduct[];
+  selectedIds: string[]; onToggle: (k: CategoryKey, id: string) => void;
   sortOption: SortOption;
 }) {
   const [open, setOpen] = useState(false);
@@ -1468,7 +1394,7 @@ function AccordionMulti({ catKey, products, selectedIds, onToggle, sortOption }:
   return (
     <div className="acc">
       <button className="acc-head" onClick={() => setOpen(o => !o)}>
-        <span className="acc-cat">{CATEGORY_LABELS[catKey]}</span>
+        <span className="acc-cat">{categoryLabels[catKey] || catKey}</span>
         <span className={`acc-info${count === 0 ? ' dim' : ''}`}>
           {count > 0 ? `${count} selected` : 'Select any'}
         </span>
@@ -1483,7 +1409,7 @@ function AccordionMulti({ catKey, products, selectedIds, onToggle, sortOption }:
               <ProdCard key={p.id} product={p} selected={selectedIds.includes(p.id)} onToggle={() => onToggle(catKey, p.id)} />
             ))}
           </div>
-          {anyCustom && <PersonalisePanel productName={CATEGORY_LABELS[catKey]} />}
+          {anyCustom && <PersonalisePanel productName={categoryLabels[catKey] || catKey} />}
         </div>
       )}
     </div>
@@ -1497,12 +1423,14 @@ interface ComboCardProps {
   combo: PresetCombo;
   selected: boolean;
   onSelect: (id: string) => void;
-  comboSelections: Partial<Record<CategoryKey, number>>;
-  onPresetSelection: (k: CategoryKey, id: number) => void;
+  comboSelections: Partial<Record<CategoryKey, string>>;
+  onPresetSelection: (k: CategoryKey, id: string) => void;
   sortOption: SortOption;
+  productsByCategory: Record<string, ComboProduct[]>;
+  categoryLabels: Record<string, string>;
 }
 
-function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelection, sortOption }: ComboCardProps) {
+function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelection, sortOption, productsByCategory, categoryLabels }: ComboCardProps) {
   const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [activeCat, setActiveCat] = useState<CategoryKey | null>(null);
@@ -1525,7 +1453,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
         style={{ '--t': combo.tint } as React.CSSProperties}
       >
         <div className="ccard-img">
-          <img src={combo.image} alt={combo.name} />
+          <img src={combo.image || '/images/hero.png'} alt={combo.name} />
           <div className="ccard-grad" />
           <span className="ccard-badge">{combo.badge}</span>
           <span className="ccard-disc">{pct}% off</span>
@@ -1543,7 +1471,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
           </div>
           <div className="ccard-chips">
             {combo.includedCategories.map(c => (
-              <span key={c} className="ccard-chip">{CATEGORY_LABELS[c]}</span>
+              <span key={c} className="ccard-chip">{categoryLabels[c] || c}</span>
             ))}
           </div>
           <div className="ccard-mobile-hint">
@@ -1570,7 +1498,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
           <div className="mobile-cat-tabs">
             {combo.includedCategories.map(cat => {
               const selId = comboSelections[cat];
-              const selProd = PRODUCTS_BY_CATEGORY[cat]?.find(p => p.id === selId);
+              const selProd = productsByCategory[cat]?.find(p => p.id === selId);
               return (
                 <button
                   key={cat}
@@ -1582,7 +1510,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   ) : null}
-                  {CATEGORY_LABELS[cat]}
+                  {categoryLabels[cat] || cat}
                 </button>
               );
             })}
@@ -1591,7 +1519,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
           {activeCat && (
             <div className="mobile-prod-section">
               <div className="mobile-pgrid">
-                {sortProducts(PRODUCTS_BY_CATEGORY[activeCat] ?? [], sortOption).map(p => {
+                {sortProducts(productsByCategory[activeCat] ?? [], sortOption).map(p => {
                   const isSelected = comboSelections[activeCat] === p.id;
                   return (
                     <button
@@ -1600,7 +1528,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
                       onClick={() => onPresetSelection(activeCat, p.id)}
                     >
                       <div className="mobile-prod-img">
-                        <img src={p.image} alt={p.name} />
+                        <img src={p.image || '/images/hero.png'} alt={p.name} />
                         {isSelected && (
                           <span className="mobile-prod-tick">
                             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5">
@@ -1617,7 +1545,7 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
               </div>
               {(() => {
                 const selId = comboSelections[activeCat];
-                const selProd = PRODUCTS_BY_CATEGORY[activeCat]?.find(p => p.id === selId);
+                const selProd = productsByCategory[activeCat]?.find(p => p.id === selId);
                 return selProd?.customisable ? <PersonalisePanel productName={selProd.name} /> : null;
               })()}
             </div>
@@ -1632,35 +1560,153 @@ function ComboCard({ combo, selected, onSelect, comboSelections, onPresetSelecti
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
 export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
+  const router = useRouter();
+  const { addItem } = useCart();
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [mode, setMode] = useState<'preset' | 'custom'>('preset');
   const [selectedComboId, setSelectedComboId] = useState('festive');
-  const [comboSelections, setComboSelections] = useState<Partial<Record<CategoryKey, number>>>(() => {
-    const c = PRESET_COMBOS.find(c => c.id === 'festive');
-    return c ? { ...c.defaultSelections } : {};
-  });
-  const [customSelectedIds, setCustomSelectedIds] = useState<Partial<Record<CategoryKey, number[]>>>({});
-  const [customCategories, setCustomCategories] = useState<CategoryKey[]>(['necklace', 'earrings']);
+  const [comboSelections, setComboSelections] = useState<Partial<Record<CategoryKey, string>>>({});
+  const [customSelectedIds, setCustomSelectedIds] = useState<Partial<Record<CategoryKey, string[]>>>({});
+  const [customCategories, setCustomCategories] = useState<CategoryKey[]>([]);
   const [cartAdded, setCartAdded] = useState(false);
+
+  // ── Dynamic Data State ──
+  const [isLoading, setIsLoading] = useState(true);
+  const [presetCombos, setPresetCombos] = useState<PresetCombo[]>([]);
+  const [customComboData, setCustomComboData] = useState<any>(null); // For custom rules
+  const [productsByCategory, setProductsByCategory] = useState<Record<string, ComboProduct[]>>({});
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({});
+  const [allCategories, setAllCategories] = useState<CategoryKey[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [combosRes, productsRes, categoriesRes] = await Promise.all([
+          apiRequest<{ success: boolean; combos: any[] }>('/combos'),
+          apiRequest<{ success: boolean; products: any[] }>('/products'),
+          apiRequest<{ success: boolean; categories: any[] }>('/categories')
+        ]);
+
+        const catLabels: Record<string, string> = {};
+        if (categoriesRes.categories) {
+          categoriesRes.categories.forEach(c => {
+            catLabels[c._id] = c.name;
+          });
+        }
+        setCategoryLabels(catLabels);
+
+        const prods = productsRes.products || [];
+        const pByCat: Record<string, ComboProduct[]> = {};
+        prods.forEach(p => {
+          if (!p.category) return;
+          const catId = typeof p.category === 'string' ? p.category : p.category._id;
+          if (!pByCat[catId]) pByCat[catId] = [];
+          pByCat[catId].push({
+            id: p._id,
+            name: p.title,
+            price: p.price || 0,
+            image: p.mainImage || '',
+            customisable: !!p.isCustomisable
+          });
+        });
+
+        const combos = combosRes.combos || [];
+        const curated = combos.filter(c => c.type === 'curated');
+        const custom = combos.find(c => c.type === 'custom');
+
+        const mappedPresets: PresetCombo[] = curated.map(c => {
+          const includedCats: string[] = [];
+          const defaultSels: Record<string, string> = {};
+          
+          if (c.slots) {
+            c.slots.forEach((s: any) => {
+              const catId = typeof s.category === 'string' ? s.category : s.category?._id;
+              if (catId) {
+                includedCats.push(catId);
+                const defaultProdId = typeof s.defaultProduct === 'string' ? s.defaultProduct : s.defaultProduct?._id;
+                if (defaultProdId) defaultSels[catId] = defaultProdId;
+
+                // Also ensure these products are in the lookup map
+                if (!pByCat[catId]) pByCat[catId] = [];
+                s.allowedProducts?.forEach((ap: any) => {
+                  const apId = typeof ap === 'string' ? ap : ap?._id;
+                  if (apId && !pByCat[catId].find(x => x.id === apId)) {
+                    const prodInfo = prods.find(pr => pr._id === apId) || (typeof ap !== 'string' ? ap : null);
+                    if (prodInfo) {
+                      pByCat[catId].push({
+                        id: prodInfo._id,
+                        name: prodInfo.title,
+                        price: prodInfo.price || 0,
+                        image: prodInfo.mainImage || '',
+                        customisable: !!prodInfo.isCustomisable
+                      });
+                    }
+                  }
+                });
+              }
+            });
+          }
+
+          return {
+            id: c._id,
+            name: c.name,
+            tagline: c.description || '',
+            price: c.price || 0,
+            originalPrice: c.originalPrice || c.price || 0,
+            image: c.image || '',
+            badge: c.status === 'active' ? 'Active' : '',
+            tint: '#c8a84b',
+            includedCategories: includedCats,
+            defaultSelections: defaultSels
+          };
+        });
+
+        setProductsByCategory(pByCat);
+        setPresetCombos(mappedPresets);
+        
+        if (mappedPresets.length > 0) {
+          setSelectedComboId(mappedPresets[0].id);
+          setComboSelections({ ...mappedPresets[0].defaultSelections });
+        }
+
+        if (custom) {
+          setCustomComboData(custom);
+          const eligibleCats = custom.categories?.map((c: any) => typeof c === 'string' ? c : c._id) || Object.keys(pByCat);
+          setAllCategories(eligibleCats);
+          if (eligibleCats.length > 0) {
+            setCustomCategories(eligibleCats.slice(0, 2));
+          }
+        } else {
+          setAllCategories(Object.keys(pByCat));
+        }
+
+      } catch (e) {
+        console.error("Error loading combo data", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // ── SortFilter state — one for preset product pickers, one for custom ──
   const [presetSortOption, setPresetSortOption] = useState<SortOption>('featured');
   const [customSortOption, setCustomSortOption] = useState<SortOption>('featured');
 
-  const selectedCombo = PRESET_COMBOS.find(c => c.id === selectedComboId);
+  const selectedCombo = presetCombos.find(c => c.id === selectedComboId);
 
   const handleComboSelect = useCallback((id: string) => {
     setSelectedComboId(id);
-    const c = PRESET_COMBOS.find(c => c.id === id);
+    const c = presetCombos.find(c => c.id === id);
     if (c) setComboSelections({ ...c.defaultSelections });
-  }, []);
+  }, [presetCombos]);
 
-  const handlePresetSelection = useCallback((k: CategoryKey, id: number) => {
+  const handlePresetSelection = useCallback((k: CategoryKey, id: string) => {
     setComboSelections(prev => ({ ...prev, [k]: id }));
   }, []);
 
-  const handleCustomToggle = useCallback((k: CategoryKey, id: number) => {
+  const handleCustomToggle = useCallback((k: CategoryKey, id: string) => {
     setCustomSelectedIds(prev => {
       const cur = prev[k] || [];
       return { ...prev, [k]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
@@ -1670,49 +1716,102 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   const customTotal = useMemo(() => {
     return customCategories.reduce((sum, cat) => {
       return sum + (customSelectedIds[cat] || []).reduce((s, id) => {
-        const p = PRODUCTS_BY_CATEGORY[cat]?.find(p => p.id === id);
+        const p = productsByCategory[cat]?.find(p => p.id === id);
         return s + (p?.price || 0);
       }, 0);
     }, 0);
   }, [customSelectedIds, customCategories]);
 
   const presetTotal = selectedCombo?.price || 0;
-  const totalPrice = mode === 'preset' ? presetTotal : customTotal;
   const totalOriginal = mode === 'preset' ? (selectedCombo?.originalPrice || presetTotal) : customTotal;
-  const savings = totalOriginal - totalPrice;
+  
+  // Apply dynamic discount rules for custom combo
+  let customDiscount = 0;
+  if (mode === 'custom' && customComboData?.discountRules?.length > 0) {
+    const totalItems = customCategories.reduce((sum, cat) => sum + (customSelectedIds[cat]?.length || 0), 0);
+    // Sort rules so highest requirement matches first
+    const rules = [...customComboData.discountRules].sort((a, b) => {
+      if (a.minItems !== b.minItems) return (b.minItems || 0) - (a.minItems || 0);
+      return (b.minPrice || 0) - (a.minPrice || 0);
+    });
+    
+    for (const rule of rules) {
+      if ((!rule.minItems || totalItems >= rule.minItems) && (!rule.minPrice || customTotal >= rule.minPrice)) {
+        if (customComboData.discountType === 'percentage') {
+          customDiscount = (customTotal * (rule.discountValue || 0)) / 100;
+        } else {
+          customDiscount = rule.discountValue || 0;
+        }
+        break;
+      }
+    }
+  }
+  
+  const totalPrice = mode === 'preset' ? presetTotal : Math.max(0, customTotal - customDiscount);
+  const savings = mode === 'preset' ? (totalOriginal - totalPrice) : customDiscount;
 
   const presetSummaryItems = useMemo(() => {
     if (!selectedCombo) return [];
     return selectedCombo.includedCategories.flatMap(k => {
       const id = comboSelections[k];
-      const p = PRODUCTS_BY_CATEGORY[k]?.find(p => p.id === id);
+      const p = productsByCategory[k]?.find(p => p.id === id);
       return p ? [{ k, p }] : [];
     });
-  }, [selectedCombo, comboSelections]);
+  }, [selectedCombo, comboSelections, productsByCategory]);
 
   const customSummaryItems = useMemo(() => {
     return customCategories.flatMap(k =>
       (customSelectedIds[k] || []).flatMap(id => {
-        const p = PRODUCTS_BY_CATEGORY[k]?.find(p => p.id === id);
+        const p = productsByCategory[k]?.find(p => p.id === id);
         return p ? [{ k, p }] : [];
       })
     );
-  }, [customSelectedIds, customCategories]);
+  }, [customSelectedIds, customCategories, productsByCategory]);
 
   const summaryItems = mode === 'preset'
     ? presetSummaryItems.map(i => ({ k: i.k, p: i.p }))
     : customSummaryItems;
   const hasItems = summaryItems.length > 0;
 
+  const buildComboCartItem = useCallback(() => {
+    if (!hasItems) return null;
+    return {
+      id: mode === 'preset' ? String(selectedCombo?.id || 'preset') : 'custom-combo-' + Date.now(),
+      name: mode === 'preset' ? (selectedCombo?.name || 'Curated Box') : 'Custom Jewellery Box',
+      price: totalPrice,
+      originalPrice: totalOriginal,
+      image: mode === 'preset' ? (selectedCombo?.image || '') : (summaryItems[0]?.p?.image || ''),
+      color: 'Default',
+      colorHex: '#c9a84c',
+      sku: `COMBO-${mode.toUpperCase()}`,
+      href: `/categories/${gender}/curated-combos`,
+      selectionGroups: summaryItems.map(item => ({
+        category: item.k,
+        label: categoryLabels[item.k] || item.k,
+        items: [{
+          id: String(item.p.id),
+          name: item.p.name,
+          price: item.p.price,
+          image: item.p.image,
+          quantity: 1,
+        }]
+      }))
+    };
+  }, [hasItems, mode, selectedCombo, totalPrice, totalOriginal, summaryItems, categoryLabels, gender]);
+
   function handleAddToCart() {
-    if (!hasItems) return;
+    const item = buildComboCartItem();
+    if (!item) return;
+    addItem(item);
     setCartAdded(true);
     setTimeout(() => setCartAdded(false), 1800);
   }
 
   function handleBuyNow() {
-    if (!hasItems) return;
-    handleAddToCart();
+    const item = buildComboCartItem();
+    if (!item) return;
+    addItem(item, false);
+    router.push('/cart');
   }
 
   return (
@@ -2303,7 +2402,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
                 {/* COMBO GRID */}
                 <div className="cgrid">
-                  {PRESET_COMBOS.map(c => (
+                  {presetCombos.map(c => (
                     <ComboCard
                       key={c.id}
                       combo={c}
@@ -2312,6 +2411,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                       comboSelections={comboSelections}
                       onPresetSelection={handlePresetSelection}
                       sortOption={presetSortOption}
+                      productsByCategory={productsByCategory}
+                      categoryLabels={categoryLabels}
                     />
                   ))}
                 </div>
@@ -2336,7 +2437,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                       <Accordion
                         key={cat}
                         catKey={cat}
-                        products={PRODUCTS_BY_CATEGORY[cat] ?? []}
+                        categoryLabels={categoryLabels}
+                        products={productsByCategory[cat] ?? []}
                         selectedId={comboSelections[cat]}
                         onSelect={handlePresetSelection}
                         sortOption={presetSortOption}
@@ -2351,7 +2453,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
               <>
                 <p className="slbl" style={{ marginBottom: 12 }}>Select Your Categories</p>
                 <div className="catpills">
-                  {ALL_CATEGORIES.map(cat => (
+                  {allCategories.map(cat => (
                     <button
                       key={cat}
                       className={`catpill${customCategories.includes(cat) ? ' on' : ''}`}
@@ -2359,7 +2461,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                         prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
                       )}
                     >
-                      {customCategories.includes(cat) ? '✓ ' : '+ '}{CATEGORY_LABELS[cat]}
+                      {customCategories.includes(cat) ? '✓ ' : '+ '}{categoryLabels[cat] || cat}
                     </button>
                   ))}
                 </div>
@@ -2380,7 +2482,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                         <AccordionMulti
                           key={cat}
                           catKey={cat}
-                          products={PRODUCTS_BY_CATEGORY[cat] ?? []}
+                          categoryLabels={categoryLabels}
+                          products={productsByCategory[cat] ?? []}
                           selectedIds={customSelectedIds[cat] ?? []}
                           onToggle={handleCustomToggle}
                           sortOption={customSortOption}
@@ -2408,9 +2511,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                     <p className="sum-empty">No items selected yet.</p>
                   ) : summaryItems.map(({ k, p }) => (
                     <div key={`${k}-${p.id}`} className="sum-row">
-                      <img className="sum-thumb" src={p.image} alt={p.name} />
+                      <img className="sum-thumb" src={p.image || '/images/hero.png'} alt={p.name} />
                       <div className="sum-info">
-                        <span className="sum-cat">{CATEGORY_LABELS[k]}</span>
+                        <span className="sum-cat">{categoryLabels[k] || k}</span>
                         <span className="sum-name">{p.name}</span>
                       </div>
                       {mode === 'preset'

@@ -263,20 +263,48 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
 // CHANGE 2: Simplified — no dates, just "Standard: 6–7 days" and "Express: 3–4 days"
 function EstimatedDeliveryBlock() {
   return (
-    <div className="acc-delivery-estimate">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--olive-500)', marginTop: 1 }}>
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <div>
-        <p className="acc-delivery-label">Estimated Delivery</p>
-        <div className="acc-delivery-row">
-          <span className="acc-delivery-chip acc-delivery-chip--std">
-            <strong>Standard</strong> 6–7 days
-          </span>
-          <span className="acc-delivery-chip acc-delivery-chip--exp">
-            <strong>Express</strong> 3–4 days
-          </span>
-        </div>
+    <div style={{ marginTop: 16 }}>
+      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--olive-600)', marginBottom: 10 }}>
+        Estimated Delivery
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {[
+          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
+          { icon: '⚡', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
+        ].map(opt => (
+          <div key={opt.label} style={{
+            border: '1.5px solid rgba(61,74,34,.15)', borderRadius: 14,
+            padding: '14px 12px', background: 'white',
+          }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--ink)', marginBottom: 10 }}>{opt.label}</div>
+
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Metro Cities</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.metro}</div>
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Rest of India</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.rest}</div>
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)' }}>{opt.rate}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Free shipping banner */}
+      <div style={{
+        marginTop: 10, padding: '11px 14px',
+        background: 'linear-gradient(135deg, #e6f4e7, #f0faf0)',
+        border: '1.5px solid rgba(45,90,39,.22)', borderRadius: 10,
+        display: 'flex', alignItems: 'center', gap: 9,
+        fontSize: 12, fontWeight: 700, color: '#0a2e12', lineHeight: 1.4,
+      }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
+        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
       </div>
     </div>
   );
@@ -733,26 +761,7 @@ function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href
         .acc-policy-link svg{transition:transform .2s}
         .acc-policy-link:hover svg{transform:translateX(3px)}
 
-        /* CHANGE 2: Estimated Delivery — simplified, no dates */
-        .acc-delivery-estimate{
-          display:flex;align-items:flex-start;gap:9px;
-          margin-top:16px;
-          background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.07));
-          border:1px solid rgba(90,110,35,.15);
-          border-radius:0;
-          padding:12px 14px;
-        }
-        .acc-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive-600);margin-bottom:8px}
-        .acc-delivery-row{display:flex;gap:8px;flex-wrap:wrap}
-        .acc-delivery-chip{
-          display:inline-flex;align-items:center;gap:5px;
-          font-size:13px;font-weight:400;color:#101010;
-          background:white;border:1px solid rgba(61,74,34,.1);
-          padding:5px 12px;border-radius:0;line-height:1.5;
-        }
-        .acc-delivery-chip strong{font-weight:600;color:#101010}
-        .acc-delivery-chip--std{border-left:2px solid var(--olive-400)}
-        .acc-delivery-chip--exp{border-left:2px solid var(--gold)}
+        
 
         /* Customisation */
         .pdp-cust-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(90,110,35,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}

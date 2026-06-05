@@ -1289,9 +1289,9 @@ const CSS = `
     position: absolute; bottom: 0; left: 0; right: 0;
     padding: 10px 10px 10px;
     font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(0.78rem, 3vw, 0.92rem);
-    font-weight: 600; font-style: italic;
-    color: #fff; line-height: 1.2;
+    font-size: clamp(1.15rem, 4.5vw, 1.5rem);
+    font-weight: 600; 
+    color: #f5f2f2; line-height: 1.2;
     text-shadow: 0 1px 5px rgba(0,0,0,0.5); z-index: 2;
   }
 

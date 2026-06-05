@@ -18,6 +18,7 @@ import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
 import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
 import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
+import AdminCombosTab from "./_components/tabs/AdminCombosTab";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -204,6 +205,27 @@ type AdminGender = {
 	isActive?: boolean;
 };
 
+export type AdminCombo = {
+	_id: string;
+	name: string;
+	description?: string;
+	type: "curated" | "custom";
+	status: "active" | "inactive";
+	displayOrder: number;
+	image?: string;
+	price?: number;
+	originalPrice?: number;
+	slots?: Array<{
+		category: { _id: string; name?: string } | string;
+		allowedProducts: Array<{ _id: string; title?: string } | string>;
+		defaultProduct: { _id: string; title?: string } | string;
+	}>;
+	categories?: Array<{ _id: string; name?: string } | string>;
+	styles?: Array<{ _id: string; name?: string } | string>;
+	discountType?: "percentage" | "fixed";
+	discountRules?: Array<{ minPrice?: number; minItems?: number; discountValue?: number }>;
+};
+
 type PagedResponse<T, K extends string> = {
 	success: boolean;
 	pagination: {
@@ -213,12 +235,13 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "categories", label: "Categories" },
 	{ key: "newArrivals", label: "New Arrivals" },
+	{ key: "combos", label: "Combos" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
@@ -400,6 +423,7 @@ export default function AdminDashboardPage() {
 	const [subcategories, setSubCategories] = useState<AdminSubCategory[]>([]);
 	const [styles, setStyles] = useState<AdminStyle[]>([]);
 	const [genders, setGenders] = useState<AdminGender[]>([]);
+	const [combos, setCombos] = useState<AdminCombo[]>([]);
 
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
@@ -413,8 +437,8 @@ export default function AdminDashboardPage() {
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
 
 	const totalManagedItems = useMemo(
-		() => users.length + products.length + orders.length + payments.length + coupons.length + banners.length + reviews.length + charms.length,
-		[users, products, orders, payments, coupons, banners, reviews, charms]
+		() => users.length + products.length + orders.length + payments.length + coupons.length + banners.length + reviews.length + charms.length + combos.length,
+		[users, products, orders, payments, coupons, banners, reviews, charms, combos]
 	);
 
 	const resetMessages = () => {
@@ -504,6 +528,11 @@ export default function AdminDashboardPage() {
 		setGenders(result.genders || []);
 	}, []);
 
+	const loadCombos = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; combos: AdminCombo[] }>("/combos");
+		setCombos(result.combos || []);
+	}, []);
+
 	const loadNewArrivals = useCallback(async () => {
 		const result = await apiRequest<{ success: boolean; section?: AdminHomeSection }>("/admin/home-sections/new-arrivals");
 		const section = result.section;
@@ -532,12 +561,13 @@ export default function AdminDashboardPage() {
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
 			if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
+			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load admin data");
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals]);
+	}, [loadBanners, loadMainBanners, loadCoupons, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -797,6 +827,35 @@ export default function AdminDashboardPage() {
 			await apiRequest(`/admin/styles/${id}`, { method: "DELETE" });
 			await loadStyles();
 		}, "Style deleted");
+	};
+
+	// Combos CRUD
+	const handleCreateCuratedCombo = async (formData: FormData) => {
+		await runAction(async () => {
+			await apiRequest("/admin/combos", { method: "POST", body: formData });
+			await loadCombos();
+		}, "Curated combo created");
+	};
+
+	const handleEditCombo = async (id: string, formData: FormData) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/combos/${id}`, { method: "PUT", body: formData });
+			await loadCombos();
+		}, "Combo updated");
+	};
+
+	const handleCreateCustomCombo = async (formData: FormData) => {
+		await runAction(async () => {
+			await apiRequest("/admin/combos/custom", { method: "POST", body: formData });
+			await loadCombos();
+		}, "Custom combo created");
+	};
+
+	const handleDeleteCombo = async (id: string) => {
+		await runAction(async () => {
+			await apiRequest(`/admin/combos/${id}`, { method: "DELETE" });
+			await loadCombos();
+		}, "Combo deleted");
 	};
 
 	// Genders CRUD
@@ -1108,6 +1167,16 @@ export default function AdminDashboardPage() {
 		onCreateGender={handleCreateGender}
 		onEditGender={handleEditGender}
 		onDeleteGender={handleDeleteGender}
+	/>;
+	if (activeTab === "combos") return <AdminCombosTab
+		combos={combos}
+		products={products}
+		categories={categories}
+		styles={styles}
+		onCreateCuratedCombo={handleCreateCuratedCombo}
+		onCreateCustomCombo={handleCreateCustomCombo}
+		onEditCombo={handleEditCombo}
+		onDeleteCombo={handleDeleteCombo}
 	/>;
 		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};

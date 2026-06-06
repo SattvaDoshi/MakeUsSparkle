@@ -1,1622 +1,14 @@
-// 'use client';
-
-// import {
-//   useState,
-//   useMemo,
-//   useCallback,
-//   useEffect,
-//   type ChangeEvent,
-// } from 'react';
-// import { useRouter } from 'next/navigation';
-// import { useCart } from '@/lib/cartContext';
-// import UpperNav from '@/components/ui/UpperNav';
-// import { sortProducts, type SortOption } from '@/components/ui/SortFilter';
-// import { apiRequest } from '@/lib/api';
-
-// /* ─────────────────────────────────────────────────────────────
-//    TYPES
-// ───────────────────────────────────────────────────────────── */
-// type CategoryKey = string;
-
-// interface ProductVariant {
-//   colour?: string;
-//   size?: string;
-//   personalMessage?: string;
-//   uploadedImageBase64?: string;
-// }
-
-// interface ComboProduct {
-//   id: string;
-//   name: string;
-//   price: number;
-//   image: string;
-//   customisable: boolean;
-//   availableColours?: string[];
-//   availableSizes?: string[];
-// }
-
-// interface PresetCombo {
-//   id: string;
-//   name: string;
-//   tagline: string;
-//   price: number;
-//   originalPrice: number;
-//   image: string;
-//   badge: string;
-//   tint: string;
-//   includedCategories: CategoryKey[];
-//   defaultSelections: Partial<Record<CategoryKey, string>>;
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    PRODUCT CUSTOMISER MODAL
-// ───────────────────────────────────────────────────────────── */
-// interface CustomiserProps {
-//   product: ComboProduct;
-//   variant: ProductVariant;
-//   onSave: (v: ProductVariant) => void;
-//   onClose: () => void;
-//   isAddFlow?: boolean;
-// }
-
-// function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: CustomiserProps) {
-//   const [local, setLocal] = useState<ProductVariant>({ ...variant });
-
-//   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
-//     const f = e.currentTarget.files?.[0];
-//     if (!f) return;
-//     const r = new FileReader();
-//     r.onload = ev => setLocal(prev => ({ ...prev, uploadedImageBase64: ev.target?.result as string }));
-//     r.readAsDataURL(f);
-//   };
-
-//   const colours = product.availableColours?.length
-//     ? product.availableColours
-//     : ['Gold', 'Silver', 'Rose Gold', 'Antique'];
-
-//   const sizes = product.availableSizes?.length
-//     ? product.availableSizes
-//     : ['XS', 'S', 'M', 'L', 'XL'];
-
-//   const hasAnySelection = !!(local.colour || local.size || local.personalMessage || local.uploadedImageBase64);
-
-//   return (
-//     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-//       <div className="modal-box" role="dialog" aria-modal="true">
-//         <div className="modal-header">
-//           <div className="modal-header-text">
-//             <span className="modal-eyebrow">Customise Piece</span>
-//             <h2 className="modal-title">{product.name}</h2>
-//           </div>
-//           <button className="modal-close" onClick={onClose} aria-label="Close dialog">
-//             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-//               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-//             </svg>
-//           </button>
-//         </div>
-
-//         <div className="modal-product-strip">
-//           <img className="modal-product-img" src={product.image || '/images/hero.png'} alt={product.name} />
-//           <div className="modal-product-info">
-//             <div className="modal-product-name">{product.name}</div>
-//             <div className="modal-product-price">₹{product.price.toLocaleString('en-IN')}</div>
-//             {isAddFlow && <div className="modal-product-note">Choose your preferences, then add to hamper</div>}
-//           </div>
-//         </div>
-
-//         <div className="modal-body">
-//           <div className="modal-field">
-//             <label className="modal-field-label">
-//               <span className="modal-field-num">1</span>
-//               Select Colour
-//               {local.colour && <span className="modal-selected-badge">{local.colour}</span>}
-//             </label>
-//             <div className="modal-chips">
-//               {colours.map(c => (
-//                 <button key={c} className={`chip${local.colour === c ? ' chip-on' : ''}`}
-//                   onClick={() => setLocal(prev => ({ ...prev, colour: c }))}>{c}</button>
-//               ))}
-//             </div>
-//           </div>
-
-//           <div className="modal-field">
-//             <label className="modal-field-label">
-//               <span className="modal-field-num">2</span>
-//               Select Size
-//               {local.size && <span className="modal-selected-badge">Size {local.size}</span>}
-//             </label>
-//             <div className="modal-chips">
-//               {sizes.map(s => (
-//                 <button key={s} className={`chip chip-size${local.size === s ? ' chip-on' : ''}`}
-//                   onClick={() => setLocal(prev => ({ ...prev, size: s }))}>{s}</button>
-//               ))}
-//             </div>
-//           </div>
-
-//           <div className="modal-field">
-//             <label className="modal-field-label">
-//               <span className="modal-field-num">3</span>
-//               Personalised Message
-//               <span className="modal-field-optional">optional</span>
-//             </label>
-//             <textarea className="modal-textarea"
-//               placeholder="E.g. 'To my dearest Priya, with love…'"
-//               value={local.personalMessage || ''}
-//               onChange={e => setLocal(prev => ({ ...prev, personalMessage: e.target.value }))}
-//               maxLength={120} rows={3} />
-//             <div className="modal-char-count">{(local.personalMessage || '').length}/120 characters</div>
-//           </div>
-
-//           <div className="modal-field">
-//             <label className="modal-field-label">
-//               <span className="modal-field-num">4</span>
-//               Upload Photo
-//               <span className="modal-field-optional">optional</span>
-//             </label>
-//             <label className="modal-upload-zone">
-//               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-//               {local.uploadedImageBase64 ? (
-//                 <div className="modal-upload-preview">
-//                   <img src={local.uploadedImageBase64} alt="Uploaded preview" />
-//                   <div className="modal-upload-preview-info">
-//                     <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-//                     <span className="modal-upload-change">Tap to change</span>
-//                   </div>
-//                 </div>
-//               ) : (
-//                 <div className="modal-upload-empty">
-//                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-//                     <rect x="3" y="3" width="18" height="18" rx="3"/>
-//                     <circle cx="8.5" cy="8.5" r="1.5"/>
-//                     <polyline points="21 15 16 10 5 21"/>
-//                   </svg>
-//                   <span className="modal-upload-cta">Tap to upload a photo</span>
-//                   <span className="modal-upload-sub">JPG, PNG, WEBP supported</span>
-//                 </div>
-//               )}
-//             </label>
-//           </div>
-
-//           {hasAnySelection && (
-//             <div className="modal-summary-box">
-//               <div className="modal-summary-title">Your selections</div>
-//               <div className="modal-summary-tags">
-//                 {local.colour && <span className="modal-sum-tag">🎨 {local.colour}</span>}
-//                 {local.size && <span className="modal-sum-tag">📐 Size {local.size}</span>}
-//                 {local.personalMessage && <span className="modal-sum-tag">✉ Personal message</span>}
-//                 {local.uploadedImageBase64 && <span className="modal-sum-tag">📷 Photo added</span>}
-//               </div>
-//             </div>
-//           )}
-//         </div>
-
-//         <div className="modal-footer">
-//           <button className="modal-btn-skip" onClick={() => { onSave({}); onClose(); }}>Skip customisation</button>
-//           <button className="modal-btn-save" onClick={() => { onSave(local); onClose(); }}>
-//             {isAddFlow ? (
-//               <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Add to Hamper</>
-//             ) : (
-//               <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes</>
-//             )}
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    COMBO CARD — Card + Side Panel layout
-// ───────────────────────────────────────────────────────────── */
-// interface ComboCardProps {
-//   combo: PresetCombo;
-//   selected: boolean;
-//   onSelect: (id: string) => void;
-//   productsByCategory: Record<string, ComboProduct[]>;
-//   categoryLabels: Record<string, string>;
-//   variants: Record<string, ProductVariant>;
-//   onVariantChange: (productId: string, v: ProductVariant) => void;
-//   onOpenPanel: (combo: PresetCombo, products: ComboProduct[]) => void;
-// }
-
-// function ComboCard({ combo, selected, onSelect, productsByCategory, categoryLabels, variants, onVariantChange, onOpenPanel }: ComboCardProps) {
-//   const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
-
-//   const hamperProducts: ComboProduct[] = useMemo(() => {
-//     const seen = new Set<string>();
-//     const result: ComboProduct[] = [];
-//     combo.includedCategories.forEach(cat => {
-//       (productsByCategory[cat] ?? []).forEach(p => {
-//         if (!seen.has(p.id)) { seen.add(p.id); result.push(p); }
-//       });
-//     });
-//     return result;
-//   }, [combo, productsByCategory]);
-
-//   const customisedCount = hamperProducts.filter(p =>
-//     !!(variants[p.id]?.colour || variants[p.id]?.size || variants[p.id]?.personalMessage || variants[p.id]?.uploadedImageBase64)
-//   ).length;
-
-//   const handleClick = () => {
-//     onSelect(combo.id);
-//     onOpenPanel(combo, hamperProducts);
-//   };
-
-//   return (
-//     <div className={`cc-card${selected ? ' cc-selected' : ''}`} onClick={handleClick}>
-//       <div className="cc-img-area">
-//         <img src={combo.image || '/images/hero.png'} alt={combo.name} />
-//         <div className="cc-img-grad" />
-//         {pct > 0 && <span className="cc-pct-badge">{pct}% off</span>}
-//         {combo.badge && <span className="cc-label-badge">{combo.badge}</span>}
-//         {selected && (
-//           <div className="cc-selected-check">
-//             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
-//               <polyline points="20 6 9 17 4 12"/>
-//             </svg>
-//           </div>
-//         )}
-//         <div className="cc-img-text">
-//           <div className="cc-img-name">{combo.name}</div>
-//           <div className="cc-img-tagline">{combo.tagline}</div>
-//         </div>
-//       </div>
-//       <div className="cc-color-strip" style={{ background: combo.tint }} />
-//       <div className="cc-foot">
-//         <div className="cc-price-row">
-//           <span className="cc-price">₹{combo.price.toLocaleString('en-IN')}</span>
-//           {combo.originalPrice > combo.price && (
-//             <span className="cc-original">₹{combo.originalPrice.toLocaleString('en-IN')}</span>
-//           )}
-//           {pct > 0 && <span className="cc-save-tag">Save {pct}%</span>}
-//         </div>
-//         <div className="cc-pieces-count">
-//           {hamperProducts.length} pieces
-//           {customisedCount > 0 && <span className="cc-cust-dot"> · {customisedCount} customised</span>}
-//         </div>
-//         <div className="cc-cta-hint">
-//           {selected ? '✦ Selected — tap to view pieces' : 'Tap to select & view pieces →'}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    SIDE PANEL — slides in from right on desktop, bottom sheet on mobile
-// ───────────────────────────────────────────────────────────── */
-// interface SidePanelProps {
-//   combo: PresetCombo | null;
-//   products: ComboProduct[];
-//   variants: Record<string, ProductVariant>;
-//   onVariantChange: (productId: string, v: ProductVariant) => void;
-//   categoryLabels: Record<string, string>;
-//   onClose: () => void;
-// }
-
-// function SidePanel({ combo, products, variants, onVariantChange, categoryLabels, onClose }: SidePanelProps) {
-//   const [customising, setCustomising] = useState<ComboProduct | null>(null);
-//   const [activeIdx, setActiveIdx] = useState(0);
-
-//   useEffect(() => { setActiveIdx(0); }, [combo?.id]);
-
-//   if (!combo) return null;
-
-//   const customisedCount = products.filter(p =>
-//     !!(variants[p.id]?.colour || variants[p.id]?.size || variants[p.id]?.personalMessage || variants[p.id]?.uploadedImageBase64)
-//   ).length;
-
-//   const activeProduct = products[activeIdx];
-//   const activeVariant = activeProduct ? (variants[activeProduct.id] || {}) : {};
-//   const hasActiveCust = !!(activeVariant.colour || activeVariant.size || activeVariant.personalMessage || activeVariant.uploadedImageBase64);
-
-//   return (
-//     <>
-//       {customising && (
-//         <ProductCustomiser
-//           product={customising}
-//           variant={variants[customising.id] || {}}
-//           onSave={v => { onVariantChange(customising.id, v); setCustomising(null); }}
-//           onClose={() => setCustomising(null)}
-//         />
-//       )}
-//       <div className="panel-backdrop" onClick={e => e.target === e.currentTarget && onClose()} />
-//       <div className="side-panel">
-//         {/* Panel header */}
-//         <div className="panel-head">
-//           <div>
-//             <div className="panel-eyebrow">Pieces in this set</div>
-//             <div className="panel-title">{combo.name}</div>
-//           </div>
-//           <div className="panel-head-right">
-//             <span className="panel-prog">{customisedCount}/{products.length} done</span>
-//             <button className="panel-close" onClick={onClose} aria-label="Close panel">
-//               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-//                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-//               </svg>
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* Thumbnail strip */}
-//         <div className="panel-thumbs">
-//           {products.map((p, i) => {
-//             const v = variants[p.id] || {};
-//             const done = !!(v.colour || v.size || v.personalMessage || v.uploadedImageBase64);
-//             return (
-//               <button key={p.id} className={`panel-thumb${activeIdx === i ? ' active' : ''}${done ? ' done' : ''}`}
-//                 onClick={() => setActiveIdx(i)}>
-//                 <img src={p.image || '/images/hero.png'} alt={p.name} />
-//                 {done && <span className="panel-thumb-check">✓</span>}
-//               </button>
-//             );
-//           })}
-//         </div>
-
-//         {/* Active product detail */}
-//         {activeProduct && (
-//           <div className="panel-detail">
-//             <div className="panel-detail-img">
-//               <a
-//                 href={`/products/${activeProduct.id}?fromCombo=true`}
-//                 className="panel-detail-img-link"
-//                 onClick={e => e.stopPropagation()}
-//               >
-//                 <img src={activeProduct.image || '/images/hero.png'} alt={activeProduct.name} />
-//                 <div className="panel-detail-img-overlay">
-//                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-//                     <path d="M5 12h14M12 5l7 7-7 7"/>
-//                   </svg>
-//                 </div>
-//               </a>
-//             </div>
-//             <div className="panel-detail-info">
-//               <a
-//                 href={`/products/${activeProduct.id}?fromCombo=true`}
-//                 className="panel-detail-name-link"
-//                 onClick={e => e.stopPropagation()}
-//               >
-//                 <div className="panel-detail-name">{activeProduct.name}</div>
-//               </a>
-//               <div className="panel-detail-price">₹{activeProduct.price.toLocaleString('en-IN')}</div>
-//               {hasActiveCust && (
-//                 <div className="panel-detail-tags">
-//                   {activeVariant.colour && <span className="panel-tag">🎨 {activeVariant.colour}</span>}
-//                   {activeVariant.size && <span className="panel-tag">📐 {activeVariant.size}</span>}
-//                   {activeVariant.personalMessage && <span className="panel-tag">✉ Msg</span>}
-//                   {activeVariant.uploadedImageBase64 && <span className="panel-tag">📷</span>}
-//                 </div>
-//               )}
-//               <button className="panel-customise-btn" onClick={() => setCustomising(activeProduct)}>
-//                 {hasActiveCust ? '✎ Edit customisation' : '+ Customise this piece'}
-//               </button>
-//             </div>
-//           </div>
-//         )}
-
-//         {/* Nav arrows */}
-//         {products.length > 1 && (
-//           <div className="panel-nav">
-//             <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.max(0, i - 1))} disabled={activeIdx === 0}>
-//               ← Prev
-//             </button>
-//             <span className="panel-nav-count">{activeIdx + 1} / {products.length}</span>
-//             <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.min(products.length - 1, i + 1))} disabled={activeIdx === products.length - 1}>
-//               Next →
-//             </button>
-//           </div>
-//         )}
-
-//         {customisedCount < products.length && (
-//           <div className="panel-tip">💡 Select each piece above to customise colour, size & message</div>
-//         )}
-//       </div>
-//     </>
-//   );
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    CUSTOM PRODUCT CARD
-//    - Image and name link to PDP with ?fromCombo=true to hide cart/buy/look sections
-//    - Add/remove/customise buttons still work independently
-// ───────────────────────────────────────────────────────────── */
-// interface CustomProdCardProps {
-//   product: ComboProduct;
-//   inHamper: boolean;
-//   variant: ProductVariant;
-//   onAdd: () => void;
-//   onRemove: () => void;
-//   onEditCustomise: () => void;
-// }
-
-// function CustomProdCard({ product, inHamper, variant, onAdd, onRemove, onEditCustomise }: CustomProdCardProps) {
-//   const hasCustomisation = !!(variant.colour || variant.size || variant.personalMessage || variant.uploadedImageBase64);
-
-//   return (
-//     <div className={`cp-card${inHamper ? ' cp-in-hamper' : ''}`}>
-//       <div className="cp-img">
-//         {/*
-//           FIX 2: Image links to PDP with ?fromCombo=true so PDP can hide
-//           Add to Cart / Buy Now / Complete the Look for combo-context visits.
-//           The cp-img-toggle (transparent full-area button) sits on top for add/remove,
-//           but the link area is carved out at the bottom-right via pointer-events.
-//         */}
-//         <a
-//           href={`/products/${product.id}?fromCombo=true`}
-//           className="cp-img-link"
-//           onClick={e => e.stopPropagation()}
-//         >
-//           <img src={product.image || '/images/hero.png'} alt={product.name} />
-//         </a>
-//         {/* Overlay toggle — only shows the green check when in hamper; handles add/remove */}
-//         <button
-//           className="cp-img-toggle"
-//           onClick={inHamper ? onRemove : onAdd}
-//           aria-label={inHamper ? 'Remove from hamper' : 'Add to hamper'}
-//         >
-//           {inHamper && (
-//             <div className="cp-in-overlay">
-//               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
-//                 <polyline points="20 6 9 17 4 12"/>
-//               </svg>
-//             </div>
-//           )}
-//         </button>
-//       </div>
-//       <div className="cp-body">
-//         {/* FIX 2: Name links to PDP with fromCombo param */}
-//         <a
-//           href={`/products/${product.id}?fromCombo=true`}
-//           className="cp-name-link"
-//           onClick={e => e.stopPropagation()}
-//         >
-//           <div className="cp-name">{product.name}</div>
-//         </a>
-//         <div className="cp-price">₹{product.price.toLocaleString('en-IN')}</div>
-//         {inHamper ? (
-//           <div className="cp-in-actions">
-//             {hasCustomisation && (
-//               <div className="cp-tag-row">
-//                 {variant.colour && <span className="cp-tag">{variant.colour}</span>}
-//                 {variant.size && <span className="cp-tag">{variant.size}</span>}
-//               </div>
-//             )}
-//             <button className="cp-edit-btn" onClick={onEditCustomise}>
-//               {hasCustomisation ? '✎ Edit' : '+ Customise'}
-//             </button>
-//             <button className="cp-remove-btn" onClick={onRemove}>Remove</button>
-//           </div>
-//         ) : (
-//           <button className="cp-add-btn" onClick={onAdd}>+ Add</button>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    MOBILE SUMMARY DRAWER
-// ───────────────────────────────────────────────────────────── */
-// interface MobileSummaryProps {
-//   totalPrice: number;
-//   savings: number;
-//   itemCount: number;
-//   onOpen: () => void;
-//   hasItems: boolean;
-//   onAddToCart: () => void;
-//   cartAdded: boolean;
-// }
-
-// function MobileSummaryBar({ totalPrice, savings, itemCount, onOpen, hasItems, onAddToCart, cartAdded }: MobileSummaryProps) {
-//   return (
-//     <div className="mobile-bar">
-//       <button className="mobile-bar-info" onClick={onOpen} disabled={!hasItems}>
-//         {hasItems ? (
-//           <>
-//             <div className="mobile-bar-count">{itemCount} piece{itemCount !== 1 ? 's' : ''}</div>
-//             <div className="mobile-bar-price">₹{totalPrice.toLocaleString('en-IN')}</div>
-//             {savings > 0 && <div className="mobile-bar-save">Save ₹{savings.toLocaleString('en-IN')}</div>}
-//             <div className="mobile-bar-view">View summary ▲</div>
-//           </>
-//         ) : (
-//           <div className="mobile-bar-empty">Select pieces to begin</div>
-//         )}
-//       </button>
-//       {/* FIX 1: Cart button is always rendered alongside the info area,
-//           never overflows or gets hidden behind safe-area / nav bars */}
-//       <button
-//         className={`mobile-bar-cart${cartAdded ? ' done' : ''}`}
-//         onClick={onAddToCart}
-//         disabled={!hasItems}
-//       >
-//         {cartAdded ? '✓ Added!' : 'Add to Cart'}
-//       </button>
-//     </div>
-//   );
-// }
-
-// /* ─────────────────────────────────────────────────────────────
-//    MAIN PAGE
-// ───────────────────────────────────────────────────────────── */
-// export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
-//   const router = useRouter();
-//   const { addItem } = useCart();
-
-//   const [mode, setMode] = useState<'preset' | 'custom'>('preset');
-
-//   const [selectedComboId, setSelectedComboId] = useState('');
-//   const [presetVariants, setPresetVariants] = useState<Record<string, ProductVariant>>({});
-
-//   // Side panel state
-//   const [panelCombo, setPanelCombo] = useState<PresetCombo | null>(null);
-//   const [panelProducts, setPanelProducts] = useState<ComboProduct[]>([]);
-
-//   /*
-//     FIX 3: In "Build Your Own" mode the category selector now works like an
-//     accordion / radio — clicking a pill opens ONLY that category's grid and
-//     collapses any previously-open one.  We track a single `activeCategory`
-//     string (null = none open) instead of a multi-select array.
-//   */
-//   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null);
-
-//   // Keep the old multi-select for cart-building purposes (all items the user
-//   // has added to the hamper can span multiple categories they visited).
-//   // We still need to know every category that has hamper items so the summary
-//   // renders correctly — we derive that from `hamper` instead of the pill state.
-//   const [hamper, setHamper] = useState<Record<string, ProductVariant>>({});
-
-//   const [pendingAdd, setPendingAdd] = useState<ComboProduct | null>(null);
-//   const [editingProduct, setEditingProduct] = useState<ComboProduct | null>(null);
-
-//   const [showMobileSummary, setShowMobileSummary] = useState(false);
-//   const [cartAdded, setCartAdded] = useState(false);
-
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [presetCombos, setPresetCombos] = useState<PresetCombo[]>([]);
-//   const [customComboData, setCustomComboData] = useState<any>(null);
-//   const [productsByCategory, setProductsByCategory] = useState<Record<string, ComboProduct[]>>({});
-//   const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({});
-//   const [allCategories, setAllCategories] = useState<CategoryKey[]>([]);
-
-//   useEffect(() => {
-//     async function loadData() {
-//       try {
-//         const [combosRes, productsRes, categoriesRes] = await Promise.all([
-//           apiRequest<{ success: boolean; combos: any[] }>('/combos'),
-//           apiRequest<{ success: boolean; products: any[] }>('/products'),
-//           apiRequest<{ success: boolean; categories: any[] }>('/categories'),
-//         ]);
-
-//         const catLabels: Record<string, string> = {};
-//         categoriesRes.categories?.forEach((c: any) => { catLabels[c._id] = c.name; });
-//         setCategoryLabels(catLabels);
-
-//         const prods = productsRes.products || [];
-//         const pByCat: Record<string, ComboProduct[]> = {};
-//         prods.forEach((p: any) => {
-//           if (!p.category) return;
-//           const catId = typeof p.category === 'string' ? p.category : p.category._id;
-//           if (!pByCat[catId]) pByCat[catId] = [];
-//           pByCat[catId].push({
-//             id: p._id, name: p.title, price: p.price || 0,
-//             image: p.mainImage || p.images?.[0] || '',
-//             customisable: !!p.isCustomisable,
-//             availableColours: p.colours || [],
-//             availableSizes: p.sizes || [],
-//           });
-//         });
-
-//         const combos = combosRes.combos || [];
-//         const curated = combos.filter((c: any) => c.type === 'curated');
-//         const custom = combos.find((c: any) => c.type === 'custom');
-
-//         const mappedPresets: PresetCombo[] = curated.map((c: any) => {
-//           const includedCats: string[] = [];
-//           const defaultSels: Record<string, string> = {};
-//           c.slots?.forEach((s: any) => {
-//             const catId = typeof s.category === 'string' ? s.category : s.category?._id;
-//             if (!catId) return;
-//             includedCats.push(catId);
-//             const defId = typeof s.defaultProduct === 'string' ? s.defaultProduct : s.defaultProduct?._id;
-//             if (defId) defaultSels[catId] = defId;
-//             if (!pByCat[catId]) pByCat[catId] = [];
-//             s.allowedProducts?.forEach((ap: any) => {
-//               const apId = typeof ap === 'string' ? ap : ap?._id;
-//               if (apId && !pByCat[catId].find((x: ComboProduct) => x.id === apId)) {
-//                 const prodInfo = prods.find((pr: any) => pr._id === apId) || (typeof ap !== 'string' ? ap : null);
-//                 if (prodInfo) {
-//                   pByCat[catId].push({
-//                     id: prodInfo._id, name: prodInfo.title, price: prodInfo.price || 0,
-//                     image: prodInfo.mainImage || prodInfo.images?.[0] || '',
-//                     customisable: !!prodInfo.isCustomisable,
-//                     availableColours: prodInfo.colours || [],
-//                     availableSizes: prodInfo.sizes || [],
-//                   });
-//                 }
-//               }
-//             });
-//           });
-//           return {
-//             id: c._id, name: c.name, tagline: c.description || '',
-//             price: c.price || 0, originalPrice: c.originalPrice || c.price || 0,
-//             image: c.image || '', badge: c.badge || '', tint: c.tint || '#c8a84b',
-//             includedCategories: includedCats, defaultSelections: defaultSels,
-//           };
-//         });
-
-//         setProductsByCategory(pByCat);
-//         setPresetCombos(mappedPresets);
-//         if (mappedPresets.length > 0) setSelectedComboId(mappedPresets[0].id);
-
-//         if (custom) {
-//           setCustomComboData(custom);
-//           const eligible = custom.categories?.map((c: any) => typeof c === 'string' ? c : c._id) || Object.keys(pByCat);
-//           setAllCategories(eligible);
-//           // Open the first category by default
-//           if (eligible.length > 0) setActiveCategory(eligible[0]);
-//         } else {
-//           const keys = Object.keys(pByCat);
-//           setAllCategories(keys);
-//           if (keys.length > 0) setActiveCategory(keys[0]);
-//         }
-//       } catch (e) {
-//         console.error('Error loading combo data', e);
-//       } finally {
-//         setIsLoading(false);
-//       }
-//     }
-//     loadData();
-//   }, []);
-
-//   const selectedCombo = presetCombos.find(c => c.id === selectedComboId);
-//   const hamperProductIds = Object.keys(hamper);
-
-//   /*
-//     For the custom mode summary we need to show all products that are in the
-//     hamper, regardless of which category pill is currently open.  We derive
-//     the categories that have hamper items dynamically from `hamper`.
-//   */
-//   const categoriesWithHamperItems: CategoryKey[] = useMemo(() => {
-//     return allCategories.filter(cat =>
-//       (productsByCategory[cat] ?? []).some(p => hamperProductIds.includes(p.id))
-//     );
-//   }, [hamperProductIds, allCategories, productsByCategory]);
-
-//   const customTotal = useMemo(() => {
-//     return hamperProductIds.reduce((sum, pid) => {
-//       // Find the product price across all categories
-//       for (const cat of allCategories) {
-//         const p = (productsByCategory[cat] ?? []).find(x => x.id === pid);
-//         if (p) return sum + p.price;
-//       }
-//       return sum;
-//     }, 0);
-//   }, [hamperProductIds, allCategories, productsByCategory]);
-
-//   let customDiscount = 0;
-//   if (mode === 'custom' && customComboData?.discountRules?.length > 0) {
-//     const totalItems = hamperProductIds.length;
-//     const rules = [...customComboData.discountRules].sort((a: any, b: any) =>
-//       (b.minItems || 0) - (a.minItems || 0) || (b.minPrice || 0) - (a.minPrice || 0)
-//     );
-//     for (const rule of rules) {
-//       if ((!rule.minItems || totalItems >= rule.minItems) && (!rule.minPrice || customTotal >= rule.minPrice)) {
-//         customDiscount = customComboData.discountType === 'percentage'
-//           ? (customTotal * (rule.discountValue || 0)) / 100
-//           : rule.discountValue || 0;
-//         break;
-//       }
-//     }
-//   }
-
-//   const presetTotal = selectedCombo?.price || 0;
-//   const presetOriginal = selectedCombo?.originalPrice || presetTotal;
-//   const totalPrice = mode === 'preset' ? presetTotal : Math.max(0, customTotal - customDiscount);
-//   const savings = mode === 'preset' ? (presetOriginal - presetTotal) : customDiscount;
-
-//   const presetSummaryItems = useMemo(() => {
-//     if (!selectedCombo) return [];
-//     const seen = new Set<string>();
-//     const items: { p: ComboProduct; k: string }[] = [];
-//     selectedCombo.includedCategories.forEach(k => {
-//       (productsByCategory[k] ?? []).forEach(p => {
-//         if (!seen.has(p.id)) { seen.add(p.id); items.push({ p, k }); }
-//       });
-//     });
-//     return items;
-//   }, [selectedCombo, productsByCategory]);
-
-//   const customSummaryItems = useMemo(() => {
-//     return categoriesWithHamperItems.flatMap(k =>
-//       (productsByCategory[k] ?? []).filter(p => hamperProductIds.includes(p.id)).map(p => ({ k, p }))
-//     );
-//   }, [categoriesWithHamperItems, productsByCategory, hamperProductIds]);
-
-//   const summaryItems = mode === 'preset' ? presetSummaryItems : customSummaryItems;
-//   const hasItems = summaryItems.length > 0;
-
-//   const buildCartItem = useCallback(() => {
-//     if (!hasItems) return null;
-//     return {
-//       id: mode === 'preset' ? String(selectedCombo?.id || 'preset') : `custom-combo-${Date.now()}`,
-//       name: mode === 'preset' ? (selectedCombo?.name || 'Curated Box') : 'Custom Jewellery Hamper',
-//       price: totalPrice,
-//       originalPrice: mode === 'preset' ? presetOriginal : customTotal,
-//       image: mode === 'preset' ? (selectedCombo?.image || '') : (summaryItems[0]?.p?.image || ''),
-//       color: 'Default', colorHex: '#c9a84c',
-//       sku: `COMBO-${mode.toUpperCase()}`,
-//       href: `/categories/${gender}/curated-combos`,
-//       selectionGroups: summaryItems.map(({ k, p }) => {
-//         const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-//         return {
-//           category: k, label: categoryLabels[k] || k,
-//           items: [{ id: String(p.id), name: p.name, price: p.price, image: p.image, quantity: 1,
-//             colour: v.colour, size: v.size, personalMessage: v.personalMessage }],
-//         };
-//       }),
-//     };
-//   }, [hasItems, mode, selectedCombo, totalPrice, presetOriginal, customTotal, summaryItems, presetVariants, hamper, categoryLabels, gender]);
-
-//   function handleAddToCart() {
-//     const item = buildCartItem();
-//     if (!item) return;
-//     addItem(item);
-//     setCartAdded(true);
-//     setTimeout(() => setCartAdded(false), 1800);
-//   }
-
-//   function handleBuyNow() {
-//     const item = buildCartItem();
-//     if (!item) return;
-//     addItem(item, false);
-//     router.push('/cart');
-//   }
-
-//   function handleProductAdd(p: ComboProduct) { setPendingAdd(p); }
-//   function handleProductRemove(productId: string) {
-//     setHamper(prev => { const next = { ...prev }; delete next[productId]; return next; });
-//   }
-
-//   function handleOpenPanel(combo: PresetCombo, products: ComboProduct[]) {
-//     setPanelCombo(combo);
-//     setPanelProducts(products);
-//   }
-
-//   /*
-//     FIX 3: Category pill click handler — behaves like an accordion.
-//     Clicking an already-open category closes it (toggle), clicking a new one
-//     switches to that category and hides the previously open grid.
-//   */
-//   function handleCategoryPillClick(cat: CategoryKey) {
-//     setActiveCategory(prev => (prev === cat ? null : cat));
-//   }
-
-//   /* ─── RENDER ─── */
-//   return (
-//     <>
-//       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
-
-//         :root {
-//           --bg:        #f5f2eb;
-//           --bg2:       #ede9df;
-//           --surf:      #ffffff;
-//           --bdr:       #e0d8c8;
-//           --bdr2:      #c9bfa8;
-//           --olive:     #3d5016;
-//           --olive2:    #5a6e2b;
-//           --olivedim:  #eef1e3;
-//           --gold:      #b8982a;
-//           --gold2:     #f0e4a0;
-//           --golddim:   #fdf8e8;
-//           --ink:       #1a1d0d;
-//           --ink7:      rgba(26,29,13,.7);
-//           --ink4:      rgba(26,29,13,.4);
-//           --ink2:      rgba(26,29,13,.15);
-//           --green:     #2a6030;
-//           --sage:      #8a9e6a;
-//           --red:       #c0392b;
-//           --ffd:       'Cormorant Garamond', Georgia, serif;
-//           --ffb:       'DM Sans', system-ui, sans-serif;
-//           --r:         12px;
-//           --rsm:       8px;
-//           --shadow:    0 4px 24px rgba(26,29,13,.10);
-//           --shadow-lg: 0 8px 40px rgba(26,29,13,.16);
-//         }
-//         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-//         html { scroll-behavior: smooth; }
-//         body { font-family: var(--ffb); background: var(--bg); color: var(--ink); }
-//         button { font-family: var(--ffb); cursor: pointer; background: transparent; border: none; }
-//         img { display: block; max-width: 100%; }
-//         textarea { font-family: var(--ffb); }
-
-//         /* ── MODAL ── */
-//         .modal-backdrop {
-//           position: fixed; inset: 0; z-index: 1000;
-//           background: rgba(10,12,5,.55);
-//           backdrop-filter: blur(8px);
-//           display: flex; align-items: center; justify-content: center;
-//           padding: 16px;
-//           animation: fadeIn .2s ease;
-//         }
-//         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-//         .modal-box {
-//           width: 100%; max-width: 520px;
-//           max-height: calc(100dvh - 32px);
-//           background: var(--surf);
-//           border-radius: 16px;
-//           overflow: hidden;
-//           display: flex; flex-direction: column;
-//           box-shadow: var(--shadow-lg);
-//           animation: modalIn .28s cubic-bezier(.34,1.1,.64,1);
-//         }
-//         @keyframes modalIn {
-//           from { opacity: 0; transform: scale(.94) translateY(16px); }
-//           to   { opacity: 1; transform: scale(1) translateY(0); }
-//         }
-//         .modal-header {
-//           display: flex; align-items: flex-start; justify-content: space-between;
-//           padding: 18px 20px 14px;
-//           background: linear-gradient(135deg, var(--olivedim) 0%, #ede9d8 100%);
-//           border-bottom: 1px solid var(--bdr);
-//           flex-shrink: 0;
-//         }
-//         .modal-header-text { flex: 1; min-width: 0; }
-//         .modal-eyebrow {
-//           display: block; font-size: 9px; font-weight: 700;
-//           letter-spacing: .24em; text-transform: uppercase;
-//           color: var(--sage); margin-bottom: 3px;
-//         }
-//         .modal-title { font-family: var(--ffd); font-size: 1.3rem; font-weight: 500; color: var(--olive); line-height: 1.2; }
-//         .modal-close {
-//           width: 34px; height: 34px; border-radius: 50%;
-//           display: flex; align-items: center; justify-content: center;
-//           color: var(--ink4); background: rgba(255,255,255,.6);
-//           transition: all .15s; flex-shrink: 0; margin-left: 12px;
-//           border: 1px solid var(--bdr);
-//         }
-//         .modal-close:hover { background: #fff; color: var(--ink); }
-//         .modal-product-strip {
-//           display: flex; align-items: center; gap: 14px;
-//           padding: 12px 20px; border-bottom: 1px solid var(--bdr);
-//           background: #fafaf6; flex-shrink: 0;
-//         }
-//         .modal-product-img { width: 54px; height: 54px; border-radius: var(--rsm); object-fit: cover; border: 1px solid var(--bdr); flex-shrink: 0; }
-//         .modal-product-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
-//         .modal-product-price { font-size: 12px; color: var(--olive2); font-weight: 600; }
-//         .modal-product-note { font-size: 10px; color: var(--ink4); margin-top: 3px; }
-//         .modal-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 20px; }
-//         .modal-body::-webkit-scrollbar { width: 3px; }
-//         .modal-body::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 3px; }
-//         .modal-field { display: flex; flex-direction: column; gap: 9px; }
-//         .modal-field-label {
-//           display: flex; align-items: center; gap: 8px;
-//           font-size: 10px; font-weight: 700; letter-spacing: .15em;
-//           text-transform: uppercase; color: var(--ink);
-//         }
-//         .modal-field-num {
-//           width: 20px; height: 20px; border-radius: 50%;
-//           background: var(--olive); color: #fff;
-//           font-size: 9px; font-weight: 700;
-//           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-//         }
-//         .modal-field-optional { font-size: 8px; font-weight: 400; letter-spacing: .04em; text-transform: none; color: var(--ink4); padding: 2px 7px; border: 1px solid var(--bdr2); border-radius: 50px; }
-//         .modal-selected-badge { font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: .03em; background: var(--olive); color: #fff; padding: 2px 9px; border-radius: 50px; margin-left: auto; }
-//         .modal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-//         .chip { font-size: 12px; font-weight: 500; padding: 8px 16px; border-radius: 6px; border: 1.5px solid var(--bdr2); color: var(--ink7); transition: all .18s; min-height: 38px; display: flex; align-items: center; }
-//         .chip:hover { border-color: var(--olive2); color: var(--olive); background: var(--olivedim); }
-//         .chip-on { background: var(--olive); color: #fff !important; border-color: var(--olive) !important; }
-//         .chip-size { min-width: 50px; justify-content: center; }
-//         .modal-textarea { width: 100%; border: 1.5px solid var(--bdr); border-radius: var(--rsm); padding: 10px 12px; font-size: 13px; color: var(--ink); background: var(--bg); outline: none; resize: none; line-height: 1.65; transition: border-color .2s; }
-//         .modal-textarea:focus { border-color: var(--olive2); background: #fff; }
-//         .modal-textarea::placeholder { color: var(--ink4); }
-//         .modal-char-count { font-size: 10px; color: var(--ink4); text-align: right; }
-//         .modal-upload-zone { display: block; border: 2px dashed var(--bdr2); border-radius: var(--rsm); cursor: pointer; transition: all .2s; overflow: hidden; }
-//         .modal-upload-zone:hover { border-color: var(--olive2); background: var(--olivedim); }
-//         .modal-upload-empty { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 24px 16px; color: var(--ink4); text-align: center; }
-//         .modal-upload-cta { font-size: 13px; font-weight: 500; color: var(--olive); }
-//         .modal-upload-sub { font-size: 10px; }
-//         .modal-upload-preview { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--olivedim); }
-//         .modal-upload-preview img { width: 52px; height: 52px; border-radius: 7px; object-fit: cover; }
-//         .modal-upload-preview-name { font-size: 12px; font-weight: 600; color: var(--olive); display: block; }
-//         .modal-upload-change { font-size: 10px; color: var(--ink4); display: block; margin-top: 2px; }
-//         .modal-summary-box { background: var(--golddim); border: 1px solid rgba(184,152,42,.3); border-radius: var(--rsm); padding: 11px 14px; }
-//         .modal-summary-title { font-size: 8.5px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); margin-bottom: 7px; }
-//         .modal-summary-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-//         .modal-sum-tag { font-size: 11px; font-weight: 500; color: #7a6010; background: rgba(255,255,255,.7); border: 1px solid rgba(184,152,42,.3); padding: 3px 9px; border-radius: 50px; }
-//         .modal-footer { padding: 12px 20px 18px; border-top: 1px solid var(--bdr); display: flex; gap: 10px; flex-shrink: 0; background: #fafaf6; }
-//         .modal-btn-skip { flex: 1; font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink4); border: 1.5px solid var(--bdr2); border-radius: 6px; padding: 12px 14px; transition: all .18s; min-height: 44px; }
-//         .modal-btn-skip:hover { border-color: var(--ink4); color: var(--ink); }
-//         .modal-btn-save { flex: 2; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff; background: var(--olive); border-radius: 6px; padding: 12px 18px; min-height: 44px; box-shadow: 0 4px 14px rgba(61,80,22,.25); transition: all .2s; }
-//         .modal-btn-save:hover { background: #2e3c0e; transform: translateY(-1px); }
-
-//         /* ── PAGE SHELL ── */
-//         .page { min-height: 100dvh; background: var(--bg); }
-
-//         /* ── HERO ── */
-//         .hero {
-//           margin-top: 56px;
-//           padding: clamp(28px,4vw,52px) clamp(20px,6vw,72px) clamp(20px,3vw,36px);
-//           background: linear-gradient(155deg, #f5f2eb 0%, #ede5d0 55%, #f5f2eb 100%);
-//           border-bottom: 1px solid var(--bdr);
-//           position: relative; overflow: hidden;
-//         }
-//         .hero::before { content: ''; position: absolute; right: -80px; top: -80px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(184,152,42,.1) 0%, transparent 68%); pointer-events: none; }
-//         .hero-eyebrow { display: flex; align-items: center; gap: 10px; font-size: 8px; letter-spacing: .44em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 12px; }
-//         .hero-line { width: 24px; height: 1px; background: var(--gold); opacity: .5; }
-//         .hero h1 { font-family: var(--ffd); font-size: clamp(1.7rem, 5vw, 3.4rem); font-weight: 500; color: var(--olive); line-height: 1.08; margin-bottom: 10px; }
-//         .hero h1 em { font-style: italic; color: var(--gold); }
-//         .hero-desc { font-size: clamp(12px, 1.3vw, 13.5px); font-weight: 300; color: var(--ink7); max-width: 400px; line-height: 1.8; }
-
-//         /* ── MODE BAR ── */
-//         .modebar { padding: 18px clamp(20px,6vw,72px) 0; display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
-//         .modetoggle { display: flex; background: var(--surf); border: 1.5px solid var(--bdr2); border-radius: 8px; padding: 4px; gap: 3px; box-shadow: var(--shadow); flex-shrink: 0; }
-//         .modebtn { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; padding: clamp(8px,1.5vw,11px) clamp(14px,2.2vw,22px); border-radius: 6px; color: var(--ink7); transition: all .22s; min-height: 38px; }
-//         .modebtn.on { background: var(--olive); color: #fff; box-shadow: 0 2px 10px rgba(61,80,22,.3); }
-//         .modehint { font-size: 12px; font-weight: 300; color: var(--ink7); line-height: 1.75; max-width: 420px; padding-top: 10px; }
-
-//         /* ── LAYOUT ── */
-//         .layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: clamp(18px,3vw,28px) clamp(20px,6vw,72px) 100px; align-items: start; }
-//         @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
-
-//         /* ── SECTION LABEL ── */
-//         .sec-label { font-size: 8px; letter-spacing: .42em; text-transform: uppercase; color: var(--ink4); font-weight: 600; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-//         .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--bdr); }
-
-//         /* ── COMBO GRID ── */
-//         .cgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-//         @media (max-width: 900px) { .cgrid { grid-template-columns: repeat(2, 1fr); } }
-//         @media (max-width: 420px) { .cgrid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
-
-//         /* ── COMBO CARD ── */
-//         .cc-card {
-//           background: var(--surf);
-//           border: 1px solid var(--bdr);
-//           cursor: pointer;
-//           display: flex; flex-direction: column;
-//           transition: all .2s cubic-bezier(.34,1.1,.64,1);
-//           position: relative;
-//           overflow: hidden;
-//         }
-//         .cc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--bdr2); }
-//         .cc-card.cc-selected { border-color: var(--bdr); box-shadow: 0 4px 20px rgba(61,80,22,.15); }
-
-//         .cc-img-area { position: relative; aspect-ratio: 4/5; overflow: hidden; }
-//         .cc-img-area img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
-//         .cc-card:hover .cc-img-area img { transform: scale(1.06); }
-//         .cc-img-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,.65) 100%); }
-//         .cc-pct-badge { position: absolute; top: 8px; right: 8px; font-size: 8px; font-weight: 700; background: var(--olive); color: #fff; padding: 3px 8px; }
-//         .cc-label-badge { position: absolute; top: 8px; left: 8px; font-size: 7px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; background: rgba(255,255,255,.93); backdrop-filter: blur(4px); color: var(--ink); padding: 3px 8px; }
-//         .cc-selected-check { position: absolute; bottom: 8px; right: 8px; width: 24px; height: 24px; background: var(--olive); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 2; }
-//         .cc-img-text { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 11px; }
-//         .cc-img-name { font-family: var(--ffd); font-size: 1rem; font-weight: 500; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.4); line-height: 1.2; }
-//         .cc-img-tagline { font-size: 8px; color: rgba(255,255,255,.55); margin-top: 1px; }
-//         .cc-color-strip { height: 2px; }
-//         .cc-foot { padding: 10px 11px 11px; }
-//         .cc-price-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
-//         .cc-price { font-family: var(--ffd); font-size: 1rem; font-weight: 600; color: var(--ink); }
-//         .cc-original { font-size: 9.5px; color: var(--ink4); text-decoration: line-through; }
-//         .cc-save-tag { font-size: 8px; font-weight: 700; color: var(--green); background: rgba(42,96,48,.08); padding: 2px 6px; }
-//         .cc-pieces-count { font-size: 9px; color: var(--ink4); margin-bottom: 4px; }
-//         .cc-cust-dot { color: var(--olive2); }
-//         .cc-cta-hint { font-size: 8.5px; color: var(--gold); font-weight: 600; letter-spacing: .03em; }
-//         .cc-selected .cc-cta-hint { color: var(--olive); }
-
-//         /* ── PANEL BACKDROP ── */
-//         .panel-backdrop {
-//           position: fixed; inset: 0; z-index: 400;
-//           background: rgba(10,12,5,.4);
-//           backdrop-filter: blur(4px);
-//           animation: fadeIn .2s ease;
-//         }
-
-//         /* ── SIDE PANEL ── */
-//         .side-panel {
-//           position: fixed; top: 0; right: 0; bottom: 0; z-index: 401;
-//           width: min(420px, 92vw);
-//           background: var(--surf);
-//           border-left: 1px solid var(--bdr);
-//           display: flex; flex-direction: column;
-//           box-shadow: -8px 0 40px rgba(26,29,13,.15);
-//           animation: slideIn .28s cubic-bezier(.34,1.05,.64,1);
-//           overflow: hidden;
-//         }
-//         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-//         .panel-detail-img { width: 90px; height: 90px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--bdr); position: relative; }
-//         .panel-detail-img-link { display: block; width: 100%; height: 100%; text-decoration: none; }
-//         .panel-detail-img-link img { width: 100%; height: 100%; object-fit: cover; }
-//         .panel-detail-img-overlay {
-//           position: absolute; inset: 0;
-//           background: rgba(61,80,22,0);
-//           display: flex; align-items: center; justify-content: center;
-//           transition: background .2s;
-//         }
-//         .panel-detail-img-link:hover .panel-detail-img-overlay { background: rgba(61,80,22,0.3); }
-//         .panel-detail-name-link { text-decoration: none; color: inherit; }
-//         .panel-detail-name-link:hover .panel-detail-name {
-//           text-decoration: underline;
-//           text-decoration-color: var(--bdr2);
-//           text-underline-offset: 3px;
-//         }
-
-//         @media (max-width: 600px) {
-//           .side-panel {
-//             top: auto; right: 0; left: 0; bottom: 0;
-//             width: 100%; max-height: 82dvh;
-//             border-left: none; border-top: 1px solid var(--bdr);
-//             border-radius: 16px 16px 0 0;
-//             animation: slideUp .28s cubic-bezier(.34,1.05,.64,1);
-//           }
-//           @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-//         }
-
-//         .panel-head {
-//           display: flex; align-items: flex-start; justify-content: space-between;
-//           padding: 16px 18px 14px;
-//           background: linear-gradient(135deg, var(--olivedim) 0%, #ede9d8 100%);
-//           border-bottom: 1px solid var(--bdr);
-//           flex-shrink: 0;
-//         }
-//         .panel-eyebrow { font-size: 8px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--sage); margin-bottom: 3px; display: block; }
-//         .panel-title { font-family: var(--ffd); font-size: 1.15rem; font-weight: 500; color: var(--olive); }
-//         .panel-head-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: 12px; }
-//         .panel-prog { font-size: 9px; font-weight: 600; color: var(--olive2); background: var(--olivedim); border: 1px solid rgba(90,110,43,.25); padding: 3px 9px; white-space: nowrap; }
-//         .panel-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink4); background: rgba(255,255,255,.6); border: 1px solid var(--bdr); transition: all .15s; }
-//         .panel-close:hover { background: #fff; color: var(--ink); }
-
-//         .panel-thumbs {
-//           display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px;
-//           border-bottom: 1px solid var(--bdr); flex-shrink: 0;
-//           scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-//         }
-//         .panel-thumbs::-webkit-scrollbar { height: 3px; }
-//         .panel-thumbs::-webkit-scrollbar-thumb { background: var(--bdr2); }
-//         .panel-thumb {
-//           flex-shrink: 0; width: 56px; height: 56px;
-//           position: relative; overflow: hidden;
-//           border: 2px solid var(--bdr); cursor: pointer;
-//           transition: all .18s; scroll-snap-align: start; background: none; padding: 0;
-//         }
-//         .panel-thumb img { width: 100%; height: 100%; object-fit: cover; }
-//         .panel-thumb:hover { border-color: var(--olive2); }
-//         .panel-thumb.active { border-color: var(--olive); }
-//         .panel-thumb.done { border-color: var(--gold); }
-//         .panel-thumb-check {
-//           position: absolute; bottom: 2px; right: 2px;
-//           width: 14px; height: 14px; background: var(--gold); color: #fff;
-//           font-size: 7px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-//         }
-
-//         .panel-detail {
-//           display: flex; gap: 14px; padding: 16px 18px;
-//           border-bottom: 1px solid var(--bdr); flex-shrink: 0;
-//         }
-//         .panel-detail-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-//         .panel-detail-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
-//         .panel-detail-price { font-size: 12px; font-weight: 600; color: var(--olive2); }
-//         .panel-detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-//         .panel-tag { font-size: 9px; background: var(--golddim); color: #7a6010; padding: 2px 7px; border: 1px solid rgba(184,152,42,.25); }
-//         .panel-customise-btn {
-//           margin-top: 4px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-//           color: var(--olive); border: 1.5px solid var(--olive2); padding: 7px 12px;
-//           transition: all .18s; align-self: flex-start; min-height: 32px;
-//         }
-//         .panel-customise-btn:hover { background: var(--olive); color: #fff; }
-
-//         .panel-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid var(--bdr); flex-shrink: 0; }
-//         .panel-nav-btn { font-size: 10px; font-weight: 600; color: var(--olive); letter-spacing: .08em; padding: 6px 14px; border: 1.5px solid var(--bdr2); transition: all .18s; min-height: 34px; }
-//         .panel-nav-btn:hover:not(:disabled) { border-color: var(--olive); background: var(--olivedim); }
-//         .panel-nav-btn:disabled { opacity: .35; cursor: default; }
-//         .panel-nav-count { font-size: 10px; color: var(--ink4); }
-//         .panel-tip { margin: 12px 18px; padding: 9px 13px; background: rgba(184,152,42,.08); font-size: 9.5px; color: var(--olive2); text-align: center; }
-
-//         /* ── CUSTOM PRODUCT CARD ── */
-//         .cp-card { background: var(--surf); border: 1.5px solid var(--bdr); overflow: hidden; display: flex; flex-direction: column; transition: all .2s; }
-//         .cp-card:hover { border-color: var(--olive2); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26,29,13,.09); }
-//         .cp-in-hamper { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(184,152,42,.15); }
-//         .cp-img { position: relative; aspect-ratio: 1; overflow: hidden; }
-//         .cp-img-link { display: block; width: 100%; height: 100%; text-decoration: none; }
-//         .cp-img-link img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; display: block; }
-//         .cp-card:hover .cp-img-link img { transform: scale(1.05); }
-//         /* Toggle button covers the whole image area for tap-to-add/remove,
-//            but pointer-events are set to none on the img so the link can receive
-//            clicks via the link layer underneath. The overlay div is non-interactive. */
-//         .cp-img-toggle {
-//           position: absolute; inset: 0; width: 100%; height: 100%;
-//           background: transparent; border: none; cursor: pointer; padding: 0; z-index: 1;
-//         }
-//         .cp-in-overlay { position: absolute; inset: 0; background: rgba(61,80,22,.4); display: flex; align-items: center; justify-content: center; pointer-events: none; }
-//         .cp-body { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
-//         .cp-name-link { text-decoration: none; color: inherit; }
-//         .cp-name-link:hover .cp-name { color: var(--olive); text-decoration: underline; text-decoration-color: var(--bdr2); text-underline-offset: 2px; }
-//         .cp-name { font-size: 9.5px; font-weight: 500; color: var(--ink); line-height: 1.3; }
-//         .cp-price { font-size: 9.5px; font-weight: 600; color: var(--olive2); }
-//         .cp-in-actions { display: flex; flex-direction: column; gap: 3px; }
-//         .cp-tag-row { display: flex; flex-wrap: wrap; gap: 3px; }
-//         .cp-tag { font-size: 7.5px; background: var(--golddim); color: #7a6010; padding: 1px 5px; border: 1px solid rgba(184,152,42,.25); }
-//         .cp-edit-btn { font-size: 7.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--olive); border: 1.5px solid var(--olive2); padding: 4px 0; min-height: 26px; transition: all .18s; }
-//         .cp-edit-btn:hover { background: var(--olive); color: #fff; }
-//         .cp-remove-btn { font-size: 7.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--ink4); border: 1px solid var(--bdr2); padding: 3px 0; min-height: 24px; transition: all .18s; }
-//         .cp-remove-btn:hover { color: var(--red); border-color: var(--red); }
-//         .cp-add-btn { font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); border: 1.5px solid var(--bdr2); padding: 5px 0; min-height: 28px; transition: all .18s; margin-top: 2px; }
-//         .cp-add-btn:hover { background: var(--olive); color: #fff; border-color: var(--olive); }
-
-//         /* ── HAMPER STATUS ── */
-//         .hamper-status { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, var(--olive), var(--olive2)); color: #fff; padding: 12px 16px; margin-bottom: 18px; }
-//         .hamper-status-left strong { font-family: var(--ffd); font-size: 1.1rem; }
-//         .hamper-status-left span { font-size: 9.5px; opacity: .7; letter-spacing: .04em; display: block; margin-top: 1px; }
-//         .hamper-clear { font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.3); padding: 6px 12px; transition: all .18s; min-height: 32px; }
-//         .hamper-clear:hover { background: rgba(255,255,255,.15); color: #fff; }
-
-//         /* ── FIX 3: Category pills — accordion/radio behaviour ── */
-//         .cat-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
-//         .cat-pill {
-//           font-size: 9.5px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase;
-//           color: var(--ink7); padding: 8px 16px; min-height: 38px;
-//           border: 1.5px solid var(--bdr2); transition: all .2s;
-//           display: flex; align-items: center; gap: 6px;
-//         }
-//         .cat-pill:hover { color: var(--olive); border-color: var(--olive2); background: var(--olivedim); }
-//         .cat-pill.on { background: var(--olive); color: #fff; border-color: var(--olive); }
-//         /* Chevron indicator on active pill */
-//         .cat-pill-chevron {
-//           display: inline-block;
-//           transition: transform .25s ease;
-//           font-style: normal;
-//           font-size: 10px;
-//           opacity: .7;
-//         }
-//         .cat-pill.on .cat-pill-chevron { transform: rotate(180deg); opacity: 1; }
-
-//         /* Category product grid — animated open/close */
-//         .custom-section {
-//           margin-bottom: 8px; overflow: hidden;
-//           box-shadow: var(--shadow); border: 1px solid var(--bdr);
-//           /* Use max-height transition for smooth accordion effect */
-//         }
-//         .custom-section-inner {
-//           overflow: hidden;
-//           transition: max-height 0.35s cubic-bezier(.4,0,.2,1);
-//         }
-//         .custom-sec-head {
-//           display: flex; align-items: center; justify-content: space-between;
-//           padding: 11px 16px;
-//           background: linear-gradient(135deg, var(--olivedim), #ede9d8);
-//           border-bottom: 1px solid var(--bdr);
-//         }
-//         .custom-sec-title { font-family: var(--ffd); font-size: 1rem; font-weight: 500; color: var(--olive); }
-//         .custom-sec-count { font-size: 9.5px; color: var(--olive2); font-weight: 600; }
-//         .custom-prod-grid {
-//           display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-//           gap: 10px; padding: 12px 14px 14px; background: var(--surf);
-//         }
-//         @media (max-width: 600px) {
-//           .custom-prod-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px 10px; }
-//           .cp-name { font-size: 9px; }
-//           .cp-price { font-size: 9px; }
-//           .cp-body { padding: 5px 6px 7px; gap: 2px; }
-//         }
-//         @media (max-width: 380px) {
-//           .custom-prod-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 7px 8px 9px; }
-//           .cp-name { font-size: 8px; }
-//           .cp-price { font-size: 8px; }
-//           .cp-edit-btn, .cp-remove-btn, .cp-add-btn { font-size: 7px; min-height: 22px; padding: 3px 0; }
-//         }
-
-//         /* ── SUMMARY PANEL (desktop right col) ── */
-//         .summary-panel { position: sticky; top: 76px; background: var(--surf); border: 1px solid var(--bdr); overflow: hidden; box-shadow: var(--shadow); }
-//         .sum-head { padding: 16px 18px 13px; background: linear-gradient(135deg, var(--olivedim), #ede5d0); border-bottom: 1px solid var(--bdr); }
-//         .sum-title { font-family: var(--ffd); font-size: 1.05rem; font-weight: 500; color: var(--olive); }
-//         .sum-modetag { display: block; font-size: 7.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-top: 2px; }
-//         .sum-body { padding: 14px 16px 18px; }
-//         .sum-list { margin-bottom: 13px; max-height: 260px; overflow-y: auto; }
-//         .sum-list::-webkit-scrollbar { width: 3px; }
-//         .sum-list::-webkit-scrollbar-thumb { background: var(--bdr2); }
-//         .sum-row { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--ink2); }
-//         .sum-row:last-child { border-bottom: none; }
-//         .sum-thumb { width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--bdr); flex-shrink: 0; }
-//         .sum-info { flex: 1; min-width: 0; }
-//         .sum-cat { font-size: 7px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink4); display: block; }
-//         .sum-name { font-size: 10px; font-weight: 500; color: var(--ink); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-//         .sum-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
-//         .sum-tag { font-size: 7px; font-weight: 500; background: var(--golddim); color: #7a6010; padding: 1.5px 6px; }
-//         .sum-price { font-size: 10px; font-weight: 600; color: var(--olive); flex-shrink: 0; }
-//         .sum-check { width: 18px; height: 18px; background: var(--olivedim); color: var(--olive); display: flex; align-items: center; justify-content: center; font-size: 8.5px; flex-shrink: 0; }
-//         .sum-empty { text-align: center; font-family: var(--ffd); font-style: italic; font-size: 13px; color: var(--ink4); padding: 22px 0; }
-//         .sum-divider { height: 1px; margin: 13px 0; background: linear-gradient(90deg, transparent, var(--gold2), transparent); }
-//         .sum-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-//         .sum-total-lbl { font-size: 8px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink4); }
-//         .sum-total-val { font-family: var(--ffd); font-size: 1.6rem; font-weight: 600; color: var(--ink); }
-//         .sum-saving { font-size: 11px; font-weight: 500; color: var(--green); margin-bottom: 14px; }
-//         .btn-cart { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #fff; background: var(--olive); padding: 14px; margin-bottom: 8px; min-height: 48px; box-shadow: 0 4px 14px rgba(61,80,22,.25); transition: all .2s; }
-//         .btn-cart:hover:not(:disabled) { background: #2e3c0e; transform: translateY(-1px); }
-//         .btn-cart:disabled { opacity: .4; cursor: not-allowed; }
-//         .btn-cart.done { background: var(--green) !important; }
-//         .btn-buy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--ink); background: var(--gold2); border: 1.5px solid var(--gold); padding: 12px; min-height: 44px; transition: all .2s; }
-//         .btn-buy:hover:not(:disabled) { background: var(--gold); color: #fff; transform: translateY(-1px); }
-//         .btn-buy:disabled { opacity: .4; cursor: not-allowed; }
-//         .perks { display: flex; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-//         .perk { font-size: 8.5px; color: var(--ink4); display: flex; align-items: center; gap: 4px; }
-//         .perk::before { content: '◆'; font-size: 4.5px; color: var(--gold); opacity: .6; }
-
-//         /* ─────────────────────────────────────────────────────────
-//            FIX 1: Mobile bottom bar — cart button always visible
-//            ───────────────────────────────────────────────────────── */
-//         .mobile-bar {
-//           display: none;
-//           position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-//           background: var(--surf);
-//           border-top: 1px solid var(--bdr);
-//           /* Safe-area padding so content clears home indicator */
-//           padding: 10px 16px max(14px, env(safe-area-inset-bottom, 14px));
-//           align-items: stretch;
-//           gap: 10px;
-//           box-shadow: 0 -4px 20px rgba(26,29,13,.12);
-//           /* Ensure the bar itself is tall enough to contain both children */
-//           min-height: calc(64px + env(safe-area-inset-bottom, 0px));
-//         }
-//         .mobile-bar-info {
-//           flex: 1; text-align: left; padding: 0; background: none; border: none;
-//           display: flex; flex-direction: column; justify-content: center;
-//           min-width: 0;
-//         }
-//         .mobile-bar-count { font-size: 9px; color: var(--ink4); font-weight: 500; }
-//         .mobile-bar-price { font-family: var(--ffd); font-size: 1.3rem; font-weight: 600; color: var(--ink); line-height: 1.1; }
-//         .mobile-bar-save { font-size: 9.5px; color: var(--green); font-weight: 500; }
-//         .mobile-bar-view { font-size: 8.5px; color: var(--gold); font-weight: 600; }
-//         .mobile-bar-empty { font-size: 11px; color: var(--ink4); font-style: italic; }
-
-//         /* FIX 1: Cart button — fixed width, vertically centred, never hidden */
-//         .mobile-bar-cart {
-//           flex-shrink: 0;
-//           align-self: center;       /* vertically centre inside the bar */
-//           font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
-//           color: #fff; background: var(--olive);
-//           padding: 0 20px;
-//           height: 46px;
-//           min-width: 120px;
-//           box-shadow: 0 4px 12px rgba(61,80,22,.25);
-//           transition: all .18s;
-//           display: flex; align-items: center; justify-content: center;
-//           border: none;
-//         }
-//         .mobile-bar-cart.done { background: var(--green); }
-//         .mobile-bar-cart:disabled { opacity: .4; cursor: not-allowed; }
-//         .mobile-bar-cart:not(:disabled):active { transform: scale(.97); }
-
-//         /* FIX 1: Give the page content enough bottom clearance so the last
-//            card is never hidden behind the bar on mobile. */
-//         @media (max-width: 1100px) {
-//           .layout {
-//             padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
-//           }
-//           .summary-panel { display: none; }
-//           .mobile-bar { display: flex; }
-//         }
-
-//         /* ── MOBILE SUMMARY SHEET ── */
-//         .mobile-sum-backdrop { position: fixed; inset: 0; z-index: 300; background: rgba(10,12,5,.55); backdrop-filter: blur(5px); display: flex; align-items: flex-end; }
-//         .mobile-sum-sheet {
-//           width: 100%; background: var(--surf); border-radius: 16px 16px 0 0;
-//           max-height: 82dvh; overflow-y: auto;
-//           padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-//           animation: sheetUp .25s cubic-bezier(.34,1.1,.64,1);
-//         }
-//         @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-//         .mobile-sum-handle { display: flex; justify-content: center; padding: 11px; }
-//         .mobile-sum-handle-bar { width: 32px; height: 3px; border-radius: 2px; background: var(--bdr2); }
-//         .mobile-sum-title { font-family: var(--ffd); font-size: 1.15rem; font-weight: 500; color: var(--olive); padding: 0 18px 11px; border-bottom: 1px solid var(--bdr); }
-//         .mobile-sum-list { padding: 0 18px; }
-//         .mobile-sum-footer { padding: 14px 18px 0; }
-
-//         /* ── LOADING ── */
-//         .loading { display: flex; align-items: center; justify-content: center; min-height: 40vh; font-family: var(--ffd); font-style: italic; font-size: 1.25rem; color: var(--ink4); }
-
-//         /* ── RESPONSIVE ── */
-//         @media (max-width: 760px) {
-//           .hero, .modebar, .layout { padding-left: 14px; padding-right: 14px; }
-//           .hero { margin-top: 48px; padding-top: 24px; }
-//           .layout { padding-top: 16px; }
-//         }
-//         @media (min-width: 1101px) {
-//           .mobile-bar { display: none !important; }
-//           .mobile-sum-backdrop { display: none !important; }
-//         }
-//       `}</style>
-
-//       <div className="page">
-//         <UpperNav />
-
-//         {/* HERO */}
-//         <div className="hero">
-//           <div className="hero-eyebrow">
-//             <span className="hero-line"/>
-//             <span>Jewellery Collections</span>
-//             <span className="hero-line"/>
-//           </div>
-//           <h1>Build Your <em>Perfect</em><br />Jewellery Hamper</h1>
-//           <p className="hero-desc">Choose a curated set and personalise every piece — or build something entirely your own.</p>
-//         </div>
-
-//         {/* MODE BAR */}
-//         <div className="modebar">
-//           <div className="modetoggle">
-//             <button className={`modebtn${mode === 'preset' ? ' on' : ''}`} onClick={() => setMode('preset')}>◈ Curated Sets</button>
-//             <button className={`modebtn${mode === 'custom' ? ' on' : ''}`} onClick={() => setMode('custom')}>✦ Build Your Own</button>
-//           </div>
-//           <p className="modehint">
-//             {mode === 'preset'
-//               ? 'Pick a curated hamper, tap to view & personalise each piece.'
-//               : 'Choose a category, pick your pieces, customise each one, and add to cart.'}
-//           </p>
-//         </div>
-
-//         {/* SIDE PANEL (preset mode) */}
-//         {mode === 'preset' && panelCombo && (
-//           <SidePanel
-//             combo={panelCombo}
-//             products={panelProducts}
-//             variants={presetVariants}
-//             onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
-//             categoryLabels={categoryLabels}
-//             onClose={() => setPanelCombo(null)}
-//           />
-//         )}
-
-//         {/* ADD-FLOW MODAL */}
-//         {pendingAdd && (
-//           <ProductCustomiser
-//             product={pendingAdd}
-//             variant={{}}
-//             onSave={v => { setHamper(prev => ({ ...prev, [pendingAdd.id]: v })); setPendingAdd(null); }}
-//             onClose={() => setPendingAdd(null)}
-//             isAddFlow
-//           />
-//         )}
-
-//         {/* EDIT MODAL */}
-//         {editingProduct && (
-//           <ProductCustomiser
-//             product={editingProduct}
-//             variant={hamper[editingProduct.id] || {}}
-//             onSave={v => { setHamper(prev => ({ ...prev, [editingProduct.id]: v })); setEditingProduct(null); }}
-//             onClose={() => setEditingProduct(null)}
-//           />
-//         )}
-
-//         {/* MOBILE SUMMARY DRAWER */}
-//         {showMobileSummary && (
-//           <div className="mobile-sum-backdrop" onClick={e => e.target === e.currentTarget && setShowMobileSummary(false)}>
-//             <div className="mobile-sum-sheet">
-//               <div className="mobile-sum-handle"><div className="mobile-sum-handle-bar"/></div>
-//               <div className="mobile-sum-title">Your Hamper Summary</div>
-//               <div className="mobile-sum-list">
-//                 {summaryItems.length === 0 ? (
-//                   <p className="sum-empty">No pieces added yet.</p>
-//                 ) : summaryItems.map(({ k, p }) => {
-//                   const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-//                   const tags = [v.colour, v.size ? `Size ${v.size}` : '', v.personalMessage ? '✉ Msg' : ''].filter(Boolean);
-//                   return (
-//                     <div key={`${k}-${p.id}`} className="sum-row">
-//                       <img className="sum-thumb" src={p.image || '/images/hero.png'} alt={p.name} />
-//                       <div className="sum-info">
-//                         <span className="sum-cat">{categoryLabels[k] || k}</span>
-//                         <span className="sum-name">{p.name}</span>
-//                         {tags.length > 0 && <div className="sum-tags">{tags.map(t => <span key={t} className="sum-tag">{t}</span>)}</div>}
-//                       </div>
-//                       <span className="sum-price">₹{p.price.toLocaleString('en-IN')}</span>
-//                     </div>
-//                   );
-//                 })}
-//               </div>
-//               <div className="mobile-sum-footer">
-//                 <div className="sum-divider"/>
-//                 <div className="sum-total-row">
-//                   <span className="sum-total-lbl">Total</span>
-//                   <span className="sum-total-val">₹{totalPrice.toLocaleString('en-IN')}</span>
-//                 </div>
-//                 {savings > 0 && <p className="sum-saving">🎉 You save ₹{savings.toLocaleString('en-IN')}</p>}
-//                 <button className={`btn-cart${cartAdded ? ' done' : ''}`} onClick={() => { handleAddToCart(); setShowMobileSummary(false); }} disabled={!hasItems}>
-//                   {cartAdded ? '✓ Added to Cart!' : 'Add Hamper to Cart'}
-//                 </button>
-//                 <button className="btn-buy" onClick={() => { setShowMobileSummary(false); handleBuyNow(); }} disabled={!hasItems}>
-//                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-//                   Buy It Now
-//                 </button>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         {/* LAYOUT */}
-//         <div className="layout">
-//           <div>
-//             {isLoading ? (
-//               <div className="loading">Loading collections…</div>
-//             ) : mode === 'preset' ? (
-//               <>
-//                 <div className="sec-label">Choose a Hamper Set</div>
-//                 <div className="cgrid">
-//                   {presetCombos.map(c => (
-//                     <ComboCard
-//                       key={c.id}
-//                       combo={c}
-//                       selected={selectedComboId === c.id}
-//                       onSelect={setSelectedComboId}
-//                       productsByCategory={productsByCategory}
-//                       categoryLabels={categoryLabels}
-//                       variants={presetVariants}
-//                       onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
-//                       onOpenPanel={handleOpenPanel}
-//                     />
-//                   ))}
-//                 </div>
-//               </>
-//             ) : (
-//               <>
-//                 {/* ── FIX 3: Category pills — only one open at a time ── */}
-//                 <div className="sec-label">1. Select a Category</div>
-//                 <div className="cat-pills">
-//                   {allCategories.map(cat => {
-//                     const isOpen = activeCategory === cat;
-//                     const countInHamper = (productsByCategory[cat] ?? []).filter(p => hamperProductIds.includes(p.id)).length;
-//                     return (
-//                       <button
-//                         key={cat}
-//                         className={`cat-pill${isOpen ? ' on' : ''}`}
-//                         onClick={() => handleCategoryPillClick(cat)}
-//                       >
-//                         {isOpen ? '✓ ' : '+ '}
-//                         {categoryLabels[cat] || cat}
-//                         {countInHamper > 0 && !isOpen && (
-//                           <span style={{ marginLeft: 4, fontSize: 8, background: 'var(--gold)', color: '#fff', padding: '1px 5px', borderRadius: 50 }}>
-//                             {countInHamper}
-//                           </span>
-//                         )}
-//                         <em className="cat-pill-chevron">▾</em>
-//                       </button>
-//                     );
-//                   })}
-//                 </div>
-
-//                 {hamperProductIds.length > 0 && (
-//                   <div className="hamper-status">
-//                     <div className="hamper-status-left">
-//                       <strong>{hamperProductIds.length} piece{hamperProductIds.length !== 1 ? 's' : ''}</strong>{' '}in your hamper
-//                       <span>Items go to cart together as one hamper</span>
-//                     </div>
-//                     <button className="hamper-clear" onClick={() => setHamper({})}>Clear all</button>
-//                   </div>
-//                 )}
-
-//                 {/* ── FIX 3: Only the active category's grid is rendered ── */}
-//                 {activeCategory !== null && (productsByCategory[activeCategory] ?? []).length > 0 && (
-//                   <>
-//                     <div className="sec-label" style={{ marginTop: 4, marginBottom: 12 }}>2. Pick Your Pieces</div>
-//                     <div className="custom-section">
-//                       <div className="custom-sec-head">
-//                         <span className="custom-sec-title">{categoryLabels[activeCategory] || activeCategory}</span>
-//                         {(productsByCategory[activeCategory] ?? []).filter(p => hamperProductIds.includes(p.id)).length > 0 && (
-//                           <span className="custom-sec-count">
-//                             {(productsByCategory[activeCategory] ?? []).filter(p => hamperProductIds.includes(p.id)).length} selected
-//                           </span>
-//                         )}
-//                       </div>
-//                       <div className="custom-prod-grid">
-//                         {(productsByCategory[activeCategory] ?? []).map(p => (
-//                           <CustomProdCard
-//                             key={p.id}
-//                             product={p}
-//                             inHamper={hamperProductIds.includes(p.id)}
-//                             variant={hamper[p.id] || {}}
-//                             onAdd={() => handleProductAdd(p)}
-//                             onRemove={() => handleProductRemove(p.id)}
-//                             onEditCustomise={() => setEditingProduct(p)}
-//                           />
-//                         ))}
-//                       </div>
-//                     </div>
-//                   </>
-//                 )}
-
-//                 {activeCategory === null && allCategories.length > 0 && (
-//                   <p style={{ fontSize: 12, color: 'var(--ink4)', fontStyle: 'italic', marginTop: 8 }}>
-//                     Select a category above to browse and add pieces to your hamper.
-//                   </p>
-//                 )}
-//               </>
-//             )}
-//           </div>
-
-//           {/* RIGHT — DESKTOP SUMMARY */}
-//           <div>
-//             <div className="summary-panel">
-//               <div className="sum-head">
-//                 <div className="sum-title">Your Hamper</div>
-//                 <span className="sum-modetag">{mode === 'preset' ? '◈ Curated Set' : '✦ Custom Build'}</span>
-//               </div>
-//               <div className="sum-body">
-//                 <div className="sum-list">
-//                   {summaryItems.length === 0 ? (
-//                     <p className="sum-empty">{mode === 'preset' ? 'Select a hamper above.' : 'Add pieces to see them here.'}</p>
-//                   ) : summaryItems.map(({ k, p }) => {
-//                     const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-//                     const tags = [v.colour, v.size ? `Size ${v.size}` : '', v.personalMessage ? '✉ Msg' : '', v.uploadedImageBase64 ? '📷' : ''].filter(Boolean);
-//                     return (
-//                       <div key={`${k}-${p.id}`} className="sum-row">
-//                         <img className="sum-thumb" src={p.image || '/images/hero.png'} alt={p.name} />
-//                         <div className="sum-info">
-//                           <span className="sum-cat">{categoryLabels[k] || k}</span>
-//                           <span className="sum-name">{p.name}</span>
-//                           {tags.length > 0 && <div className="sum-tags">{tags.map(t => <span key={t} className="sum-tag">{t}</span>)}</div>}
-//                         </div>
-//                         {mode === 'preset'
-//                           ? <span className="sum-check">✓</span>
-//                           : <span className="sum-price">₹{p.price.toLocaleString('en-IN')}</span>
-//                         }
-//                       </div>
-//                     );
-//                   })}
-//                 </div>
-//                 <div className="sum-divider"/>
-//                 <div className="sum-total-row">
-//                   <span className="sum-total-lbl">Total</span>
-//                   <span className="sum-total-val">₹{totalPrice.toLocaleString('en-IN')}</span>
-//                 </div>
-//                 {savings > 0 && <p className="sum-saving">🎉 You save ₹{savings.toLocaleString('en-IN')}</p>}
-//                 <button className={`btn-cart${cartAdded ? ' done' : ''}`} onClick={handleAddToCart} disabled={!hasItems}>
-//                   {cartAdded ? (
-//                     <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> Added to Cart!</>
-//                   ) : (
-//                     <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> Add Hamper to Cart</>
-//                   )}
-//                 </button>
-//                 <button className="btn-buy" onClick={handleBuyNow} disabled={!hasItems}>
-//                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-//                   Buy It Now
-//                 </button>
-//                 <div className="perks">
-//                   <span className="perk">Free shipping ₹599+</span>
-//                   <span className="perk">COD available</span>
-//                   <span className="perk">Easy returns</span>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* MOBILE BOTTOM BAR — FIX 1: always visible, cart button never hidden */}
-//         <MobileSummaryBar
-//           totalPrice={totalPrice}
-//           savings={savings}
-//           itemCount={summaryItems.length}
-//           onOpen={() => setShowMobileSummary(true)}
-//           hasItems={hasItems}
-//           onAddToCart={handleAddToCart}
-//           cartAdded={cartAdded}
-//         />
-//       </div>
-//     </>
-//   );
-// }
-
-
-
 'use client';
 
 import {
   useState,
   useMemo,
-  useCallback,
   useEffect,
   type ChangeEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import UpperNav from '@/components/ui/UpperNav';
-import { sortProducts, type SortOption } from '@/components/ui/SortFilter';
-import { apiRequest } from '@/lib/api';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -1649,22 +41,188 @@ interface PresetCombo {
   image: string;
   badge: string;
   tint: string;
-  includedCategories: CategoryKey[];
-  defaultSelections: Partial<Record<CategoryKey, string>>;
+  includedProducts: ComboProduct[];
+}
+
+interface CustomComboSlot {
+  id: string;
+  name: string;
+  tagline: string;
+  maxItems: number;
+  fixedPrice: number;
+  image: string;
+  badge: string;
+  tint: string;
+  allowedProducts: ComboProduct[];
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DEMO DATA
+───────────────────────────────────────────────────────────── */
+
+const IMG = {
+  ring1:    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80',
+  ring2:    'https://images.unsplash.com/photo-1573408301185-9519f94f0200?w=600&q=80',
+  ring3:    'https://images.unsplash.com/photo-1635797255620-2d8e5c7d7ad6?w=600&q=80',
+  necklace1:'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80',
+  necklace2:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600&q=80',
+  necklace3:'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80',
+  earring1: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80',
+  earring2: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=600&q=80',
+  earring3: 'https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=600&q=80',
+  bangle1:  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80',
+  bangle2:  'https://images.unsplash.com/photo-1624913503273-5f9c4e980dba?w=600&q=80',
+  bangle3:  'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80',
+  combo1:   'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80',
+  combo2:   'https://images.unsplash.com/photo-1535556116002-6281ff3e9f36?w=800&q=80',
+  combo3:   'https://images.unsplash.com/photo-1616541823729-00fe0aacd32c?w=800&q=80',
+  combo4:   'https://images.unsplash.com/photo-1627293620999-e9b5c2325842?w=800&q=80',
+};
+
+const COLOURS = ['Gold', 'Silver', 'Rose Gold', 'Antique Gold'];
+const SIZES   = ['XS', 'S', 'M', 'L', 'XL'];
+
+const ALL_PRODUCTS: ComboProduct[] = [
+  { id: 'r1', name: 'Floral Solitaire Ring',        price: 1299, image: IMG.ring1,    customisable: true,  availableColours: COLOURS, availableSizes: ['5','6','7','8','9'] },
+  { id: 'r2', name: 'Twisted Band Ring',             price: 999,  image: IMG.ring2,    customisable: true,  availableColours: COLOURS, availableSizes: ['5','6','7','8','9'] },
+  { id: 'r3', name: 'Stacking Midi Ring',            price: 799,  image: IMG.ring3,    customisable: false, availableColours: COLOURS, availableSizes: ['5','6','7','8'] },
+  { id: 'n1', name: 'Layered Gold Necklace',         price: 1899, image: IMG.necklace1, customisable: true, availableColours: ['Gold','Rose Gold'], availableSizes: SIZES },
+  { id: 'n2', name: 'Delicate Pearl Pendant',        price: 1499, image: IMG.necklace2, customisable: true, availableColours: COLOURS, availableSizes: SIZES },
+  { id: 'n3', name: 'Antique Coin Necklace',         price: 2199, image: IMG.necklace3, customisable: true, availableColours: ['Gold','Antique Gold'], availableSizes: SIZES },
+  { id: 'e1', name: 'Jhumki Drop Earrings',          price: 1199, image: IMG.earring1, customisable: true,  availableColours: COLOURS, availableSizes: [] },
+  { id: 'e2', name: 'Minimal Hoop Earrings',         price: 799,  image: IMG.earring2, customisable: false, availableColours: COLOURS, availableSizes: [] },
+  { id: 'e3', name: 'Chandelier Statement Earrings', price: 1699, image: IMG.earring3, customisable: true,  availableColours: COLOURS, availableSizes: [] },
+  { id: 'b1', name: 'Kundan Bangle Set',             price: 2499, image: IMG.bangle1,  customisable: true,  availableColours: ['Gold','Antique Gold'], availableSizes: ['2.4','2.6','2.8'] },
+  { id: 'b2', name: 'Slim Gold Bangle',              price: 1299, image: IMG.bangle2,  customisable: false, availableColours: COLOURS, availableSizes: ['2.4','2.6','2.8'] },
+  { id: 'b3', name: 'Beaded Charm Bracelet',         price: 999,  image: IMG.bangle3,  customisable: true,  availableColours: COLOURS, availableSizes: ['2.4','2.6','2.8'] },
+];
+
+const byId = (id: string) => ALL_PRODUCTS.find(p => p.id === id)!;
+
+const PRESET_COMBOS: PresetCombo[] = [
+  {
+    id: 'pc1',
+    name: 'Bridal Glow Set',
+    tagline: 'The complete bridal jewellery edit',
+    price: 5499,
+    originalPrice: 7396,
+    image: IMG.combo1,
+    badge: 'Best Seller',
+    tint: '#c8a84b',
+    includedProducts: [byId('n3'), byId('e1'), byId('b1'), byId('r1')],
+  },
+  {
+    id: 'pc2',
+    name: 'Everyday Minimal Set',
+    tagline: 'Understated elegance for every day',
+    price: 2999,
+    originalPrice: 3997,
+    image: IMG.combo2,
+    badge: 'New Arrival',
+    tint: '#8a9e6a',
+    includedProducts: [byId('n2'), byId('e2'), byId('r2')],
+  },
+  {
+    id: 'pc3',
+    name: 'Statement Night Set',
+    tagline: 'Turn heads at every occasion',
+    price: 4299,
+    originalPrice: 5597,
+    image: IMG.combo3,
+    badge: 'Limited',
+    tint: '#3d5016',
+    includedProducts: [byId('n1'), byId('e3'), byId('b1'), byId('r3')],
+  },
+  {
+    id: 'pc4',
+    name: 'Pearl & Gold Duo',
+    tagline: 'Timeless pearl-and-gold pairing',
+    price: 2699,
+    originalPrice: 3398,
+    image: IMG.combo4,
+    badge: '',
+    tint: '#b8982a',
+    includedProducts: [byId('n2'), byId('e2')],
+  },
+];
+
+const CUSTOM_SLOTS: CustomComboSlot[] = [
+  {
+    id: 'cs1',
+    name: 'Choose Any 3 for ₹1,999',
+    tagline: 'Pick 3 pieces from our ring & earring edit',
+    maxItems: 3,
+    fixedPrice: 1999,
+    image: IMG.ring1,
+    badge: 'Save up to 40%',
+    tint: '#c8a84b',
+    allowedProducts: [byId('r1'), byId('r2'), byId('r3'), byId('e1'), byId('e2'), byId('e3')],
+  },
+  {
+    id: 'cs2',
+    name: 'Choose Any 4 for ₹3,499',
+    tagline: 'Build your dream necklace & bangle stack',
+    maxItems: 4,
+    fixedPrice: 3499,
+    image: IMG.necklace1,
+    badge: 'Most Popular',
+    tint: '#5a6e2b',
+    allowedProducts: [byId('n1'), byId('n2'), byId('n3'), byId('b1'), byId('b2'), byId('b3')],
+  },
+  {
+    id: 'cs3',
+    name: 'Choose Any 5 for ₹4,999',
+    tagline: 'Full head-to-toe jewellery wardrobe',
+    maxItems: 5,
+    fixedPrice: 4999,
+    image: IMG.combo2,
+    badge: 'Best Value',
+    tint: '#3d5016',
+    allowedProducts: ALL_PRODUCTS,
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────── */
+function hasCustomisation(v: ProductVariant) {
+  return !!(v.colour || v.size || v.personalMessage || v.uploadedImageBase64);
+}
+
+/** Small inline badge showing what was customised on a cart item */
+function CustomisationBadge({ variant, productName }: { variant: ProductVariant; productName: string }) {
+  if (!hasCustomisation(variant)) return null;
+  return (
+    <div className="cust-badge">
+      <span className="cust-badge-icon">✦</span>
+      <span className="cust-badge-label">Customised</span>
+      <div className="cust-badge-tags">
+        {variant.colour          && <span className="cust-tag">🎨 {variant.colour}</span>}
+        {variant.size            && <span className="cust-tag">📐 Size {variant.size}</span>}
+        {variant.personalMessage && <span className="cust-tag">✉ Personal message</span>}
+        {variant.uploadedImageBase64 && <span className="cust-tag">📷 Photo</span>}
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────
    PRODUCT CUSTOMISER MODAL
+   - isAddFlow: true  → "Add to Hamper" primary CTA
+   - isAddFlow: false → "Save Changes" primary CTA
+   - skipAllowed: whether to show a Skip button (false in slot add-flow to enforce explicit choice)
 ───────────────────────────────────────────────────────────── */
 interface CustomiserProps {
   product: ComboProduct;
   variant: ProductVariant;
   onSave: (v: ProductVariant) => void;
+  onSkip?: () => void; // called when user explicitly skips; undefined = no skip button
   onClose: () => void;
   isAddFlow?: boolean;
+  hidePrice?: boolean;
 }
 
-function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: CustomiserProps) {
+function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlow, hidePrice }: CustomiserProps) {
   const [local, setLocal] = useState<ProductVariant>({ ...variant });
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1675,41 +233,40 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
     r.readAsDataURL(f);
   };
 
-  const colours = product.availableColours?.length
-    ? product.availableColours
-    : ['Gold', 'Silver', 'Rose Gold', 'Antique'];
-
-  const sizes = product.availableSizes?.length
-    ? product.availableSizes
-    : ['XS', 'S', 'M', 'L', 'XL'];
-
-  const hasAnySelection = !!(local.colour || local.size || local.personalMessage || local.uploadedImageBase64);
+  const colours = product.availableColours?.length ? product.availableColours : COLOURS;
+  const sizes   = product.availableSizes?.length   ? product.availableSizes   : SIZES;
+  const hasAny  = !!(local.colour || local.size || local.personalMessage || local.uploadedImageBase64);
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box" role="dialog" aria-modal="true">
+
+        {/* Header */}
         <div className="modal-header">
           <div className="modal-header-text">
             <span className="modal-eyebrow">Customise Piece</span>
             <h2 className="modal-title">{product.name}</h2>
           </div>
-          <button className="modal-close" onClick={onClose} aria-label="Close dialog">
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
 
+        {/* Product strip */}
         <div className="modal-product-strip">
-          <img className="modal-product-img" src={product.image || '/images/hero.png'} alt={product.name} />
-          <div className="modal-product-info">
+          <img className="modal-product-img" src={product.image} alt={product.name} />
+          <div>
             <div className="modal-product-name">{product.name}</div>
-            <div className="modal-product-price">₹{product.price.toLocaleString('en-IN')}</div>
-            {isAddFlow && <div className="modal-product-note">Choose your preferences, then add to hamper</div>}
+            {!hidePrice && <div className="modal-product-price">₹{product.price.toLocaleString('en-IN')}</div>}
+            {isAddFlow && <div className="modal-product-note">Customise your preferences before adding to hamper</div>}
           </div>
         </div>
 
+        {/* Body */}
         <div className="modal-body">
+          {/* Colour */}
           <div className="modal-field">
             <label className="modal-field-label">
               <span className="modal-field-num">1</span>
@@ -1719,25 +276,29 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
             <div className="modal-chips">
               {colours.map(c => (
                 <button key={c} className={`chip${local.colour === c ? ' chip-on' : ''}`}
-                  onClick={() => setLocal(prev => ({ ...prev, colour: c }))}>{c}</button>
+                  onClick={() => setLocal(p => ({ ...p, colour: c }))}>{c}</button>
               ))}
             </div>
           </div>
 
-          <div className="modal-field">
-            <label className="modal-field-label">
-              <span className="modal-field-num">2</span>
-              Select Size
-              {local.size && <span className="modal-selected-badge">Size {local.size}</span>}
-            </label>
-            <div className="modal-chips">
-              {sizes.map(s => (
-                <button key={s} className={`chip chip-size${local.size === s ? ' chip-on' : ''}`}
-                  onClick={() => setLocal(prev => ({ ...prev, size: s }))}>{s}</button>
-              ))}
+          {/* Size */}
+          {sizes.length > 0 && (
+            <div className="modal-field">
+              <label className="modal-field-label">
+                <span className="modal-field-num">2</span>
+                Select Size
+                {local.size && <span className="modal-selected-badge">Size {local.size}</span>}
+              </label>
+              <div className="modal-chips">
+                {sizes.map(s => (
+                  <button key={s} className={`chip chip-size${local.size === s ? ' chip-on' : ''}`}
+                    onClick={() => setLocal(p => ({ ...p, size: s }))}>{s}</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
+          {/* Message */}
           <div className="modal-field">
             <label className="modal-field-label">
               <span className="modal-field-num">3</span>
@@ -1747,11 +308,12 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
             <textarea className="modal-textarea"
               placeholder="E.g. 'To my dearest Priya, with love…'"
               value={local.personalMessage || ''}
-              onChange={e => setLocal(prev => ({ ...prev, personalMessage: e.target.value }))}
+              onChange={e => setLocal(p => ({ ...p, personalMessage: e.target.value }))}
               maxLength={120} rows={3} />
-            <div className="modal-char-count">{(local.personalMessage || '').length}/120 characters</div>
+            <div className="modal-char-count">{(local.personalMessage || '').length}/120</div>
           </div>
 
+          {/* Photo */}
           <div className="modal-field">
             <label className="modal-field-label">
               <span className="modal-field-num">4</span>
@@ -1762,8 +324,8 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
               {local.uploadedImageBase64 ? (
                 <div className="modal-upload-preview">
-                  <img src={local.uploadedImageBase64} alt="Uploaded preview" />
-                  <div className="modal-upload-preview-info">
+                  <img src={local.uploadedImageBase64} alt="Preview" />
+                  <div>
                     <span className="modal-upload-preview-name">Photo uploaded ✓</span>
                     <span className="modal-upload-change">Tap to change</span>
                   </div>
@@ -1776,33 +338,39 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
                     <polyline points="21 15 16 10 5 21"/>
                   </svg>
                   <span className="modal-upload-cta">Tap to upload a photo</span>
-                  <span className="modal-upload-sub">JPG, PNG, WEBP supported</span>
+                  <span className="modal-upload-sub">JPG · PNG · WEBP</span>
                 </div>
               )}
             </label>
           </div>
 
-          {hasAnySelection && (
+          {/* Summary */}
+          {hasAny && (
             <div className="modal-summary-box">
               <div className="modal-summary-title">Your selections</div>
               <div className="modal-summary-tags">
-                {local.colour && <span className="modal-sum-tag">🎨 {local.colour}</span>}
-                {local.size && <span className="modal-sum-tag">📐 Size {local.size}</span>}
-                {local.personalMessage && <span className="modal-sum-tag">✉ Personal message</span>}
+                {local.colour              && <span className="modal-sum-tag">🎨 {local.colour}</span>}
+                {local.size                && <span className="modal-sum-tag">📐 Size {local.size}</span>}
+                {local.personalMessage     && <span className="modal-sum-tag">✉ Personal message</span>}
                 {local.uploadedImageBase64 && <span className="modal-sum-tag">📷 Photo added</span>}
               </div>
             </div>
           )}
         </div>
 
+        {/* Footer */}
         <div className="modal-footer">
-          <button className="modal-btn-skip" onClick={() => { onSave({}); onClose(); }}>Skip customisation</button>
+          {/* Skip button — only shown when onSkip is provided */}
+          {onSkip && (
+            <button className="modal-btn-skip" onClick={() => { onSkip(); onClose(); }}>
+              Skip customisation
+            </button>
+          )}
           <button className="modal-btn-save" onClick={() => { onSave(local); onClose(); }}>
-            {isAddFlow ? (
-              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Add to Hamper</>
-            ) : (
-              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes</>
-            )}
+            {isAddFlow
+              ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Add to Hamper</>
+              : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes</>
+            }
           </button>
         </div>
       </div>
@@ -1811,109 +379,26 @@ function ProductCustomiser({ product, variant, onSave, onClose, isAddFlow }: Cus
 }
 
 /* ─────────────────────────────────────────────────────────────
-   COMBO CARD — Card + Side Panel layout
-───────────────────────────────────────────────────────────── */
-interface ComboCardProps {
-  combo: PresetCombo;
-  selected: boolean;
-  onSelect: (id: string) => void;
-  productsByCategory: Record<string, ComboProduct[]>;
-  categoryLabels: Record<string, string>;
-  variants: Record<string, ProductVariant>;
-  onVariantChange: (productId: string, v: ProductVariant) => void;
-  onOpenPanel: (combo: PresetCombo, products: ComboProduct[]) => void;
-}
-
-function ComboCard({ combo, selected, onSelect, productsByCategory, categoryLabels, variants, onVariantChange, onOpenPanel }: ComboCardProps) {
-  const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
-
-  const hamperProducts: ComboProduct[] = useMemo(() => {
-    const seen = new Set<string>();
-    const result: ComboProduct[] = [];
-    combo.includedCategories.forEach(cat => {
-      (productsByCategory[cat] ?? []).forEach(p => {
-        if (!seen.has(p.id)) { seen.add(p.id); result.push(p); }
-      });
-    });
-    return result;
-  }, [combo, productsByCategory]);
-
-  const customisedCount = hamperProducts.filter(p =>
-    !!(variants[p.id]?.colour || variants[p.id]?.size || variants[p.id]?.personalMessage || variants[p.id]?.uploadedImageBase64)
-  ).length;
-
-  const handleClick = () => {
-    onSelect(combo.id);
-    onOpenPanel(combo, hamperProducts);
-  };
-
-  return (
-    <div className={`cc-card${selected ? ' cc-selected' : ''}`} onClick={handleClick}>
-      <div className="cc-img-area">
-        <img src={combo.image || '/images/hero.png'} alt={combo.name} />
-        <div className="cc-img-grad" />
-        {pct > 0 && <span className="cc-pct-badge">{pct}% off</span>}
-        {combo.badge && <span className="cc-label-badge">{combo.badge}</span>}
-        {selected && (
-          <div className="cc-selected-check">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-        )}
-        <div className="cc-img-text">
-          <div className="cc-img-name">{combo.name}</div>
-          <div className="cc-img-tagline">{combo.tagline}</div>
-        </div>
-      </div>
-      <div className="cc-color-strip" style={{ background: combo.tint }} />
-      <div className="cc-foot">
-        <div className="cc-price-row">
-          <span className="cc-price">₹{combo.price.toLocaleString('en-IN')}</span>
-          {combo.originalPrice > combo.price && (
-            <span className="cc-original">₹{combo.originalPrice.toLocaleString('en-IN')}</span>
-          )}
-          {pct > 0 && <span className="cc-save-tag">Save {pct}%</span>}
-        </div>
-        <div className="cc-pieces-count">
-          {hamperProducts.length} pieces
-          {customisedCount > 0 && <span className="cc-cust-dot"> · {customisedCount} customised</span>}
-        </div>
-        <div className="cc-cta-hint">
-          {selected ? '✦ Selected — tap to view pieces' : 'Tap to select & view pieces →'}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   SIDE PANEL — slides in from right on desktop, bottom sheet on mobile
+   PRESET SIDE PANEL
 ───────────────────────────────────────────────────────────── */
 interface SidePanelProps {
-  combo: PresetCombo | null;
-  products: ComboProduct[];
+  combo: PresetCombo;
   variants: Record<string, ProductVariant>;
-  onVariantChange: (productId: string, v: ProductVariant) => void;
-  categoryLabels: Record<string, string>;
+  onVariantChange: (pid: string, v: ProductVariant) => void;
   onClose: () => void;
+  gender?: string;
 }
 
-function SidePanel({ combo, products, variants, onVariantChange, categoryLabels, onClose }: SidePanelProps) {
+function SidePanel({ combo, variants, onVariantChange, onClose, gender = 'women' }: SidePanelProps) {
   const [customising, setCustomising] = useState<ComboProduct | null>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx]     = useState(0);
 
-  useEffect(() => { setActiveIdx(0); }, [combo?.id]);
-
-  if (!combo) return null;
-
-  const customisedCount = products.filter(p =>
-    !!(variants[p.id]?.colour || variants[p.id]?.size || variants[p.id]?.personalMessage || variants[p.id]?.uploadedImageBase64)
-  ).length;
+  const products = combo.includedProducts;
+  const customisedCount = products.filter(p => hasCustomisation(variants[p.id] || {})).length;
 
   const activeProduct = products[activeIdx];
   const activeVariant = activeProduct ? (variants[activeProduct.id] || {}) : {};
-  const hasActiveCust = !!(activeVariant.colour || activeVariant.size || activeVariant.personalMessage || activeVariant.uploadedImageBase64);
+  const hasActiveCust = hasCustomisation(activeVariant);
 
   return (
     <>
@@ -1927,7 +412,8 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
       )}
       <div className="panel-backdrop" onClick={e => e.target === e.currentTarget && onClose()} />
       <div className="side-panel">
-        {/* Panel header */}
+
+        {/* Header */}
         <div className="panel-head">
           <div>
             <div className="panel-eyebrow">Pieces in this set</div>
@@ -1935,7 +421,7 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
           </div>
           <div className="panel-head-right">
             <span className="panel-prog">{customisedCount}/{products.length} done</span>
-            <button className="panel-close" onClick={onClose} aria-label="Close panel">
+            <button className="panel-close" onClick={onClose} aria-label="Close">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -1946,28 +432,26 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
         {/* Thumbnail strip */}
         <div className="panel-thumbs">
           {products.map((p, i) => {
-            const v = variants[p.id] || {};
-            const done = !!(v.colour || v.size || v.personalMessage || v.uploadedImageBase64);
+            const done = hasCustomisation(variants[p.id] || {});
             return (
-              <button key={p.id} className={`panel-thumb${activeIdx === i ? ' active' : ''}${done ? ' done' : ''}`}
+              <button key={p.id}
+                className={`panel-thumb${activeIdx === i ? ' active' : ''}${done ? ' done' : ''}`}
                 onClick={() => setActiveIdx(i)}>
-                <img src={p.image || '/images/hero.png'} alt={p.name} />
+                <img src={p.image} alt={p.name} />
                 {done && <span className="panel-thumb-check">✓</span>}
               </button>
             );
           })}
         </div>
 
-        {/* Active product detail */}
+        {/* Active product */}
         {activeProduct && (
           <div className="panel-detail">
             <div className="panel-detail-img">
-              <a
-                href={`/products/${activeProduct.id}?fromCombo=true`}
-                className="panel-detail-img-link"
-                onClick={e => e.stopPropagation()}
-              >
-                <img src={activeProduct.image || '/images/hero.png'} alt={activeProduct.name} />
+              {/* ── CHANGE 1: Clicking the product image/name opens PDP with ?fromCombo=true ── */}
+              <a href={`/products/${activeProduct.id}?fromCombo=true`} className="panel-detail-img-link"
+                onClick={e => e.stopPropagation()}>
+                <img src={activeProduct.image} alt={activeProduct.name} />
                 <div className="panel-detail-img-overlay">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -1976,18 +460,17 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
               </a>
             </div>
             <div className="panel-detail-info">
-              <a
-                href={`/products/${activeProduct.id}?fromCombo=true`}
-                className="panel-detail-name-link"
-                onClick={e => e.stopPropagation()}
-              >
+              <a href={`/products/${activeProduct.id}?fromCombo=true`} className="panel-detail-name-link"
+                onClick={e => e.stopPropagation()}>
                 <div className="panel-detail-name">{activeProduct.name}</div>
               </a>
               <div className="panel-detail-price">₹{activeProduct.price.toLocaleString('en-IN')}</div>
+
+              {/* ── CHANGE 3: Show customisation summary inside panel ── */}
               {hasActiveCust && (
-                <div className="panel-detail-tags">
-                  {activeVariant.colour && <span className="panel-tag">🎨 {activeVariant.colour}</span>}
-                  {activeVariant.size && <span className="panel-tag">📐 {activeVariant.size}</span>}
+                <div className="panel-cust-summary">
+                  {activeVariant.colour          && <span className="panel-tag">🎨 {activeVariant.colour}</span>}
+                  {activeVariant.size            && <span className="panel-tag">📐 {activeVariant.size}</span>}
                   {activeVariant.personalMessage && <span className="panel-tag">✉ Msg</span>}
                   {activeVariant.uploadedImageBase64 && <span className="panel-tag">📷</span>}
                 </div>
@@ -1999,16 +482,12 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
           </div>
         )}
 
-        {/* Nav arrows */}
+        {/* Nav */}
         {products.length > 1 && (
           <div className="panel-nav">
-            <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.max(0, i - 1))} disabled={activeIdx === 0}>
-              ← Prev
-            </button>
+            <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.max(0, i - 1))} disabled={activeIdx === 0}>← Prev</button>
             <span className="panel-nav-count">{activeIdx + 1} / {products.length}</span>
-            <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.min(products.length - 1, i + 1))} disabled={activeIdx === products.length - 1}>
-              Next →
-            </button>
+            <button className="panel-nav-btn" onClick={() => setActiveIdx(i => Math.min(products.length - 1, i + 1))} disabled={activeIdx === products.length - 1}>Next →</button>
           </div>
         )}
 
@@ -2021,128 +500,465 @@ function SidePanel({ combo, products, variants, onVariantChange, categoryLabels,
 }
 
 /* ─────────────────────────────────────────────────────────────
-   CUSTOM PRODUCT CARD
-   Image and name link to PDP with ?fromCombo=true.
-   Add/remove/customise buttons work independently.
+   SLOT PANEL  (Build Your Own picker)
+   
+   CHANGE 2: When user taps "+ Add" on a product, instead of
+   immediately adding it, we open the customisation modal first.
+   After saving (or skipping), the product is added.
 ───────────────────────────────────────────────────────────── */
-interface CustomProdCardProps {
-  product: ComboProduct;
-  inHamper: boolean;
-  variant: ProductVariant;
-  onAdd: () => void;
-  onRemove: () => void;
-  onEditCustomise: () => void;
+interface SlotPanelProps {
+  slot: CustomComboSlot;
+  selectedIds: string[];
+  variants: Record<string, ProductVariant>;
+  onToggle: (pid: string) => void;
+  onVariantChange: (pid: string, v: ProductVariant) => void;
+  onClose: () => void;
+  gender?: string;
 }
 
-function CustomProdCard({ product, inHamper, variant, onAdd, onRemove, onEditCustomise }: CustomProdCardProps) {
-  const hasCustomisation = !!(variant.colour || variant.size || variant.personalMessage || variant.uploadedImageBase64);
+function SlotPanel({ slot, selectedIds, variants, onToggle, onVariantChange, onClose, gender = 'women' }: SlotPanelProps) {
+  // The product currently being customised (in add-flow or edit-flow)
+  const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
+
+  const remaining        = slot.maxItems - selectedIds.length;
+  const selectedProducts = slot.allowedProducts.filter(p => selectedIds.includes(p.id));
+
+  /**
+   * CHANGE 2: Called when user taps "Add" on an un-selected product.
+   * Opens the customisation modal. After saving the modal, product is toggled in.
+   */
+  const handleAddWithCustomise = (product: ComboProduct) => {
+    setCustomising({ product, isAddFlow: true });
+  };
+
+  /** Called when user saves the customiser in add-flow: saves variant then adds product */
+  const handleCustomiserSave = (v: ProductVariant) => {
+    if (!customising) return;
+    onVariantChange(customising.product.id, v);
+    if (customising.isAddFlow) {
+      onToggle(customising.product.id); // add to selection
+    }
+    setCustomising(null);
+  };
+
+  /** Skip: add product without any customisation */
+  const handleCustomiserSkip = () => {
+    if (!customising || !customising.isAddFlow) return;
+    onVariantChange(customising.product.id, {}); // clear any previous
+    onToggle(customising.product.id);
+    setCustomising(null);
+  };
 
   return (
-    <div className={`cp-card${inHamper ? ' cp-in-hamper' : ''}`}>
-      <div className="cp-img">
-        {/*
-          Image links to PDP with ?fromCombo=true so PDP hides
-          Add to Cart / Buy Now / Complete the Look for combo-context visits.
-          The cp-img-toggle (transparent full-area button) handles add/remove;
-          the link occupies the same space but sits beneath via z-index layering.
-          We use pointer-events on the link so the toggle still captures taps
-          on the non-link area, but the link itself is clickable.
-        */}
-        <a
-          href={`/products/${product.id}?fromCombo=true`}
-          className="cp-img-link"
-          onClick={e => e.stopPropagation()}
-        >
-          <img src={product.image || '/images/hero.png'} alt={product.name} />
-        </a>
-        {/* Green check overlay + add/remove tap area — sits above the link */}
-        <button
-          className="cp-img-toggle"
-          onClick={inHamper ? onRemove : onAdd}
-          aria-label={inHamper ? 'Remove from hamper' : 'Add to hamper'}
-        >
-          {inHamper && (
-            <div className="cp-in-overlay">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+    <>
+      {customising && (
+        <ProductCustomiser
+          product={customising.product}
+          variant={variants[customising.product.id] || {}}
+          onSave={handleCustomiserSave}
+          onSkip={customising.isAddFlow ? handleCustomiserSkip : undefined}
+          onClose={() => setCustomising(null)}
+          isAddFlow={customising.isAddFlow}
+          hidePrice
+        />
+      )}
+      <div className="panel-backdrop" onClick={e => e.target === e.currentTarget && onClose()} />
+      <div className="side-panel">
+
+        {/* Header */}
+        <div className="panel-head">
+          <div>
+            <div className="panel-eyebrow">{slot.name}</div>
+            <div className="panel-title">Pick Your Pieces</div>
+          </div>
+          <div className="panel-head-right">
+            <span className={`panel-prog${remaining === 0 ? ' done-prog' : ''}`}>
+              {selectedIds.length}/{slot.maxItems} chosen
+            </span>
+            <button className="panel-close" onClick={onClose} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="slot-progress-wrap">
+          <div className="slot-progress-bar" style={{ width: `${(selectedIds.length / slot.maxItems) * 100}%` }} />
+        </div>
+        <div className={`slot-hint${remaining === 0 ? ' slot-hint-done' : ''}`}>
+          {remaining > 0
+            ? `Choose ${remaining} more piece${remaining !== 1 ? 's' : ''} — you can customise each one as you add it`
+            : "✓ All pieces selected! Tap any piece below to edit or re-customise."}
+        </div>
+
+        {/* Product grid */}
+        <div className="slot-prod-scroll">
+          <div className="slot-prod-grid">
+            {slot.allowedProducts.map(p => {
+              const isChosen = selectedIds.includes(p.id);
+              const canAdd   = !isChosen && remaining > 0;
+              const v        = variants[p.id] || {};
+              const hasCust  = hasCustomisation(v);
+
+              return (
+                <div key={p.id} className={`sp-card${isChosen ? ' sp-chosen' : ''}${!canAdd && !isChosen ? ' sp-disabled' : ''}`}>
+                  <div className="sp-img">
+                    {/* ── CHANGE 1: Image links to PDP with ?fromCombo=true ── */}
+                    <a href={`/products/${p.id}?fromCombo=true`} className="sp-img-link" onClick={e => e.stopPropagation()}>
+                      <img src={p.image} alt={p.name} />
+                      <div className="sp-img-pdp-hint">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                      </div>
+                    </a>
+                    {/* Add / remove overlay — only toggles on chosen state; adding goes through customiser */}
+                    <button className="sp-img-toggle"
+                      onClick={() => isChosen && onToggle(p.id)}
+                      disabled={!isChosen}
+                      aria-label={isChosen ? 'Remove' : ''}>
+                      {isChosen && (
+                        <div className="sp-chosen-overlay">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  <div className="sp-body">
+                    {/* ── CHANGE 1: Name links to PDP with ?fromCombo=true ── */}
+                    <a href={`/products/${p.id}?fromCombo=true`} className="sp-name-link" onClick={e => e.stopPropagation()}>
+                      <div className="sp-name">{p.name}</div>
+                    </a>
+
+                    {isChosen ? (
+                      <div className="sp-actions">
+                        {/* ── CHANGE 3: Show customisation summary tags when chosen ── */}
+                        {hasCust && (
+                          <div className="sp-cust-summary">
+                            {v.colour && <span className="sp-tag">🎨 {v.colour}</span>}
+                            {v.size   && <span className="sp-tag">📐 {v.size}</span>}
+                            {v.personalMessage && <span className="sp-tag">✉ Msg</span>}
+                            {v.uploadedImageBase64 && <span className="sp-tag">📷</span>}
+                          </div>
+                        )}
+                        {!hasCust && (
+                          <div className="sp-no-cust-note">No customisation added</div>
+                        )}
+                        {/* Edit customisation */}
+                        <button className="sp-cust-btn"
+                          onClick={() => setCustomising({ product: p, isAddFlow: false })}>
+                          {hasCust ? '✎ Edit' : '+ Customise'}
+                        </button>
+                        <button className="sp-remove-btn" onClick={() => onToggle(p.id)}>Remove</button>
+                      </div>
+                    ) : (
+                      /* ── CHANGE 2: "+ Add" now opens customisation first ── */
+                      <button className="sp-add-btn"
+                        onClick={() => canAdd && handleAddWithCustomise(p)}
+                        disabled={!canAdd}>
+                        {canAdd ? '+ Add & Customise' : 'Limit reached'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected thumbs */}
+        {selectedProducts.length > 0 && (
+          <div className="slot-selected-strip">
+            <div className="slot-selected-label">
+              Selected ({selectedProducts.length}/{slot.maxItems})
+              {/* ── CHANGE 3: show how many are customised ── */}
+              {selectedProducts.filter(p => hasCustomisation(variants[p.id] || {})).length > 0 && (
+                <span className="slot-cust-count">
+                  · {selectedProducts.filter(p => hasCustomisation(variants[p.id] || {})).length} customised
+                </span>
+              )}
+            </div>
+            <div className="slot-selected-thumbs">
+              {selectedProducts.map(p => {
+                const isCust = hasCustomisation(variants[p.id] || {});
+                return (
+                  <div key={p.id} className={`slot-sel-thumb${isCust ? ' slot-sel-thumb-cust' : ''}`}
+                    title={p.name + (isCust ? ' (customised)' : '')}>
+                    <img src={p.image} alt={p.name} />
+                    {isCust && <span className="slot-sel-cust-dot">✦</span>}
+                    <button className="slot-sel-remove" onClick={() => onToggle(p.id)}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="slot-panel-footer">
+          <button className="slot-done-btn" onClick={onClose}>
+            {remaining === 0 ? '✓ Done — Close' : `Continue (${selectedIds.length}/${slot.maxItems})`}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PRESET COMBO CARD
+───────────────────────────────────────────────────────────── */
+interface ComboCardProps {
+  combo: PresetCombo;
+  selected: boolean;
+  onSelect: () => void;
+  variants: Record<string, ProductVariant>;
+  onOpenPanel: () => void;
+  onAddToCart: () => void;
+  cartAdded: boolean;
+}
+
+function ComboCard({ combo, selected, onSelect, variants, onOpenPanel, onAddToCart, cartAdded }: ComboCardProps) {
+  const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
+  const customisedCount = combo.includedProducts.filter(p => hasCustomisation(variants[p.id] || {})).length;
+
+  const handleClick = () => { onSelect(); onOpenPanel(); };
+
+  return (
+    <div className={`cc-card${selected ? ' cc-selected' : ''}`}>
+      <div className="cc-clickable" onClick={handleClick}>
+        <div className="cc-img-area">
+          <img src={combo.image} alt={combo.name} />
+          <div className="cc-img-grad" />
+          {pct > 0    && <span className="cc-pct-badge">{pct}% off</span>}
+          {combo.badge && <span className="cc-label-badge">{combo.badge}</span>}
+          {selected && (
+            <div className="cc-selected-check">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
           )}
-        </button>
-      </div>
-      <div className="cp-body">
-        {/* Name links to PDP with fromCombo param */}
-        <a
-          href={`/products/${product.id}?fromCombo=true`}
-          className="cp-name-link"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="cp-name">{product.name}</div>
-        </a>
-        <div className="cp-price">₹{product.price.toLocaleString('en-IN')}</div>
-        {inHamper ? (
-          <div className="cp-in-actions">
-            {hasCustomisation && (
-              <div className="cp-tag-row">
-                {variant.colour && <span className="cp-tag">{variant.colour}</span>}
-                {variant.size && <span className="cp-tag">{variant.size}</span>}
-              </div>
-            )}
-            <button className="cp-edit-btn" onClick={onEditCustomise}>
-              {hasCustomisation ? '✎ Edit' : '+ Customise'}
-            </button>
-            <button className="cp-remove-btn" onClick={onRemove}>Remove</button>
+          <div className="cc-img-text">
+            <div className="cc-img-name">{combo.name}</div>
+            <div className="cc-img-tagline">{combo.tagline}</div>
           </div>
-        ) : (
-          <button className="cp-add-btn" onClick={onAdd}>+ Add</button>
-        )}
+        </div>
+        <div className="cc-color-strip" style={{ background: combo.tint }} />
+        <div className="cc-foot">
+          <div className="cc-price-row">
+            <span className="cc-price">₹{combo.price.toLocaleString('en-IN')}</span>
+            <span className="cc-original">₹{combo.originalPrice.toLocaleString('en-IN')}</span>
+            {pct > 0 && <span className="cc-save-tag">Save {pct}%</span>}
+          </div>
+          <div className="cc-pieces-count">
+            {combo.includedProducts.length} pieces
+            {customisedCount > 0 && <span className="cc-cust-dot"> · {customisedCount} customised</span>}
+          </div>
+          <div className="cc-cta-hint">
+            {selected ? '✦ Selected — tap to view pieces' : 'Tap to select & view pieces →'}
+          </div>
+        </div>
       </div>
+
+      {/* Cart area — shown only when selected */}
+      {selected && (
+        <div className="cc-cart-area">
+          {combo.originalPrice > combo.price && (
+            <div className="cc-cart-saving">🎉 You save ₹{(combo.originalPrice - combo.price).toLocaleString('en-IN')}</div>
+          )}
+
+          {/* ── CHANGE 3: Show customisation summary before add-to-cart ── */}
+          {customisedCount > 0 && (
+            <div className="cc-cart-cust-note">
+              <span className="cc-cart-cust-icon">✦</span>
+              <span className="cc-cart-cust-text">
+                {customisedCount} of {combo.includedProducts.length} pieces customised
+              </span>
+              <div className="cc-cart-cust-pieces">
+                {combo.includedProducts
+                  .filter(p => hasCustomisation(variants[p.id] || {}))
+                  .map(p => {
+                    const v = variants[p.id] || {};
+                    return (
+                      <div key={p.id} className="cc-cart-cust-item">
+                        <img src={p.image} alt={p.name} className="cc-cart-cust-img" />
+                        <div className="cc-cart-cust-details">
+                          <div className="cc-cart-cust-name">{p.name}</div>
+                          <div className="cc-cart-cust-tags">
+                            {v.colour          && <span className="cc-mini-tag">🎨 {v.colour}</span>}
+                            {v.size            && <span className="cc-mini-tag">📐 {v.size}</span>}
+                            {v.personalMessage && <span className="cc-mini-tag">✉ Msg</span>}
+                            {v.uploadedImageBase64 && <span className="cc-mini-tag">📷 Photo</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          <div className="cc-cart-row">
+            <div className="cc-cart-total">
+              <span className="cc-cart-total-lbl">Total</span>
+              <span className="cc-cart-total-val">₹{combo.price.toLocaleString('en-IN')}</span>
+            </div>
+            {/* ── CHANGE 1: Only "Add to Cart" button, no text beside it ── */}
+            <button
+              className={`cc-cart-btn${cartAdded ? ' done' : ''}`}
+              onClick={e => { e.stopPropagation(); onAddToCart(); }}
+              aria-label={cartAdded ? 'Added to cart' : 'Add to cart'}
+            >
+              {cartAdded
+                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+              }
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   MOBILE SUMMARY DRAWER
+   CUSTOM SLOT CARD
 ───────────────────────────────────────────────────────────── */
-interface MobileSummaryProps {
-  totalPrice: number;
-  savings: number;
-  itemCount: number;
-  onOpen: () => void;
-  hasItems: boolean;
+interface CustomSlotCardProps {
+  slot: CustomComboSlot;
+  selectedIds: string[];
+  variants: Record<string, ProductVariant>;
+  onOpenPanel: () => void;
   onAddToCart: () => void;
   cartAdded: boolean;
 }
 
-function MobileSummaryBar({ totalPrice, savings, itemCount, onOpen, hasItems, onAddToCart, cartAdded }: MobileSummaryProps) {
-  return (
-    <div className="mobile-bar">
-      {/* Left info area — tappable to open summary sheet */}
-      <button className="mobile-bar-info" onClick={onOpen} disabled={!hasItems}>
-        {hasItems ? (
-          <>
-            <div className="mobile-bar-count">{itemCount} piece{itemCount !== 1 ? 's' : ''}</div>
-            <div className="mobile-bar-price">₹{totalPrice.toLocaleString('en-IN')}</div>
-            {savings > 0 && <div className="mobile-bar-save">Save ₹{savings.toLocaleString('en-IN')}</div>}
-            <div className="mobile-bar-view">View summary ▲</div>
-          </>
-        ) : (
-          <div className="mobile-bar-empty">Select pieces to begin</div>
-        )}
-      </button>
+function CustomSlotCard({ slot, selectedIds, variants, onOpenPanel, onAddToCart, cartAdded }: CustomSlotCardProps) {
+  const chosen  = selectedIds.length;
+  const isFull  = chosen >= slot.maxItems;
+  const customisedCount = slot.allowedProducts.filter(p =>
+    selectedIds.includes(p.id) && hasCustomisation(variants[p.id] || {})
+  ).length;
+  const chosenProducts = slot.allowedProducts.filter(p => selectedIds.includes(p.id));
 
-      {/*
-        FIX 1: Cart button is always rendered as a sibling to the info area,
-        never overflows or gets hidden behind safe-area / nav bars.
-        It has a fixed height and width so it is always fully visible.
-      */}
-      <button
-        className={`mobile-bar-cart${cartAdded ? ' done' : ''}`}
-        onClick={onAddToCart}
-        disabled={!hasItems}
-      >
-        {cartAdded ? '✓ Added!' : 'Add to Cart'}
-      </button>
+  return (
+    <div className={`cc-card${isFull ? ' cc-selected' : ''}`}>
+      <div className="cc-clickable" onClick={onOpenPanel}>
+        <div className="cc-img-area">
+          <img src={slot.image} alt={slot.name} />
+          <div className="cc-img-grad" />
+          {slot.badge && <span className="cc-label-badge">{slot.badge}</span>}
+          {isFull && (
+            <div className="cc-selected-check">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+          )}
+          {/* Mini thumbs of chosen pieces */}
+          {chosenProducts.length > 0 && (
+            <div className="cc-chosen-thumbs">
+              {chosenProducts.slice(0, 4).map(p => {
+                const isCust = hasCustomisation(variants[p.id] || {});
+                return (
+                  <div key={p.id} className="cc-chosen-thumb-wrap">
+                    <img src={p.image} alt={p.name} className="cc-chosen-thumb-img" />
+                    {isCust && <span className="cc-chosen-thumb-cust">✦</span>}
+                  </div>
+                );
+              })}
+              {chosenProducts.length > 4 && (
+                <div className="cc-chosen-thumb-more">+{chosenProducts.length - 4}</div>
+              )}
+            </div>
+          )}
+          <div className="cc-img-text">
+            <div className="cc-img-name">{slot.name}</div>
+            <div className="cc-img-tagline">{slot.tagline}</div>
+          </div>
+        </div>
+        <div className="cc-color-strip" style={{ background: slot.tint }} />
+        <div className="cc-foot">
+          <div className="cc-price-row">
+            <span className="cc-price">₹{slot.fixedPrice.toLocaleString('en-IN')}</span>
+            <span className="cc-slot-pick-label">Choose {slot.maxItems}</span>
+          </div>
+          {/* Progress bar */}
+          <div className="cc-slot-progress">
+            <div className="cc-slot-progress-track">
+              <div className="cc-slot-progress-fill" style={{ width: `${Math.min(100, (chosen / slot.maxItems) * 100)}%` }} />
+            </div>
+            <span className="cc-slot-progress-text">{chosen}/{slot.maxItems}</span>
+          </div>
+          {customisedCount > 0 && (
+            <div className="cc-pieces-count"><span className="cc-cust-dot">{customisedCount} customised</span></div>
+          )}
+          <div className="cc-cta-hint">
+            {isFull ? '✦ Complete — tap to edit' : `Tap to choose ${slot.maxItems - chosen} more →`}
+          </div>
+        </div>
+      </div>
+
+      {/* Cart area — shown once at least 1 item picked */}
+      {chosen > 0 && (
+        <div className="cc-cart-area">
+          {/* ── CHANGE 3: Customisation summary for slot card ── */}
+          {customisedCount > 0 && (
+            <div className="cc-cart-cust-note">
+              <span className="cc-cart-cust-icon">✦</span>
+              <span className="cc-cart-cust-text">
+                {customisedCount} of {chosen} pieces customised
+              </span>
+              <div className="cc-cart-cust-pieces">
+                {chosenProducts
+                  .filter(p => hasCustomisation(variants[p.id] || {}))
+                  .map(p => {
+                    const v = variants[p.id] || {};
+                    return (
+                      <div key={p.id} className="cc-cart-cust-item">
+                        <img src={p.image} alt={p.name} className="cc-cart-cust-img" />
+                        <div className="cc-cart-cust-details">
+                          <div className="cc-cart-cust-name">{p.name}</div>
+                          <div className="cc-cart-cust-tags">
+                            {v.colour          && <span className="cc-mini-tag">🎨 {v.colour}</span>}
+                            {v.size            && <span className="cc-mini-tag">📐 {v.size}</span>}
+                            {v.personalMessage && <span className="cc-mini-tag">✉ Msg</span>}
+                            {v.uploadedImageBase64 && <span className="cc-mini-tag">📷 Photo</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+          {customisedCount === 0 && chosen > 0 && (
+            <div className="cc-no-cust-note">No customisations added yet — tap the card to customise pieces</div>
+          )}
+
+          <div className="cc-cart-row">
+            <div className="cc-cart-total">
+              <span className="cc-cart-total-lbl">{isFull ? 'Ready' : `${chosen}/${slot.maxItems} picked`}</span>
+              <span className="cc-cart-total-val">₹{slot.fixedPrice.toLocaleString('en-IN')}</span>
+            </div>
+            {/* ── CHANGE 1: Icon-only add to cart button ── */}
+            <button
+              className={`cc-cart-btn${cartAdded ? ' done' : ''}${!isFull ? ' partial' : ''}`}
+              onClick={e => { e.stopPropagation(); onAddToCart(); }}
+              aria-label={cartAdded ? 'Added to cart' : 'Add to cart'}
+            >
+              {cartAdded
+                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+              }
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2151,805 +967,413 @@ function MobileSummaryBar({ totalPrice, savings, itemCount, onOpen, hasItems, on
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
 export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
-  const router = useRouter();
+  const router   = useRouter();
   const { addItem } = useCart();
 
   const [mode, setMode] = useState<'preset' | 'custom'>('preset');
 
-  const [selectedComboId, setSelectedComboId] = useState('');
-  const [presetVariants, setPresetVariants] = useState<Record<string, ProductVariant>>({});
+  // ── Preset state ──
+  const [selectedComboId, setSelectedComboId]   = useState<string>(PRESET_COMBOS[0].id);
+  const [presetVariants, setPresetVariants]      = useState<Record<string, ProductVariant>>({});
+  const [panelComboId, setPanelComboId]          = useState<string | null>(null);
+  const [presetCartAdded, setPresetCartAdded]    = useState<Record<string, boolean>>({});
 
-  // Side panel state
-  const [panelCombo, setPanelCombo] = useState<PresetCombo | null>(null);
-  const [panelProducts, setPanelProducts] = useState<ComboProduct[]>([]);
+  // ── Custom state ──
+  const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>(
+    () => Object.fromEntries(CUSTOM_SLOTS.map(s => [s.id, []]))
+  );
+  const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>(
+    () => Object.fromEntries(CUSTOM_SLOTS.map(s => [s.id, {}]))
+  );
+  const [openSlotId, setOpenSlotId]        = useState<string | null>(null);
+  const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
 
-  /*
-    In "Build Your Own" mode the category selector works like an
-    accordion / radio — clicking a pill opens ONLY that category's grid and
-    collapses any previously-open one.  We track a single `activeCategory`
-    string (null = none open) instead of a multi-select array.
-  */
-  const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null);
+  const panelCombo = PRESET_COMBOS.find(c => c.id === panelComboId) ?? null;
+  const openSlot   = CUSTOM_SLOTS.find(s => s.id === openSlotId) ?? null;
 
-  const [hamper, setHamper] = useState<Record<string, ProductVariant>>({});
-
-  const [pendingAdd, setPendingAdd] = useState<ComboProduct | null>(null);
-  const [editingProduct, setEditingProduct] = useState<ComboProduct | null>(null);
-
-  const [showMobileSummary, setShowMobileSummary] = useState(false);
-  const [cartAdded, setCartAdded] = useState(false);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [presetCombos, setPresetCombos] = useState<PresetCombo[]>([]);
-  const [customComboData, setCustomComboData] = useState<any>(null);
-  const [productsByCategory, setProductsByCategory] = useState<Record<string, ComboProduct[]>>({});
-  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({});
-  const [allCategories, setAllCategories] = useState<CategoryKey[]>([]);
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [combosRes, productsRes, categoriesRes] = await Promise.all([
-          apiRequest<{ success: boolean; combos: any[] }>('/combos'),
-          apiRequest<{ success: boolean; products: any[] }>('/products'),
-          apiRequest<{ success: boolean; categories: any[] }>('/categories'),
-        ]);
-
-        const catLabels: Record<string, string> = {};
-        categoriesRes.categories?.forEach((c: any) => { catLabels[c._id] = c.name; });
-        setCategoryLabels(catLabels);
-
-        const prods = productsRes.products || [];
-        const pByCat: Record<string, ComboProduct[]> = {};
-        prods.forEach((p: any) => {
-          if (!p.category) return;
-          const catId = typeof p.category === 'string' ? p.category : p.category._id;
-          if (!pByCat[catId]) pByCat[catId] = [];
-          pByCat[catId].push({
-            id: p._id, name: p.title, price: p.price || 0,
-            image: p.mainImage || p.images?.[0] || '',
-            customisable: !!p.isCustomisable,
-            availableColours: p.colours || [],
-            availableSizes: p.sizes || [],
-          });
-        });
-
-        const combos = combosRes.combos || [];
-        const curated = combos.filter((c: any) => c.type === 'curated');
-        const custom = combos.find((c: any) => c.type === 'custom');
-
-        const mappedPresets: PresetCombo[] = curated.map((c: any) => {
-          const includedCats: string[] = [];
-          const defaultSels: Record<string, string> = {};
-          c.slots?.forEach((s: any) => {
-            const catId = typeof s.category === 'string' ? s.category : s.category?._id;
-            if (!catId) return;
-            includedCats.push(catId);
-            const defId = typeof s.defaultProduct === 'string' ? s.defaultProduct : s.defaultProduct?._id;
-            if (defId) defaultSels[catId] = defId;
-            if (!pByCat[catId]) pByCat[catId] = [];
-            s.allowedProducts?.forEach((ap: any) => {
-              const apId = typeof ap === 'string' ? ap : ap?._id;
-              if (apId && !pByCat[catId].find((x: ComboProduct) => x.id === apId)) {
-                const prodInfo = prods.find((pr: any) => pr._id === apId) || (typeof ap !== 'string' ? ap : null);
-                if (prodInfo) {
-                  pByCat[catId].push({
-                    id: prodInfo._id, name: prodInfo.title, price: prodInfo.price || 0,
-                    image: prodInfo.mainImage || prodInfo.images?.[0] || '',
-                    customisable: !!prodInfo.isCustomisable,
-                    availableColours: prodInfo.colours || [],
-                    availableSizes: prodInfo.sizes || [],
-                  });
-                }
-              }
-            });
-          });
-          return {
-            id: c._id, name: c.name, tagline: c.description || '',
-            price: c.price || 0, originalPrice: c.originalPrice || c.price || 0,
-            image: c.image || '', badge: c.badge || '', tint: c.tint || '#c8a84b',
-            includedCategories: includedCats, defaultSelections: defaultSels,
-          };
-        });
-
-        setProductsByCategory(pByCat);
-        setPresetCombos(mappedPresets);
-        if (mappedPresets.length > 0) setSelectedComboId(mappedPresets[0].id);
-
-        if (custom) {
-          setCustomComboData(custom);
-          const eligible = custom.categories?.map((c: any) => typeof c === 'string' ? c : c._id) || Object.keys(pByCat);
-          setAllCategories(eligible);
-          if (eligible.length > 0) setActiveCategory(eligible[0]);
-        } else {
-          const keys = Object.keys(pByCat);
-          setAllCategories(keys);
-          if (keys.length > 0) setActiveCategory(keys[0]);
-        }
-      } catch (e) {
-        console.error('Error loading combo data', e);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const selectedCombo = presetCombos.find(c => c.id === selectedComboId);
-  const hamperProductIds = Object.keys(hamper);
-
-  const categoriesWithHamperItems: CategoryKey[] = useMemo(() => {
-    return allCategories.filter(cat =>
-      (productsByCategory[cat] ?? []).some(p => hamperProductIds.includes(p.id))
-    );
-  }, [hamperProductIds, allCategories, productsByCategory]);
-
-  const customTotal = useMemo(() => {
-    return hamperProductIds.reduce((sum, pid) => {
-      for (const cat of allCategories) {
-        const p = (productsByCategory[cat] ?? []).find(x => x.id === pid);
-        if (p) return sum + p.price;
-      }
-      return sum;
-    }, 0);
-  }, [hamperProductIds, allCategories, productsByCategory]);
-
-  let customDiscount = 0;
-  if (mode === 'custom' && customComboData?.discountRules?.length > 0) {
-    const totalItems = hamperProductIds.length;
-    const rules = [...customComboData.discountRules].sort((a: any, b: any) =>
-      (b.minItems || 0) - (a.minItems || 0) || (b.minPrice || 0) - (a.minPrice || 0)
-    );
-    for (const rule of rules) {
-      if ((!rule.minItems || totalItems >= rule.minItems) && (!rule.minPrice || customTotal >= rule.minPrice)) {
-        customDiscount = customComboData.discountType === 'percentage'
-          ? (customTotal * (rule.discountValue || 0)) / 100
-          : rule.discountValue || 0;
-        break;
-      }
-    }
-  }
-
-  const presetTotal = selectedCombo?.price || 0;
-  const presetOriginal = selectedCombo?.originalPrice || presetTotal;
-  const totalPrice = mode === 'preset' ? presetTotal : Math.max(0, customTotal - customDiscount);
-  const savings = mode === 'preset' ? (presetOriginal - presetTotal) : customDiscount;
-
-  const presetSummaryItems = useMemo(() => {
-    if (!selectedCombo) return [];
-    const seen = new Set<string>();
-    const items: { p: ComboProduct; k: string }[] = [];
-    selectedCombo.includedCategories.forEach(k => {
-      (productsByCategory[k] ?? []).forEach(p => {
-        if (!seen.has(p.id)) { seen.add(p.id); items.push({ p, k }); }
-      });
-    });
-    return items;
-  }, [selectedCombo, productsByCategory]);
-
-  const customSummaryItems = useMemo(() => {
-    return categoriesWithHamperItems.flatMap(k =>
-      (productsByCategory[k] ?? []).filter(p => hamperProductIds.includes(p.id)).map(p => ({ k, p }))
-    );
-  }, [categoriesWithHamperItems, productsByCategory, hamperProductIds]);
-
-  const summaryItems = mode === 'preset' ? presetSummaryItems : customSummaryItems;
-  const hasItems = summaryItems.length > 0;
-
-  const buildCartItem = useCallback(() => {
-    if (!hasItems) return null;
-    return {
-      id: mode === 'preset' ? String(selectedCombo?.id || 'preset') : `custom-combo-${Date.now()}`,
-      name: mode === 'preset' ? (selectedCombo?.name || 'Curated Box') : 'Custom Jewellery Hamper',
-      price: totalPrice,
-      originalPrice: mode === 'preset' ? presetOriginal : customTotal,
-      image: mode === 'preset' ? (selectedCombo?.image || '') : (summaryItems[0]?.p?.image || ''),
+  // ── Preset cart ──
+  function handlePresetAddToCart(combo: PresetCombo) {
+    addItem({
+      id: combo.id,
+      name: combo.name,
+      price: combo.price,
+      originalPrice: combo.originalPrice,
+      image: combo.image,
       color: 'Default', colorHex: '#c9a84c',
-      sku: `COMBO-${mode.toUpperCase()}`,
+      sku: `COMBO-PRESET-${combo.id}`,
       href: `/categories/${gender}/curated-combos`,
-      selectionGroups: summaryItems.map(({ k, p }) => {
-        const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-        return {
-          category: k, label: categoryLabels[k] || k,
-          items: [{ id: String(p.id), name: p.name, price: p.price, image: p.image, quantity: 1,
-            colour: v.colour, size: v.size, personalMessage: v.personalMessage }],
-        };
-      }),
-    };
-  }, [hasItems, mode, selectedCombo, totalPrice, presetOriginal, customTotal, summaryItems, presetVariants, hamper, categoryLabels, gender]);
-
-  function handleAddToCart() {
-    const item = buildCartItem();
-    if (!item) return;
-    addItem(item);
-    setCartAdded(true);
-    setTimeout(() => setCartAdded(false), 1800);
+      selectionGroups: [{
+        category: 'preset', label: combo.name,
+        items: combo.includedProducts.map(p => {
+          const v = presetVariants[p.id] || {};
+          return {
+            id: p.id, name: p.name, price: p.price, image: p.image, quantity: 1,
+            colour: v.colour, size: v.size, personalMessage: v.personalMessage,
+            isCustomised: hasCustomisation(v),
+          };
+        }),
+      }],
+    });
+    setPresetCartAdded(prev => ({ ...prev, [combo.id]: true }));
+    setTimeout(() => setPresetCartAdded(prev => ({ ...prev, [combo.id]: false })), 1800);
   }
 
-  function handleBuyNow() {
-    const item = buildCartItem();
-    if (!item) return;
-    addItem(item, false);
-    router.push('/cart');
+  // ── Custom slot cart ──
+  function handleSlotToggle(slotId: string, pid: string) {
+    setSlotSelections(prev => {
+      const cur  = prev[slotId] || [];
+      const slot = CUSTOM_SLOTS.find(s => s.id === slotId)!;
+      if (cur.includes(pid)) return { ...prev, [slotId]: cur.filter(id => id !== pid) };
+      if (cur.length >= slot.maxItems) return prev;
+      return { ...prev, [slotId]: [...cur, pid] };
+    });
   }
 
-  function handleProductAdd(p: ComboProduct) { setPendingAdd(p); }
-  function handleProductRemove(productId: string) {
-    setHamper(prev => { const next = { ...prev }; delete next[productId]; return next; });
+  function handleSlotVariantChange(slotId: string, pid: string, v: ProductVariant) {
+    setSlotVariants(prev => ({ ...prev, [slotId]: { ...(prev[slotId] || {}), [pid]: v } }));
   }
 
-  function handleOpenPanel(combo: PresetCombo, products: ComboProduct[]) {
-    setPanelCombo(combo);
-    setPanelProducts(products);
+  function handleCustomAddToCart(slot: CustomComboSlot) {
+    const ids  = slotSelections[slot.id] || [];
+    const vars = slotVariants[slot.id]   || {};
+    if (!ids.length) return;
+    addItem({
+      id: `custom-slot-${slot.id}-${Date.now()}`,
+      name: slot.name,
+      price: slot.fixedPrice,
+      originalPrice: slot.fixedPrice,
+      image: slot.image,
+      color: 'Default', colorHex: '#c9a84c',
+      sku: `COMBO-CUSTOM-${slot.id}`,
+      href: `/categories/${gender}/curated-combos`,
+      selectionGroups: [{
+        category: slot.id, label: slot.name,
+        items: ids.map(pid => {
+          const p = slot.allowedProducts.find(x => x.id === pid)!;
+          const v = vars[pid] || {};
+          return {
+            id: pid, name: p.name, price: p.price, image: p.image, quantity: 1,
+            colour: v.colour, size: v.size, personalMessage: v.personalMessage,
+            isCustomised: hasCustomisation(v),
+          };
+        }),
+      }],
+    });
+    setCustomCartAdded(prev => ({ ...prev, [slot.id]: true }));
+    setTimeout(() => setCustomCartAdded(prev => ({ ...prev, [slot.id]: false })), 1800);
   }
 
-  function handleCategoryPillClick(cat: CategoryKey) {
-    setActiveCategory(prev => (prev === cat ? null : cat));
-  }
-
-  /* ─── RENDER ─── */
+  /* ── RENDER ── */
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
 
         :root {
-          --bg:        #f5f2eb;
-          --bg2:       #ede9df;
-          --surf:      #ffffff;
-          --bdr:       #e0d8c8;
-          --bdr2:      #c9bfa8;
-          --olive:     #3d5016;
-          --olive2:    #5a6e2b;
-          --olivedim:  #eef1e3;
-          --gold:      #b8982a;
-          --gold2:     #f0e4a0;
-          --golddim:   #fdf8e8;
-          --ink:       #1a1d0d;
-          --ink7:      rgba(26,29,13,.7);
-          --ink4:      rgba(26,29,13,.4);
-          --ink2:      rgba(26,29,13,.15);
-          --green:     #2a6030;
-          --sage:      #8a9e6a;
-          --red:       #c0392b;
-          --ffd:       'Cormorant Garamond', Georgia, serif;
-          --ffb:       'DM Sans', system-ui, sans-serif;
-          --r:         12px;
-          --rsm:       8px;
-          --shadow:    0 4px 24px rgba(26,29,13,.10);
-          --shadow-lg: 0 8px 40px rgba(26,29,13,.16);
+          --bg:       #f5f2eb;
+          --surf:     #ffffff;
+          --bdr:      #e0d8c8;
+          --bdr2:     #c9bfa8;
+          --olive:    #3d5016;
+          --olive2:   #5a6e2b;
+          --olivedim: #eef1e3;
+          --gold:     #b8982a;
+          --gold2:    #f0e4a0;
+          --golddim:  #fdf8e8;
+          --ink:      #1a1d0d;
+          --ink7:     rgba(26,29,13,.7);
+          --ink4:     rgba(26,29,13,.4);
+          --ink2:     rgba(26,29,13,.15);
+          --green:    #2a6030;
+          --sage:     #8a9e6a;
+          --red:      #c0392b;
+          --ffd:      'Cormorant Garamond', Georgia, serif;
+          --ffb:      'DM Sans', system-ui, sans-serif;
+          --shadow:   0 4px 24px rgba(26,29,13,.10);
+          --shadow-lg:0 8px 40px rgba(26,29,13,.16);
         }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { font-family: var(--ffb); background: var(--bg); color: var(--ink); }
-        button { font-family: var(--ffb); cursor: pointer; background: transparent; border: none; }
-        img { display: block; max-width: 100%; }
-        textarea { font-family: var(--ffb); }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        body{font-family:var(--ffb);background:var(--bg);color:var(--ink)}
+        button{font-family:var(--ffb);cursor:pointer;background:transparent;border:none}
+        img{display:block;max-width:100%}
+        textarea{font-family:var(--ffb)}
 
         /* ── MODAL ── */
-        .modal-backdrop {
-          position: fixed; inset: 0; z-index: 1000;
-          background: rgba(10,12,5,.55);
-          backdrop-filter: blur(8px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 16px;
-          animation: fadeIn .2s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .modal-box {
-          width: 100%; max-width: 520px;
-          max-height: calc(100dvh - 32px);
-          background: var(--surf);
-          border-radius: 16px;
-          overflow: hidden;
-          display: flex; flex-direction: column;
-          box-shadow: var(--shadow-lg);
-          animation: modalIn .28s cubic-bezier(.34,1.1,.64,1);
-        }
-        @keyframes modalIn {
-          from { opacity: 0; transform: scale(.94) translateY(16px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .modal-header {
-          display: flex; align-items: flex-start; justify-content: space-between;
-          padding: 18px 20px 14px;
-          background: linear-gradient(135deg, var(--olivedim) 0%, #ede9d8 100%);
-          border-bottom: 1px solid var(--bdr);
-          flex-shrink: 0;
-        }
-        .modal-header-text { flex: 1; min-width: 0; }
-        .modal-eyebrow {
-          display: block; font-size: 9px; font-weight: 700;
-          letter-spacing: .24em; text-transform: uppercase;
-          color: var(--sage); margin-bottom: 3px;
-        }
-        .modal-title { font-family: var(--ffd); font-size: 1.3rem; font-weight: 500; color: var(--olive); line-height: 1.2; }
-        .modal-close {
-          width: 34px; height: 34px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--ink4); background: rgba(255,255,255,.6);
-          transition: all .15s; flex-shrink: 0; margin-left: 12px;
-          border: 1px solid var(--bdr);
-        }
-        .modal-close:hover { background: #fff; color: var(--ink); }
-        .modal-product-strip {
-          display: flex; align-items: center; gap: 14px;
-          padding: 12px 20px; border-bottom: 1px solid var(--bdr);
-          background: #fafaf6; flex-shrink: 0;
-        }
-        .modal-product-img { width: 54px; height: 54px; border-radius: var(--rsm); object-fit: cover; border: 1px solid var(--bdr); flex-shrink: 0; }
-        .modal-product-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
-        .modal-product-price { font-size: 12px; color: var(--olive2); font-weight: 600; }
-        .modal-product-note { font-size: 10px; color: var(--ink4); margin-top: 3px; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 20px; }
-        .modal-body::-webkit-scrollbar { width: 3px; }
-        .modal-body::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 3px; }
-        .modal-field { display: flex; flex-direction: column; gap: 9px; }
-        .modal-field-label {
-          display: flex; align-items: center; gap: 8px;
-          font-size: 10px; font-weight: 700; letter-spacing: .15em;
-          text-transform: uppercase; color: var(--ink);
-        }
-        .modal-field-num {
-          width: 20px; height: 20px; border-radius: 50%;
-          background: var(--olive); color: #fff;
-          font-size: 9px; font-weight: 700;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .modal-field-optional { font-size: 8px; font-weight: 400; letter-spacing: .04em; text-transform: none; color: var(--ink4); padding: 2px 7px; border: 1px solid var(--bdr2); border-radius: 50px; }
-        .modal-selected-badge { font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: .03em; background: var(--olive); color: #fff; padding: 2px 9px; border-radius: 50px; margin-left: auto; }
-        .modal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-        .chip { font-size: 12px; font-weight: 500; padding: 8px 16px; border-radius: 6px; border: 1.5px solid var(--bdr2); color: var(--ink7); transition: all .18s; min-height: 38px; display: flex; align-items: center; }
-        .chip:hover { border-color: var(--olive2); color: var(--olive); background: var(--olivedim); }
-        .chip-on { background: var(--olive); color: #fff !important; border-color: var(--olive) !important; }
-        .chip-size { min-width: 50px; justify-content: center; }
-        .modal-textarea { width: 100%; border: 1.5px solid var(--bdr); border-radius: var(--rsm); padding: 10px 12px; font-size: 13px; color: var(--ink); background: var(--bg); outline: none; resize: none; line-height: 1.65; transition: border-color .2s; }
-        .modal-textarea:focus { border-color: var(--olive2); background: #fff; }
-        .modal-textarea::placeholder { color: var(--ink4); }
-        .modal-char-count { font-size: 10px; color: var(--ink4); text-align: right; }
-        .modal-upload-zone { display: block; border: 2px dashed var(--bdr2); border-radius: var(--rsm); cursor: pointer; transition: all .2s; overflow: hidden; }
-        .modal-upload-zone:hover { border-color: var(--olive2); background: var(--olivedim); }
-        .modal-upload-empty { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 24px 16px; color: var(--ink4); text-align: center; }
-        .modal-upload-cta { font-size: 13px; font-weight: 500; color: var(--olive); }
-        .modal-upload-sub { font-size: 10px; }
-        .modal-upload-preview { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--olivedim); }
-        .modal-upload-preview img { width: 52px; height: 52px; border-radius: 7px; object-fit: cover; }
-        .modal-upload-preview-name { font-size: 12px; font-weight: 600; color: var(--olive); display: block; }
-        .modal-upload-change { font-size: 10px; color: var(--ink4); display: block; margin-top: 2px; }
-        .modal-summary-box { background: var(--golddim); border: 1px solid rgba(184,152,42,.3); border-radius: var(--rsm); padding: 11px 14px; }
-        .modal-summary-title { font-size: 8.5px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); margin-bottom: 7px; }
-        .modal-summary-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-        .modal-sum-tag { font-size: 11px; font-weight: 500; color: #7a6010; background: rgba(255,255,255,.7); border: 1px solid rgba(184,152,42,.3); padding: 3px 9px; border-radius: 50px; }
-        .modal-footer { padding: 12px 20px 18px; border-top: 1px solid var(--bdr); display: flex; gap: 10px; flex-shrink: 0; background: #fafaf6; }
-        .modal-btn-skip { flex: 1; font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink4); border: 1.5px solid var(--bdr2); border-radius: 6px; padding: 12px 14px; transition: all .18s; min-height: 44px; }
-        .modal-btn-skip:hover { border-color: var(--ink4); color: var(--ink); }
-        .modal-btn-save { flex: 2; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff; background: var(--olive); border-radius: 6px; padding: 12px 18px; min-height: 44px; box-shadow: 0 4px 14px rgba(61,80,22,.25); transition: all .2s; }
-        .modal-btn-save:hover { background: #2e3c0e; transform: translateY(-1px); }
+        .modal-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(10,12,5,.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .modal-box{width:100%;max-width:520px;max-height:calc(100dvh - 32px);background:var(--surf);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:modalIn .28s cubic-bezier(.34,1.1,.64,1)}
+        @keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .modal-header{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 14px;background:linear-gradient(135deg,var(--olivedim),#ede9d8);border-bottom:1px solid var(--bdr);flex-shrink:0}
+        .modal-header-text{flex:1;min-width:0}
+        .modal-eyebrow{display:block;font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--sage);margin-bottom:3px}
+        .modal-title{font-family:var(--ffd);font-size:1.3rem;font-weight:500;color:var(--olive);line-height:1.2}
+        .modal-close{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink4);background:rgba(255,255,255,.6);transition:all .15s;flex-shrink:0;margin-left:12px;border:1px solid var(--bdr)}
+        .modal-close:hover{background:#fff;color:var(--ink)}
+        .modal-product-strip{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--bdr);background:#fafaf6;flex-shrink:0}
+        .modal-product-img{width:54px;height:54px;border-radius:4px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0}
+        .modal-product-name{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+        .modal-product-price{font-size:12px;color:var(--olive2);font-weight:600}
+        .modal-product-note{font-size:10px;color:var(--ink4);margin-top:3px}
+        .modal-body{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:20px}
+        .modal-body::-webkit-scrollbar{width:3px}
+        .modal-body::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+        .modal-field{display:flex;flex-direction:column;gap:9px}
+        .modal-field-label{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ink)}
+        .modal-field-num{width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .modal-field-optional{font-size:8px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--ink4);padding:2px 7px;border:1px solid var(--bdr2);border-radius:50px}
+        .modal-selected-badge{font-size:9px;font-weight:600;text-transform:none;letter-spacing:.03em;background:var(--olive);color:#fff;padding:2px 9px;border-radius:50px;margin-left:auto}
+        .modal-chips{display:flex;flex-wrap:wrap;gap:8px}
+        .chip{font-size:12px;font-weight:500;padding:8px 16px;border-radius:4px;border:1.5px solid var(--bdr2);color:var(--ink7);transition:all .18s;min-height:38px;display:flex;align-items:center}
+        .chip:hover{border-color:var(--olive2);color:var(--olive);background:var(--olivedim)}
+        .chip-on{background:var(--olive);color:#fff !important;border-color:var(--olive) !important}
+        .chip-size{min-width:50px;justify-content:center}
+        .modal-textarea{width:100%;border:1.5px solid var(--bdr);border-radius:4px;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--bg);outline:none;resize:none;line-height:1.65;transition:border-color .2s}
+        .modal-textarea:focus{border-color:var(--olive2);background:#fff}
+        .modal-textarea::placeholder{color:var(--ink4)}
+        .modal-char-count{font-size:10px;color:var(--ink4);text-align:right}
+        .modal-upload-zone{display:block;border:2px dashed var(--bdr2);border-radius:4px;cursor:pointer;transition:all .2s;overflow:hidden}
+        .modal-upload-zone:hover{border-color:var(--olive2);background:var(--olivedim)}
+        .modal-upload-empty{display:flex;flex-direction:column;align-items:center;gap:7px;padding:24px 16px;color:var(--ink4);text-align:center}
+        .modal-upload-cta{font-size:13px;font-weight:500;color:var(--olive)}
+        .modal-upload-sub{font-size:10px}
+        .modal-upload-preview{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--olivedim)}
+        .modal-upload-preview img{width:52px;height:52px;border-radius:7px;object-fit:cover}
+        .modal-upload-preview-name{font-size:12px;font-weight:600;color:var(--olive);display:block}
+        .modal-upload-change{font-size:10px;color:var(--ink4);display:block;margin-top:2px}
+        .modal-summary-box{background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:4px;padding:11px 14px}
+        .modal-summary-title{font-size:8.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+        .modal-summary-tags{display:flex;flex-wrap:wrap;gap:5px}
+        .modal-sum-tag{font-size:11px;font-weight:500;color:#7a6010;background:rgba(255,255,255,.7);border:1px solid rgba(184,152,42,.3);padding:3px 9px;border-radius:50px}
+        .modal-footer{padding:12px 20px 18px;border-top:1px solid var(--bdr);display:flex;gap:10px;flex-shrink:0;background:#fafaf6}
+        .modal-btn-skip{flex:1;font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);border:1.5px solid var(--bdr2);border-radius:4px;padding:12px 14px;transition:all .18s;min-height:44px}
+        .modal-btn-skip:hover{border-color:var(--ink4);color:var(--ink)}
+        .modal-btn-save{flex:2;display:flex;align-items:center;justify-content:center;gap:7px;font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:4px;padding:12px 18px;min-height:44px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s}
+        .modal-btn-save:hover{background:#2e3c0e;transform:translateY(-1px)}
 
-        /* ── PAGE SHELL ── */
-        .page { min-height: 100dvh; background: var(--bg); }
+        /* ── CUSTOMISATION BADGE (inline in cart/panel) ── */
+        .cust-badge{display:flex;align-items:flex-start;gap:5px;background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:4px;padding:6px 10px;margin-top:4px}
+        .cust-badge-icon{color:var(--gold);font-size:9px;flex-shrink:0;margin-top:1px}
+        .cust-badge-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);flex-shrink:0;margin-top:1px}
+        .cust-badge-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+        .cust-tag{font-size:9px;background:rgba(255,255,255,.8);border:1px solid rgba(184,152,42,.25);color:#7a6010;padding:2px 7px;border-radius:50px}
+
+        /* ── PAGE ── */
+        .page{min-height:100dvh;background:var(--bg)}
 
         /* ── HERO ── */
-        .hero {
-          margin-top: 56px;
-          padding: clamp(28px,4vw,52px) clamp(20px,6vw,72px) clamp(20px,3vw,36px);
-          background: linear-gradient(155deg, #f5f2eb 0%, #ede5d0 55%, #f5f2eb 100%);
-          border-bottom: 1px solid var(--bdr);
-          position: relative; overflow: hidden;
-        }
-        .hero::before { content: ''; position: absolute; right: -80px; top: -80px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(184,152,42,.1) 0%, transparent 68%); pointer-events: none; }
-        .hero-eyebrow { display: flex; align-items: center; gap: 10px; font-size: 8px; letter-spacing: .44em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 12px; }
-        .hero-line { width: 24px; height: 1px; background: var(--gold); opacity: .5; }
-        .hero h1 { font-family: var(--ffd); font-size: clamp(1.7rem, 5vw, 3.4rem); font-weight: 500; color: var(--olive); line-height: 1.08; margin-bottom: 10px; }
-        .hero h1 em { font-style: italic; color: var(--gold); }
-        .hero-desc { font-size: clamp(12px, 1.3vw, 13.5px); font-weight: 300; color: var(--ink7); max-width: 400px; line-height: 1.8; }
+        .hero{margin-top:56px;padding:clamp(28px,4vw,52px) clamp(20px,6vw,72px) clamp(20px,3vw,36px);background:linear-gradient(155deg,#f5f2eb 0%,#ede5d0 55%,#f5f2eb 100%);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden}
+        .hero::before{content:'';position:absolute;right:-80px;top:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(184,152,42,.1) 0%,transparent 68%);pointer-events:none}
+        .hero-eyebrow{display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px}
+        .hero-line{width:24px;height:1px;background:var(--gold);opacity:.5}
+        .hero h1{font-family:var(--ffd);font-size:clamp(1.7rem,5vw,3.4rem);font-weight:500;color:var(--olive);line-height:1.08;margin-bottom:10px}
+        .hero h1 em{font-style:italic;color:var(--gold)}
+        .hero-desc{font-size:clamp(12px,1.3vw,13.5px);font-weight:300;color:var(--ink7);max-width:400px;line-height:1.8}
 
         /* ── MODE BAR ── */
-        .modebar { padding: 18px clamp(20px,6vw,72px) 0; display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
-        .modetoggle { display: flex; background: var(--surf); border: 1.5px solid var(--bdr2); border-radius: 8px; padding: 4px; gap: 3px; box-shadow: var(--shadow); flex-shrink: 0; }
-        .modebtn { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; padding: clamp(8px,1.5vw,11px) clamp(14px,2.2vw,22px); border-radius: 6px; color: var(--ink7); transition: all .22s; min-height: 38px; }
-        .modebtn.on { background: var(--olive); color: #fff; box-shadow: 0 2px 10px rgba(61,80,22,.3); }
-        .modehint { font-size: 12px; font-weight: 300; color: var(--ink7); line-height: 1.75; max-width: 420px; padding-top: 10px; }
+        .modebar{padding:18px clamp(20px,6vw,72px) 0;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+        .modetoggle{display:flex;background:var(--surf);border:1.5px solid var(--bdr2);border-radius:4px;padding:4px;gap:3px;box-shadow:var(--shadow);flex-shrink:0}
+        .modebtn{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:clamp(8px,1.5vw,11px) clamp(14px,2.2vw,22px);border-radius:3px;color:var(--ink7);transition:all .22s;min-height:38px}
+        .modebtn.on{background:var(--olive);color:#fff;box-shadow:0 2px 10px rgba(61,80,22,.3)}
+        .modehint{font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;max-width:420px;padding-top:10px}
 
         /* ── LAYOUT ── */
-        .layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: clamp(18px,3vw,28px) clamp(20px,6vw,72px) 100px; align-items: start; }
-        @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+        .layout{padding:clamp(18px,3vw,28px) clamp(20px,6vw,72px) clamp(40px,5vw,60px)}
 
         /* ── SECTION LABEL ── */
-        .sec-label { font-size: 8px; letter-spacing: .42em; text-transform: uppercase; color: var(--ink4); font-weight: 600; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-        .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--bdr); }
+        .sec-label{font-size:8px;letter-spacing:.42em;text-transform:uppercase;color:var(--ink4);font-weight:600;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+        .sec-label::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
-        /* ── COMBO GRID ── */
-        .cgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        @media (max-width: 900px) { .cgrid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 420px) { .cgrid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
+        /* ── CARD GRID ── */
+        .cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+        @media(max-width:1024px){.cgrid{grid-template-columns:repeat(2,1fr);gap:14px}}
+        @media(max-width:600px){.cgrid{grid-template-columns:repeat(2,1fr);gap:10px}}
 
         /* ── COMBO CARD ── */
-        .cc-card {
-          background: var(--surf);
-          border: 1px solid var(--bdr);
-          cursor: pointer;
-          display: flex; flex-direction: column;
-          transition: all .2s cubic-bezier(.34,1.1,.64,1);
-          position: relative;
-          overflow: hidden;
-        }
-        .cc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--bdr2); }
-        .cc-card.cc-selected { border-color: var(--bdr); box-shadow: 0 4px 20px rgba(61,80,22,.15); }
+        .cc-card{background:var(--surf);border:1px solid var(--bdr);display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s cubic-bezier(.34,1.1,.64,1);overflow:hidden}
+        .cc-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--bdr2)}
+        .cc-card.cc-selected{border-color:var(--olive2);box-shadow:0 4px 20px rgba(61,80,22,.15)}
+        .cc-clickable{cursor:pointer;flex:1;display:flex;flex-direction:column}
+        .cc-img-area{position:relative;aspect-ratio:4/5;overflow:hidden}
+        .cc-img-area img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+        .cc-card:hover .cc-img-area img{transform:scale(1.06)}
+        .cc-img-grad{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 35%,rgba(0,0,0,.65) 100%)}
+        .cc-pct-badge{position:absolute;top:8px;right:8px;font-size:8px;font-weight:700;background:var(--olive);color:#fff;padding:3px 8px}
+        .cc-label-badge{position:absolute;top:8px;left:8px;font-size:7px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.93);backdrop-filter:blur(4px);color:var(--ink);padding:3px 8px}
+        .cc-selected-check{position:absolute;bottom:8px;right:8px;width:24px;height:24px;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;z-index:2}
+        .cc-img-text{position:absolute;bottom:0;left:0;right:0;padding:10px 11px}
+        .cc-img-name{font-family:var(--ffd);font-size:1rem;font-weight:500;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.4);line-height:1.2}
+        .cc-img-tagline{font-size:8px;color:rgba(255,255,255,.55);margin-top:1px}
 
-        .cc-img-area { position: relative; aspect-ratio: 4/5; overflow: hidden; }
-        .cc-img-area img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
-        .cc-card:hover .cc-img-area img { transform: scale(1.06); }
-        .cc-img-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,.65) 100%); }
-        .cc-pct-badge { position: absolute; top: 8px; right: 8px; font-size: 8px; font-weight: 700; background: var(--olive); color: #fff; padding: 3px 8px; }
-        .cc-label-badge { position: absolute; top: 8px; left: 8px; font-size: 7px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; background: rgba(255,255,255,.93); backdrop-filter: blur(4px); color: var(--ink); padding: 3px 8px; }
-        .cc-selected-check { position: absolute; bottom: 8px; right: 8px; width: 24px; height: 24px; background: var(--olive); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 2; }
-        .cc-img-text { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 11px; }
-        .cc-img-name { font-family: var(--ffd); font-size: 1rem; font-weight: 500; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.4); line-height: 1.2; }
-        .cc-img-tagline { font-size: 8px; color: rgba(255,255,255,.55); margin-top: 1px; }
-        .cc-color-strip { height: 2px; }
-        .cc-foot { padding: 10px 11px 11px; }
-        .cc-price-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
-        .cc-price { font-family: var(--ffd); font-size: 1rem; font-weight: 600; color: var(--ink); }
-        .cc-original { font-size: 9.5px; color: var(--ink4); text-decoration: line-through; }
-        .cc-save-tag { font-size: 8px; font-weight: 700; color: var(--green); background: rgba(42,96,48,.08); padding: 2px 6px; }
-        .cc-pieces-count { font-size: 9px; color: var(--ink4); margin-bottom: 4px; }
-        .cc-cust-dot { color: var(--olive2); }
-        .cc-cta-hint { font-size: 8.5px; color: var(--gold); font-weight: 600; letter-spacing: .03em; }
-        .cc-selected .cc-cta-hint { color: var(--olive); }
+        /* Chosen thumbs on slot card */
+        .cc-chosen-thumbs{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:3}
+        .cc-chosen-thumb-wrap{position:relative;width:28px;height:28px}
+        .cc-chosen-thumb-img{width:28px;height:28px;object-fit:cover;border:2px solid #fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+        .cc-chosen-thumb-cust{position:absolute;bottom:-2px;right:-2px;font-size:7px;color:var(--gold);background:#fff;border-radius:50%;width:11px;height:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+        .cc-chosen-thumb-more{width:28px;height:28px;background:var(--olive);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:3px}
+
+        .cc-color-strip{height:2px;flex-shrink:0}
+        .cc-foot{padding:10px 11px 11px}
+        .cc-price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;flex-wrap:wrap}
+        .cc-price{font-family:var(--ffd);font-size:1rem;font-weight:600;color:var(--ink)}
+        .cc-original{font-size:9.5px;color:var(--ink4);text-decoration:line-through}
+        .cc-save-tag{font-size:8px;font-weight:700;color:var(--green);background:rgba(42,96,48,.08);padding:2px 6px}
+        .cc-slot-pick-label{font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);padding:2px 8px;border-radius:50px}
+        .cc-slot-progress{display:flex;align-items:center;gap:8px;margin:5px 0 3px}
+        .cc-slot-progress-track{flex:1;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden}
+        .cc-slot-progress-fill{height:100%;background:var(--olive);border-radius:2px;transition:width .3s ease}
+        .cc-slot-progress-text{font-size:8.5px;font-weight:600;color:var(--olive2);white-space:nowrap}
+        .cc-pieces-count{font-size:9px;color:var(--ink4);margin-bottom:4px}
+        .cc-cust-dot{color:var(--olive2)}
+        .cc-cta-hint{font-size:8.5px;color:var(--gold);font-weight:600;letter-spacing:.03em}
+        .cc-selected .cc-cta-hint{color:var(--olive)}
+
+        /* Cart area on card */
+        .cc-cart-area{border-top:1px solid var(--bdr);padding:10px 11px 12px;background:#fafaf6;flex-shrink:0}
+        .cc-cart-saving{font-size:9px;color:var(--green);font-weight:500;margin-bottom:7px}
+        .cc-cart-row{display:flex;align-items:center;gap:8px}
+        .cc-cart-total{flex:1;min-width:0}
+        .cc-cart-total-lbl{display:block;font-size:7.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);margin-bottom:1px}
+        .cc-cart-total-val{font-family:var(--ffd);font-size:1.05rem;font-weight:600;color:var(--ink)}
+
+        /* ── CHANGE 1: Cart button is icon-only, fixed square ── */
+        .cc-cart-btn{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;border-radius:4px;background:var(--olive);color:#fff;box-shadow:0 3px 10px rgba(61,80,22,.25);transition:background .18s,transform .12s;cursor:pointer}
+        .cc-cart-btn:hover{background:#2e3c0e;transform:translateY(-1px)}
+        .cc-cart-btn.done{background:var(--green) !important}
+        .cc-cart-btn.partial{background:var(--olive2)}
+        .cc-cart-btn:active{transform:scale(.97)}
+
+        /* ── CHANGE 3: Customisation summary in cart area ── */
+        .cc-cart-cust-note{background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:4px;padding:8px 10px;margin-bottom:8px}
+        .cc-cart-cust-icon{color:var(--gold);font-size:9px}
+        .cc-cart-cust-text{font-size:9px;font-weight:700;color:#7a6010;letter-spacing:.06em;margin-left:4px}
+        .cc-cart-cust-pieces{margin-top:6px;display:flex;flex-direction:column;gap:5px}
+        .cc-cart-cust-item{display:flex;align-items:center;gap:7px}
+        .cc-cart-cust-img{width:28px;height:28px;object-fit:cover;border-radius:3px;border:1px solid var(--bdr);flex-shrink:0}
+        .cc-cart-cust-details{flex:1;min-width:0}
+        .cc-cart-cust-name{font-size:9px;font-weight:500;color:var(--ink);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .cc-cart-cust-tags{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+        .cc-mini-tag{font-size:8px;background:rgba(255,255,255,.8);border:1px solid rgba(184,152,42,.2);color:#7a6010;padding:1px 5px;border-radius:50px}
+        .cc-no-cust-note{font-size:9px;color:var(--ink4);margin-bottom:6px;padding:6px 8px;border:1px dashed var(--bdr2);border-radius:4px;text-align:center}
 
         /* ── PANEL BACKDROP ── */
-        .panel-backdrop {
-          position: fixed; inset: 0; z-index: 400;
-          background: rgba(10,12,5,.4);
-          backdrop-filter: blur(4px);
-          animation: fadeIn .2s ease;
-        }
+        .panel-backdrop{position:fixed;inset:0;z-index:400;background:rgba(10,12,5,.4);backdrop-filter:blur(4px);animation:fadeIn .2s ease}
 
         /* ── SIDE PANEL ── */
-        .side-panel {
-          position: fixed; top: 0; right: 0; bottom: 0; z-index: 401;
-          width: min(420px, 92vw);
-          background: var(--surf);
-          border-left: 1px solid var(--bdr);
-          display: flex; flex-direction: column;
-          box-shadow: -8px 0 40px rgba(26,29,13,.15);
-          animation: slideIn .28s cubic-bezier(.34,1.05,.64,1);
-          overflow: hidden;
+        .side-panel{position:fixed;top:0;right:0;bottom:0;z-index:401;width:min(460px,96vw);background:var(--surf);border-left:1px solid var(--bdr);display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(26,29,13,.15);animation:slideIn .28s cubic-bezier(.34,1.05,.64,1);overflow:hidden}
+        @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        @media(max-width:600px){
+          .side-panel{top:auto;right:0;left:0;bottom:0;width:100%;max-height:88dvh;border-left:none;border-top:1px solid var(--bdr);border-radius:16px 16px 0 0;animation:slideUp .28s cubic-bezier(.34,1.05,.64,1)}
+          @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .panel-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 14px;background:linear-gradient(135deg,var(--olivedim),#ede9d8);border-bottom:1px solid var(--bdr);flex-shrink:0}
+        .panel-eyebrow{font-size:8px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--sage);margin-bottom:3px;display:block}
+        .panel-title{font-family:var(--ffd);font-size:1.15rem;font-weight:500;color:var(--olive)}
+        .panel-head-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:12px}
+        .panel-prog{font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);border:1px solid rgba(90,110,43,.25);padding:3px 9px;white-space:nowrap}
+        .panel-prog.done-prog{color:var(--green);border-color:rgba(42,96,48,.3)}
+        .panel-close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink4);background:rgba(255,255,255,.6);border:1px solid var(--bdr);transition:all .15s}
+        .panel-close:hover{background:#fff;color:var(--ink)}
+        .panel-thumbs{display:flex;gap:8px;overflow-x:auto;padding:12px 16px;border-bottom:1px solid var(--bdr);flex-shrink:0;scroll-snap-type:x mandatory}
+        .panel-thumbs::-webkit-scrollbar{height:3px}
+        .panel-thumbs::-webkit-scrollbar-thumb{background:var(--bdr2)}
+        .panel-thumb{flex-shrink:0;width:56px;height:56px;position:relative;overflow:hidden;border:2px solid var(--bdr);cursor:pointer;transition:all .18s;scroll-snap-align:start;background:none;padding:0}
+        .panel-thumb img{width:100%;height:100%;object-fit:cover}
+        .panel-thumb:hover{border-color:var(--olive2)}
+        .panel-thumb.active{border-color:var(--olive)}
+        .panel-thumb.done{border-color:var(--gold)}
+        .panel-thumb-check{position:absolute;bottom:2px;right:2px;width:14px;height:14px;background:var(--gold);color:#fff;font-size:7px;font-weight:700;display:flex;align-items:center;justify-content:center}
+        .panel-detail{display:flex;gap:14px;padding:16px 18px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+        .panel-detail-img{width:90px;height:90px;flex-shrink:0;overflow:hidden;border:1px solid var(--bdr);position:relative}
+        .panel-detail-img-link{display:block;width:100%;height:100%;text-decoration:none}
+        .panel-detail-img-link img{width:100%;height:100%;object-fit:cover}
+        .panel-detail-img-overlay{position:absolute;inset:0;background:rgba(61,80,22,0);display:flex;align-items:center;justify-content:center;transition:background .2s}
+        .panel-detail-img-link:hover .panel-detail-img-overlay{background:rgba(61,80,22,.3)}
+        .panel-detail-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+        .panel-detail-name-link{text-decoration:none;color:inherit}
+        .panel-detail-name-link:hover .panel-detail-name{text-decoration:underline;text-decoration-color:var(--bdr2);text-underline-offset:3px}
+        .panel-detail-name{font-size:13px;font-weight:600;color:var(--ink);line-height:1.3}
+        .panel-detail-price{font-size:12px;font-weight:600;color:var(--olive2)}
+        .panel-cust-summary{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+        .panel-tag{font-size:9px;background:var(--golddim);color:#7a6010;padding:2px 7px;border:1px solid rgba(184,152,42,.25)}
+        .panel-customise-btn{margin-top:4px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);border:1.5px solid var(--olive2);padding:7px 12px;transition:all .18s;align-self:flex-start;min-height:32px}
+        .panel-customise-btn:hover{background:var(--olive);color:#fff}
+        .panel-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+        .panel-nav-btn{font-size:10px;font-weight:600;color:var(--olive);letter-spacing:.08em;padding:6px 14px;border:1.5px solid var(--bdr2);transition:all .18s;min-height:34px}
+        .panel-nav-btn:hover:not(:disabled){border-color:var(--olive);background:var(--olivedim)}
+        .panel-nav-btn:disabled{opacity:.35;cursor:default}
+        .panel-nav-count{font-size:10px;color:var(--ink4)}
+        .panel-tip{margin:12px 18px;padding:9px 13px;background:rgba(184,152,42,.08);font-size:9.5px;color:var(--olive2);text-align:center}
 
-        .panel-detail-img { width: 90px; height: 90px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--bdr); position: relative; }
-        .panel-detail-img-link { display: block; width: 100%; height: 100%; text-decoration: none; }
-        .panel-detail-img-link img { width: 100%; height: 100%; object-fit: cover; }
-        .panel-detail-img-overlay {
-          position: absolute; inset: 0;
-          background: rgba(61,80,22,0);
-          display: flex; align-items: center; justify-content: center;
-          transition: background .2s;
-        }
-        .panel-detail-img-link:hover .panel-detail-img-overlay { background: rgba(61,80,22,0.3); }
-        .panel-detail-name-link { text-decoration: none; color: inherit; }
-        .panel-detail-name-link:hover .panel-detail-name {
-          text-decoration: underline;
-          text-decoration-color: var(--bdr2);
-          text-underline-offset: 3px;
-        }
+        /* ── SLOT PANEL ── */
+        .slot-progress-wrap{height:3px;background:var(--bdr);flex-shrink:0}
+        .slot-progress-bar{height:100%;background:var(--olive);transition:width .3s ease}
+        .slot-hint{font-size:10px;color:var(--olive2);font-weight:500;padding:8px 18px;background:var(--olivedim);flex-shrink:0;border-bottom:1px solid var(--bdr);line-height:1.5}
+        .slot-hint.slot-hint-done{color:var(--green);background:rgba(42,96,48,.06)}
+        .slot-prod-scroll{flex:1;overflow-y:auto}
+        .slot-prod-scroll::-webkit-scrollbar{width:3px}
+        .slot-prod-scroll::-webkit-scrollbar-thumb{background:var(--bdr2)}
+        .slot-prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:12px 14px 14px}
+        @media(max-width:600px){.slot-prod-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:10px 12px}}
+        @media(max-width:380px){.slot-prod-grid{grid-template-columns:repeat(2,1fr);gap:6px;padding:8px 10px}}
 
-        @media (max-width: 600px) {
-          .side-panel {
-            top: auto; right: 0; left: 0; bottom: 0;
-            width: 100%; max-height: 82dvh;
-            border-left: none; border-top: 1px solid var(--bdr);
-            border-radius: 16px 16px 0 0;
-            animation: slideUp .28s cubic-bezier(.34,1.05,.64,1);
-          }
-          @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        }
+        .sp-card{background:var(--surf);border:1.5px solid var(--bdr);display:flex;flex-direction:column;transition:all .2s}
+        .sp-card:hover:not(.sp-disabled){border-color:var(--olive2);transform:translateY(-2px);box-shadow:0 6px 16px rgba(26,29,13,.09)}
+        .sp-chosen{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,152,42,.15)}
+        .sp-disabled{opacity:.45}
+        .sp-img{position:relative;aspect-ratio:4/5;overflow:hidden}
+        .sp-img-link{display:block;width:100%;height:100%;text-decoration:none;position:relative;z-index:0}
+        .sp-img-link img{width:100%;height:100%;object-fit:cover;transition:transform .3s;display:block}
+        .sp-card:hover:not(.sp-disabled) .sp-img-link img{transform:scale(1.05)}
+        .sp-img-pdp-hint{position:absolute;bottom:4px;right:4px;width:20px;height:20px;background:rgba(61,80,22,.7);display:flex;align-items:center;justify-content:center;border-radius:2px;opacity:0;transition:opacity .2s}
+        .sp-img-link:hover .sp-img-pdp-hint{opacity:1}
+        .sp-img-toggle{position:absolute;inset:0;width:100%;height:100%;background:transparent;border:none;cursor:pointer;padding:0;z-index:1}
+        .sp-img-toggle:disabled{cursor:default}
+        .sp-chosen-overlay{position:absolute;inset:0;background:rgba(61,80,22,.4);display:flex;align-items:center;justify-content:center;pointer-events:none}
+        .sp-body{padding:6px 8px 8px;display:flex;flex-direction:column;gap:3px}
+        .sp-name-link{text-decoration:none;color:inherit}
+        .sp-name-link:hover .sp-name{color:var(--olive);text-decoration:underline;text-decoration-color:var(--bdr2);text-underline-offset:2px}
+        .sp-name{font-size:10px;font-weight:500;color:var(--ink);line-height:1.3}
 
-        .panel-head {
-          display: flex; align-items: flex-start; justify-content: space-between;
-          padding: 16px 18px 14px;
-          background: linear-gradient(135deg, var(--olivedim) 0%, #ede9d8 100%);
-          border-bottom: 1px solid var(--bdr);
-          flex-shrink: 0;
-        }
-        .panel-eyebrow { font-size: 8px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--sage); margin-bottom: 3px; display: block; }
-        .panel-title { font-family: var(--ffd); font-size: 1.15rem; font-weight: 500; color: var(--olive); }
-        .panel-head-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: 12px; }
-        .panel-prog { font-size: 9px; font-weight: 600; color: var(--olive2); background: var(--olivedim); border: 1px solid rgba(90,110,43,.25); padding: 3px 9px; white-space: nowrap; }
-        .panel-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink4); background: rgba(255,255,255,.6); border: 1px solid var(--bdr); transition: all .15s; }
-        .panel-close:hover { background: #fff; color: var(--ink); }
+        /* ── CHANGE 3: Customisation summary in slot product card ── */
+        .sp-cust-summary{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px}
+        .sp-tag{font-size:7.5px;background:var(--golddim);color:#7a6010;padding:1px 5px;border:1px solid rgba(184,152,42,.25);border-radius:50px}
+        .sp-no-cust-note{font-size:8px;color:var(--ink4);font-style:italic;margin-bottom:2px}
 
-        .panel-thumbs {
-          display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px;
-          border-bottom: 1px solid var(--bdr); flex-shrink: 0;
-          scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-        }
-        .panel-thumbs::-webkit-scrollbar { height: 3px; }
-        .panel-thumbs::-webkit-scrollbar-thumb { background: var(--bdr2); }
-        .panel-thumb {
-          flex-shrink: 0; width: 56px; height: 56px;
-          position: relative; overflow: hidden;
-          border: 2px solid var(--bdr); cursor: pointer;
-          transition: all .18s; scroll-snap-align: start; background: none; padding: 0;
-        }
-        .panel-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .panel-thumb:hover { border-color: var(--olive2); }
-        .panel-thumb.active { border-color: var(--olive); }
-        .panel-thumb.done { border-color: var(--gold); }
-        .panel-thumb-check {
-          position: absolute; bottom: 2px; right: 2px;
-          width: 14px; height: 14px; background: var(--gold); color: #fff;
-          font-size: 7px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-        }
+        .sp-actions{display:flex;flex-direction:column;gap:3px}
+        .sp-cust-btn{font-size:7.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--olive);border:1.5px solid var(--olive2);padding:4px 0;min-height:24px;transition:all .18s}
+        .sp-cust-btn:hover{background:var(--olive);color:#fff}
+        .sp-remove-btn{font-size:7.5px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--ink4);border:1px solid var(--bdr2);padding:3px 0;min-height:22px;transition:all .18s}
+        .sp-remove-btn:hover{color:var(--red);border-color:var(--red)}
 
-        .panel-detail {
-          display: flex; gap: 14px; padding: 16px 18px;
-          border-bottom: 1px solid var(--bdr); flex-shrink: 0;
-        }
-        .panel-detail-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-        .panel-detail-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
-        .panel-detail-price { font-size: 12px; font-weight: 600; color: var(--olive2); }
-        .panel-detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-        .panel-tag { font-size: 9px; background: var(--golddim); color: #7a6010; padding: 2px 7px; border: 1px solid rgba(184,152,42,.25); }
-        .panel-customise-btn {
-          margin-top: 4px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-          color: var(--olive); border: 1.5px solid var(--olive2); padding: 7px 12px;
-          transition: all .18s; align-self: flex-start; min-height: 32px;
-        }
-        .panel-customise-btn:hover { background: var(--olive); color: #fff; }
-
-        .panel-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid var(--bdr); flex-shrink: 0; }
-        .panel-nav-btn { font-size: 10px; font-weight: 600; color: var(--olive); letter-spacing: .08em; padding: 6px 14px; border: 1.5px solid var(--bdr2); transition: all .18s; min-height: 34px; }
-        .panel-nav-btn:hover:not(:disabled) { border-color: var(--olive); background: var(--olivedim); }
-        .panel-nav-btn:disabled { opacity: .35; cursor: default; }
-        .panel-nav-count { font-size: 10px; color: var(--ink4); }
-        .panel-tip { margin: 12px 18px; padding: 9px 13px; background: rgba(184,152,42,.08); font-size: 9.5px; color: var(--olive2); text-align: center; }
-
-        /* ── CUSTOM PRODUCT CARD ── */
-        .cp-card { background: var(--surf); border: 1.5px solid var(--bdr); overflow: hidden; display: flex; flex-direction: column; transition: all .2s; }
-        .cp-card:hover { border-color: var(--olive2); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26,29,13,.09); }
-        .cp-in-hamper { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(184,152,42,.15); }
-        .cp-img { position: relative; aspect-ratio: 1; overflow: hidden; }
-        .cp-img-link { display: block; width: 100%; height: 100%; text-decoration: none; z-index: 0; position: relative; }
-        .cp-img-link img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; display: block; }
-        .cp-card:hover .cp-img-link img { transform: scale(1.05); }
-        /*
-          The toggle button sits above the image link (z-index: 1).
-          It is transparent so the image is visible through it.
-          We carve out a small bottom-right corner so the PDP link is
-          accessible by long-pressing / right-clicking on the image;
-          for normal taps the toggle fires add/remove.
-        */
-        .cp-img-toggle {
-          position: absolute; inset: 0; width: 100%; height: 100%;
-          background: transparent; border: none; cursor: pointer; padding: 0; z-index: 1;
-        }
-        .cp-in-overlay { position: absolute; inset: 0; background: rgba(61,80,22,.4); display: flex; align-items: center; justify-content: center; pointer-events: none; }
-        .cp-body { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
-        .cp-name-link { text-decoration: none; color: inherit; }
-        .cp-name-link:hover .cp-name { color: var(--olive); text-decoration: underline; text-decoration-color: var(--bdr2); text-underline-offset: 2px; }
-        .cp-name { font-size: 9.5px; font-weight: 500; color: var(--ink); line-height: 1.3; }
-        .cp-price { font-size: 9.5px; font-weight: 600; color: var(--olive2); }
-        .cp-in-actions { display: flex; flex-direction: column; gap: 3px; }
-        .cp-tag-row { display: flex; flex-wrap: wrap; gap: 3px; }
-        .cp-tag { font-size: 7.5px; background: var(--golddim); color: #7a6010; padding: 1px 5px; border: 1px solid rgba(184,152,42,.25); }
-        .cp-edit-btn { font-size: 7.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--olive); border: 1.5px solid var(--olive2); padding: 4px 0; min-height: 26px; transition: all .18s; }
-        .cp-edit-btn:hover { background: var(--olive); color: #fff; }
-        .cp-remove-btn { font-size: 7.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--ink4); border: 1px solid var(--bdr2); padding: 3px 0; min-height: 24px; transition: all .18s; }
-        .cp-remove-btn:hover { color: var(--red); border-color: var(--red); }
-        .cp-add-btn { font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); border: 1.5px solid var(--bdr2); padding: 5px 0; min-height: 28px; transition: all .18s; margin-top: 2px; }
-        .cp-add-btn:hover { background: var(--olive); color: #fff; border-color: var(--olive); }
-
-        /* ── HAMPER STATUS ── */
-        .hamper-status { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, var(--olive), var(--olive2)); color: #fff; padding: 12px 16px; margin-bottom: 18px; }
-        .hamper-status-left strong { font-family: var(--ffd); font-size: 1.1rem; }
-        .hamper-status-left span { font-size: 9.5px; opacity: .7; letter-spacing: .04em; display: block; margin-top: 1px; }
-        .hamper-clear { font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.3); padding: 6px 12px; transition: all .18s; min-height: 32px; }
-        .hamper-clear:hover { background: rgba(255,255,255,.15); color: #fff; }
-
-        /* ── Category pills ── */
-        .cat-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
-        .cat-pill {
-          font-size: 9.5px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase;
-          color: var(--ink7); padding: 8px 16px; min-height: 38px;
-          border: 1.5px solid var(--bdr2); transition: all .2s;
-          display: flex; align-items: center; gap: 6px;
-        }
-        .cat-pill:hover { color: var(--olive); border-color: var(--olive2); background: var(--olivedim); }
-        .cat-pill.on { background: var(--olive); color: #fff; border-color: var(--olive); }
-        .cat-pill-chevron {
-          display: inline-block;
-          transition: transform .25s ease;
-          font-style: normal;
-          font-size: 10px;
-          opacity: .7;
-        }
-        .cat-pill.on .cat-pill-chevron { transform: rotate(180deg); opacity: 1; }
-
-        /* Category product grid */
-        .custom-section {
-          margin-bottom: 8px; overflow: hidden;
-          box-shadow: var(--shadow); border: 1px solid var(--bdr);
-        }
-        .custom-sec-head {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 11px 16px;
-          background: linear-gradient(135deg, var(--olivedim), #ede9d8);
-          border-bottom: 1px solid var(--bdr);
-        }
-        .custom-sec-title { font-family: var(--ffd); font-size: 1rem; font-weight: 500; color: var(--olive); }
-        .custom-sec-count { font-size: 9.5px; color: var(--olive2); font-weight: 600; }
-        .custom-prod-grid {
-          display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-          gap: 10px; padding: 12px 14px 14px; background: var(--surf);
-        }
-        @media (max-width: 600px) {
-          .custom-prod-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px 10px; }
-          .cp-name { font-size: 9px; }
-          .cp-price { font-size: 9px; }
-          .cp-body { padding: 5px 6px 7px; gap: 2px; }
-        }
-        @media (max-width: 380px) {
-          .custom-prod-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 7px 8px 9px; }
-          .cp-name { font-size: 8px; }
-          .cp-price { font-size: 8px; }
-          .cp-edit-btn, .cp-remove-btn, .cp-add-btn { font-size: 7px; min-height: 22px; padding: 3px 0; }
+        /* ── CHANGE 2: "Add & Customise" button styling ── */
+        .sp-add-btn{font-size:7.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--olive);border:1.5px solid var(--olive2);padding:5px 0;min-height:26px;transition:all .18s;margin-top:2px;background:var(--olivedim)}
+        .sp-add-btn:hover:not(:disabled){background:var(--olive);color:#fff;border-color:var(--olive)}
+        .sp-add-btn:disabled{opacity:.4;cursor:not-allowed;background:transparent}
+        @media(max-width:480px){
+          .sp-name{font-size:9px}
+          .sp-cust-btn,.sp-remove-btn,.sp-add-btn{font-size:7px;min-height:22px}
         }
 
-        /* ── SUMMARY PANEL (desktop right col) ── */
-        .summary-panel { position: sticky; top: 76px; background: var(--surf); border: 1px solid var(--bdr); overflow: hidden; box-shadow: var(--shadow); }
-        .sum-head { padding: 16px 18px 13px; background: linear-gradient(135deg, var(--olivedim), #ede5d0); border-bottom: 1px solid var(--bdr); }
-        .sum-title { font-family: var(--ffd); font-size: 1.05rem; font-weight: 500; color: var(--olive); }
-        .sum-modetag { display: block; font-size: 7.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-top: 2px; }
-        .sum-body { padding: 14px 16px 18px; }
-        .sum-list { margin-bottom: 13px; max-height: 260px; overflow-y: auto; }
-        .sum-list::-webkit-scrollbar { width: 3px; }
-        .sum-list::-webkit-scrollbar-thumb { background: var(--bdr2); }
-        .sum-row { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--ink2); }
-        .sum-row:last-child { border-bottom: none; }
-        .sum-thumb { width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--bdr); flex-shrink: 0; }
-        .sum-info { flex: 1; min-width: 0; }
-        .sum-cat { font-size: 7px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink4); display: block; }
-        .sum-name { font-size: 10px; font-weight: 500; color: var(--ink); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sum-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
-        .sum-tag { font-size: 7px; font-weight: 500; background: var(--golddim); color: #7a6010; padding: 1.5px 6px; }
-        .sum-price { font-size: 10px; font-weight: 600; color: var(--olive); flex-shrink: 0; }
-        .sum-check { width: 18px; height: 18px; background: var(--olivedim); color: var(--olive); display: flex; align-items: center; justify-content: center; font-size: 8.5px; flex-shrink: 0; }
-        .sum-empty { text-align: center; font-family: var(--ffd); font-style: italic; font-size: 13px; color: var(--ink4); padding: 22px 0; }
-        .sum-divider { height: 1px; margin: 13px 0; background: linear-gradient(90deg, transparent, var(--gold2), transparent); }
-        .sum-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-        .sum-total-lbl { font-size: 8px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink4); }
-        .sum-total-val { font-family: var(--ffd); font-size: 1.6rem; font-weight: 600; color: var(--ink); }
-        .sum-saving { font-size: 11px; font-weight: 500; color: var(--green); margin-bottom: 14px; }
-        .btn-cart { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #fff; background: var(--olive); padding: 14px; margin-bottom: 8px; min-height: 48px; box-shadow: 0 4px 14px rgba(61,80,22,.25); transition: all .2s; }
-        .btn-cart:hover:not(:disabled) { background: #2e3c0e; transform: translateY(-1px); }
-        .btn-cart:disabled { opacity: .4; cursor: not-allowed; }
-        .btn-cart.done { background: var(--green) !important; }
-        .btn-buy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--ink); background: var(--gold2); border: 1.5px solid var(--gold); padding: 12px; min-height: 44px; transition: all .2s; }
-        .btn-buy:hover:not(:disabled) { background: var(--gold); color: #fff; transform: translateY(-1px); }
-        .btn-buy:disabled { opacity: .4; cursor: not-allowed; }
-        .perks { display: flex; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-        .perk { font-size: 8.5px; color: var(--ink4); display: flex; align-items: center; gap: 4px; }
-        .perk::before { content: '◆'; font-size: 4.5px; color: var(--gold); opacity: .6; }
-
-        /* ─────────────────────────────────────────────────────────
-           FIX 1: Mobile bottom bar
-           Two explicit children side-by-side:
-             • .mobile-bar-info  (flex: 1, truncates at left edge)
-             • .mobile-bar-cart  (fixed width, never hidden)
-           The bar itself uses display:flex with align-items:stretch so
-           both children fill the full height. Safe-area inset is applied
-           as bottom padding on the bar, NOT on the children, so the cart
-           button is always fully visible above the home indicator.
-           ───────────────────────────────────────────────────────── */
-        .mobile-bar {
-          display: none;               /* shown only on ≤1100px via media query below */
-          position: fixed;
-          bottom: 0; left: 0; right: 0;
-          z-index: 200;
-          background: var(--surf);
-          border-top: 1px solid var(--bdr);
-          box-shadow: 0 -4px 20px rgba(26,29,13,.12);
-          /* horizontal padding */
-          padding-left: 16px;
-          padding-right: 16px;
-          /* top padding inside bar */
-          padding-top: 10px;
-          /* bottom padding clears iOS home indicator */
-          padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
-          /* layout */
-          align-items: center;         /* vertically centre children */
-          gap: 12px;
-          /* minimum usable height above safe area */
-          min-height: 64px;
-        }
-
-        .mobile-bar-info {
-          flex: 1;
-          min-width: 0;                /* allow truncation */
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 1px;
-          text-align: left;
-          padding: 0;
-          background: none;
-          border: none;
-          cursor: pointer;
-        }
-        .mobile-bar-info:disabled { cursor: default; }
-        .mobile-bar-count { font-size: 9px; color: var(--ink4); font-weight: 500; }
-        .mobile-bar-price { font-family: var(--ffd); font-size: 1.3rem; font-weight: 600; color: var(--ink); line-height: 1.1; }
-        .mobile-bar-save { font-size: 9.5px; color: var(--green); font-weight: 500; }
-        .mobile-bar-view { font-size: 8.5px; color: var(--gold); font-weight: 600; }
-        .mobile-bar-empty { font-size: 11px; color: var(--ink4); font-style: italic; }
-
-        /*
-          FIX 1: Cart button — hard-coded dimensions so it can NEVER be
-          accidentally hidden, clipped, or squashed. flex-shrink:0 prevents
-          the info column from eating into its width.
-        */
-        .mobile-bar-cart {
-          flex-shrink: 0;
-          width: 128px;               /* fixed width — never collapses */
-          height: 46px;               /* fixed height — always fully visible */
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: .13em;
-          text-transform: uppercase;
-          color: #fff;
-          background: var(--olive);
-          border: none;
-          border-radius: 4px;
-          box-shadow: 0 4px 12px rgba(61,80,22,.28);
-          transition: background .18s, transform .12s;
-        }
-        .mobile-bar-cart.done { background: var(--green); }
-        .mobile-bar-cart:disabled { opacity: .4; cursor: not-allowed; }
-        .mobile-bar-cart:not(:disabled):active { transform: scale(.97); }
-
-        /* Show the bar on mobile/tablet */
-        @media (max-width: 1100px) {
-          .layout {
-            /* give page content room so last card clears the bar */
-            padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
-          }
-          .summary-panel { display: none; }
-          .mobile-bar { display: flex; }
-        }
-
-        /* ── MOBILE SUMMARY SHEET ── */
-        .mobile-sum-backdrop { position: fixed; inset: 0; z-index: 300; background: rgba(10,12,5,.55); backdrop-filter: blur(5px); display: flex; align-items: flex-end; }
-        .mobile-sum-sheet {
-          width: 100%; background: var(--surf); border-radius: 16px 16px 0 0;
-          max-height: 82dvh; overflow-y: auto;
-          padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-          animation: sheetUp .25s cubic-bezier(.34,1.1,.64,1);
-        }
-        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .mobile-sum-handle { display: flex; justify-content: center; padding: 11px; }
-        .mobile-sum-handle-bar { width: 32px; height: 3px; border-radius: 2px; background: var(--bdr2); }
-        .mobile-sum-title { font-family: var(--ffd); font-size: 1.15rem; font-weight: 500; color: var(--olive); padding: 0 18px 11px; border-bottom: 1px solid var(--bdr); }
-        .mobile-sum-list { padding: 0 18px; }
-        .mobile-sum-footer { padding: 14px 18px 0; }
-
-        /* ── LOADING ── */
-        .loading { display: flex; align-items: center; justify-content: center; min-height: 40vh; font-family: var(--ffd); font-style: italic; font-size: 1.25rem; color: var(--ink4); }
+        /* Selected strip */
+        .slot-selected-strip{padding:10px 16px;border-top:1px solid var(--bdr);background:#fafaf6;flex-shrink:0}
+        .slot-selected-label{font-size:7.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;display:flex;align-items:center;gap:4px}
+        .slot-cust-count{color:var(--gold);font-weight:600}
+        .slot-selected-thumbs{display:flex;gap:6px;flex-wrap:wrap}
+        .slot-sel-thumb{position:relative;width:40px;height:40px;border:1.5px solid var(--bdr2);overflow:visible}
+        .slot-sel-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+        .slot-sel-thumb-cust{border-color:var(--gold)}
+        .slot-sel-cust-dot{position:absolute;bottom:-4px;left:-4px;font-size:8px;color:var(--gold);background:#fff;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:2}
+        .slot-sel-remove{position:absolute;top:-6px;right:-6px;width:15px;height:15px;background:var(--red);color:#fff;border:none;border-radius:50%;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0}
+        .slot-panel-footer{padding:12px 16px 16px;border-top:1px solid var(--bdr);background:#fafaf6;flex-shrink:0}
+        .slot-done-btn{width:100%;font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px;min-height:46px;border:none;border-radius:3px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s}
+        .slot-done-btn:hover{background:#2e3c0e}
 
         /* ── RESPONSIVE ── */
-        @media (max-width: 760px) {
-          .hero, .modebar, .layout { padding-left: 14px; padding-right: 14px; }
-          .hero { margin-top: 48px; padding-top: 24px; }
-          .layout { padding-top: 16px; }
-        }
-        @media (min-width: 1101px) {
-          .mobile-bar { display: none !important; }
-          .mobile-sum-backdrop { display: none !important; }
+        @media(max-width:760px){
+          .hero,.modebar,.layout{padding-left:14px;padding-right:14px}
+          .hero{margin-top:48px;padding-top:24px}
+          .layout{padding-top:16px;padding-bottom:32px}
         }
       `}</style>
 
@@ -2959,9 +1383,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         {/* HERO */}
         <div className="hero">
           <div className="hero-eyebrow">
-            <span className="hero-line"/>
+            <span className="hero-line" />
             <span>Jewellery Collections</span>
-            <span className="hero-line"/>
+            <span className="hero-line" />
           </div>
           <h1>Build Your <em>Perfect</em><br />Jewellery Hamper</h1>
           <p className="hero-desc">Choose a curated set and personalise every piece — or build something entirely your own.</p>
@@ -2976,256 +1400,74 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           <p className="modehint">
             {mode === 'preset'
               ? 'Pick a curated hamper, tap to view & personalise each piece.'
-              : 'Choose a category, pick your pieces, customise each one, and add to cart.'}
+              : 'Choose a combo, pick your pieces — you\'ll customise each one as you add it.'}
           </p>
         </div>
 
-        {/* SIDE PANEL (preset mode) */}
+        {/* PRESET SIDE PANEL */}
         {mode === 'preset' && panelCombo && (
           <SidePanel
             combo={panelCombo}
-            products={panelProducts}
             variants={presetVariants}
             onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
-            categoryLabels={categoryLabels}
-            onClose={() => setPanelCombo(null)}
+            onClose={() => setPanelComboId(null)}
+            gender={gender}
           />
         )}
 
-        {/* ADD-FLOW MODAL */}
-        {pendingAdd && (
-          <ProductCustomiser
-            product={pendingAdd}
-            variant={{}}
-            onSave={v => { setHamper(prev => ({ ...prev, [pendingAdd.id]: v })); setPendingAdd(null); }}
-            onClose={() => setPendingAdd(null)}
-            isAddFlow
+        {/* CUSTOM SLOT PANEL */}
+        {mode === 'custom' && openSlot && (
+          <SlotPanel
+            slot={openSlot}
+            selectedIds={slotSelections[openSlot.id] || []}
+            variants={slotVariants[openSlot.id] || {}}
+            onToggle={pid => handleSlotToggle(openSlot.id, pid)}
+            onVariantChange={(pid, v) => handleSlotVariantChange(openSlot.id, pid, v)}
+            onClose={() => setOpenSlotId(null)}
+            gender={gender}
           />
-        )}
-
-        {/* EDIT MODAL */}
-        {editingProduct && (
-          <ProductCustomiser
-            product={editingProduct}
-            variant={hamper[editingProduct.id] || {}}
-            onSave={v => { setHamper(prev => ({ ...prev, [editingProduct.id]: v })); setEditingProduct(null); }}
-            onClose={() => setEditingProduct(null)}
-          />
-        )}
-
-        {/* MOBILE SUMMARY DRAWER */}
-        {showMobileSummary && (
-          <div className="mobile-sum-backdrop" onClick={e => e.target === e.currentTarget && setShowMobileSummary(false)}>
-            <div className="mobile-sum-sheet">
-              <div className="mobile-sum-handle"><div className="mobile-sum-handle-bar"/></div>
-              <div className="mobile-sum-title">Your Hamper Summary</div>
-              <div className="mobile-sum-list">
-                {summaryItems.length === 0 ? (
-                  <p className="sum-empty">No pieces added yet.</p>
-                ) : summaryItems.map(({ k, p }) => {
-                  const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-                  const tags = [v.colour, v.size ? `Size ${v.size}` : '', v.personalMessage ? '✉ Msg' : ''].filter(Boolean);
-                  return (
-                    <div key={`${k}-${p.id}`} className="sum-row">
-                      <img className="sum-thumb" src={p.image || '/images/hero.png'} alt={p.name} />
-                      <div className="sum-info">
-                        <span className="sum-cat">{categoryLabels[k] || k}</span>
-                        <span className="sum-name">{p.name}</span>
-                        {tags.length > 0 && <div className="sum-tags">{tags.map(t => <span key={t} className="sum-tag">{t}</span>)}</div>}
-                      </div>
-                      <span className="sum-price">₹{p.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mobile-sum-footer">
-                <div className="sum-divider"/>
-                <div className="sum-total-row">
-                  <span className="sum-total-lbl">Total</span>
-                  <span className="sum-total-val">₹{totalPrice.toLocaleString('en-IN')}</span>
-                </div>
-                {savings > 0 && <p className="sum-saving">🎉 You save ₹{savings.toLocaleString('en-IN')}</p>}
-                <button className={`btn-cart${cartAdded ? ' done' : ''}`} onClick={() => { handleAddToCart(); setShowMobileSummary(false); }} disabled={!hasItems}>
-                  {cartAdded ? '✓ Added to Cart!' : 'Add Hamper to Cart'}
-                </button>
-                <button className="btn-buy" onClick={() => { setShowMobileSummary(false); handleBuyNow(); }} disabled={!hasItems}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  Buy It Now
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* LAYOUT */}
         <div className="layout">
-          <div>
-            {isLoading ? (
-              <div className="loading">Loading collections…</div>
-            ) : mode === 'preset' ? (
-              <>
-                <div className="sec-label">Choose a Hamper Set</div>
-                <div className="cgrid">
-                  {presetCombos.map(c => (
-                    <ComboCard
-                      key={c.id}
-                      combo={c}
-                      selected={selectedComboId === c.id}
-                      onSelect={setSelectedComboId}
-                      productsByCategory={productsByCategory}
-                      categoryLabels={categoryLabels}
-                      variants={presetVariants}
-                      onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
-                      onOpenPanel={handleOpenPanel}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Category pills — only one open at a time */}
-                <div className="sec-label">1. Select a Category</div>
-                <div className="cat-pills">
-                  {allCategories.map(cat => {
-                    const isOpen = activeCategory === cat;
-                    const countInHamper = (productsByCategory[cat] ?? []).filter(p => hamperProductIds.includes(p.id)).length;
-                    return (
-                      <button
-                        key={cat}
-                        className={`cat-pill${isOpen ? ' on' : ''}`}
-                        onClick={() => handleCategoryPillClick(cat)}
-                      >
-                        {isOpen ? '✓ ' : '+ '}
-                        {categoryLabels[cat] || cat}
-                        {countInHamper > 0 && !isOpen && (
-                          <span style={{ marginLeft: 4, fontSize: 8, background: 'var(--gold)', color: '#fff', padding: '1px 5px', borderRadius: 50 }}>
-                            {countInHamper}
-                          </span>
-                        )}
-                        <em className="cat-pill-chevron">▾</em>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {hamperProductIds.length > 0 && (
-                  <div className="hamper-status">
-                    <div className="hamper-status-left">
-                      <strong>{hamperProductIds.length} piece{hamperProductIds.length !== 1 ? 's' : ''}</strong>{' '}in your hamper
-                      <span>Items go to cart together as one hamper</span>
-                    </div>
-                    <button className="hamper-clear" onClick={() => setHamper({})}>Clear all</button>
-                  </div>
-                )}
-
-                {/* Only the active category's grid is rendered */}
-                {activeCategory !== null && (productsByCategory[activeCategory] ?? []).length > 0 && (
-                  <>
-                    <div className="sec-label" style={{ marginTop: 4, marginBottom: 12 }}>2. Pick Your Pieces</div>
-                    <div className="custom-section">
-                      <div className="custom-sec-head">
-                        <span className="custom-sec-title">{categoryLabels[activeCategory] || activeCategory}</span>
-                        {(productsByCategory[activeCategory] ?? []).filter(p => hamperProductIds.includes(p.id)).length > 0 && (
-                          <span className="custom-sec-count">
-                            {(productsByCategory[activeCategory] ?? []).filter(p => hamperProductIds.includes(p.id)).length} selected
-                          </span>
-                        )}
-                      </div>
-                      <div className="custom-prod-grid">
-                        {(productsByCategory[activeCategory] ?? []).map(p => (
-                          <CustomProdCard
-                            key={p.id}
-                            product={p}
-                            inHamper={hamperProductIds.includes(p.id)}
-                            variant={hamper[p.id] || {}}
-                            onAdd={() => handleProductAdd(p)}
-                            onRemove={() => handleProductRemove(p.id)}
-                            onEditCustomise={() => setEditingProduct(p)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {activeCategory === null && allCategories.length > 0 && (
-                  <p style={{ fontSize: 12, color: 'var(--ink4)', fontStyle: 'italic', marginTop: 8 }}>
-                    Select a category above to browse and add pieces to your hamper.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* RIGHT — DESKTOP SUMMARY */}
-          <div>
-            <div className="summary-panel">
-              <div className="sum-head">
-                <div className="sum-title">Your Hamper</div>
-                <span className="sum-modetag">{mode === 'preset' ? '◈ Curated Set' : '✦ Custom Build'}</span>
+          {mode === 'preset' ? (
+            <>
+              <div className="sec-label">Choose a Hamper Set</div>
+              <div className="cgrid">
+                {PRESET_COMBOS.map(combo => (
+                  <ComboCard
+                    key={combo.id}
+                    combo={combo}
+                    selected={selectedComboId === combo.id}
+                    onSelect={() => setSelectedComboId(combo.id)}
+                    variants={presetVariants}
+                    onOpenPanel={() => setPanelComboId(combo.id)}
+                    onAddToCart={() => handlePresetAddToCart(combo)}
+                    cartAdded={!!presetCartAdded[combo.id]}
+                  />
+                ))}
               </div>
-              <div className="sum-body">
-                <div className="sum-list">
-                  {summaryItems.length === 0 ? (
-                    <p className="sum-empty">{mode === 'preset' ? 'Select a hamper above.' : 'Add pieces to see them here.'}</p>
-                  ) : summaryItems.map(({ k, p }) => {
-                    const v = mode === 'preset' ? (presetVariants[p.id] || {}) : (hamper[p.id] || {});
-                    const tags = [v.colour, v.size ? `Size ${v.size}` : '', v.personalMessage ? '✉ Msg' : '', v.uploadedImageBase64 ? '📷' : ''].filter(Boolean);
-                    return (
-                      <div key={`${k}-${p.id}`} className="sum-row">
-                        <img className="sum-thumb" src={p.image || '/images/hero.png'} alt={p.name} />
-                        <div className="sum-info">
-                          <span className="sum-cat">{categoryLabels[k] || k}</span>
-                          <span className="sum-name">{p.name}</span>
-                          {tags.length > 0 && <div className="sum-tags">{tags.map(t => <span key={t} className="sum-tag">{t}</span>)}</div>}
-                        </div>
-                        {mode === 'preset'
-                          ? <span className="sum-check">✓</span>
-                          : <span className="sum-price">₹{p.price.toLocaleString('en-IN')}</span>
-                        }
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="sum-divider"/>
-                <div className="sum-total-row">
-                  <span className="sum-total-lbl">Total</span>
-                  <span className="sum-total-val">₹{totalPrice.toLocaleString('en-IN')}</span>
-                </div>
-                {savings > 0 && <p className="sum-saving">🎉 You save ₹{savings.toLocaleString('en-IN')}</p>}
-                <button className={`btn-cart${cartAdded ? ' done' : ''}`} onClick={handleAddToCart} disabled={!hasItems}>
-                  {cartAdded ? (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> Added to Cart!</>
-                  ) : (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> Add Hamper to Cart</>
-                  )}
-                </button>
-                <button className="btn-buy" onClick={handleBuyNow} disabled={!hasItems}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  Buy It Now
-                </button>
-                <div className="perks">
-                  <span className="perk">Free shipping ₹599+</span>
-                  <span className="perk">COD available</span>
-                  <span className="perk">Easy returns</span>
-                </div>
+            </>
+          ) : (
+            <>
+              <div className="sec-label">Choose Your Combo</div>
+              <div className="cgrid">
+                {CUSTOM_SLOTS.map(slot => (
+                  <CustomSlotCard
+                    key={slot.id}
+                    slot={slot}
+                    selectedIds={slotSelections[slot.id] || []}
+                    variants={slotVariants[slot.id] || {}}
+                    onOpenPanel={() => setOpenSlotId(slot.id)}
+                    onAddToCart={() => handleCustomAddToCart(slot)}
+                    cartAdded={!!customCartAdded[slot.id]}
+                  />
+                ))}
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
-
-        {/* MOBILE BOTTOM BAR — cart button always visible */}
-        <MobileSummaryBar
-          totalPrice={totalPrice}
-          savings={savings}
-          itemCount={summaryItems.length}
-          onOpen={() => setShowMobileSummary(true)}
-          hasItems={hasItems}
-          onAddToCart={handleAddToCart}
-          cartAdded={cartAdded}
-        />
       </div>
     </>
   );
 }
-

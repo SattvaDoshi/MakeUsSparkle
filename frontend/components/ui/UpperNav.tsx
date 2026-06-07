@@ -691,7 +691,7 @@ export default function TopNav() {
         }
 
         /* ── HAMBURGER ── */
-        .sparkle-hamburger {
+        .sparkle-hamburger { 
           display: flex;
           flex-direction: column;
           gap: 5px;

@@ -1766,18 +1766,28 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     return {
       id: String(product.sourceId), name: product.name || '', price: computedPrice,
       originalPrice: price, image: displayImg,
-      selections: selections.map(sel => ({
-        color: normalizedColors[sel.colorIndex]?.label || '',
-        colorHex: normalizedColors[sel.colorIndex]?.hex || '#c9a84c',
-        size: sel.size || undefined
-      })),
-      sku: product.sku,
+      color: normalizedColors[selections[0]?.colorIndex || 0]?.label || '',
+      colorHex: normalizedColors[selections[0]?.colorIndex || 0]?.hex || '#c9a84c',
+      size: selections[0]?.size || undefined,
+      sku: product.sku || '',
       href: product.href || `/products/${product.sourceId}`,
       customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
       customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
-      giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
-    };
-  }, [product, computedPrice, price, displayImg, selections, normalizedColors, customData, giftMessage, allowCustomization]);
+      // store selections inside selectionGroups to preserve multiple product selections if needed
+      selectionGroups: [{
+        type: 'selections',
+        items: selections.map((sel, idx) => ({
+          name: `Piece ${idx + 1}`,
+          customData: {
+            color: normalizedColors[sel.colorIndex]?.label || '',
+            colorHex: normalizedColors[sel.colorIndex]?.hex || '#c9a84c',
+            size: sel.size || undefined
+          }
+        }))
+      }],
+      // if gift message is used, we can append it to customNote or store somewhere else, though CartItem doesn't have giftMessage
+    } as Omit<import("@/lib/cartContext").CartItem, "qty">;
+  }, [product, computedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization]);
 
   const handleBuyNow = useCallback(() => {
     const item = buildCartItem(); if (!item) return;

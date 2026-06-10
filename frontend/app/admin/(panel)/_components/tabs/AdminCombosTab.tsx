@@ -45,9 +45,6 @@ type ModalState = {
 	price: string;
 	originalPrice: string;
 	itemsCount: string;
-	tagline: string;
-	badge: string;
-	tint: string;
 	products: string[];
 	imageFile: File | null;
 	existingImage?: string;
@@ -63,9 +60,6 @@ const defaultModal: ModalState = {
 	price: "",
 	originalPrice: "",
 	itemsCount: "",
-	tagline: "",
-	badge: "",
-	tint: "#c8a84b",
 	products: [],
 	imageFile: null,
 };
@@ -110,9 +104,6 @@ export default function AdminCombosTab({
 			price: combo.price ? String(combo.price) : "",
 			originalPrice: combo.originalPrice ? String(combo.originalPrice) : "",
 			itemsCount: combo.itemsCount ? String(combo.itemsCount) : "",
-			tagline: combo.tagline || "",
-			badge: combo.badge || "",
-			tint: combo.tint || "#c8a84b",
 			products: (combo.products || []).map((p) => (typeof p === "string" ? p : p._id)),
 			imageFile: null,
 			existingImage: combo.image,
@@ -145,9 +136,6 @@ export default function AdminCombosTab({
 		fd.append("status", modal.status);
 		fd.append("displayOrder", modal.displayOrder);
 		fd.append("price", modal.price);
-		if (modal.tagline) fd.append("tagline", modal.tagline.trim());
-		if (modal.badge) fd.append("badge", modal.badge.trim());
-		if (modal.tint) fd.append("tint", modal.tint);
 		fd.append("products", JSON.stringify(modal.products));
 
 		if (modal.kind === "curated") {
@@ -333,36 +321,6 @@ export default function AdminCombosTab({
 										rows={2}
 										style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem", resize: "vertical" }}
 									/>
-								</div>
-
-								<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
-									<div style={{ display: "grid", gap: "0.35rem" }}>
-										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Tagline</label>
-										<input
-											placeholder="e.g. Bridal Glow Set"
-											value={modal.tagline}
-											onChange={(e) => setModal((prev) => (prev ? { ...prev, tagline: e.target.value } : prev))}
-											style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
-										/>
-									</div>
-									<div style={{ display: "grid", gap: "0.35rem" }}>
-										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Badge</label>
-										<input
-											placeholder="e.g. Best Seller"
-											value={modal.badge}
-											onChange={(e) => setModal((prev) => (prev ? { ...prev, badge: e.target.value } : prev))}
-											style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
-										/>
-									</div>
-									<div style={{ display: "grid", gap: "0.35rem" }}>
-										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Tint Color</label>
-										<input
-											type="color"
-											value={modal.tint}
-											onChange={(e) => setModal((prev) => (prev ? { ...prev, tint: e.target.value } : prev))}
-											style={{ padding: "0.2rem", border: "1px solid #d4d4c8", borderRadius: 6, width: "100%", height: "42px", cursor: "pointer" }}
-										/>
-									</div>
 								</div>
 
 								<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>

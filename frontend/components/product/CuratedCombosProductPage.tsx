@@ -2851,7 +2851,6 @@ interface PresetCombo {
   originalPrice: number;
   image: string;
   badge: string;
-  tint: string;
   includedProducts: ComboProduct[];
 }
 
@@ -2863,7 +2862,6 @@ interface CustomComboSlot {
   fixedPrice: number;
   image: string;
   badge: string;
-  tint: string;
   allowedProducts: ComboProduct[];
 }
 
@@ -2920,28 +2918,28 @@ const PRESET_COMBOS: PresetCombo[] = [
     id: 'pc1', name: 'Bridal Glow Set',
     tagline: 'The complete bridal jewellery edit',
     price: 5499, originalPrice: 7396,
-    image: IMG.combo1, badge: 'Best Seller', tint: '#c8a84b',
+    image: IMG.combo1, badge: 'Best Seller',
     includedProducts: [byId('n3'), byId('e1'), byId('b1'), byId('r1')],
   },
   {
     id: 'pc2', name: 'Everyday Minimal Set',
     tagline: 'Understated elegance for every day',
     price: 2999, originalPrice: 3997,
-    image: IMG.combo2, badge: 'New Arrival', tint: '#8a9e6a',
+    image: IMG.combo2, badge: 'New Arrival',
     includedProducts: [byId('n2'), byId('e2'), byId('r2')],
   },
   {
     id: 'pc3', name: 'Statement Night Set',
     tagline: 'Turn heads at every occasion',
     price: 4299, originalPrice: 5597,
-    image: IMG.combo3, badge: 'Limited', tint: '#3d5016',
+    image: IMG.combo3, badge: 'Limited',
     includedProducts: [byId('n1'), byId('e3'), byId('b1'), byId('r3')],
   },
   {
     id: 'pc4', name: 'Pearl & Gold Duo',
     tagline: 'Timeless pearl-and-gold pairing',
     price: 2699, originalPrice: 3398,
-    image: IMG.combo4, badge: '', tint: '#b8982a',
+    image: IMG.combo4, badge: '',
     includedProducts: [byId('n2'), byId('e2')],
   },
 ];
@@ -2951,21 +2949,21 @@ const CUSTOM_SLOTS: CustomComboSlot[] = [
     id: 'cs1', name: 'Choose Any 3 for ₹1,999',
     tagline: 'Pick 3 pieces from our ring & earring edit',
     maxItems: 3, fixedPrice: 1999,
-    image: IMG.ring1, badge: 'Save up to 40%', tint: '#c8a84b',
+    image: IMG.ring1, badge: 'Save up to 40%',
     allowedProducts: [byId('r1'), byId('r2'), byId('r3'), byId('e1'), byId('e2'), byId('e3')],
   },
   {
     id: 'cs2', name: 'Choose Any 4 for ₹3,499',
     tagline: 'Build your dream necklace & bangle stack',
     maxItems: 4, fixedPrice: 3499,
-    image: IMG.necklace1, badge: 'Most Popular', tint: '#5a6e2b',
+    image: IMG.necklace1, badge: 'Most Popular',
     allowedProducts: [byId('n1'), byId('n2'), byId('n3'), byId('b1'), byId('b2'), byId('b3')],
   },
   {
     id: 'cs3', name: 'Choose Any 5 for ₹4,999',
     tagline: 'Full head-to-toe jewellery wardrobe',
     maxItems: 5, fixedPrice: 4999,
-    image: IMG.combo2, badge: 'Best Value', tint: '#3d5016',
+    image: IMG.combo2, badge: 'Best Value',
     allowedProducts: ALL_PRODUCTS,
   },
 ];
@@ -3013,9 +3011,14 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
     r.readAsDataURL(f);
   };
 
-  const colours = product.availableColours?.length ? product.availableColours : COLOURS;
-  const sizes   = product.availableSizes?.length   ? product.availableSizes   : SIZES;
+  const colours = product.availableColours || [];
+  const sizes   = product.availableSizes || [];
   const hasAny  = !!(local.colour || local.size || local.personalMessage || local.uploadedImageBase64);
+
+  const cNum = colours.length > 0 ? 1 : 0;
+  const sNum = sizes.length > 0 ? cNum + 1 : cNum;
+  const msgNum = sNum + 1;
+  const picNum = sNum + 2;
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -3042,24 +3045,26 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
         </div>
 
         <div className="modal-body">
-          <div className="modal-field">
-            <label className="modal-field-label">
-              <span className="modal-field-num">1</span>
-              Colour
-              {local.colour && <span className="modal-selected-badge">{local.colour}</span>}
-            </label>
-            <div className="modal-chips">
-              {colours.map(c => (
-                <button key={c} className={`chip${local.colour === c ? ' chip-on' : ''}`}
-                  onClick={() => setLocal(p => ({ ...p, colour: c }))}>{c}</button>
-              ))}
+          {colours.length > 0 && (
+            <div className="modal-field">
+              <label className="modal-field-label">
+                <span className="modal-field-num">{cNum}</span>
+                Colour
+                {local.colour && <span className="modal-selected-badge">{local.colour}</span>}
+              </label>
+              <div className="modal-chips">
+                {colours.map(c => (
+                  <button key={c} className={`chip${local.colour === c ? ' chip-on' : ''}`}
+                    onClick={() => setLocal(p => ({ ...p, colour: c }))}>{c}</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {sizes.length > 0 && (
             <div className="modal-field">
               <label className="modal-field-label">
-                <span className="modal-field-num">2</span>
+                <span className="modal-field-num">{sNum}</span>
                 Size
                 {local.size && <span className="modal-selected-badge">Size {local.size}</span>}
               </label>
@@ -3074,7 +3079,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
 
           <div className="modal-field">
             <label className="modal-field-label">
-              <span className="modal-field-num">3</span>
+              <span className="modal-field-num">{msgNum}</span>
               Personal Message
               <span className="modal-field-optional">optional</span>
             </label>
@@ -3088,7 +3093,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
 
           <div className="modal-field">
             <label className="modal-field-label">
-              <span className="modal-field-num">4</span>
+              <span className="modal-field-num">{picNum}</span>
               Upload Photo
               <span className="modal-field-optional">optional</span>
             </label>
@@ -3499,7 +3504,7 @@ function ComboCard({ combo, selected, onSelect, variants, onOpenPanel }: ComboCa
       </div>
 
       {/* COLOR ACCENT STRIP */}
-      <div className="cc-color-strip" style={{ background: combo.tint }} />
+
 
       {/* CARD BODY — all text below image */}
       <div className="cc-body">
@@ -3570,7 +3575,7 @@ function CustomSlotCard({ slot, selectedIds, variants, onOpenPanel }: CustomSlot
         )}
       </div>
 
-      <div className="cc-color-strip" style={{ background: slot.tint }} />
+
 
       {/* CARD BODY — all text below image */}
       <div className="cc-body">
@@ -3637,8 +3642,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 price: p.price,
                 image: safeImageSrc(p.mainImage || (p.images && p.images[0])),
                 customisable: p.customisable ?? true,
-                availableColours: p.availableColours?.length ? p.availableColours : undefined,
-                availableSizes: p.availableSizes?.length ? p.availableSizes : undefined,
+                availableColours: p.colors?.length ? p.colors.map((c: any) => c.name) : undefined,
+                availableSizes: p.sizes?.length ? p.sizes : undefined,
               });
             }
             return loadedProductsMap.get(p._id)!;
@@ -3656,7 +3661,6 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 originalPrice: c.originalPrice || c.price || 0,
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
-                tint: c.tint || '#c8a84b',
                 includedProducts: products,
               });
             } else {
@@ -3668,7 +3672,6 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 fixedPrice: c.price || 0,
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
-                tint: c.tint || '#c8a84b',
                 allowedProducts: products,
               });
             }

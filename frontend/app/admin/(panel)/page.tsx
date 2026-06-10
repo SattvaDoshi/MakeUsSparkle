@@ -238,7 +238,6 @@ export type AdminCombo = {
 	itemsCount?: number;
 	tagline?: string;
 	badge?: string;
-	tint?: string;
 };
 
 type PagedResponse<T, K extends string> = {

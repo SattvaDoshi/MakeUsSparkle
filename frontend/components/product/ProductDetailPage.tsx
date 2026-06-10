@@ -1652,8 +1652,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [activeColor,   setActiveColor]   = useState(0);
-  const [activeSize,    setActiveSize]    = useState('');
+  const [selections, setSelections] = useState<{ colorIndex: number; size: string }[]>([]);
   const [activeImg,     setActiveImg]     = useState(0);
   const [shipping,      setShipping]      = useState('standard');
   const [payment,       setPayment]       = useState('prepaid');
@@ -1687,9 +1686,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const faqs            = product?.faqs ?? [];
   const about           = product?.about ?? '';
 
-  const normalizedColors: ProductColor[] = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c' }));
+  const normalizedColors = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c', image: c.image || undefined }));
   const sizes    = product?.sizes ?? [];
   const variants = product?.variants ?? [];
+  const numberOfProducts = product?.numberOfProducts || 1;
   const mainImage = product?.mainImage;
   const images   = product?.images ?? [];
 
@@ -1697,38 +1697,63 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!product) return;
-    setActiveColor(0);
-    setActiveSize(product.sizes?.[0] || product.variants?.[0]?.size || '');
+    const initialSize = product.sizes?.[0] || product.variants?.[0]?.size || '';
+    setSelections(Array.from({ length: product.numberOfProducts || 1 }, () => ({
+      colorIndex: 0,
+      size: initialSize
+    })));
     setActiveImg(0);
-  }, [product?.sourceId]);
+  }, [product?.sourceId, product?.numberOfProducts]);
 
-  const currentColor      = normalizedColors[activeColor] || normalizedColors[0];
-  const currentColorLabel = currentColor?.label || '';
-  const normalizedColor   = normalizeText(currentColorLabel);
-  const normalizedSize    = normalizeText(activeSize);
+  const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
+    const cLabel = normalizeText(normalizedColors[colorIndex]?.label || '');
+    const sLabel = normalizeText(size);
+    return variants.find((v) => normalizeText(v.color) === cLabel && normalizeText(v.size) === sLabel)
+      || variants.find((v) => normalizeText(v.color) === cLabel)
+      || variants.find((v) => normalizeText(v.size) === sLabel);
+  }, [normalizedColors, variants]);
 
-  const matchingVariant = variants.find((v) => normalizeText(v.color) === normalizedColor && normalizeText(v.size) === normalizedSize)
-    || variants.find((v) => normalizeText(v.color) === normalizedColor)
-    || variants.find((v) => normalizeText(v.size) === normalizedSize);
+  const currentColor = normalizedColors[selections[0]?.colorIndex || 0] || normalizedColors[0];
+  const matchingVariant = selections.length > 0 ? getVariantForSelection(selections[0].colorIndex, selections[0].size) : undefined;
 
   const currentImages = dedupeImages([matchingVariant?.image, mainImage, ...images]).filter(Boolean) as string[];
   const displayImg    = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
+
+  let computedPrice = discountedPrice || price;
+  if (selections.length > 0) {
+    const baseUnit = computedPrice / numberOfProducts;
+    let sum = 0;
+    selections.forEach(sel => {
+      const v = getVariantForSelection(sel.colorIndex, sel.size);
+      if (v && typeof v.price === 'number' && v.price > 0) {
+        sum += v.price;
+      } else {
+        sum += baseUnit;
+      }
+    });
+    computedPrice = sum;
+  }
 
   let discount = 0;
   if (discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
   else if (originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
 
-  const currentStock  = matchingVariant?.stock ?? stock;
+  const currentStock  = selections.length > 0
+    ? selections.reduce((min, sel) => {
+        const v = getVariantForSelection(sel.colorIndex, sel.size);
+        return Math.min(min, v?.stock ?? stock);
+      }, stock)
+    : stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
   const sizeOptions   = availableSizes.length > 0 ? availableSizes : [];
 
-  const deliveryCharge = shipping === 'express' ? 110 : ((discountedPrice || price) >= 999 ? 0 : 60);
+  const deliveryCharge = shipping === 'express' ? 110 : (computedPrice >= 999 ? 0 : 60);
   const codCharge      = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
   const wished = product ? isWished(product.id) : false;
 
   const wishlistItem = product ? {
-    id: product.id, name: product.name || 'Product', price: discountedPrice || price,
+    id: product.id, name: product.name || 'Product', price: computedPrice,
     originalPrice: price, image: displayImg, category: product.category || '',
     href: product.href || `/products/${product.sourceId}`, colors: normalizedColors,
     badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0,
@@ -1739,15 +1764,20 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const buildCartItem = useCallback(() => {
     if (!product) return null;
     return {
-      id: String(product.sourceId), name: product.name || '', price: discountedPrice || price,
-      originalPrice: price, image: displayImg, color: currentColor?.label || '',
-      colorHex: currentColor?.hex || '#c9a84c', size: activeSize || undefined, sku: product.sku,
+      id: String(product.sourceId), name: product.name || '', price: computedPrice,
+      originalPrice: price, image: displayImg,
+      selections: selections.map(sel => ({
+        color: normalizedColors[sel.colorIndex]?.label || '',
+        colorHex: normalizedColors[sel.colorIndex]?.hex || '#c9a84c',
+        size: sel.size || undefined
+      })),
+      sku: product.sku,
       href: product.href || `/products/${product.sourceId}`,
       customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
       customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
       giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
     };
-  }, [product, discountedPrice, price, displayImg, currentColor, activeSize, customData, giftMessage, allowCustomization]);
+  }, [product, computedPrice, price, displayImg, selections, normalizedColors, customData, giftMessage, allowCustomization]);
 
   const handleBuyNow = useCallback(() => {
     const item = buildCartItem(); if (!item) return;
@@ -1764,14 +1794,27 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setTimeout(() => setSparkleAnim(false), 800);
   }, [buildCartItem, qty, addItem]);
 
-  const handleColorChange = useCallback((i: number) => {
-    const nextColor = normalizedColors[i]; setActiveColor(i); setActiveImg(0);
-    if (!nextColor) return;
-    const nextSize = variants.find((v) => normalizeText(v.color) === normalizeText(nextColor.label))?.size || sizeOptions[0] || '';
-    setActiveSize(nextSize);
+  const handleColorChange = useCallback((productIndex: number, colorIndex: number) => {
+    setSelections(prev => {
+      const next = [...prev];
+      const nextColor = normalizedColors[colorIndex];
+      if (nextColor) {
+        const nextSize = variants.find((v) => normalizeText(v.color) === normalizeText(nextColor.label))?.size || sizeOptions[0] || '';
+        next[productIndex] = { colorIndex, size: nextSize };
+      }
+      return next;
+    });
+    setActiveImg(0);
   }, [normalizedColors, variants, sizeOptions]);
 
-  const handleSizeChange = useCallback((size: string) => { setActiveSize(size); setActiveImg(0); }, []);
+  const handleSizeChange = useCallback((productIndex: number, size: string) => { 
+    setSelections(prev => {
+      const next = [...prev];
+      next[productIndex] = { ...next[productIndex], size };
+      return next;
+    });
+    setActiveImg(0);
+  }, []);
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
 
@@ -2194,7 +2237,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             <div className="pdp-info-top">
               <div className="pdp-price-row">
-                <span className="pdp-price">₹{(discountedPrice || price).toLocaleString('en-IN')}</span>
+                <span className="pdp-price">₹{computedPrice.toLocaleString('en-IN')}</span>
                 {(originalPrice || price) && (discountedPrice || originalPrice) && (
                   <>
                     <span className="pdp-original">₹{(originalPrice || price).toLocaleString('en-IN')}</span>
@@ -2212,28 +2255,60 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             <div className="pdp-divider" />
 
-            <div className="pdp-swatches">
-              {normalizedColors.map((c, i) => (
-                <button key={c.hex} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
-                  <div className={`pdp-swatch${activeColor === i ? ' active' : ''}`} style={{ background: c.hex, border: c.hex === '#ffffff' ? '2px solid #d9cdb8' : undefined }} />
-                  <span className="pdp-swatch-label">{c.label}</span>
-                </button>
-              ))}
-            </div>
+            {selections.map((sel, pIdx) => {
+              const selectedColorLabel = normalizeText(normalizedColors[sel.colorIndex]?.label || '');
+              return (
+                <div key={pIdx} style={{ marginBottom: pIdx < selections.length - 1 ? 24 : 0 }}>
+                  {numberOfProducts > 1 && (
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--olive-600)', marginBottom: 12, letterSpacing: '.05em', textTransform: 'uppercase' }}>
+                      Product {pIdx + 1}
+                    </h3>
+                  )}
+                  
+                  <div className="pdp-swatches">
+                    {normalizedColors.map((c, i) => (
+                      <button key={c.hex + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(pIdx, i)} title={c.label}>
+                        {c.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img 
+                            src={c.image} 
+                            alt={c.label} 
+                            style={{ 
+                              width: '44px', 
+                              height: '28px', 
+                              borderRadius: '4px', 
+                              objectFit: 'cover', 
+                              border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
+                              padding: sel.colorIndex === i ? '2px' : '0',
+                              transition: 'all 0.2s',
+                            }} 
+                          />
+                        ) : (
+                          <>
+                            <div className={`pdp-swatch${sel.colorIndex === i ? ' active' : ''}`} style={{ background: c.hex, border: c.hex === '#ffffff' ? '2px solid #d9cdb8' : undefined }} />
+                            <span className="pdp-swatch-label">{c.label}</span>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
 
-            {sizeOptions.length > 0 && (
-              <>
-                <p className="pdp-section-label">Size: <span>{activeSize || sizeOptions[0]}</span></p>
-                <div className="pdp-sizes">
-                  {sizeOptions.map((size) => {
-                    const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === normalizedColor && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
-                    return (
-                      <button key={size} type="button" className={`pdp-size-btn${activeSize === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(size)}>{size}</button>
-                    );
-                  })}
+                  {sizeOptions.length > 0 && (
+                    <>
+                      <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>
+                      <div className="pdp-sizes">
+                        {sizeOptions.map((size) => {
+                          const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === selectedColorLabel && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
+                          return (
+                            <button key={size} type="button" className={`pdp-size-btn${sel.size === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(pIdx, size)}>{size}</button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
-              </>
-            )}
+              );
+            })}
 
             {description && <p className="pdp-desc">{description}</p>}
 

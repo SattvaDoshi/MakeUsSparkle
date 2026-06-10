@@ -2815,10 +2815,12 @@
 
 import {
   useState,
+  useEffect,
   type ChangeEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
+import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
 
 /* ─────────────────────────────────────────────────────────────
@@ -2863,6 +2865,12 @@ interface CustomComboSlot {
   badge: string;
   tint: string;
   allowedProducts: ComboProduct[];
+}
+
+const FALLBACK_COMBO_IMAGE = '/images/hero.png';
+
+function safeImageSrc(src?: string | null) {
+  return src && src.trim() ? src : FALLBACK_COMBO_IMAGE;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -3472,12 +3480,13 @@ interface ComboCardProps {
 function ComboCard({ combo, selected, onSelect, variants, onOpenPanel }: ComboCardProps) {
   const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
   const customisedCount = combo.includedProducts.filter(p => hasCustomisation(variants[p.id] || {})).length;
+  const comboImage = safeImageSrc(combo.image);
 
   return (
     <div className={`cc-card${selected ? ' cc-selected' : ''}`} onClick={() => { onSelect(); onOpenPanel(); }}>
       {/* IMAGE — only badges on image, NO text overlay */}
       <div className="cc-img-area">
-        <img src={combo.image} alt={combo.name} />
+        <img src={comboImage} alt={combo.name} />
         {pct > 0     && <span className="cc-pct-badge">{pct}% off</span>}
         {combo.badge  && <span className="cc-label-badge">{combo.badge}</span>}
         {selected && (
@@ -3596,22 +3605,94 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
   const [mode, setMode] = useState<'preset' | 'custom'>('preset');
 
-  const [selectedComboId, setSelectedComboId] = useState<string>(PRESET_COMBOS[0].id);
+  const [presetCombos, setPresetCombos] = useState<PresetCombo[]>([]);
+  const [customSlots, setCustomSlots] = useState<CustomComboSlot[]>([]);
+  const [allProducts, setAllProducts] = useState<ComboProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedComboId, setSelectedComboId] = useState<string>('');
   const [presetVariants, setPresetVariants]   = useState<Record<string, ProductVariant>>({});
   const [panelComboId, setPanelComboId]       = useState<string | null>(null);
   const [presetCartAdded, setPresetCartAdded] = useState<Record<string, boolean>>({});
 
-  const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>(
-    () => Object.fromEntries(CUSTOM_SLOTS.map(s => [s.id, []]))
-  );
-  const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>(
-    () => Object.fromEntries(CUSTOM_SLOTS.map(s => [s.id, {}]))
-  );
+  const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>({});
+  const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>({});
   const [openSlotId, setOpenSlotId]         = useState<string | null>(null);
   const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
 
-  const panelCombo = PRESET_COMBOS.find(c => c.id === panelComboId) ?? null;
-  const openSlot   = CUSTOM_SLOTS.find(s => s.id === openSlotId) ?? null;
+  useEffect(() => {
+    async function loadCombos() {
+      try {
+        const data = await apiRequest<{ success: boolean; combos: any[] }>('/combos');
+        if (data.success && data.combos) {
+          const loadedPreset: PresetCombo[] = [];
+          const loadedCustom: CustomComboSlot[] = [];
+          const loadedProductsMap = new Map<string, ComboProduct>();
+
+          const mapProduct = (p: any): ComboProduct => {
+            if (!loadedProductsMap.has(p._id)) {
+              loadedProductsMap.set(p._id, {
+                id: p._id,
+                name: p.title || p.name,
+                price: p.price,
+                image: safeImageSrc(p.mainImage || (p.images && p.images[0])),
+                customisable: p.customisable ?? true,
+                availableColours: p.availableColours?.length ? p.availableColours : undefined,
+                availableSizes: p.availableSizes?.length ? p.availableSizes : undefined,
+              });
+            }
+            return loadedProductsMap.get(p._id)!;
+          };
+
+          data.combos.forEach(c => {
+            const products = (c.products || []).map(mapProduct);
+            
+            if (c.type === 'curated') {
+              loadedPreset.push({
+                id: c._id,
+                name: c.name,
+                tagline: c.tagline || '',
+                price: c.price || 0,
+                originalPrice: c.originalPrice || c.price || 0,
+                image: safeImageSrc(c.image),
+                badge: c.badge || '',
+                tint: c.tint || '#c8a84b',
+                includedProducts: products,
+              });
+            } else {
+              loadedCustom.push({
+                id: c._id,
+                name: c.name,
+                tagline: c.tagline || '',
+                maxItems: c.itemsCount || 3,
+                fixedPrice: c.price || 0,
+                image: safeImageSrc(c.image),
+                badge: c.badge || '',
+                tint: c.tint || '#c8a84b',
+                allowedProducts: products,
+              });
+            }
+          });
+
+          setAllProducts(Array.from(loadedProductsMap.values()));
+          setPresetCombos(loadedPreset);
+          setCustomSlots(loadedCustom);
+          if (loadedPreset.length > 0) setSelectedComboId(loadedPreset[0].id);
+
+          setSlotSelections(Object.fromEntries(loadedCustom.map(s => [s.id, []])));
+          setSlotVariants(Object.fromEntries(loadedCustom.map(s => [s.id, {}])));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCombos();
+  }, []);
+
+  const panelCombo = presetCombos.find(c => c.id === panelComboId) ?? null;
+  const openSlot   = customSlots.find(s => s.id === openSlotId) ?? null;
 
   function handlePresetAddToCart(combo: PresetCombo) {
     addItem({
@@ -3637,7 +3718,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   function handleSlotToggle(slotId: string, pid: string) {
     setSlotSelections(prev => {
       const cur  = prev[slotId] || [];
-      const slot = CUSTOM_SLOTS.find(s => s.id === slotId)!;
+      const slot = customSlots.find(s => s.id === slotId)!;
       if (cur.includes(pid)) return { ...prev, [slotId]: cur.filter(id => id !== pid) };
       if (cur.length >= slot.maxItems) return prev;
       return { ...prev, [slotId]: [...cur, pid] };
@@ -4027,7 +4108,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 {/* <p className="sec-desc">Each set is a curated collection of complementary jewellery pieces. Tap any set to view the individual pieces and personalise them before adding to your cart.</p> */}
               </div>
               <div className="cgrid">
-                {PRESET_COMBOS.map(combo => (
+                {presetCombos.map(combo => (
                   <ComboCard
                     key={combo.id}
                     combo={combo}
@@ -4046,7 +4127,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 {/* <p className="sec-desc">Choose a bundle size, then hand-pick your favourite pieces from our collection. Customise each one with your preferred colour, size, and a personal message as you go.</p> */}
               </div>
               <div className="cgrid-custom">
-                {CUSTOM_SLOTS.map(slot => (
+                {customSlots.map(slot => (
                   <CustomSlotCard
                     key={slot.id}
                     slot={slot}

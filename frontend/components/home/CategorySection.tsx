@@ -624,9 +624,16 @@ export default function CategorySection() {
         if (!mounted) return;
 
         const routePrefix = tab;
-        const filteredCategories = catalogCategories.filter(
-          (category) => !category.genderSlug || category.genderSlug === tab
-        );
+        const filteredCategories = catalogCategories
+          .filter((category) => !category.genderSlug || category.genderSlug === tab)
+          .sort((left, right) => {
+            const leftIsJewellery = left.name?.trim().toLowerCase() === 'jewellery';
+            const rightIsJewellery = right.name?.trim().toLowerCase() === 'jewellery';
+
+            if (leftIsJewellery && !rightIsJewellery) return -1;
+            if (!leftIsJewellery && rightIsJewellery) return 1;
+            return 0;
+          });
         const filteredIds = new Set(filteredCategories.map((category) => category.id));
         const subcategoriesByCategory = new Map<string, SubCategoryItem[]>();
 

@@ -64,6 +64,7 @@ export interface CatalogProduct {
   subtype?: string;
   gender: "men" | "women" | "kids" | "unisex";
   stock: number;
+  numberOfProducts: number;
   badge: string | null;
   offer: string | null;
   sku: string;
@@ -74,6 +75,7 @@ export interface CatalogProduct {
     color: string;
     size: string;
     stock: number;
+    price?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -138,6 +140,7 @@ interface BackendProduct {
     color?: string;
     size?: string;
     stock?: number;
+    price?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -146,6 +149,7 @@ interface BackendProduct {
   style?: BackendMaybeRef;
   gender?: "men" | "women" | "kids" | "unisex";
   stock?: number;
+  numberOfProducts?: number;
   tags?: string[];
   seoTags?: string[];
   faqs?: Array<{ question: string; answer: string }>;
@@ -284,6 +288,7 @@ function normalizeProduct(
           color: variant.color || "",
           size: variant.size || "",
           stock: Number(variant.stock ?? 0),
+          price: variant.price !== undefined && variant.price !== null ? Number(variant.price) : undefined,
           image: variant.image,
           imagePublicId: variant.imagePublicId,
         }))
@@ -348,6 +353,7 @@ function normalizeProduct(
     subtype: subCategorySlug || undefined,
     gender: item.gender || "unisex",
     stock: Number(item.stock ?? 0),
+    numberOfProducts: Number(item.numberOfProducts ?? 1),
     badge: pickBadge(rating),
     offer: discountedPrice ? "Limited Time Deal" : null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,

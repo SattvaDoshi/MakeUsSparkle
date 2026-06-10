@@ -14,11 +14,12 @@ type TaxonomyItem = {
 	category?: { _id: string; gender?: GenderRef } | string;
 };
 
-type Color = { name: string; hex: string };
+type Color = { name: string; hex: string; existingImage?: string; existingImagePublicId?: string; imageFile?: File | null };
 type Variant = {
 	variantIndex: number;
 	color: string;
 	size: string;
+	price?: number | string;
 	stock: number;
 	existingImage?: string;
 	existingImagePublicId?: string;
@@ -63,6 +64,11 @@ const matchesGender = (itemGender: GenderRef | undefined, selected: TaxonomyItem
 	if (!itemGender) return selectedSlug === "unisex";
 	const rawId = typeof itemGender === "string" ? itemGender : itemGender?._id || "";
 	const rawSlug = getGenderSlug(itemGender);
+	
+	if (selectedSlug === "unisex") {
+		return rawSlug === "unisex" || rawSlug === "men" || rawSlug === "women" || rawId === selected?._id || rawId === selected?.slug;
+	}
+	
 	return rawSlug === selectedSlug || rawId === selected?._id || rawId === selected?.slug;
 };
 
@@ -103,6 +109,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		discountedPrice: initialData?.discountedPrice?.toString() || "",
 		discountTag: initialData?.discountTag || "",
 		allowCustomization: Boolean(initialData?.allowCustomization),
+		numberOfProducts: initialData?.numberOfProducts?.toString() || "1",
 		stock: initialData?.stock?.toString() || "",
 		description: initialData?.description || "",
 		about: toPlainText(initialData?.about || ""),
@@ -121,7 +128,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 	// Colors management
 	const [colors, setColors] = useState<Color[]>(initialData?.colors || []);
-	const [newColor, setNewColor] = useState({ name: "", hex: "#000000" });
+	const [newColor, setNewColor] = useState<Color>({ name: "", hex: "#000000", imageFile: null });
 
 	// Sizes management
 	const [sizes, setSizes] = useState<string[]>(initialData?.sizes || []);
@@ -134,6 +141,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				variantIndex: idx,
 				color: v.color || "",
 				size: v.size || "",
+				price: v.price || "",
 				stock: v.stock || 0,
 				existingImage: v.image,
 				existingImagePublicId: v.imagePublicId,
@@ -224,8 +232,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	// Color management
 	const addColor = () => {
 		if (!newColor.name.trim()) return;
-		setColors((prev) => [...prev, { name: newColor.name, hex: newColor.hex }]);
-		setNewColor({ name: "", hex: "#000000" });
+		setColors((prev) => [...prev, { name: newColor.name, hex: newColor.hex, imageFile: newColor.imageFile }]);
+		setNewColor({ name: "", hex: "#000000", imageFile: null });
 	};
 
 	const removeColor = (index: number) => {
@@ -248,7 +256,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		const newIndex = Math.max(...variants.map((v) => v.variantIndex), -1) + 1;
 		setVariants((prev) => [
 			...prev,
-			{ variantIndex: newIndex, color: "", size: "", stock: 0 },
+			{ variantIndex: newIndex, color: "", size: "", price: "", stock: 0 },
 		]);
 	};
 
@@ -309,6 +317,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			if (form.discountedPrice) formData.append("discountedPrice", String(form.discountedPrice));
 			if (form.discountTag) formData.append("discountTag", form.discountTag);
 			formData.append("allowCustomization", String(form.allowCustomization));
+			formData.append("numberOfProducts", String(form.numberOfProducts));
 			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
 			formData.append("stock", String(form.stock));
@@ -322,13 +331,27 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			form.seoTags.forEach((t: string) => formData.append("seoTags", t));
 
 			// Colors & Sizes
-			if (colors.length > 0) formData.append("colors", JSON.stringify(colors));
+			if (colors.length > 0) {
+				const processedColors = colors.map((c) => ({
+					name: c.name,
+					hex: c.hex,
+					existingImage: c.existingImage,
+					existingImagePublicId: c.existingImagePublicId,
+				}));
+				formData.append("colors", JSON.stringify(processedColors));
+				colors.forEach((c, idx) => {
+					if (c.imageFile) {
+						formData.append(`colorImage_${idx}`, c.imageFile);
+					}
+				});
+			}
 			if (sizes.length > 0) formData.append("sizes", JSON.stringify(sizes));
 
 			// Variants
 			const processedVariants = variants.map((v) => ({
 				color: v.color,
 				size: v.size,
+				price: v.price,
 				stock: v.stock,
 				existingImage: v.existingImage,
 				existingImagePublicId: v.existingImagePublicId,
@@ -701,6 +724,25 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										/>
 									</span>
 								</label>
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										Number of Items in Set (e.g., 2 for couple bracelets)
+									</label>
+									<input
+										type="number"
+										min="1"
+										placeholder="1"
+										value={form.numberOfProducts}
+										onChange={(e) => setForm({ ...form, numberOfProducts: e.target.value })}
+										style={{
+											padding: "0.7rem",
+											border: "1px solid #d4d4c8",
+											borderRadius: "6px",
+											fontSize: "0.95rem",
+										}}
+									/>
+								</div>
 
 								{/* Number of Pieces — only for Custom Charms / Keychains */}
 								{isCharmOrKeychain && (
@@ -1228,6 +1270,14 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														border: "1px solid #ccc",
 													}}
 												/>
+												{color.existingImage && (
+													<img src={color.existingImage} alt={color.name} style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 4 }} />
+												)}
+												{color.imageFile && (
+													<span style={{ fontSize: '0.75rem', color: '#4a5c22', display: 'flex', alignItems: 'center' }}>
+														<span style={{ display: 'inline-block', maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{color.imageFile.name}</span>
+													</span>
+												)}
 												<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>{color.name}</span>
 												<button
 													type="button"
@@ -1246,7 +1296,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										))}
 									</div>
 
-									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 64px", gap: "0.7rem", alignItems: "stretch" }}>
+									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 64px 100px", gap: "0.7rem", alignItems: "stretch" }}>
 										<input
 											placeholder="e.g. Gold, Silver, Red"
 											value={newColor.name}
@@ -1281,6 +1331,38 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												boxSizing: "border-box",
 											}}
 										/>
+										<div style={{ position: "relative", minHeight: 44 }}>
+											<input
+												type="file"
+												accept="image/*"
+												id="color-image-upload"
+												onChange={(e) => {
+													if (e.target.files?.[0]) {
+														setNewColor({ ...newColor, imageFile: e.target.files[0] });
+													}
+												}}
+												style={{
+													position: "absolute",
+													inset: 0,
+													opacity: 0,
+													cursor: "pointer",
+													width: "100%",
+												}}
+											/>
+											<div style={{ 
+												display: "flex", 
+												alignItems: "center", 
+												justifyContent: "center", 
+												height: "100%", 
+												border: "1px solid #d4d4c8", 
+												borderRadius: "4px", 
+												background: "#fff", 
+												fontSize: "0.8rem", 
+												color: newColor.imageFile ? "#4a5c22" : "#6b6b60" 
+											}}>
+												{newColor.imageFile ? '✓ Image' : '+ Image'}
+											</div>
+										</div>
 										<button
 											type="button"
 											onClick={addColor}
@@ -1403,141 +1485,167 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												key={idx}
 												style={{
 													background: "#f9f9f7",
-													padding: "1rem",
-													borderRadius: "6px",
+													padding: "1.2rem",
+													borderRadius: "8px",
 													border: "1px solid #d4d4c8",
-													display: "grid",
-													gridTemplateColumns: "minmax(130px, 1.1fr) minmax(105px, 0.9fr) minmax(90px, 0.7fr) minmax(150px, 1fr) 96px",
-													gap: "0.8rem",
-													alignItems: "end",
-													overflowX: "auto",
+													display: "flex",
+													flexDirection: "column",
+													gap: "1.2rem",
 												}}
 											>
-												<div style={{ display: "grid", gap: "0.4rem" }}>
-													<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-														Color
-													</label>
-													<select
-														value={variant.color}
-														onChange={(e) => updateVariant(idx, "color", e.target.value)}
+												<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
+													<div style={{ display: "grid", gap: "0.4rem" }}>
+														<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+															Color
+														</label>
+														<select
+															value={variant.color}
+															onChange={(e) => updateVariant(idx, "color", e.target.value)}
+															style={{
+																padding: "0.6rem",
+																border: "1px solid #d4d4c8",
+																borderRadius: "4px",
+																fontSize: "0.9rem",
+																background: "#fff",
+																width: "100%",
+															}}
+														>
+															<option value="">Select Color</option>
+															{colors.map((c, i) => (
+																<option key={i} value={c.name}>
+																	{c.name}
+																</option>
+															))}
+														</select>
+													</div>
+
+													<div style={{ display: "grid", gap: "0.4rem" }}>
+														<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+															Size
+														</label>
+														<select
+															value={variant.size}
+															onChange={(e) => updateVariant(idx, "size", e.target.value)}
+															style={{
+																padding: "0.6rem",
+																border: "1px solid #d4d4c8",
+																borderRadius: "4px",
+																fontSize: "0.9rem",
+																background: "#fff",
+																width: "100%",
+															}}
+														>
+															<option value="">Select Size</option>
+															{sizes.map((s, i) => (
+																<option key={i} value={s}>
+																	{s}
+																</option>
+															))}
+														</select>
+													</div>
+
+													<div style={{ display: "grid", gap: "0.4rem" }}>
+														<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+															Price (INR)
+														</label>
+														<input
+															type="number"
+															value={variant.price}
+															onChange={(e) => updateVariant(idx, "price", e.target.value)}
+															placeholder="Optional"
+															style={{
+																padding: "0.6rem",
+																border: "1px solid #d4d4c8",
+																borderRadius: "4px",
+																fontSize: "0.9rem",
+																width: "100%",
+																boxSizing: "border-box",
+															}}
+														/>
+													</div>
+
+													<div style={{ display: "grid", gap: "0.4rem" }}>
+														<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+															Stock
+														</label>
+														<input
+															type="number"
+															value={variant.stock}
+															onChange={(e) => updateVariant(idx, "stock", parseInt(e.target.value) || 0)}
+															placeholder="0"
+															style={{
+																padding: "0.6rem",
+																border: "1px solid #d4d4c8",
+																borderRadius: "4px",
+																fontSize: "0.9rem",
+																width: "100%",
+																boxSizing: "border-box",
+															}}
+														/>
+													</div>
+												</div>
+
+												<div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", borderTop: "1px solid #e8ead0", paddingTop: "1rem" }}>
+													<div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", flex: 1 }}>
+														<div style={{ display: "grid", gap: "0.4rem", flex: 1, maxWidth: "300px" }}>
+															<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+																Image
+															</label>
+															<input
+																type="file"
+																accept="image/*"
+																onChange={(e) => {
+																	if (e.target.files?.[0]) {
+																		setVariantImageFile((prev) => ({
+																			...prev,
+																			[variant.variantIndex]: e.target.files![0],
+																		}));
+																	}
+																}}
+																style={{
+																	padding: "0.5rem",
+																	border: "1px dashed #b5c27a",
+																	borderRadius: "6px",
+																	fontSize: "0.85rem",
+																	background: "#fff",
+																	cursor: "pointer",
+																	width: "100%",
+																	boxSizing: "border-box",
+																}}
+															/>
+														</div>
+														
+														<div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minHeight: "42px" }}>
+															{variantImageFile[variant.variantIndex] ? (
+																<span style={{ color: "#4a5c22", fontWeight: 500, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+																	✓ <span style={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{variantImageFile[variant.variantIndex].name}</span>
+																</span>
+															) : variant.existingImage && typeof variant.existingImage === 'string' ? (
+																<img src={variant.existingImage} alt="variant" style={{ width: 42, height: 42, objectFit: 'cover', borderRadius: 6, border: '1px solid #d4d4c8' }} />
+															) : null}
+														</div>
+													</div>
+
+													<button
+														type="button"
+														onClick={() => removeVariant(idx)}
+														onMouseOver={(e) => { e.currentTarget.style.background = "#c62828"; e.currentTarget.style.color = "#fff"; }}
+														onMouseOut={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#c62828"; }}
 														style={{
-															padding: "0.6rem",
-															border: "1px solid #d4d4c8",
-															borderRadius: "4px",
-															fontSize: "0.9rem",
+															padding: "0.6rem 1.2rem",
 															background: "#fff",
-															width: "100%",
+															color: "#c62828",
+															border: "1px solid #c62828",
+															borderRadius: "6px",
+															fontWeight: 500,
+															cursor: "pointer",
+															transition: "all 0.2s ease",
+															whiteSpace: "nowrap",
 														}}
 													>
-														<option value="">Select Color</option>
-														{colors.map((c, i) => (
-															<option key={i} value={c.name}>
-																{c.name}
-															</option>
-														))}
-													</select>
+														Remove Variant
+													</button>
 												</div>
-
-												<div style={{ display: "grid", gap: "0.4rem" }}>
-													<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-														Size
-													</label>
-													<select
-														value={variant.size}
-														onChange={(e) => updateVariant(idx, "size", e.target.value)}
-														style={{
-															padding: "0.6rem",
-															border: "1px solid #d4d4c8",
-															borderRadius: "4px",
-															fontSize: "0.9rem",
-															background: "#fff",
-															width: "100%",
-														}}
-													>
-														<option value="">Select Size</option>
-														{sizes.map((s, i) => (
-															<option key={i} value={s}>
-																{s}
-															</option>
-														))}
-													</select>
-												</div>
-
-												<div style={{ display: "grid", gap: "0.4rem" }}>
-													<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-														Stock
-													</label>
-													<input
-														type="number"
-														value={variant.stock}
-														onChange={(e) => updateVariant(idx, "stock", parseInt(e.target.value) || 0)}
-														placeholder="0"
-														style={{
-															padding: "0.6rem",
-															border: "1px solid #d4d4c8",
-															borderRadius: "4px",
-															fontSize: "0.9rem",
-															width: "100%",
-															boxSizing: "border-box",
-														}}
-													/>
-												</div>
-
-												<div style={{ display: "grid", gap: "0.4rem" }}>
-													<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-														Image
-													</label>
-													<input
-														type="file"
-														accept="image/*"
-														onChange={(e) => {
-															if (e.target.files?.[0]) {
-																setVariantImageFile((prev) => ({
-																	...prev,
-																	[variant.variantIndex]: e.target.files![0],
-																}));
-															}
-														}}
-														style={{
-															padding: "0.4rem",
-															border: "1px solid #d4d4c8",
-															borderRadius: "4px",
-															fontSize: "0.8rem",
-															width: "100%",
-															maxWidth: "100%",
-															boxSizing: "border-box",
-														}}
-													/>
-													{variantImageFile[variant.variantIndex] && (
-														<small style={{ color: "#4a5c22", fontWeight: 500 }}>
-															✓ {variantImageFile[variant.variantIndex].name}
-														</small>
-													)}
-													{variant.existingImage && !variantImageFile[variant.variantIndex] && (
-														typeof variant.existingImage === 'string' ? (
-															<img src={variant.existingImage} alt="variant" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #ddd' }} />
-														) : (
-															<small style={{ color: "#6b6b60" }}>Current image exists</small>
-														)
-													)}
-												</div>
-
-												<button
-													type="button"
-													onClick={() => removeVariant(idx)}
-													style={{
-														padding: "0.6rem",
-														background: "#c62828",
-														color: "#fff",
-														border: "none",
-														borderRadius: "4px",
-														fontWeight: 500,
-														cursor: "pointer",
-														width: "100%",
-													}}
-												>
-													Remove
-												</button>
 											</div>
 										))}
 									</div>

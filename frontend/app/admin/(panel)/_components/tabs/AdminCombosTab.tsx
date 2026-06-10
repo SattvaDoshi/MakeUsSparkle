@@ -15,15 +15,8 @@ export type AdminCombo = {
 	image?: string;
 	price?: number;
 	originalPrice?: number;
-	slots?: Array<{
-		category: CategoryRef;
-		allowedProducts: Array<ProductRef>;
-		defaultProduct: ProductRef;
-	}>;
-	categories?: Array<CategoryRef>;
-	styles?: Array<StyleRef>;
-	discountType?: "percentage" | "fixed";
-	discountRules?: Array<{ minPrice?: number; minItems?: number; discountValue?: number }>;
+	products?: Array<ProductRef>;
+	itemsCount?: number;
 };
 
 type AdminProduct = { _id: string; title: string; price?: number; image?: string };
@@ -51,15 +44,11 @@ type ModalState = {
 	displayOrder: string;
 	price: string;
 	originalPrice: string;
-	slots: Array<{
-		category: string;
-		allowedProducts: string[];
-		defaultProduct: string;
-	}>;
-	selectedCategories: string[];
-	selectedStyles: string[];
-	discountType: "percentage" | "fixed";
-	discountRules: Array<{ minPrice: string; minItems: string; discountValue: string }>;
+	itemsCount: string;
+	tagline: string;
+	badge: string;
+	tint: string;
+	products: string[];
 	imageFile: File | null;
 	existingImage?: string;
 };
@@ -73,11 +62,11 @@ const defaultModal: ModalState = {
 	displayOrder: "0",
 	price: "",
 	originalPrice: "",
-	slots: [],
-	selectedCategories: [],
-	selectedStyles: [],
-	discountType: "percentage",
-	discountRules: [],
+	itemsCount: "",
+	tagline: "",
+	badge: "",
+	tint: "#c8a84b",
+	products: [],
 	imageFile: null,
 };
 
@@ -86,8 +75,8 @@ type TabKey = "curated" | "custom";
 export default function AdminCombosTab({
 	combos,
 	products,
-	categories,
-	styles,
+	categories, // Kept in props in case needed later, though not used in new combo logic
+	styles,     // Kept in props
 	onCreateCuratedCombo,
 	onCreateCustomCombo,
 	onEditCombo,
@@ -95,20 +84,21 @@ export default function AdminCombosTab({
 }: Props) {
 	const safeCombos = Array.isArray(combos) ? combos : [];
 	const safeProducts = Array.isArray(products) ? products : [];
-	const safeCategories = Array.isArray(categories) ? categories : [];
-	const safeStyles = Array.isArray(styles) ? styles : [];
 	const [activeTab, setActiveTab] = useState<TabKey>("curated");
 	const [modal, setModal] = useState<ModalState | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [productSearch, setProductSearch] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const openCreate = () => {
 		setImagePreview(null);
+		setProductSearch("");
 		setModal({ ...defaultModal, kind: activeTab, mode: "create" });
 	};
 
 	const openEdit = (combo: AdminCombo) => {
 		setImagePreview(combo.image || null);
+		setProductSearch("");
 		setModal({
 			mode: "edit",
 			kind: combo.type,
@@ -119,19 +109,11 @@ export default function AdminCombosTab({
 			displayOrder: String(combo.displayOrder || 0),
 			price: combo.price ? String(combo.price) : "",
 			originalPrice: combo.originalPrice ? String(combo.originalPrice) : "",
-			slots: (combo.slots || []).map((s) => ({
-				category: typeof s.category === "string" ? s.category : s.category._id,
-				allowedProducts: (s.allowedProducts || []).map((p) => (typeof p === "string" ? p : p._id)),
-				defaultProduct: typeof s.defaultProduct === "string" ? s.defaultProduct : s.defaultProduct._id,
-			})),
-			selectedCategories: (combo.categories || []).map((c) => (typeof c === "string" ? c : c._id)),
-			selectedStyles: (combo.styles || []).map((s) => (typeof s === "string" ? s : s._id)),
-			discountType: combo.discountType || "percentage",
-			discountRules: (combo.discountRules || []).map((r) => ({
-				minPrice: String(r.minPrice || ""),
-				minItems: String(r.minItems || ""),
-				discountValue: String(r.discountValue || ""),
-			})),
+			itemsCount: combo.itemsCount ? String(combo.itemsCount) : "",
+			tagline: combo.tagline || "",
+			badge: combo.badge || "",
+			tint: combo.tint || "#c8a84b",
+			products: (combo.products || []).map((p) => (typeof p === "string" ? p : p._id)),
 			imageFile: null,
 			existingImage: combo.image,
 		});
@@ -140,6 +122,7 @@ export default function AdminCombosTab({
 	const closeModal = () => {
 		setModal(null);
 		setImagePreview(null);
+		setProductSearch("");
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
@@ -161,25 +144,16 @@ export default function AdminCombosTab({
 		if (modal.description) fd.append("description", modal.description.trim());
 		fd.append("status", modal.status);
 		fd.append("displayOrder", modal.displayOrder);
+		fd.append("price", modal.price);
+		if (modal.tagline) fd.append("tagline", modal.tagline.trim());
+		if (modal.badge) fd.append("badge", modal.badge.trim());
+		if (modal.tint) fd.append("tint", modal.tint);
+		fd.append("products", JSON.stringify(modal.products));
 
 		if (modal.kind === "curated") {
-			fd.append("price", modal.price);
 			if (modal.originalPrice) fd.append("originalPrice", modal.originalPrice);
-			fd.append("slots", JSON.stringify(modal.slots));
 		} else {
-			fd.append("categories", JSON.stringify(modal.selectedCategories));
-			fd.append("styles", JSON.stringify(modal.selectedStyles));
-			fd.append("discountType", modal.discountType);
-			fd.append(
-				"discountRules",
-				JSON.stringify(
-					modal.discountRules.map((r) => ({
-						minPrice: r.minPrice ? Number(r.minPrice) : undefined,
-						minItems: r.minItems ? Number(r.minItems) : undefined,
-						discountValue: r.discountValue ? Number(r.discountValue) : undefined,
-					}))
-				)
-			);
+			fd.append("itemsCount", modal.itemsCount);
 		}
 
 		if (modal.imageFile) fd.append("image", modal.imageFile);
@@ -204,7 +178,7 @@ export default function AdminCombosTab({
 		onDeleteCombo(id);
 	};
 
-		const visibleCombos = safeCombos.filter((c) => c.type === activeTab);
+	const visibleCombos = safeCombos.filter((c) => c.type === activeTab);
 
 	const renderTable = () => {
 		return (
@@ -215,7 +189,7 @@ export default function AdminCombosTab({
 							<th style={{ width: 64 }}>Image</th>
 							<th>Name</th>
 							<th>Status</th>
-							<th>{activeTab === "curated" ? "Price" : "Discount"}</th>
+							<th>Price</th>
 							<th style={{ width: 120 }}>Actions</th>
 						</tr>
 					</thead>
@@ -255,7 +229,7 @@ export default function AdminCombosTab({
 									</span>
 								</td>
 								<td style={{ color: "#666" }}>
-									{activeTab === "curated" ? `₹${c.price || 0}` : `${c.discountType === "percentage" ? "Percentage" : "Fixed"} Based`}
+									₹{c.price || 0}
 								</td>
 								<td>
 									<div className="admin-inline-actions">
@@ -361,6 +335,36 @@ export default function AdminCombosTab({
 									/>
 								</div>
 
+								<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+									<div style={{ display: "grid", gap: "0.35rem" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Tagline</label>
+										<input
+											placeholder="e.g. Bridal Glow Set"
+											value={modal.tagline}
+											onChange={(e) => setModal((prev) => (prev ? { ...prev, tagline: e.target.value } : prev))}
+											style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
+										/>
+									</div>
+									<div style={{ display: "grid", gap: "0.35rem" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Badge</label>
+										<input
+											placeholder="e.g. Best Seller"
+											value={modal.badge}
+											onChange={(e) => setModal((prev) => (prev ? { ...prev, badge: e.target.value } : prev))}
+											style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
+										/>
+									</div>
+									<div style={{ display: "grid", gap: "0.35rem" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Tint Color</label>
+										<input
+											type="color"
+											value={modal.tint}
+											onChange={(e) => setModal((prev) => (prev ? { ...prev, tint: e.target.value } : prev))}
+											style={{ padding: "0.2rem", border: "1px solid #d4d4c8", borderRadius: 6, width: "100%", height: "42px", cursor: "pointer" }}
+										/>
+									</div>
+								</div>
+
 								<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
 									<div style={{ display: "grid", gap: "0.35rem" }}>
 										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Status</label>
@@ -384,251 +388,89 @@ export default function AdminCombosTab({
 									</div>
 								</div>
 
-								{modal.kind === "curated" && (
-									<>
-										<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-											<div style={{ display: "grid", gap: "0.35rem" }}>
-												<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Fixed Price *</label>
-												<input
-													required
-													type="number"
-													placeholder="Combo Price..."
-													value={modal.price}
-													onChange={(e) => setModal((prev) => (prev ? { ...prev, price: e.target.value } : prev))}
-													style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
-												/>
-											</div>
-											<div style={{ display: "grid", gap: "0.35rem" }}>
-												<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Original Price</label>
-												<input
-													type="number"
-													placeholder="Original Price..."
-													value={modal.originalPrice}
-													onChange={(e) => setModal((prev) => (prev ? { ...prev, originalPrice: e.target.value } : prev))}
-													style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
-												/>
-											</div>
-										</div>
-
+								<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+									<div style={{ display: "grid", gap: "0.35rem" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Fixed Price *</label>
+										<input
+											required
+											type="number"
+											placeholder="Combo Price..."
+											value={modal.price}
+											onChange={(e) => setModal((prev) => (prev ? { ...prev, price: e.target.value } : prev))}
+											style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
+										/>
+									</div>
+									{modal.kind === "curated" && (
 										<div style={{ display: "grid", gap: "0.35rem" }}>
-											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Box Slots</label>
-											<div style={{ border: "1px solid #d4d4c8", borderRadius: 6, padding: "0.8rem", background: "#fdfdfa", maxHeight: 400, overflowY: "auto", display: "grid", gap: "0.8rem" }}>
-												{modal.slots.map((s, idx) => {
-													return (
-														<div key={idx} style={{ background: "#fff", border: "1px solid #e8ead0", padding: "0.8rem", borderRadius: 8, display: "grid", gap: "0.6rem" }}>
-															<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-																<strong style={{ fontSize: "0.9rem", color: "#4a5c22" }}>Slot {idx + 1}</strong>
-																<button
-																	type="button"
-																	onClick={() => {
-																		const newS = [...modal.slots];
-																		newS.splice(idx, 1);
-																		setModal({ ...modal, slots: newS });
-																	}}
-																	style={{ background: "#fde8e8", color: "#943b2a", border: "none", borderRadius: 4, padding: "0.2rem 0.5rem", cursor: "pointer", fontSize: "0.75rem" }}
-																>
-																	Remove Slot
-																</button>
-															</div>
-															
-															<div style={{ display: "grid", gap: "0.3rem" }}>
-																<label style={{ fontSize: "0.8rem", color: "#666" }}>Category</label>
-																<select
-																	value={s.category}
-																	onChange={(e) => {
-																		const newS = [...modal.slots];
-																		newS[idx].category = e.target.value;
-																		newS[idx].allowedProducts = [];
-																		newS[idx].defaultProduct = "";
-																		setModal({ ...modal, slots: newS });
-																	}}
-																	style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8" }}
-																>
-																	<option value="">Select a category...</option>
-																	{safeCategories.map((cat) => (
-																		<option key={cat._id} value={cat._id}>{cat.name}</option>
-																	))}
-																</select>
-															</div>
-
-															{s.category && (
-																<>
-																	<div style={{ display: "grid", gap: "0.3rem" }}>
-																		<label style={{ fontSize: "0.8rem", color: "#666" }}>Allowed Products (Hold Ctrl/Cmd to select multiple)</label>
-																		<select
-																			multiple
-																			value={s.allowedProducts}
-																			onChange={(e) => {
-																				const opts = Array.from(e.target.selectedOptions, (opt) => opt.value);
-																				const newS = [...modal.slots];
-																				newS[idx].allowedProducts = opts;
-																				// Reset default if it's no longer allowed
-																				if (!opts.includes(newS[idx].defaultProduct)) {
-																					newS[idx].defaultProduct = opts[0] || "";
-																				}
-																				setModal({ ...modal, slots: newS });
-																			}}
-																			style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8", height: 100 }}
-																		>
-																			{safeProducts.map((prod) => (
-																				<option key={prod._id} value={prod._id}>{prod.title}</option>
-																			))}
-																		</select>
-																	</div>
-
-																	<div style={{ display: "grid", gap: "0.3rem" }}>
-																		<label style={{ fontSize: "0.8rem", color: "#666" }}>Default Product</label>
-																		<select
-																			value={s.defaultProduct}
-																			onChange={(e) => {
-																				const newS = [...modal.slots];
-																				newS[idx].defaultProduct = e.target.value;
-																				setModal({ ...modal, slots: newS });
-																			}}
-																			style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8" }}
-																		>
-																			<option value="">Select default...</option>
-																			{s.allowedProducts.map((pId) => {
-																				const p = safeProducts.find(prod => prod._id === pId);
-																				return p ? <option key={p._id} value={p._id}>{p.title}</option> : null;
-																			})}
-																		</select>
-																	</div>
-																</>
-															)}
-														</div>
-													);
-												})}
-												<button
-													type="button"
-													onClick={() => setModal({ ...modal, slots: [...modal.slots, { category: "", allowedProducts: [], defaultProduct: "" }] })}
-													style={{ background: "#e8ead0", color: "#4a5c22", border: "none", borderRadius: 4, padding: "0.6rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, justifySelf: "start" }}
-												>
-													+ Add Slot
-												</button>
-											</div>
+											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Original Price</label>
+											<input
+												type="number"
+												placeholder="Original Price..."
+												value={modal.originalPrice}
+												onChange={(e) => setModal((prev) => (prev ? { ...prev, originalPrice: e.target.value } : prev))}
+												style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
+											/>
 										</div>
-									</>
-								)}
-
-								{modal.kind === "custom" && (
-									<>
-										<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-											<div style={{ display: "grid", gap: "0.35rem" }}>
-												<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Eligible Categories</label>
-												<select
-													multiple
-													value={modal.selectedCategories}
-													onChange={(e) => {
-														const opts = Array.from(e.target.selectedOptions, (opt) => opt.value);
-														setModal((prev) => (prev ? { ...prev, selectedCategories: opts } : prev));
-													}}
-													style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem", background: "#fff", height: 120 }}
-												>
-													{safeCategories.map((c) => (
-														<option key={c._id} value={c._id}>
-															{c.name}
-														</option>
-													))}
-												</select>
-												<span style={{ fontSize: "0.75rem", color: "#888" }}>Hold Ctrl/Cmd to select multiple. Leave empty for all.</span>
-											</div>
-											<div style={{ display: "grid", gap: "0.35rem" }}>
-												<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Eligible Styles</label>
-												<select
-													multiple
-													value={modal.selectedStyles}
-													onChange={(e) => {
-														const opts = Array.from(e.target.selectedOptions, (opt) => opt.value);
-														setModal((prev) => (prev ? { ...prev, selectedStyles: opts } : prev));
-													}}
-													style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem", background: "#fff", height: 120 }}
-												>
-													{safeStyles.map((s) => (
-														<option key={s._id} value={s._id}>
-															{s.name}
-														</option>
-													))}
-												</select>
-												<span style={{ fontSize: "0.75rem", color: "#888" }}>Hold Ctrl/Cmd to select multiple. Leave empty for all.</span>
-											</div>
-										</div>
-
+									)}
+									{modal.kind === "custom" && (
 										<div style={{ display: "grid", gap: "0.35rem" }}>
-											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Discount Type</label>
-											<select
-												value={modal.discountType}
-												onChange={(e) => setModal((prev) => (prev ? { ...prev, discountType: e.target.value as "percentage" | "fixed" } : prev))}
-												style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem", background: "#fff" }}
-											>
-												<option value="percentage">Percentage Off (%)</option>
-												<option value="fixed">Fixed Amount Off (₹)</option>
-											</select>
+											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Number of Items *</label>
+											<input
+												required
+												type="number"
+												placeholder="e.g. 3"
+												value={modal.itemsCount}
+												onChange={(e) => setModal((prev) => (prev ? { ...prev, itemsCount: e.target.value } : prev))}
+												style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
+											/>
 										</div>
+									)}
+								</div>
 
-										<div style={{ display: "grid", gap: "0.35rem" }}>
-											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Discount Rules</label>
-											<div style={{ border: "1px solid #d4d4c8", borderRadius: 6, padding: "0.8rem", background: "#fdfdfa" }}>
-												{modal.discountRules.map((r, idx) => (
-													<div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "0.5rem", marginBottom: "0.5rem" }}>
+								<div style={{ display: "grid", gap: "0.35rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										{modal.kind === "curated" ? "Included Products" : "Eligible Products"}
+									</label>
+									<input
+										type="text"
+										placeholder="Search products..."
+										value={productSearch}
+										onChange={(e) => setProductSearch(e.target.value)}
+										style={{ padding: "0.5rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.9rem", marginBottom: "0.2rem" }}
+									/>
+									<div style={{ border: "1px solid #d4d4c8", borderRadius: 6, padding: "0.8rem", background: "#fff", height: 200, overflowY: "auto", display: "grid", gap: "0.5rem" }}>
+										{safeProducts
+											.filter((p) => p.title.toLowerCase().includes(productSearch.toLowerCase()))
+											.map((p) => {
+												const isSelected = modal.products.includes(p._id);
+												return (
+													<label key={p._id} style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.9rem", cursor: "pointer", background: isSelected ? "#f5f7ed" : "transparent", padding: "0.4rem", borderRadius: 4, transition: "background 0.2s" }}>
 														<input
-															type="number"
-															placeholder="Min Price (₹)"
-															value={r.minPrice}
+															type="checkbox"
+															checked={isSelected}
 															onChange={(e) => {
-																const newR = [...modal.discountRules];
-																newR[idx].minPrice = e.target.value;
-																setModal({ ...modal, discountRules: newR });
+																if (e.target.checked) {
+																	setModal((prev) => (prev ? { ...prev, products: [...prev.products, p._id] } : prev));
+																} else {
+																	setModal((prev) => (prev ? { ...prev, products: prev.products.filter((id) => id !== p._id) } : prev));
+																}
 															}}
-															style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8" }}
+															style={{ cursor: "pointer", width: 16, height: 16, accentColor: "#4a5c22" }}
 														/>
-														<input
-															type="number"
-															placeholder="Min Items"
-															value={r.minItems}
-															onChange={(e) => {
-																const newR = [...modal.discountRules];
-																newR[idx].minItems = e.target.value;
-																setModal({ ...modal, discountRules: newR });
-															}}
-															style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8" }}
-														/>
-														<input
-															type="number"
-															placeholder={modal.discountType === "percentage" ? "Discount %" : "Discount ₹"}
-															value={r.discountValue}
-															onChange={(e) => {
-																const newR = [...modal.discountRules];
-																newR[idx].discountValue = e.target.value;
-																setModal({ ...modal, discountRules: newR });
-															}}
-															style={{ padding: "0.4rem", borderRadius: 4, border: "1px solid #d4d4c8" }}
-															required
-														/>
-														<button
-															type="button"
-															onClick={() => {
-																const newR = [...modal.discountRules];
-																newR.splice(idx, 1);
-																setModal({ ...modal, discountRules: newR });
-															}}
-															style={{ background: "#fde8e8", color: "#943b2a", border: "none", borderRadius: 4, padding: "0.4rem 0.6rem", cursor: "pointer" }}
-														>
-															X
-														</button>
-													</div>
-												))}
-												<button
-													type="button"
-													onClick={() => setModal({ ...modal, discountRules: [...modal.discountRules, { minPrice: "", minItems: "", discountValue: "" }] })}
-													style={{ background: "#e8ead0", color: "#4a5c22", border: "none", borderRadius: 4, padding: "0.4rem 0.6rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}
-												>
-													+ Add Rule
-												</button>
-											</div>
-										</div>
-									</>
-								)}
+														<span>{p.title} <span style={{ color: "#666" }}>{p.price ? `(₹${p.price})` : ""}</span></span>
+													</label>
+												);
+											})}
+										{safeProducts.filter((p) => p.title.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+											<div style={{ color: "#888", fontSize: "0.85rem", textAlign: "center", padding: "1rem" }}>No products found</div>
+										)}
+									</div>
+									<span style={{ fontSize: "0.75rem", color: "#888" }}>
+										{modal.kind === "curated"
+											? "These products will be bundled together at the fixed price."
+											: "Users will be able to choose their required number of items from this list."}
+									</span>
+								</div>
 
 								<div style={{ display: "grid", gap: "0.35rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Image</label>

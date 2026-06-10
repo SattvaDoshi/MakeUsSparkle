@@ -126,7 +126,7 @@ export default function CheckoutPage() {
             }),
           }] : undefined);
           return { product: mappedProduct, sourceId: item.sourceId, name: item.name, category: item.category,
-            quantity: item.qty, price: item.price, customNote: item.customNote, customImages: item.customImages,
+            quantity: item.qty, price: item.price, color: item.color, colorHex: item.colorHex, size: item.size, sku: item.sku, customNote: item.customNote, customImages: item.customImages,
             selectedCharms, selectionGroups };
         }),
         shippingAddress: currentAddress, isGift, giftMessage: state.giftMessage,

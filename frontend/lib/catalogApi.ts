@@ -49,6 +49,8 @@ export interface CatalogProduct {
   discountedPrice?: number | null;
   discountTag?: string | null;
   allowCustomization?: boolean;
+  maxQuantity?: number;
+  volumeDiscounts?: { quantity: number; discountPercentage: number }[];
   originalPrice: number | null;
   rating: number;
   reviewCount: number;

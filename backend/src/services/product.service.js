@@ -210,6 +210,21 @@ class ProductService {
 		return [];
 	}
 
+	/**
+	 * Parse volume discounts JSON string
+	 */
+	_parseVolumeDiscounts(productData) {
+		try {
+			if (typeof productData.volumeDiscounts === "string") {
+				return JSON.parse(productData.volumeDiscounts);
+			}
+			if (Array.isArray(productData.volumeDiscounts)) {
+				return productData.volumeDiscounts;
+			}
+		} catch (_) {}
+		return [];
+	}
+
 	async createProduct(productData, filesMap = {}) {
 		try {
 			const gender = await this._normalizeProductGender(productData.gender);
@@ -294,6 +309,7 @@ class ProductService {
 
 			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
+			const volumeDiscounts = this._parseVolumeDiscounts(productData);
 
 			const product = await Product.create({
 				title: productData.title,
@@ -303,6 +319,8 @@ class ProductService {
 				discountedPrice: productData.discountedPrice ? Number(productData.discountedPrice) : undefined,
 				discountTag: productData.discountTag,
 				allowCustomization: parseBoolean(productData.allowCustomization),
+				maxQuantity: productData.maxQuantity !== undefined ? Number(productData.maxQuantity) : 10,
+				volumeDiscounts,
 				numberOfProducts: productData.numberOfProducts ? Number(productData.numberOfProducts) : 1,
 				charmPieceOptions,
 				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
@@ -488,6 +506,7 @@ class ProductService {
 
 			const sizes = this._parseSizes(updateData);
 			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
+			const volumeDiscounts = this._parseVolumeDiscounts(updateData);
 
 			const updatedProduct = await Product.findByIdAndUpdate(
 				productId,
@@ -499,6 +518,8 @@ class ProductService {
 					discountedPrice: updateData.discountedPrice ? Number(updateData.discountedPrice) : undefined,
 					discountTag: updateData.discountTag,
 					allowCustomization: updateData.allowCustomization === undefined ? product.allowCustomization : parseBoolean(updateData.allowCustomization),
+					maxQuantity: updateData.maxQuantity !== undefined ? Number(updateData.maxQuantity) : product.maxQuantity,
+					volumeDiscounts,
 					numberOfProducts: updateData.numberOfProducts !== undefined ? Number(updateData.numberOfProducts) : product.numberOfProducts,
 					charmPieceOptions,
 					totalCharms: updateData.totalCharms !== undefined ? Number(updateData.totalCharms) : product.totalCharms,

@@ -22,6 +22,15 @@ const productSchema = new mongoose.Schema(
     discountTag: String,
     allowCustomization: { type: Boolean, default: false },
 
+    // Admin defined limits and discounts
+    maxQuantity: { type: Number, default: 10 },
+    volumeDiscounts: [
+      {
+        quantity: { type: Number, required: true },
+        discountPercentage: { type: Number, required: true },
+      }
+    ],
+
     // The number of individual products to be customized in this product listing
     numberOfProducts: { type: Number, default: 1 },
 

@@ -1698,12 +1698,20 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   useEffect(() => {
     if (!product) return;
     const initialSize = product.sizes?.[0] || product.variants?.[0]?.size || '';
-    setSelections(Array.from({ length: product.numberOfProducts || 1 }, () => ({
-      colorIndex: 0,
-      size: initialSize
-    })));
+    const totalItems = (product.numberOfProducts || 1) * qty;
+    setSelections(prev => {
+      const newSelections = [...prev];
+      if (newSelections.length < totalItems) {
+        for (let i = newSelections.length; i < totalItems; i++) {
+          newSelections.push({ colorIndex: 0, size: initialSize });
+        }
+      } else if (newSelections.length > totalItems) {
+        newSelections.length = totalItems;
+      }
+      return newSelections;
+    });
     setActiveImg(0);
-  }, [product?.sourceId, product?.numberOfProducts]);
+  }, [product?.sourceId, product?.numberOfProducts, qty]);
 
   const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
     const cLabel = normalizeText(normalizedColors[colorIndex]?.label || '');
@@ -1719,19 +1727,18 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const currentImages = dedupeImages([matchingVariant?.image, mainImage, ...images]).filter(Boolean) as string[];
   const displayImg    = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
 
+  let volumeDiscountPct = 0;
+  if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
+    const applicableTiers = product.volumeDiscounts.filter((vd) => qty >= vd.quantity);
+    if (applicableTiers.length > 0) {
+      const bestTier = applicableTiers.reduce((prev, current) => (prev.quantity > current.quantity) ? prev : current);
+      volumeDiscountPct = bestTier.discountPercentage;
+    }
+  }
+
   let computedPrice = discountedPrice || price;
   if (selections.length > 0) {
-    const baseUnit = computedPrice / numberOfProducts;
-    let sum = 0;
-    selections.forEach(sel => {
-      const v = getVariantForSelection(sel.colorIndex, sel.size);
-      if (v && typeof v.price === 'number' && v.price > 0) {
-        sum += v.price;
-      } else {
-        sum += baseUnit;
-      }
-    });
-    computedPrice = sum;
+    computedPrice = (discountedPrice || price) * (1 - volumeDiscountPct / 100);
   }
 
   let discount = 0;
@@ -1761,48 +1768,73 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleWishToggle = useCallback(() => { if (!wishlistItem) return; toggleItem(wishlistItem); }, [toggleItem, wishlistItem]);
 
-  const buildCartItem = useCallback(() => {
-    if (!product) return null;
-    return {
-      id: String(product.sourceId), name: product.name || '', price: computedPrice,
-      originalPrice: price, image: displayImg,
-      color: normalizedColors[selections[0]?.colorIndex || 0]?.label || '',
-      colorHex: normalizedColors[selections[0]?.colorIndex || 0]?.hex || '#c9a84c',
-      size: selections[0]?.size || undefined,
-      sku: product.sku || '',
-      href: product.href || `/products/${product.sourceId}`,
-      customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
-      customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
-      // store selections inside selectionGroups to preserve multiple product selections if needed
-      selectionGroups: [{
-        type: 'selections',
-        items: selections.map((sel, idx) => ({
-          name: `Piece ${idx + 1}`,
-          customData: {
-            color: normalizedColors[sel.colorIndex]?.label || '',
-            colorHex: normalizedColors[sel.colorIndex]?.hex || '#c9a84c',
-            size: sel.size || undefined
-          }
-        }))
-      }],
-      // if gift message is used, we can append it to customNote or store somewhere else, though CartItem doesn't have giftMessage
-    } as Omit<import("@/lib/cartContext").CartItem, "qty">;
-  }, [product, computedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization]);
+  const buildCartItems = useCallback(() => {
+    if (!product) return [];
+
+    let volumeDiscountPct = 0;
+    if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
+      const applicableTiers = product.volumeDiscounts.filter((vd) => qty >= vd.quantity);
+      if (applicableTiers.length > 0) {
+        const bestTier = applicableTiers.reduce((prev, current) => (prev.quantity > current.quantity) ? prev : current);
+        volumeDiscountPct = bestTier.discountPercentage;
+      }
+    }
+
+    const itemsToCart: Omit<import("@/lib/cartContext").CartItem, "qty">[] = [];
+    const sets = qty;
+    const itemsPerSet = product.numberOfProducts || 1;
+
+    for (let i = 0; i < sets; i++) {
+      const setSelections = selections.slice(i * itemsPerSet, (i + 1) * itemsPerSet);
+      
+      let setPrice = discountedPrice || price;
+      // Apply volume discount to this specific set
+      const discountedSetPrice = setPrice * (1 - volumeDiscountPct / 100);
+
+      const cartItem: Omit<import("@/lib/cartContext").CartItem, "qty"> = {
+        id: String(product.sourceId) + `-${Date.now()}-${i}`,
+        name: product.name || '',
+        price: discountedSetPrice,
+        originalPrice: setPrice,
+        image: displayImg,
+        color: normalizedColors[setSelections[0]?.colorIndex || 0]?.label || '',
+        colorHex: normalizedColors[setSelections[0]?.colorIndex || 0]?.hex || '#c9a84c',
+        size: setSelections[0]?.size || undefined,
+        sku: product.sku || '',
+        href: product.href || `/products/${product.sourceId}`,
+        customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
+        customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
+        selectionGroups: [{
+          type: 'selections',
+          items: setSelections.map((sel, idx) => ({
+            name: `Piece ${idx + 1}`,
+            customData: {
+              color: normalizedColors[sel.colorIndex]?.label || '',
+              colorHex: normalizedColors[sel.colorIndex]?.hex || '#c9a84c',
+              size: sel.size || undefined
+            }
+          }))
+        }],
+      };
+      itemsToCart.push(cartItem);
+    }
+    return itemsToCart;
+  }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty]);
 
   const handleBuyNow = useCallback(() => {
-    const item = buildCartItem(); if (!item) return;
-    for (let i = 0; i < qty; i++) addItem(item, false);
+    const items = buildCartItems(); if (items.length === 0) return;
+    items.forEach(item => addItem(item, false));
     router.push('/cart');
-  }, [buildCartItem, qty, addItem, router]);
+  }, [buildCartItems, addItem, router]);
 
   const handleAddToCart = useCallback(() => {
-    const item = buildCartItem(); if (!item) return;
-    for (let i = 0; i < qty; i++) addItem(item);
+    const items = buildCartItems(); if (items.length === 0) return;
+    items.forEach(item => addItem(item));
     fireConfetti(cartBtnRef.current);
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [buildCartItem, qty, addItem]);
+  }, [buildCartItems, addItem]);
 
   const handleColorChange = useCallback((productIndex: number, colorIndex: number) => {
     setSelections(prev => {
@@ -2263,15 +2295,44 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               )}
             </div>
 
-            <div className="pdp-divider" />
+            {/* ── CHANGE: Only show qty when NOT in combo context, and place it ABOVE variants ── */}
+            {!isFromCombo && (
+              <>
+                <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
+                <div className="pdp-qty-row">
+                  <select
+                    value={qty}
+                    onChange={(e) => setQty(Number(e.target.value))}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid rgba(61,74,34,0.2)',
+                      background: '#fff',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--olive-600)',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '80px'
+                    }}
+                  >
+                    {Array.from({ length: Math.min(product?.maxQuantity || stock || 10, 10) }, (_, i) => i + 1).map(q => (
+                      <option key={q} value={q}>{q}</option>
+                    ))}
+                  </select>
+                  <span className="pdp-stock" style={{ marginLeft: 12 }}>Limit: {product?.maxQuantity ? `${product.maxQuantity} per order` : `${stock} left`}</span>
+                </div>
+                <div className="pdp-divider" />
+              </>
+            )}
 
             {selections.map((sel, pIdx) => {
               const selectedColorLabel = normalizeText(normalizedColors[sel.colorIndex]?.label || '');
               return (
                 <div key={pIdx} style={{ marginBottom: pIdx < selections.length - 1 ? 24 : 0 }}>
-                  {numberOfProducts > 1 && (
+                  {(numberOfProducts > 1 || qty > 1) && (
                     <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--olive-600)', marginBottom: 12, letterSpacing: '.05em', textTransform: 'uppercase' }}>
-                      Product {pIdx + 1}
+                      Item {pIdx + 1}
                     </h3>
                   )}
                   
@@ -2345,21 +2406,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            {/* ── CHANGE: Only show qty + CTA buttons when NOT in combo context ── */}
-            {!isFromCombo && (
-              <>
-                <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
-                <div className="pdp-qty-row">
-                  <div className="pdp-qty">
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-                    <span className="pdp-qty-val">{qty}</span>
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock, q + 1))}>+</button>
-                  </div>
-                  <span className="pdp-stock">Only {currentStock} left in stock!</span>
-                </div>
-                <div className="pdp-divider" />
-              </>
-            )}
+
 
             {/* ── CHANGE: Hide Complete the Look in combo context ── */}
             {!isFromCombo && (

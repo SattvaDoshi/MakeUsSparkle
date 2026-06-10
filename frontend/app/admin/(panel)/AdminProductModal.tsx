@@ -109,6 +109,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		discountedPrice: initialData?.discountedPrice?.toString() || "",
 		discountTag: initialData?.discountTag || "",
 		allowCustomization: Boolean(initialData?.allowCustomization),
+		maxQuantity: initialData?.maxQuantity?.toString() || "10",
 		numberOfProducts: initialData?.numberOfProducts?.toString() || "1",
 		stock: initialData?.stock?.toString() || "",
 		description: initialData?.description || "",
@@ -125,6 +126,11 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		Array.isArray(initialData?.charmPieceOptions) ? initialData.charmPieceOptions : []
 	);
 	const [newPieceInput, setNewPieceInput] = useState("");
+
+	// Volume discounts
+	const [volumeDiscounts, setVolumeDiscounts] = useState<{ quantity: number; discountPercentage: number }[]>(
+		Array.isArray(initialData?.volumeDiscounts) ? initialData.volumeDiscounts : []
+	);
 
 	// Colors management
 	const [colors, setColors] = useState<Color[]>(initialData?.colors || []);
@@ -317,6 +323,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			if (form.discountedPrice) formData.append("discountedPrice", String(form.discountedPrice));
 			if (form.discountTag) formData.append("discountTag", form.discountTag);
 			formData.append("allowCustomization", String(form.allowCustomization));
+			formData.append("maxQuantity", String(form.maxQuantity));
+			formData.append("volumeDiscounts", JSON.stringify(volumeDiscounts));
 			formData.append("numberOfProducts", String(form.numberOfProducts));
 			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
@@ -963,6 +971,72 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											fontSize: "0.95rem",
 										}}
 									/>
+								</div>
+
+								<div className="input-group" style={{ display: "grid", gap: "0.4rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										Max Quantity per Order
+									</label>
+									<input
+										placeholder="e.g. 10"
+										type="number"
+										value={form.maxQuantity}
+										onChange={(e) => setForm({ ...form, maxQuantity: e.target.value })}
+										style={{
+											padding: "0.7rem",
+											border: "1px solid #d4d4c8",
+											borderRadius: "6px",
+											fontSize: "0.95rem",
+										}}
+									/>
+								</div>
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.6rem", padding: "1rem", border: "1px solid #d4d4c8", borderRadius: "8px", background: "#f9f9f7" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										Volume Discounts (Tiered Pricing)
+									</label>
+									{volumeDiscounts.map((vd, idx) => (
+										<div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+											<input
+												type="number"
+												placeholder="Quantity"
+												value={vd.quantity}
+												onChange={(e) => {
+													const newVd = [...volumeDiscounts];
+													newVd[idx].quantity = Number(e.target.value);
+													setVolumeDiscounts(newVd);
+												}}
+												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
+											/>
+											<span style={{ fontSize: "0.85rem", color: "#666" }}>qty</span>
+											<input
+												type="number"
+												placeholder="Discount %"
+												value={vd.discountPercentage}
+												onChange={(e) => {
+													const newVd = [...volumeDiscounts];
+													newVd[idx].discountPercentage = Number(e.target.value);
+													setVolumeDiscounts(newVd);
+												}}
+												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
+											/>
+											<span style={{ fontSize: "0.85rem", color: "#666" }}>% off</span>
+											<button
+												type="button"
+												onClick={() => setVolumeDiscounts(volumeDiscounts.filter((_, i) => i !== idx))}
+												style={{ background: "#ffebee", color: "#c62828", border: "none", borderRadius: "4px", padding: "0.4rem 0.6rem", cursor: "pointer" }}
+											>
+												Remove
+											</button>
+										</div>
+									))}
+									<button
+										type="button"
+										onClick={() => setVolumeDiscounts([...volumeDiscounts, { quantity: 2, discountPercentage: 5 }])}
+										style={{ alignSelf: "flex-start", background: "#4a5c22", color: "#fff", border: "none", borderRadius: "4px", padding: "0.5rem 1rem", fontSize: "0.8rem", cursor: "pointer", marginTop: "0.5rem" }}
+									>
+										+ Add Discount Tier
+									</button>
 								</div>
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>

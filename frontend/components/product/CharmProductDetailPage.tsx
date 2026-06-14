@@ -306,10 +306,10 @@ const GOES_WELL_WITH = [
 ];
 
 /* ─── CHARM SELECTOR COMPONENT ─── */
+/* ─── CHARM SELECTOR COMPONENT ─── */
 function CharmSelector({
   onChange,
   charmPieceOptions = [],
-  totalCharms = 0
 }: {
   onChange: (data: { count: number; charms: string[] }) => void;
   charmPieceOptions?: number[];
@@ -318,10 +318,8 @@ function CharmSelector({
   const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const [charmCount, setCharmCount] = useState(() => optionsList[0] || 1);
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync count when options change
+  // Sync count options change
   useEffect(() => {
     if (charmPieceOptions && charmPieceOptions.length > 0) {
       setCharmCount(charmPieceOptions[0]);
@@ -329,244 +327,185 @@ function CharmSelector({
     }
   }, [charmPieceOptions]);
 
-  // Adjust selection if charmCount decreases
+  // Keep selectedCharms array in sync with charmCount
   useEffect(() => {
-    if (selectedCharms.length > charmCount) {
-      setSelectedCharms(prev => prev.slice(0, charmCount));
-    }
-  }, [charmCount, selectedCharms.length]);
+    setSelectedCharms(prev => {
+      const next = [...prev];
+      while (next.length < charmCount) next.push('');
+      return next.slice(0, charmCount);
+    });
+  }, [charmCount]);
 
   useEffect(() => {
     onChange({ count: charmCount, charms: selectedCharms });
   }, [charmCount, selectedCharms, onChange]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, []);
-
-  const toggleSelectCharm = (charmName: string) => {
+  const setCharm = (index: number, value: string) => {
     setSelectedCharms(prev => {
-      if (prev.includes(charmName)) {
-        return prev.filter(c => c !== charmName);
-      }
-      if (prev.length >= charmCount) {
-        // Can't select more than the limit
-        return prev;
-      }
-      return [...prev, charmName];
+      const next = [...prev];
+      next[index] = value;
+      return next;
     });
   };
 
-  const totalOptions = totalCharms > 0 ? totalCharms : 42; // default to 42 if not configured
-  const charmOptions = Array.from({ length: totalOptions }, (_, i) => `Charm ${i + 1}`);
+  const filledCount = selectedCharms.filter(Boolean).length;
+  const availableCharms = CHARM_OPTIONS; // includes the placeholder at index 0
 
   return (
     <div className="charm-selector">
       {/* Count picker */}
-      <div className="charm-count-row">
-        <p className="charm-section-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Number of Charms
-        </p>
-        <div className="charm-count-grid">
-          {optionsList.map(n => (
-            <button
-              key={n}
-              type="button"
-              className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
-              onClick={() => {
-                setCharmCount(n);
-              }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+      <p className="charm-section-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Number of Charms
+      </p>
+      <div className="charm-count-grid" style={{ marginBottom: 20 }}>
+        {optionsList.map(n => (
+          <button
+            key={n}
+            type="button"
+            className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
+            onClick={() => setCharmCount(n)}
+          >
+            {n}
+          </button>
+        ))}
       </div>
 
-      {/* Checkbox Dropdown */}
-      <div className="charm-dropdown-container" ref={dropdownRef} style={{ marginTop: 18, position: 'relative' }}>
-        <p className="charm-section-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-          Select Charms
-          <span className="charm-filled-badge">{selectedCharms.length}/{charmCount} selected</span>
-        </p>
+      {/* One native <select> per slot */}
+      <p className="charm-section-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+        Select Your Charms
+        <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
+      </p>
 
-        <button
-          type="button"
-          className="charm-dropdown-btn"
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'white',
-            border: '1.5px solid var(--beige-dkr)',
-            borderRadius: 12,
-            padding: '12px 16px',
-            fontFamily: "'Jost', sans-serif",
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--olive-600)',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            {selectedCharms.length > 0
-              ? selectedCharms.join(', ')
-              : 'SELECT CHARMS'}
-          </span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            style={{
-              width: 14,
-              height: 14,
-              color: 'var(--mist)',
-              transition: 'transform 0.2s',
-              transform: isOpen ? 'rotate(180deg)' : 'none',
-              flexShrink: 0,
-            }}
-          >
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {Array.from({ length: charmCount }, (_, i) => {
+          const chosen = selectedCharms[i] || '';
+          const usedValues = new Set(selectedCharms.filter((c, idx) => c && idx !== i));
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Slot number badge */}
+              <span style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: chosen ? 'var(--olive-600)' : 'var(--beige-dkr)',
+                color: chosen ? 'var(--beige)' : 'var(--mist)',
+                fontSize: 10, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background .2s, color .2s',
+              }}>
+                {i + 1}
+              </span>
 
-        {isOpen && (
-          <div
-            className="charm-dropdown-list-wrapper"
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              marginTop: 6,
-              background: 'white',
-              border: '1.5px solid var(--beige-dkr)',
-              borderRadius: 12,
-              maxHeight: 240,
-              overflowY: 'auto',
-              boxShadow: '0 8px 30px rgba(61,74,34,0.15)',
-              zIndex: 100,
-              animation: 'charmPop 0.25s ease both',
-            }}
-          >
-            {charmOptions.map(option => {
-              const isChecked = selectedCharms.includes(option);
-              const isMaxReached = selectedCharms.length >= charmCount;
-              const disabled = isMaxReached && !isChecked;
-
-              return (
-                <label
-                  key={option}
+              {/* Native select — browser renders the list natively, no clipping */}
+              <div style={{ position: 'relative', flex: 1 }}>
+                <select
+                  value={chosen}
+                  onChange={e => setCharm(i, e.target.value)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '10px 16px',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    background: isChecked ? 'var(--olive-50)' : 'transparent',
-                    borderBottom: '1px solid rgba(61,74,34,0.06)',
-                    transition: 'background 0.15s',
-                    opacity: disabled ? 0.5 : 1,
-                  }}
-                  className="charm-dropdown-option"
-                  onClick={(e) => {
-                    if (disabled) e.preventDefault();
+                    width: '100%',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    background: chosen ? 'var(--olive-50)' : 'white',
+                    border: `1.5px solid ${chosen ? 'rgba(90,110,35,.35)' : 'var(--beige-dkr)'}`,
+                    borderRadius: 10,
+                    padding: '10px 36px 10px 14px',
+                    fontFamily: "'Jost', sans-serif",
+                    fontSize: 12.5,
+                    fontWeight: chosen ? 500 : 400,
+                    color: chosen ? 'var(--olive-900)' : 'rgba(30,35,16,.4)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    transition: 'border-color .2s, background .2s',
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={disabled}
-                    onChange={() => toggleSelectCharm(option)}
-                    style={{
-                      width: 16,
-                      height: 16,
-                      accentColor: 'var(--olive-600)',
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: isChecked ? 600 : 400,
-                      color: isChecked ? 'var(--olive-900)' : 'var(--ink)',
-                    }}
-                  >
-                    {option}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        )}
+                  {availableCharms.map(opt => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      disabled={opt.value === '' ? false : usedValues.has(opt.value)}
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Custom chevron */}
+                <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{
+                    position: 'absolute', right: 11, top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 13, height: 13,
+                    color: 'var(--mist)', pointerEvents: 'none',
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+
+              {/* Clear button — only when a charm is chosen */}
+              {chosen && (
+                <button
+                  type="button"
+                  onClick={() => setCharm(i, '')}
+                  title="Clear"
+                  style={{
+                    flexShrink: 0, width: 28, height: 28,
+                    borderRadius: '50%', border: '1.5px solid var(--beige-dkr)',
+                    background: 'white', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--mist)', fontSize: 15, lineHeight: 1,
+                    transition: 'border-color .2s, color .2s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--red)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--red)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--beige-dkr)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--mist)';
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Summary / selected display */}
-      {selectedCharms.length > 0 && (
+      {/* Summary strip */}
+      {filledCount > 0 && (
         <div className="charm-summary-strip" style={{ animation: 'charmFadeUp .35s ease both', marginTop: 16 }}>
           <div className="charm-summary-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--olive-500)', flexShrink: 0, marginTop: 1 }}>
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <span>
-              <strong>{selectedCharms.length}</strong> of <strong>{charmCount}</strong> selected
-              {selectedCharms.length === charmCount && <span className="charm-all-done"> — all set! ✨</span>}
+              <strong>{filledCount}</strong> of <strong>{charmCount}</strong> selected
+              {filledCount === charmCount && <span className="charm-all-done"> — all set! ✨</span>}
             </span>
           </div>
-          <div className="charm-summary-list" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {selectedCharms.map((c, i) => (
-              <span key={c} className="charm-summary-pill" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 10.5,
-                fontWeight: 500,
-                color: 'var(--ink)',
-                background: 'white',
-                border: '1px solid rgba(61,74,34,0.12)',
-                padding: '4px 10px 4px 4px',
-                borderRadius: 50,
-              }}>
-                <span className="charm-summary-num" style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: 'var(--olive-600)',
-                  color: 'var(--beige)',
-                  fontSize: 9,
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>{i + 1}</span>
-                {c}
-                <button
-                  type="button"
-                  onClick={() => toggleSelectCharm(c)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', color: 'var(--mist)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
-                  title="Remove"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {selectedCharms.map((c, i) => {
+              const label = CHARM_OPTIONS.find(o => o.value === c)?.label || '';
+              return (
+                <span key={i} className={`charm-summary-pill${!c ? ' charm-summary-pill--empty' : ''}`}>
+                  <span className="charm-summary-num">{i + 1}</span>
+                  {c ? label : <em style={{ fontSize: 10 }}>empty</em>}
+                  {c && (
+                    <button
+                      type="button"
+                      onClick={() => setCharm(i, '')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 2px', color: 'var(--mist)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                    >×</button>
+                  )}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

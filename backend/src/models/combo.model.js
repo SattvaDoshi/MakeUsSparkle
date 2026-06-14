@@ -8,14 +8,12 @@ const comboSchema = new mongoose.Schema(
       type: String,
       enum: ["curated", "custom"],
     },
-    // Fields for Curated Combos
-    slots: [
-      {
-        category: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
-        allowedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
-        defaultProduct: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-      },
-    ],
+    // Styling Fields
+    tagline: String,
+    badge: String,
+    tint: String,
+    // Shared or Curated fields
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     price: Number,
     originalPrice: Number,
     image: String,
@@ -32,20 +30,8 @@ const comboSchema = new mongoose.Schema(
       default: 0
     },
 
-    // Fields for Custom Combos
-    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
-    styles: [{ type: mongoose.Schema.Types.ObjectId, ref: "Style" }],
-    discountType: {
-      type: String,
-      enum: ["percentage", "fixed"],
-    },
-    discountRules: [
-      {
-        minPrice: Number, // Minimum total price of selected products
-        minItems: Number, // Minimum number of selected products
-        discountValue: Number, // Discount value to apply
-      }
-    ]
+    // Fields specific to Custom Combos
+    itemsCount: Number, // Number of items the user must select from the products list
   },
   { timestamps: true }
 );

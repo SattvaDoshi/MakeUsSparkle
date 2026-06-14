@@ -210,6 +210,21 @@ class ProductService {
 		return [];
 	}
 
+	/**
+	 * Parse volume discounts JSON string
+	 */
+	_parseVolumeDiscounts(productData) {
+		try {
+			if (typeof productData.volumeDiscounts === "string") {
+				return JSON.parse(productData.volumeDiscounts);
+			}
+			if (Array.isArray(productData.volumeDiscounts)) {
+				return productData.volumeDiscounts;
+			}
+		} catch (_) {}
+		return [];
+	}
+
 	async createProduct(productData, filesMap = {}) {
 		try {
 			const gender = await this._normalizeProductGender(productData.gender);
@@ -261,6 +276,7 @@ class ProductService {
 				variants.push({
 					color: v.color || null,
 					size: v.size || null,
+					price: v.price ? Number(v.price) : undefined,
 					image: variantImage,
 					imagePublicId: variantImagePublicId,
 					stock: v.stock ? Number(v.stock) : 0,
@@ -268,9 +284,32 @@ class ProductService {
 			}
 
 			// --- Colors & Sizes ---
-			const colors = this._parseColors(productData);
+			const rawColors = this._parseColors(productData);
+			const colors = [];
+
+			for (let i = 0; i < rawColors.length; i++) {
+				const c = rawColors[i];
+				const colorFile = filesMap[`colorImage_${i}`];
+				let colorImage = c.existingImage || null;
+				let colorImagePublicId = c.existingImagePublicId || null;
+
+				if (colorFile && colorFile[0]) {
+					const uploaded = await imageService.uploadImage(colorFile[0].buffer, "products/colors");
+					colorImage = uploaded.url;
+					colorImagePublicId = uploaded.publicId;
+				}
+
+				colors.push({
+					name: c.name,
+					hex: c.hex,
+					image: colorImage,
+					imagePublicId: colorImagePublicId,
+				});
+			}
+
 			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
+			const volumeDiscounts = this._parseVolumeDiscounts(productData);
 
 			const product = await Product.create({
 				title: productData.title,
@@ -280,6 +319,9 @@ class ProductService {
 				discountedPrice: productData.discountedPrice ? Number(productData.discountedPrice) : undefined,
 				discountTag: productData.discountTag,
 				allowCustomization: parseBoolean(productData.allowCustomization),
+				maxQuantity: productData.maxQuantity !== undefined ? Number(productData.maxQuantity) : 10,
+				volumeDiscounts,
+				numberOfProducts: productData.numberOfProducts ? Number(productData.numberOfProducts) : 1,
 				charmPieceOptions,
 				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
 				stock: productData.stock ? Number(productData.stock) : undefined,
@@ -402,6 +444,7 @@ class ProductService {
 				variants.push({
 					color: v.color || null,
 					size: v.size || null,
+					price: v.price ? Number(v.price) : undefined,
 					image: variantImage,
 					imagePublicId: variantImagePublicId,
 					stock: v.stock ? Number(v.stock) : 0,
@@ -416,9 +459,54 @@ class ProductService {
 			}
 
 			// --- Colors & Sizes ---
-			const colors = this._parseColors(updateData);
+			const rawColors = this._parseColors(updateData);
+			const colors = [];
+
+			const existingColorPublicIds = {};
+			if (product.colors) {
+				for (const c of product.colors) {
+					if (c.image && c.imagePublicId) {
+						existingColorPublicIds[c.image] = c.imagePublicId;
+					}
+				}
+			}
+
+			const keptColorImages = new Set();
+
+			for (let i = 0; i < rawColors.length; i++) {
+				const c = rawColors[i];
+				const colorFile = filesMap[`colorImage_${i}`];
+				let colorImage = c.existingImage || null;
+				let colorImagePublicId = c.existingImagePublicId || null;
+
+				if (colorFile && colorFile[0]) {
+					if (colorImagePublicId) {
+						await imageService.deleteImage(colorImagePublicId).catch((e) => console.error("Could not delete old color image", e));
+					}
+					const uploaded = await imageService.uploadImage(colorFile[0].buffer, "products/colors");
+					colorImage = uploaded.url;
+					colorImagePublicId = uploaded.publicId;
+				}
+
+				if (colorImage) keptColorImages.add(colorImage);
+
+				colors.push({
+					name: c.name,
+					hex: c.hex,
+					image: colorImage,
+					imagePublicId: colorImagePublicId,
+				});
+			}
+
+			for (const [imgUrl, pubId] of Object.entries(existingColorPublicIds)) {
+				if (!keptColorImages.has(imgUrl)) {
+					await imageService.deleteImage(pubId).catch((e) => console.error("Could not delete orphaned color image", e));
+				}
+			}
+
 			const sizes = this._parseSizes(updateData);
 			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
+			const volumeDiscounts = this._parseVolumeDiscounts(updateData);
 
 			const updatedProduct = await Product.findByIdAndUpdate(
 				productId,
@@ -430,6 +518,9 @@ class ProductService {
 					discountedPrice: updateData.discountedPrice ? Number(updateData.discountedPrice) : undefined,
 					discountTag: updateData.discountTag,
 					allowCustomization: updateData.allowCustomization === undefined ? product.allowCustomization : parseBoolean(updateData.allowCustomization),
+					maxQuantity: updateData.maxQuantity !== undefined ? Number(updateData.maxQuantity) : product.maxQuantity,
+					volumeDiscounts,
+					numberOfProducts: updateData.numberOfProducts !== undefined ? Number(updateData.numberOfProducts) : product.numberOfProducts,
 					charmPieceOptions,
 					totalCharms: updateData.totalCharms !== undefined ? Number(updateData.totalCharms) : product.totalCharms,
 					stock: updateData.stock ? Number(updateData.stock) : undefined,
@@ -481,6 +572,16 @@ class ProductService {
 					.map((v) => v.imagePublicId);
 				if (variantPublicIds.length > 0) {
 					await imageService.deleteMultipleImages(variantPublicIds).catch(() => {});
+				}
+			}
+
+			// Delete color images from Cloudinary
+			if (product.colors && product.colors.length > 0) {
+				const colorPublicIds = product.colors
+					.filter((c) => c.imagePublicId)
+					.map((c) => c.imagePublicId);
+				if (colorPublicIds.length > 0) {
+					await imageService.deleteMultipleImages(colorPublicIds).catch(() => {});
 				}
 			}
 

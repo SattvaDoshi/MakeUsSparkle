@@ -234,15 +234,10 @@ export type AdminCombo = {
 	image?: string;
 	price?: number;
 	originalPrice?: number;
-	slots?: Array<{
-		category: { _id: string; name?: string } | string;
-		allowedProducts: Array<{ _id: string; title?: string } | string>;
-		defaultProduct: { _id: string; title?: string } | string;
-	}>;
-	categories?: Array<{ _id: string; name?: string } | string>;
-	styles?: Array<{ _id: string; name?: string } | string>;
-	discountType?: "percentage" | "fixed";
-	discountRules?: Array<{ minPrice?: number; minItems?: number; discountValue?: number }>;
+	products?: any[];
+	itemsCount?: number;
+	tagline?: string;
+	badge?: string;
 };
 
 type PagedResponse<T, K extends string> = {

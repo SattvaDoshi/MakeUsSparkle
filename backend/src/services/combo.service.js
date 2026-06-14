@@ -23,47 +23,13 @@ const normalizeObjectIdArray = (values) => {
 	return values.map(normalizeObjectId).filter(Boolean);
 };
 
-const normalizeCuratedSlots = (slots) => {
-	if (!Array.isArray(slots)) {
-		return slots;
-	}
-
-	return slots
-		.map((slot) => {
-			if (!slot || typeof slot !== "object") {
-				return null;
-			}
-
-			const normalizedSlot = {
-				...slot,
-				category: normalizeObjectId(slot.category),
-				allowedProducts: normalizeObjectIdArray(slot.allowedProducts),
-			};
-
-			const defaultProduct = normalizeObjectId(slot.defaultProduct);
-			if (defaultProduct) {
-				normalizedSlot.defaultProduct = defaultProduct;
-			} else {
-				delete normalizedSlot.defaultProduct;
-			}
-
-			if (!normalizedSlot.category) {
-				return null;
-			}
-
-			return normalizedSlot;
-		})
-		.filter(Boolean);
-};
-
+// Removed normalizeCuratedSlots
 class ComboService {
 	async getCombos(type = null) {
 		try {
 			const query = type ? { type } : {};
 			const combos = await Combo.find(query)
-				.populate(["slots.category", "slots.allowedProducts", "slots.defaultProduct"])
-				.populate("categories")
-				.populate("styles")
+				.populate("products")
 				.sort({ createdAt: -1 });
 			return { success: true, combos };
 		} catch (error) {
@@ -75,9 +41,7 @@ class ComboService {
 	async getComboById(comboId) {
 		try {
 			const combo = await Combo.findById(comboId)
-				.populate(["slots.category", "slots.allowedProducts", "slots.defaultProduct"])
-				.populate("categories")
-				.populate("styles");
+				.populate("products");
 			if (!combo) {
 				throw new Error("Combo not found");
 			}
@@ -92,7 +56,7 @@ class ComboService {
 		try {
 			const curatedData = {
 				...comboData,
-				slots: normalizeCuratedSlots(comboData.slots),
+				products: normalizeObjectIdArray(comboData.products),
 			};
 
 			let imageUrl = null;
@@ -112,7 +76,7 @@ class ComboService {
 				imagePublicId,
 			});
 
-			await combo.populate(["slots.category", "slots.allowedProducts", "slots.defaultProduct"]);
+			await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -125,8 +89,7 @@ class ComboService {
 		try {
 			const customData = {
 				...comboData,
-				categories: normalizeObjectIdArray(comboData.categories),
-				styles: normalizeObjectIdArray(comboData.styles),
+				products: normalizeObjectIdArray(comboData.products),
 			};
 
 			let imageUrl = null;
@@ -146,7 +109,7 @@ class ComboService {
 				imagePublicId,
 			});
 
-			await combo.populate(["categories", "styles"]);
+			await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -159,16 +122,8 @@ class ComboService {
 		try {
 			const normalizedUpdateData = { ...updateData };
 
-			if (Object.prototype.hasOwnProperty.call(updateData, "slots")) {
-				normalizedUpdateData.slots = normalizeCuratedSlots(updateData.slots);
-			}
-
-			if (Object.prototype.hasOwnProperty.call(updateData, "categories")) {
-				normalizedUpdateData.categories = normalizeObjectIdArray(updateData.categories);
-			}
-
-			if (Object.prototype.hasOwnProperty.call(updateData, "styles")) {
-				normalizedUpdateData.styles = normalizeObjectIdArray(updateData.styles);
+			if (Object.prototype.hasOwnProperty.call(updateData, "products")) {
+				normalizedUpdateData.products = normalizeObjectIdArray(updateData.products);
 			}
 
 			const combo = await Combo.findById(comboId);
@@ -188,9 +143,7 @@ class ComboService {
 			}
 
 			const updatedCombo = await Combo.findByIdAndUpdate(comboId, normalizedUpdateData, { returnDocument: "after" })
-				.populate(["slots.category", "slots.allowedProducts", "slots.defaultProduct"])
-				.populate("categories")
-				.populate("styles");
+				.populate("products");
 
 			return { success: true, combo: updatedCombo };
 		} catch (error) {

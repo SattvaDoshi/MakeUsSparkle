@@ -15,11 +15,11 @@ export const uploadStorage = multer.memoryStorage();
 export const uploadSingle = multer({
 	storage: uploadStorage,
 	fileFilter: (req, file, cb) => {
-		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
 			cb(null, true);
 		} else {
-			cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
 		}
 	},
 }).single("image");
@@ -28,11 +28,11 @@ export const uploadSingle = multer({
 export const uploadMultiple = multer({
 	storage: uploadStorage,
 	fileFilter: (req, file, cb) => {
-		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
 			cb(null, true);
 		} else {
-			cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
 		}
 	},
 }).array("images", 10);
@@ -41,11 +41,11 @@ export const uploadMultiple = multer({
 export const uploadProductImages = multer({
 	storage: uploadStorage,
 	fileFilter: (req, file, cb) => {
-		const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
 			cb(null, true);
 		} else {
-			cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
 		}
 	},
 }).fields([
@@ -53,6 +53,8 @@ export const uploadProductImages = multer({
 	{ name: "images", maxCount: 20 },
 	// Variant images will come as variantImage_<index> fields (dynamic)
 	...Array.from({ length: 50 }, (_, i) => ({ name: `variantImage_${i}`, maxCount: 1 })),
+	// Color images will come as colorImage_<index> fields (dynamic)
+	...Array.from({ length: 20 }, (_, i) => ({ name: `colorImage_${i}`, maxCount: 1 })),
 ]);
 
 // Cloudinary upload helper

@@ -891,7 +891,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const unitOriginalCharmPrice = originalPrice || price;
   const totalCharmPrice = unitCharmPrice * selectedCharmCount;
   const totalCharmOriginalPrice = unitOriginalCharmPrice * selectedCharmCount;
-  const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? 99 : 0);
+  const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
 
   const wished = product ? isWished(product.id) : false;
 
@@ -903,7 +903,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const buildCartItem = useCallback(() => ({
     id: String(product!.sourceId),
     name: product!.name || '',
-    price: totalCharmPrice + (giftBoxAdded ? 99 : 0),
+    price: totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0),
     originalPrice: totalCharmOriginalPrice,
     image: displayImg,
     color: currentColor?.label || '',
@@ -1563,13 +1563,15 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            {/* Size chart link — always available */}
-            <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
-              </svg>
-              Size Chart
-            </button>
+            {/* Size chart link — show only if sizeChartImage is coming from the data */}
+            {product?.sizeChartImage && (
+              <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+                </svg>
+                Size Chart
+              </button>
+            )}
 
             {description && <p className="pdp-desc">{description}</p>}
 
@@ -1633,16 +1635,20 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
             <div className="pdp-divider" />
 
-            {/* Premium Gift Box upsell */}
-            <p className="pdp-section-label" style={{ marginBottom: 12 }}>Make it a Gift</p>
-            <GiftBoxUpsell
-              added={giftBoxAdded}
-              onToggle={() => setGiftBoxAdded(v => !v)}
-              image={product.giftBox?.image || GIFT_BOX_IMAGE}
-              heading={product.giftBox?.heading || 'Premium Gift Box'}
-              description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
-              price={product.giftBox?.price ?? 99}
-            />
+            {/* Premium Gift Box upsell — show only if giftBox is enabled in the product data */}
+            {product?.giftBox?.enabled && (
+              <>
+                <p className="pdp-section-label" style={{ marginBottom: 12 }}>Make it a Gift</p>
+                <GiftBoxUpsell
+                  added={giftBoxAdded}
+                  onToggle={() => setGiftBoxAdded(v => !v)}
+                  image={product.giftBox?.image || GIFT_BOX_IMAGE}
+                  heading={product.giftBox?.heading || 'Premium Gift Box'}
+                  description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
+                  price={product.giftBox?.price ?? 99}
+                />
+              </>
+            )}
 
             <div className="pdp-divider" />
             <CompleteTheLookStrip />

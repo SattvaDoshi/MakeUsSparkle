@@ -819,7 +819,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
       const cartItem: Omit<import("@/lib/cartContext").CartItem, "qty"> = {
         id: String(product.sourceId) + `-${Date.now()}-${i}`,
         name: product.name || '',
-        price: discountedSetPrice,
+        price: discountedSetPrice + (giftBoxAdded ? (product.giftBox?.price ?? 99) : 0),
         originalPrice: setPrice,
         image: displayImg,
         color: normalizedColors[setSelections[0]?.colorIndex || 0]?.label || '',
@@ -829,6 +829,8 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
         href: product.href || `/products/${product.sourceId}`,
         customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
         customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
+        giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
+        giftBox: giftBoxAdded || undefined,
         selectionGroups: [{
           type: 'selections',
           items: setSelections.map((sel, idx) => ({
@@ -844,7 +846,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
       itemsToCart.push(cartItem);
     }
     return itemsToCart;
-  }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty]);
+  }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
 
   const handleBuyNow = useCallback(() => {
     const items = buildCartItems(); if (items.length === 0) return;
@@ -1386,13 +1388,15 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               );
             })}
 
-            {/* Size chart link — always visible */}
-            <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
-              </svg>
-              Size Chart
-            </button>
+            {/* Size chart link — show only if sizeChartImage is coming from the data */}
+            {product?.sizeChartImage && (
+              <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+                </svg>
+                Size Chart
+              </button>
+            )}
 
             {description && <p className="pdp-desc">{description}</p>}
 
@@ -1422,8 +1426,8 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
 
 
 
-            {/* CHANGE 3: Premium Gift Box upsell — show when NOT in combo context */}
-            {!isFromCombo && product.giftBox?.enabled !== false && (
+            {/* CHANGE 3: Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
+            {!isFromCombo && product?.giftBox?.enabled && (
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 12 }}>
                   Make it a Gift

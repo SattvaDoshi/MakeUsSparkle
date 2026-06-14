@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -82,6 +83,10 @@ const CHARM_OPTIONS = [
 
 const MAX_CHARM_COUNT = 10;
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
+// ── Replace with actual size chart image path ──
+const SIZE_CHART_IMAGE = '/images/size-chart.jpg';
+// ── Replace with actual gift box image path ──
+const GIFT_BOX_IMAGE = '/smallerBox.png';
 const CUSTOMISABLE_CATEGORIES = ['Gift Boxes', 'Fan Box', 'Key Chain/Charm'];
 
 /* ─── Helpers ─── */
@@ -90,6 +95,160 @@ function uniqueValues(vals: Array<string | undefined | null>) {
   return Array.from(new Set(vals.filter((v): v is string => Boolean(v && v.trim()))));
 }
 function dedupeImages(vals: Array<string | undefined | null>) { return uniqueValues(vals); }
+
+/* ─── Size Chart Lightbox ─── */
+function SizeChartLightbox({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', handleKey); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(10,14,5,.82)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px', animation: 'fadeUp .22s ease both',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--beige)', borderRadius: 20,
+          overflow: 'hidden', maxWidth: 540, width: '100%',
+          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 32px 80px rgba(0,0,0,.4)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', borderBottom: '1px solid rgba(61,74,34,.1)',
+          flexShrink: 0,
+        }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 2 }}>Reference Guide</p>
+            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--olive-900)', fontFamily: 'Cormorant Garamond, serif' }}>Size Chart</p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 34, height: 34, borderRadius: '50%', border: '1.5px solid rgba(61,74,34,.15)',
+              background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--mist)', transition: 'all .2s',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        {/* Image */}
+        <div style={{ overflow: 'auto', flexShrink: 1 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={SIZE_CHART_IMAGE}
+            alt="Size Chart"
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+          />
+        </div>
+        {/* Footer tip */}
+        <div style={{
+          padding: '12px 20px', borderTop: '1px solid rgba(61,74,34,.08)',
+          fontSize: 10, color: 'var(--mist)', letterSpacing: '.06em',
+          background: 'var(--beige-dk)', flexShrink: 0,
+        }}>
+          📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Premium Gift Box Upsell ─── */
+function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => void }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'stretch',
+      border: `1.5px solid ${added ? 'rgba(201,168,76,.55)' : 'rgba(61,74,34,.13)'}`,
+      borderRadius: 14, overflow: 'hidden',
+      background: added ? 'linear-gradient(135deg,rgba(201,168,76,.07),rgba(245,240,232,.8))' : 'white',
+      transition: 'border-color .25s, background .25s',
+      marginBottom: 20,
+    }}>
+      {/* Square image, left side */}
+      <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={GIFT_BOX_IMAGE}
+          alt="Premium Gift Box"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(160deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 60%)',
+          pointerEvents: 'none',
+        }} />
+      </div>
+
+      {/* Text content, right side */}
+      <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minWidth: 0 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: 'rgba(201,168,76,.13)', border: '1px solid rgba(201,168,76,.3)',
+          borderRadius: 50, padding: '2px 9px', width: 'fit-content',
+          fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
+          color: '#8c6b20',
+        }}>
+          7 in 10 gifters choose this
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', letterSpacing: '.01em', lineHeight: 1.2 }}>
+            Premium Gift Box
+          </p>
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹99</span>
+        </div>
+
+        <p style={{ fontSize: 10, fontWeight: 400, color: '#101010', lineHeight: 1.5, letterSpacing: '.02em' }}>
+          Rigid magnetic-close box · satin ribbon · message card
+        </p>
+
+        <button
+          onClick={onToggle}
+          style={{
+            marginTop: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            alignSelf: 'flex-start',
+            fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
+            color: added ? 'var(--beige)' : 'var(--olive-600)',
+            background: added ? 'var(--olive-600)' : 'transparent',
+            border: `1.5px solid ${added ? 'var(--olive-600)' : 'rgba(61,74,34,.25)'}`,
+            borderRadius: 50, padding: '6px 14px',
+            cursor: 'pointer', transition: 'all .22s',
+            fontFamily: 'Jost, sans-serif',
+          }}
+        >
+          {added ? (
+            <>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+              Added
+            </>
+          ) : (
+            <>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add to order
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Trust badges ─── */
 const TRUST_BADGES = [
@@ -714,6 +873,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [cartAnim, setCartAnim] = useState(false);
   const [sparkleAnim, setSparkleAnim] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
+  const [showSizeChart, setShowSizeChart] = useState(false);
+  const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
@@ -782,6 +943,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const unitOriginalCharmPrice = originalPrice || price;
   const totalCharmPrice = unitCharmPrice * selectedCharmCount;
   const totalCharmOriginalPrice = unitOriginalCharmPrice * selectedCharmCount;
+  const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? 99 : 0);
 
   const wished = product ? isWished(product.id) : false;
 
@@ -793,7 +955,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const buildCartItem = useCallback(() => ({
     id: String(product!.sourceId),
     name: product!.name || '',
-    price: totalCharmPrice,
+    price: totalCharmPrice + (giftBoxAdded ? 99 : 0),
     originalPrice: totalCharmOriginalPrice,
     image: displayImg,
     color: currentColor?.label || '',
@@ -806,6 +968,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     customNote: customData.wantCustom ? customData.globalNote : undefined,
     customImages: customData.wantCustom ? customData.uploads : undefined,
     giftMessage: giftMessage.customMessage || undefined,
+    giftBox: giftBoxAdded || undefined,
     selectedCharms: charmData.charms.filter(Boolean).map(charm => ({
       sourceId: charm,
       name: charm,
@@ -834,7 +997,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     }],
     charms: charmData.charms.filter(Boolean),
     charmCount: selectedCharmCount,
-  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, unitCharmPrice, selectedCharmCount]);
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, unitCharmPrice, selectedCharmCount, giftBoxAdded]);
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
@@ -891,6 +1054,9 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
   return (
     <>
+      {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
+      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} />}
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
 
@@ -916,14 +1082,15 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         .pdp-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1280px;margin:0 auto}
 
         /* ── Gallery ── */
-        .pdp-gallery{position:sticky;top:80px;height:calc(100vh - 80px);padding:32px 28px 32px 52px;display:flex;flex-direction:column;gap:14px;animation:fadeUp .6s ease both;min-width:0;overflow:hidden}
-        .pdp-main-img-wrap{flex:1;min-height:0;background:var(--beige-dk);border-radius:24px;overflow:hidden;position:relative}
+        .pdp-gallery{position:sticky;top:80px;max-height:calc(100vh - 80px);padding:32px 28px 32px 52px;display:flex;flex-direction:column;gap:14px;animation:fadeUp .6s ease both;min-width:0;overflow:hidden}
+        /* CHANGE: main image now uses a 4:5 portrait ratio instead of filling all available space */
+        .pdp-main-img-wrap{aspect-ratio:4/5;width:100%;flex:none;background:var(--beige-dk);overflow:hidden;position:relative}
         .pdp-main-img{width:100%;height:100%;object-fit:cover;animation:imgIn .4s ease both}
         .pdp-badge{position:absolute;top:16px;left:16px;font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--beige);background:var(--olive-600);padding:5px 14px 4px;border-radius:50px}
         .pdp-wish{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(245,240,232,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
         .pdp-wish:hover{transform:scale(1.1)}
         .pdp-wish.on{background:var(--olive-600)}
-        .pdp-thumb-row{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+        .pdp-thumb-row{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;flex-shrink:0}
         .pdp-thumb-row::-webkit-scrollbar{height:3px}
         .pdp-thumb-row::-webkit-scrollbar-thumb{background:var(--beige-dkr);border-radius:4px}
         .pdp-thumb{width:72px;height:72px;border-radius:12px;overflow:hidden;cursor:pointer;flex-shrink:0;border:2px solid transparent;transition:border-color .2s,transform .2s}
@@ -955,12 +1122,29 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         .pdp-swatch:hover{transform:scale(1.15)}
         .pdp-swatch.active{box-shadow:0 0 0 2px var(--beige),0 0 0 4px var(--olive-500)}
         .pdp-swatch-label{font-size:8px;letter-spacing:.06em;color:var(--mist);white-space:nowrap}
-        .pdp-sizes{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+        .pdp-sizes{display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap}
         .pdp-size-btn{min-width:54px;padding:9px 12px;border-radius:999px;border:1.5px solid var(--beige-dkr);background:white;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--olive-600);cursor:pointer;transition:all .2s}
         .pdp-size-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
         .pdp-size-btn.active{border-color:var(--olive-600);background:var(--olive-600);color:var(--beige)}
         .pdp-size-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
-        .pdp-desc{font-size:13px;font-weight:300;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
+
+        /* ── Size chart link ── */
+        .pdp-size-chart-link{
+          display:inline-flex;align-items:center;gap:5px;
+          margin-bottom:20px;
+          font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+          color:var(--olive-500);background:none;border:none;
+          cursor:pointer;font-family:'Jost',sans-serif;
+          text-decoration:underline;text-decoration-color:rgba(90,107,46,.35);
+          text-underline-offset:3px;
+          transition:color .2s;
+          padding:0;
+        }
+        .pdp-size-chart-link:hover{color:var(--olive-600)}
+        .pdp-size-chart-link svg{transition:transform .2s}
+        .pdp-size-chart-link:hover svg{transform:scale(1.15)}
+
+        .pdp-desc{font-size:14px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
         .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
         .pdp-qty{display:flex;align-items:center;border:1.5px solid var(--beige-dkr);border-radius:50px;overflow:hidden}
         .pdp-qty-btn{width:36px;height:36px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--olive-600);display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -1289,8 +1473,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         /* ════ TABLET ════ */
         @media(max-width:960px){
           .pdp-layout{grid-template-columns:1fr}
-          .pdp-gallery{position:static;height:auto;padding:24px 24px 0}
-          .pdp-main-img-wrap{height:420px;flex:none}
+          .pdp-gallery{position:static;max-height:none;padding:24px 24px 0}
           .pdp-info{padding:24px 24px 48px}
           .pdp-trust{grid-template-columns:repeat(3,1fr)}
           .rev-section{padding:40px 24px 48px}
@@ -1303,7 +1486,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         @media(max-width:600px){
           .pdp-gallery{padding:16px 16px 0}
           .pdp-info{padding:20px 16px 40px}
-          .pdp-main-img-wrap{height:300px;flex:none}
+          /* 4:5 ratio naturally gives a shorter image on mobile — cap it */
+          .pdp-main-img-wrap{max-height:400px}
           .pdp-trust{grid-template-columns:repeat(3,minmax(80px,1fr));gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
           .pdp-trust::-webkit-scrollbar{display:none}
           .pdp-trust-item{padding:10px 6px;border-radius:12px;min-width:80px}
@@ -1328,7 +1512,6 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
         /* ════ VERY SMALL ════ */
         @media(max-width:380px){
-          .pdp-main-img-wrap{height:260px}
           .pdp-name{font-size:1.7rem}
           .pdp-cta-row{grid-template-columns:1fr}
           .pdp-btn-buy{grid-column:unset}
@@ -1432,6 +1615,14 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
+            {/* Size chart link — always available */}
+            <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+              </svg>
+              Size Chart
+            </button>
+
             {description && <p className="pdp-desc">{description}</p>}
 
             {tags.length > 0 && (
@@ -1451,7 +1642,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <div className="charm-selector-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
+                </svg>  
                 Build Your Charm Combination
               </div>
               <p className="charm-selector-sub">
@@ -1493,6 +1684,12 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             </div>
 
             <div className="pdp-divider" />
+
+            {/* Premium Gift Box upsell */}
+            <p className="pdp-section-label" style={{ marginBottom: 12 }}>Make it a Gift</p>
+            <GiftBoxUpsell added={giftBoxAdded} onToggle={() => setGiftBoxAdded(v => !v)} />
+
+            <div className="pdp-divider" />
             <CompleteTheLookStrip />
             <div className="pdp-divider" />
             <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
@@ -1509,7 +1706,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <div className="pdp-btn-cart-wrap">
                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                  {cartAnim ? 'Added! ✓' : 'Add to Cart'}
+                  {cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                 </button>
                 <Sparkles active={sparkleAnim} />
               </div>

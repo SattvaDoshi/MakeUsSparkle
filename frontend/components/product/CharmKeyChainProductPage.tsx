@@ -803,7 +803,7 @@ const sortedCharms = useMemo(
                   key={cat.id}
                   className={`cat-tab${activeCategory === cat.id ? ' on' : ''}`}
                   onClick={() => setActiveCategory(cat.id)}
-                >
+                > 
                   <span>{cat.icon}</span>
                   {cat.label}
                 </button>

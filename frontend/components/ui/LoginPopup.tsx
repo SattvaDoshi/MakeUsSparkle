@@ -406,7 +406,7 @@ export default function LoginPopup() {
             )}
 
             <button type="submit" className="mu-submit" disabled={loading}>
-              {loading ? 'Please wait…' : tab === 'register' ? '✦ Unlock My 5% Reward' : 'Sign In'}
+              {loading ? 'Please wait…' : tab === 'register' ? '✦ Unlock My Reward' : 'Sign In'}
             </button>
           </form>
 

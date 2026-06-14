@@ -577,6 +577,7 @@ export default function TopNav() {
           justify-content: space-between;
           align-items: center;
           gap: 16px;
+          width: 100%;
         }
 
         /* ── THEME-AWARE COLOURS ── */
@@ -615,37 +616,45 @@ export default function TopNav() {
         .sparkle-nav[data-theme="dark"] .sparkle-search-box input::placeholder { color: rgba(255,255,255,0.45); }
 
         /* ── RIGHT UTILITIES & SEARCH ── */
-        .sparkle-nav-right {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .sparkle-search-wrap {
-          display: flex;
-          align-items: center;
-          position: relative;
-        }
-        .sparkle-search-box {
-          display: flex;
-          align-items: center;
-          overflow: hidden;
-          height: 36px;
-          border: 1px solid transparent;
-          border-radius: 4px;
-          transition: border-color 0.25s, background 0.25s, width 0.3s ease;
-          width: 220px; /* Laptop/Desktop width */
-        }
-        .sparkle-search-box input {
-          border: none;
-          outline: none;
-          background: transparent;
-          font-family: 'Montserrat', sans-serif;
-          font-size: 0.7rem;
-          letter-spacing: 0.05em;
-          padding: 0 12px;
-          width: 100%;
-          height: 100%;
-        }
+       .sparkle-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;        /* allows children to shrink below content size */
+  justify-content: flex-end;
+}
+.sparkle-search-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 220px; /* desktop cap */
+}
+.sparkle-search-box {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.25s, background 0.25s, width 0.3s ease;
+  width: 100%;       /* fills its wrapper instead of fixed px */
+  min-width: 0;
+}
+.sparkle-search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0 12px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
         .sparkle-search-icon-inline {
           display: flex;
           align-items: center;
@@ -654,28 +663,35 @@ export default function TopNav() {
           opacity: 0.7;
         }
         
-        .sparkle-icon-btn {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          border: none;
-          background: transparent;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          position: relative;
-          text-decoration: none;
-          transition: background 0.2s, color 0.25s, text-shadow 0.25s;
-        }
+.sparkle-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  text-decoration: none;
+  transition: background 0.2s, color 0.25s, text-shadow 0.25s;
+  flex-shrink: 0;
+}
         .sparkle-icon-btn:hover {
           background: rgba(201,168,76,0.15);
           color: #c9a84c !important;
           text-shadow: none !important;
         }
 
-        .sparkle-divider { width: 1px; height: 18px; margin: 0 4px; transition: background 0.25s; }
-        .sparkle-badge {
+.sparkle-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+          .sparkle-badge {
           position: absolute;
           top: 4px; right: 4px;
           width: 14px; height: 14px;
@@ -714,7 +730,7 @@ export default function TopNav() {
           display: none;
           position: fixed;
           top: 72px; left: 0; right: 0;
-          background: rgba(10,28,14,0.96);
+          background: #c8dfc0;
           backdrop-filter: blur(20px);
           padding: 16px 32px 24px 32px;
           flex-direction: column;
@@ -739,7 +755,7 @@ export default function TopNav() {
           font-weight: 500;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.6);
+          color: #101010;
           text-decoration: none;
           padding: 14px 0;
           border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -769,7 +785,7 @@ export default function TopNav() {
           width: 340px;
           max-height: 450px;
           overflow-y: auto;
-          background: rgba(10,28,14,0.98);
+          background: #c8dfc0;
           backdrop-filter: blur(20px);
           border: 1px solid rgba(201,168,76,0.3);
           border-radius: 4px;
@@ -797,7 +813,7 @@ export default function TopNav() {
           align-items: center;
           gap: 12px;
           padding: 8px 16px;
-          color: rgba(255,255,255,0.85);
+          color: rgba(255,255,255,0.85;
           text-decoration: none;
           transition: background 0.2s, color 0.2s;
         }
@@ -836,25 +852,40 @@ export default function TopNav() {
           text-align: center;
           font-family: 'Montserrat', sans-serif;
           font-size: 0.75rem;
-          color: rgba(255,255,255,0.6);
+          color: #101010;
         }
 
         /* ── RESPONSIVE BREAKPOINTS ── */
-        @media (max-width: 768px) {
-          .sparkle-search-box { width: 160px; }
-        }
-        @media (max-width: 480px) {
-          .sparkle-nav { padding: 0 16px; }
-          .sparkle-nav-inner { height: 64px; gap: 8px; }
-          .sparkle-menu-dropdown { top: 64px; max-height: calc(100vh - 64px); }
-          .sparkle-search-box { width: 135px; height: 32px; }
-          .sparkle-search-box input { padding: 0 8px; font-size: 0.65rem; }
-          .sparkle-search-dropdown { width: 280px; right: -40px; }
-          .sparkle-search-icon-inline { padding-right: 6px; }
-          .sparkle-search-icon-inline svg { width: 14px; height: 14px; }
-          .sparkle-icon-btn { width: 34px; height: 34px; }
-          .sparkle-divider { margin: 0 2px; }
-        }
+        /* ── TABLET ── */
+@media (max-width: 768px) {
+  .sparkle-search-wrap { max-width: 160px; }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 480px) {
+  .sparkle-nav { padding: 0 16px; }
+  .sparkle-nav-inner { height: 64px; gap: 8px; }
+  .sparkle-menu-dropdown { top: 64px; max-height: calc(100vh - 64px); }
+  .sparkle-search-wrap { max-width: 130px; }
+  .sparkle-search-box { height: 32px; }
+  .sparkle-search-box input { padding: 0 8px; font-size: 0.65rem; }
+  .sparkle-search-dropdown { width: 280px; right: -40px; }
+  .sparkle-search-icon-inline { padding-right: 6px; }
+  .sparkle-search-icon-inline svg { width: 14px; height: 14px; }
+  .sparkle-icon-btn { width: 34px; height: 34px; }
+  .sparkle-divider { margin: 0 2px; }
+}
+
+/* ── EXTRA SMALL (≤360px) ── */
+@media (max-width: 360px) {
+  .sparkle-nav { padding: 0 10px; }
+  .sparkle-nav-inner { gap: 4px; }
+  .sparkle-search-wrap { max-width: 95px; }
+  .sparkle-search-box input { padding: 0 6px; font-size: 0.6rem; }
+  .sparkle-icon-btn { width: 30px; height: 30px; }
+  .sparkle-icon-btn svg { width: 14px; height: 14px; }
+  .sparkle-divider { margin: 0 1px; }
+}
       `}</style>
 
       {/* ── MAIN NAV BAR ── */}
@@ -1029,7 +1060,13 @@ export default function TopNav() {
           >
             Affiliate
           </Link>
-          
+<Link 
+  className="sparkle-policy-link" 
+  href="/categories" 
+  onClick={() => setMenuOpen(false)}
+> 
+  Categories
+</Link>
           <button
             className="sparkle-policy-link"
             onClick={() => {

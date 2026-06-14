@@ -119,6 +119,14 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		mainImage: initialData?.mainImage || null,
 		galleryImages: initialData?.images || [],
 		totalCharms: initialData?.totalCharms?.toString() || "0",
+		sizeChartImage: initialData?.sizeChartImage || null,
+		giftBoxEnabled: initialData?.giftBox?.enabled ?? true,
+		giftBoxHeading: initialData?.giftBox?.heading || "Premium Gift Box",
+		giftBoxDescription: initialData?.giftBox?.description || "Rigid magnetic-close box · satin ribbon · message card",
+		giftBoxPrice: initialData?.giftBox?.price?.toString() || "99",
+		giftBoxImage: initialData?.giftBox?.image || null,
+		partialCODEnabled: initialData?.partialCOD?.enabled ?? false,
+		partialCODPercentage: initialData?.partialCOD?.percentage?.toString() || "0",
 	});
 
 	// Charm piece-count options (e.g. [3, 5, 7])
@@ -160,6 +168,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	// Image file states
 	const [mainImageFile, setMainImageFile] = useState<File | null>(null);
 	const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
+	const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
+	const [giftBoxImageFile, setGiftBoxImageFile] = useState<File | null>(null);
 
 	// Fetch taxonomy data
 	useEffect(() => {
@@ -372,14 +382,39 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			// Images
 			if (mainImageFile) {
 				formData.append("mainImage", mainImageFile);
+			} else if (form.mainImage === null && mode === "edit") {
+				// Explicitly cleared
+				formData.append("mainImage", "");
 			}
 			form.galleryImages.forEach((img: string) => formData.append("existingImages", img));
 			galleryImageFiles.forEach((file) => formData.append("images", file));
+
+			if (sizeChartImageFile) {
+				formData.append("sizeChartImage", sizeChartImageFile);
+			} else if (form.sizeChartImage === null && mode === "edit") {
+				formData.append("sizeChartImage", "");
+			}
 
 			// Variant images
 			Object.entries(variantImageFile).forEach(([varIndex, file]) => {
 				formData.append(`variantImage_${varIndex}`, file);
 			});
+
+			// Gift Box
+			formData.append("giftBoxEnabled", String(form.giftBoxEnabled));
+			formData.append("giftBoxHeading", form.giftBoxHeading);
+			formData.append("giftBoxDescription", form.giftBoxDescription);
+			formData.append("giftBoxPrice", form.giftBoxPrice);
+			
+			// Partial COD
+			formData.append("partialCODEnabled", String(form.partialCODEnabled));
+			formData.append("partialCODPercentage", form.partialCODPercentage);
+			
+			if (giftBoxImageFile) {
+				formData.append("giftBoxImage", giftBoxImageFile);
+			} else if (form.giftBoxImage === null && mode === "edit") {
+				formData.append("giftBoxImage", "");
+			}
 
 			if (mode === "edit" && productId) {
 				await apiRequest(`/admin/products/${productId}`, {
@@ -402,7 +437,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		}
 	};
 
-	const steps = ["Basic Info", "Pricing", "Colors & Sizes", "Variants"];
+	const steps = ["Basic Info", "Pricing", "Colors & Sizes", "Variants", "Media & Gift Box"];
 
 	return (
 		<div
@@ -956,14 +991,13 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-										Stock Count *
+										Stock Count
 									</label>
 									<input
 										placeholder="0"
 										type="number"
 										value={form.stock}
 										onChange={(e) => setForm({ ...form, stock: e.target.value })}
-										required
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
@@ -1370,7 +1404,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										))}
 									</div>
 
-									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 64px 100px", gap: "0.7rem", alignItems: "stretch" }}>
+									<div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 100px", gap: "0.7rem", alignItems: "stretch" }}>
 										<input
 											placeholder="e.g. Gold, Silver, Red"
 											value={newColor.name}
@@ -1387,21 +1421,6 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												borderRadius: "4px",
 												fontSize: "0.9rem",
 												minHeight: 44,
-												boxSizing: "border-box",
-											}}
-										/>
-										<input
-											type="color"
-											value={newColor.hex}
-											onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })}
-											style={{
-												padding: "0.25rem",
-												border: "1px solid #d4d4c8",
-												borderRadius: "4px",
-												cursor: "pointer",
-												width: "64px",
-												height: "44px",
-												background: "#fff",
 												boxSizing: "border-box",
 											}}
 										/>
@@ -1741,6 +1760,229 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 								>
 									+ Add Variant
 								</button>
+							</div>
+						)}
+
+						{step === 5 && (
+							<div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+								{/* Size Chart Section */}
+								<div>
+									<h3 style={{ fontSize: "1.1rem", color: "#2d3715", marginBottom: "0.5rem" }}>Size Chart</h3>
+									<p style={{ fontSize: "0.85rem", color: "#666", marginBottom: "1rem" }}>
+										Upload a custom size chart image for this product. If left empty, the global default size chart will be used.
+									</p>
+									<div
+										style={{
+											border: "2px dashed #e0e0e0",
+											borderRadius: "8px",
+											padding: "1rem",
+											textAlign: "center",
+											cursor: "pointer",
+											background: "#fafafa",
+										}}
+									>
+										<input
+											type="file"
+											accept="image/*"
+											id="sizeChartUpload"
+											style={{ display: "none" }}
+											onChange={(e) => {
+												if (e.target.files && e.target.files[0]) {
+													setSizeChartImageFile(e.target.files[0]);
+												}
+											}}
+										/>
+										<label htmlFor="sizeChartUpload" style={{ cursor: "pointer", display: "block" }}>
+											{sizeChartImageFile ? (
+												<div style={{ color: "#4a5c22", fontWeight: 500 }}>New file selected: {sizeChartImageFile.name}</div>
+											) : form.sizeChartImage ? (
+												<div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+													{/* eslint-disable-next-line @next/next/no-img-element */}
+													<img src={form.sizeChartImage} alt="Current Size Chart" style={{ height: "60px", borderRadius: "4px" }} />
+													<span style={{ fontSize: "0.85rem", color: "#666" }}>Click to replace</span>
+													<button
+														type="button"
+														onClick={(e) => {
+															e.preventDefault();
+															setForm({ ...form, sizeChartImage: null });
+														}}
+														style={{
+															marginTop: "0.5rem",
+															fontSize: "0.8rem",
+															color: "#d32f2f",
+															background: "none",
+															border: "none",
+															cursor: "pointer",
+															textDecoration: "underline",
+														}}
+													>
+														Remove Image (Use Default)
+													</button>
+												</div>
+											) : (
+												<div style={{ color: "#666" }}>
+													<div>Click to upload a custom Size Chart image</div>
+													<div style={{ fontSize: "0.8rem", marginTop: "4px" }}>Using default size chart</div>
+												</div>
+											)}
+										</label>
+									</div>
+								</div>
+
+								<hr style={{ border: "none", borderTop: "1px solid #eee" }} />
+
+								{/* Gift Box Section */}
+								<div>
+									<h3 style={{ fontSize: "1.1rem", color: "#2d3715", marginBottom: "0.5rem" }}>Premium Gift Box Upsell</h3>
+									<p style={{ fontSize: "0.85rem", color: "#666", marginBottom: "1rem" }}>
+										Configure the gift box add-on for this product. Uncheck the box below to disable the upsell entirely for this item.
+									</p>
+
+									<label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem", cursor: "pointer" }}>
+										<input
+											type="checkbox"
+											checked={form.giftBoxEnabled}
+											onChange={(e) => setForm({ ...form, giftBoxEnabled: e.target.checked })}
+											style={{ width: "18px", height: "18px", accentColor: "#4a5c22" }}
+										/>
+										<span style={{ fontWeight: 500, color: "#2d3715" }}>Enable Gift Box Upsell</span>
+									</label>
+
+									{form.giftBoxEnabled && (
+										<div style={{ display: "flex", flexDirection: "column", gap: "1.2rem", background: "#fcfcfa", padding: "1.5rem", borderRadius: "8px", border: "1px solid #eee" }}>
+											<div style={{ display: "flex", gap: "1rem" }}>
+												<div style={{ flex: 2 }}>
+													<label className="admin-modal-label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a5c22', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Heading</label>
+													<input
+														type="text"
+														value={form.giftBoxHeading}
+														onChange={(e) => setForm({ ...form, giftBoxHeading: e.target.value })}
+														style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #d1d9be', background: '#fcfcfc', fontSize: '0.95rem', color: '#2d3318', outline: 'none', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
+														placeholder="Premium Gift Box"
+													/>
+												</div>
+												<div style={{ flex: 1 }}>
+													<label className="admin-modal-label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a5c22', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price (+₹)</label>
+													<input
+														type="number"
+														value={form.giftBoxPrice}
+														onChange={(e) => setForm({ ...form, giftBoxPrice: e.target.value })}
+														style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #d1d9be', background: '#fcfcfc', fontSize: '0.95rem', color: '#2d3318', outline: 'none', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
+														min="0"
+													/>
+												</div>
+											</div>
+
+											<div>
+												<label className="admin-modal-label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a5c22', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</label>
+												<input
+													type="text"
+													value={form.giftBoxDescription}
+													onChange={(e) => setForm({ ...form, giftBoxDescription: e.target.value })}
+													style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #d1d9be', background: '#fcfcfc', fontSize: '0.95rem', color: '#2d3318', outline: 'none', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
+													placeholder="Rigid magnetic-close box · satin ribbon · message card"
+												/>
+											</div>
+
+											<div>
+												<label className="admin-modal-label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a5c22', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gift Box Image</label>
+												<div
+													style={{
+														border: "2px dashed #e0e0e0",
+														borderRadius: "8px",
+														padding: "1rem",
+														textAlign: "center",
+														cursor: "pointer",
+														background: "#fff",
+													}}
+												>
+													<input
+														type="file"
+														accept="image/*"
+														id="giftBoxUpload"
+														style={{ display: "none" }}
+														onChange={(e) => {
+															if (e.target.files && e.target.files[0]) {
+																setGiftBoxImageFile(e.target.files[0]);
+															}
+														}}
+													/>
+													<label htmlFor="giftBoxUpload" style={{ cursor: "pointer", display: "block" }}>
+														{giftBoxImageFile ? (
+															<div style={{ color: "#4a5c22", fontWeight: 500 }}>New file selected: {giftBoxImageFile.name}</div>
+														) : form.giftBoxImage ? (
+															<div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+																{/* eslint-disable-next-line @next/next/no-img-element */}
+																<img src={form.giftBoxImage} alt="Current Gift Box" style={{ height: "60px", borderRadius: "4px" }} />
+																<span style={{ fontSize: "0.85rem", color: "#666" }}>Click to replace</span>
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.preventDefault();
+																		setForm({ ...form, giftBoxImage: null });
+																	}}
+																	style={{
+																		marginTop: "0.5rem",
+																		fontSize: "0.8rem",
+																		color: "#d32f2f",
+																		background: "none",
+																		border: "none",
+																		cursor: "pointer",
+																		textDecoration: "underline",
+																	}}
+																>
+																	Remove Image (Use Default)
+																</button>
+															</div>
+														) : (
+															<div style={{ color: "#666" }}>
+																<div>Click to upload a custom Gift Box image</div>
+																<div style={{ fontSize: "0.8rem", marginTop: "4px" }}>Using default gift box image</div>
+															</div>
+														)}
+													</label>
+												</div>
+											</div>
+										</div>
+									)}
+								</div>
+
+								{/* Partial COD Setup */}
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "flex", gap: "1rem", flexDirection: "column", padding: "1rem", background: "#f9f9f7", borderRadius: "8px", border: "1px solid #e2e2d8" }}>
+									<div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+										<label style={{ position: "relative", display: "inline-block", width: "40px", height: "22px" }}>
+											<input
+												type="checkbox"
+												checked={form.partialCODEnabled}
+												onChange={(e) => setForm({ ...form, partialCODEnabled: e.target.checked })}
+												style={{ opacity: 0, width: 0, height: 0 }}
+											/>
+											<span style={{
+												position: "absolute", cursor: "pointer", inset: 0, backgroundColor: form.partialCODEnabled ? "#4a5c22" : "#d4d4c8", transition: ".4s", borderRadius: "22px"
+											}}>
+												<span style={{
+													position: "absolute", content: '""', height: "16px", width: "16px", left: "3px", bottom: "3px", backgroundColor: "white", transition: ".4s", borderRadius: "50%",
+													transform: form.partialCODEnabled ? "translateX(18px)" : "translateX(0)"
+												}}></span>
+											</span>
+										</label>
+										<span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#3d4a20" }}>Compulsory Partial COD</span>
+									</div>
+									{form.partialCODEnabled && (
+										<div style={{ display: "grid", gap: "0.4rem" }}>
+											<label style={{ fontSize: "0.85rem", fontWeight: 500, color: "#6b6b60" }}>Percentage to pay upfront (%)</label>
+											<input
+												type="number"
+												min="0"
+												max="100"
+												value={form.partialCODPercentage}
+												onChange={(e) => setForm({ ...form, partialCODPercentage: e.target.value })}
+												style={{ padding: "0.6rem", border: "1px solid #d4d4c8", borderRadius: "6px", width: "120px" }}
+											/>
+										</div>
+									)}
+								</div>
+
 							</div>
 						)}
 					</form>

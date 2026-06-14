@@ -438,6 +438,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { getApiUrl } from "@/lib/api";
 
 export default function TopNav() {
   const { itemCount } = useCart();
@@ -476,7 +477,8 @@ export default function TopNav() {
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/products/search?q=${encodeURIComponent(searchTerm)}`);
+        const url = getApiUrl(`/products/search?q=${encodeURIComponent(searchTerm)}`);
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -485,10 +487,13 @@ export default function TopNav() {
               categories: data.categories || [],
               styles: data.styles || [],
             });
+            return;
           }
         }
+        setSearchResults({ products: [], categories: [], styles: [] });
       } catch (error) {
         console.error("Search error:", error);
+        setSearchResults({ products: [], categories: [], styles: [] });
       } finally {
         setIsSearching(false);
       }
@@ -813,13 +818,13 @@ export default function TopNav() {
           align-items: center;
           gap: 12px;
           padding: 8px 16px;
-          color: rgba(255,255,255,0.85;
+          color: #101010;
           text-decoration: none;
           transition: background 0.2s, color 0.2s;
         }
         .sparkle-search-item:hover {
-          background: rgba(201,168,76,0.15);
-          color: #fff;
+          background: rgba(255, 255, 255, 0.4);
+          color: #101010;
         }
         .sparkle-search-item-img {
           width: 32px;
@@ -926,7 +931,7 @@ export default function TopNav() {
               </div>
 
               {/* SEARCH DROPDOWN */}
-              {showDropdown && (
+              {showDropdown && (isSearching || searchResults) && (
                 <div className="sparkle-search-dropdown">
                   {isSearching ? (
                     <div className="sparkle-search-message">Searching...</div>

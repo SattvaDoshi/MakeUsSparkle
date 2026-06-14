@@ -51,6 +51,8 @@ export const uploadProductImages = multer({
 }).fields([
 	{ name: "mainImage", maxCount: 1 },
 	{ name: "images", maxCount: 20 },
+	{ name: "sizeChartImage", maxCount: 1 },
+	{ name: "giftBoxImage", maxCount: 1 },
 	// Variant images will come as variantImage_<index> fields (dynamic)
 	...Array.from({ length: 50 }, (_, i) => ({ name: `variantImage_${i}`, maxCount: 1 })),
 	// Color images will come as colorImage_<index> fields (dynamic)

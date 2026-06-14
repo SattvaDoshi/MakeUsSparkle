@@ -882,27 +882,24 @@ export default function CartPage() {
   const {
     state, subtotal, savings, shipping, total,
     itemCount, removeItem, updateQty,
-    toggleGift, setGiftMessage,
+    toggleGift, setGiftId, setGiftMessage,
     removeDiscount, applyCouponCode,
+    autoDiscountAmount, appliedOffers,
   } = useCart();
-  const { items, isGift, giftMessage, discountCode, discountAmount } = state;
-
-  // ── Gift box local state ──
-  const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
+  const { items, isGift, giftMessage, discountCode, discountAmount, selectedGiftId } = state;
 
   const handleSelectGift = (id: string) => {
     if (selectedGiftId === id) {
-      setSelectedGiftId(null);
+      setGiftId(null);
       if (isGift) toggleGift();
     } else {
-      setSelectedGiftId(id);
+      setGiftId(id);
       if (!isGift) toggleGift();
     }
   };
 
   const activeGift  = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
-  const giftCharge  = activeGift?.price ?? 0;
-  const displayTotal = total + giftCharge;
+  const displayTotal = total;
 
   const [couponInput,   setCouponInput  ] = useState('');
   const [couponError,   setCouponError  ] = useState('');
@@ -1390,6 +1387,16 @@ export default function CartPage() {
                       <span>Coupon ({discountCode})</span>
                       <span>−₹{discountAmount}</span>
                     </div>
+                  )}
+                  {autoDiscountAmount > 0 && (
+                    <>
+                      {appliedOffers.map((o) => (
+                        <div key={o.id} className="cp-summary-row cp-summary-row--savings">
+                          <span>Store Offer ({o.title})</span>
+                          <span>−₹{o.amount.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </>
                   )}
                   <div className="cp-summary-row">
                     <span>Shipping</span>

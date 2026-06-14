@@ -65,7 +65,23 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
     deliveryCharge: Number,
+    shippingAddress: {
+      addressLine1: String,
+      addressLine2: String,
+      city: String,
+      state: String,
+      pincode: String,
+    },
+    billingAddress: {
+      addressLine1: String,
+      addressLine2: String,
+      city: String,
+      state: String,
+      pincode: String,
+    },
     address: {
+      addressLine1: String,
+      addressLine2: String,
       fullAddress: String,
       city: String,
       state: String,

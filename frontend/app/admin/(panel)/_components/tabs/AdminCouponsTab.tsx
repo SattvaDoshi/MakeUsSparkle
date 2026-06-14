@@ -35,8 +35,8 @@ export default function AdminCouponsTab({
 							{offers.map((entry) => (
 								<tr key={entry._id}>
 									<td>{entry.title}</td>
-									<td>{entry.offerType === "bogo" ? `Buy ${entry.buyQuantity} Get ${entry.getQuantity}` : entry.offerType}</td>
-									<td>{entry.offerType === "bogo" ? "-" : entry.discountValue}</td>
+									<td>{entry.offerType === "bogo" ? `Buy ${entry.buyQuantity} Get ${entry.getQuantity}` : entry.offerType === "buy_x_for_y" ? `Buy ${entry.buyQuantity} for ${entry.discountValue}` : entry.offerType === "free_shipping" ? "Free Shipping" : entry.offerType}</td>
+									<td>{entry.offerType === "bogo" || entry.offerType === "free_shipping" || entry.offerType === "buy_x_for_y" ? "-" : entry.discountValue}</td>
 									<td>{entry.usedCount ?? 0}/{entry.usageLimit === 0 ? "∞" : entry.usageLimit}</td>
 									<td>{entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "-"}</td>
 									<td>{entry.isActive ? "Yes" : "No"}</td>
@@ -69,8 +69,8 @@ export default function AdminCouponsTab({
 								<tr key={entry._id}>
 									<td>{entry.code}</td>
 									<td>{entry.name}</td>
-									<td>{entry.discountType}</td>
-									<td>{entry.discountValue}</td>
+									<td>{entry.discountType === "free_shipping" ? "Free Shipping" : entry.discountType}</td>
+									<td>{entry.discountType === "free_shipping" ? "-" : entry.discountValue}</td>
 									<td>{entry.minOrderValue ?? 0}</td>
 									<td>{entry.usedCount ?? 0}/{entry.usageLimit === 0 ? "∞" : entry.usageLimit}</td>
 									<td>{entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "-"}</td>

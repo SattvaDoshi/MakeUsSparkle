@@ -258,6 +258,26 @@ class ProductService {
 				imagePublicIds.push(...uploaded.map((u) => u.publicId));
 			}
 
+			// --- Size Chart Image ---
+			let sizeChartImage = null;
+			let sizeChartImagePublicId = null;
+			const sizeChartFiles = filesMap.sizeChartImage || [];
+			if (sizeChartFiles.length > 0) {
+				const result = await imageService.uploadImage(sizeChartFiles[0].buffer, "products/size-charts");
+				sizeChartImage = result.url;
+				sizeChartImagePublicId = result.publicId;
+			}
+
+			// --- Gift Box Image ---
+			let giftBoxImage = null;
+			let giftBoxImagePublicId = null;
+			const giftBoxFiles = filesMap.giftBoxImage || [];
+			if (giftBoxFiles.length > 0) {
+				const result = await imageService.uploadImage(giftBoxFiles[0].buffer, "products/gift-boxes");
+				giftBoxImage = result.url;
+				giftBoxImagePublicId = result.publicId;
+			}
+
 			// --- Variants ---
 			const rawVariants = this._parseVariants(productData);
 			const variants = [];
@@ -338,6 +358,20 @@ class ProductService {
 				colors,
 				sizes,
 				variants,
+				sizeChartImage,
+				sizeChartImagePublicId,
+				giftBox: {
+					enabled:       productData.giftBoxEnabled !== undefined ? parseBoolean(productData.giftBoxEnabled) : true,
+					heading:       productData.giftBoxHeading || "Premium Gift Box",
+					description:   productData.giftBoxDescription || "Rigid magnetic-close box · satin ribbon · message card",
+					price:         productData.giftBoxPrice ? Number(productData.giftBoxPrice) : 99,
+					image:         giftBoxImage,
+					imagePublicId: giftBoxImagePublicId,
+				},
+				partialCOD: {
+					enabled: productData.partialCODEnabled !== undefined ? parseBoolean(productData.partialCODEnabled) : false,
+					percentage: productData.partialCODPercentage ? Number(productData.partialCODPercentage) : 0,
+				},
 			});
 
 			return { success: true, product };
@@ -406,6 +440,44 @@ class ProductService {
 				const uploaded = await imageService.uploadMultipleImages(buffers, "products");
 				imageUrls.push(...uploaded.map((u) => u.url));
 				imagePublicIds.push(...uploaded.map((u) => u.publicId));
+			}
+
+			// --- Size Chart Image ---
+			let sizeChartImage = product.sizeChartImage || null;
+			let sizeChartImagePublicId = product.sizeChartImagePublicId || null;
+			const sizeChartFiles = filesMap.sizeChartImage || [];
+			if (sizeChartFiles.length > 0) {
+				if (sizeChartImagePublicId) {
+					await imageService.deleteImage(sizeChartImagePublicId).catch((e) => console.error("Could not delete old sizeChartImage", e));
+				}
+				const result = await imageService.uploadImage(sizeChartFiles[0].buffer, "products/size-charts");
+				sizeChartImage = result.url;
+				sizeChartImagePublicId = result.publicId;
+			} else if (updateData.sizeChartImage === "") {
+				if (sizeChartImagePublicId) {
+					await imageService.deleteImage(sizeChartImagePublicId).catch((e) => console.error("Could not delete sizeChartImage", e));
+				}
+				sizeChartImage = null;
+				sizeChartImagePublicId = null;
+			}
+
+			// --- Gift Box Image ---
+			let giftBoxImage = product.giftBox?.image || null;
+			let giftBoxImagePublicId = product.giftBox?.imagePublicId || null;
+			const giftBoxFiles = filesMap.giftBoxImage || [];
+			if (giftBoxFiles.length > 0) {
+				if (giftBoxImagePublicId) {
+					await imageService.deleteImage(giftBoxImagePublicId).catch((e) => console.error("Could not delete old giftBoxImage", e));
+				}
+				const result = await imageService.uploadImage(giftBoxFiles[0].buffer, "products/gift-boxes");
+				giftBoxImage = result.url;
+				giftBoxImagePublicId = result.publicId;
+			} else if (updateData.giftBoxImage === "") {
+				if (giftBoxImagePublicId) {
+					await imageService.deleteImage(giftBoxImagePublicId).catch((e) => console.error("Could not delete giftBoxImage", e));
+				}
+				giftBoxImage = null;
+				giftBoxImagePublicId = null;
 			}
 
 			// --- Variants ---
@@ -537,6 +609,20 @@ class ProductService {
 					colors,
 					sizes,
 					variants,
+					sizeChartImage,
+					sizeChartImagePublicId,
+					giftBox: {
+						enabled:       updateData.giftBoxEnabled !== undefined ? parseBoolean(updateData.giftBoxEnabled) : (product.giftBox?.enabled ?? true),
+						heading:       updateData.giftBoxHeading || product.giftBox?.heading || "Premium Gift Box",
+						description:   updateData.giftBoxDescription || product.giftBox?.description || "Rigid magnetic-close box · satin ribbon · message card",
+						price:         updateData.giftBoxPrice ? Number(updateData.giftBoxPrice) : (product.giftBox?.price ?? 99),
+						image:         giftBoxImage,
+						imagePublicId: giftBoxImagePublicId,
+					},
+					partialCOD: {
+						enabled: updateData.partialCODEnabled !== undefined ? parseBoolean(updateData.partialCODEnabled) : (product.partialCOD?.enabled ?? false),
+						percentage: updateData.partialCODPercentage !== undefined ? Number(updateData.partialCODPercentage) : (product.partialCOD?.percentage ?? 0),
+					},
 				},
 				{ new: true }
 			);

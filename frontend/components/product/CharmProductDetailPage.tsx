@@ -97,7 +97,7 @@ function uniqueValues(vals: Array<string | undefined | null>) {
 function dedupeImages(vals: Array<string | undefined | null>) { return uniqueValues(vals); }
 
 /* ─── Size Chart Lightbox ─── */
-function SizeChartLightbox({ onClose }: { onClose: () => void }) {
+function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUrl: string }) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
@@ -151,7 +151,7 @@ function SizeChartLightbox({ onClose }: { onClose: () => void }) {
         <div style={{ overflow: 'auto', flexShrink: 1 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={SIZE_CHART_IMAGE}
+            src={imageUrl}
             alt="Size Chart"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
@@ -170,7 +170,16 @@ function SizeChartLightbox({ onClose }: { onClose: () => void }) {
 }
 
 /* ─── Premium Gift Box Upsell ─── */
-function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => void }) {
+function GiftBoxUpsell({
+  added, onToggle, image, heading, description, price,
+}: {
+  added: boolean;
+  onToggle: () => void;
+  image: string;
+  heading: string;
+  description: string;
+  price: number;
+}) {
   return (
     <div style={{
       display: 'flex', alignItems: 'stretch',
@@ -184,8 +193,8 @@ function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => vo
       <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={GIFT_BOX_IMAGE}
-          alt="Premium Gift Box"
+          src={image}
+          alt={heading}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
         <div style={{
@@ -209,13 +218,13 @@ function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => vo
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', letterSpacing: '.01em', lineHeight: 1.2 }}>
-            Premium Gift Box
+            {heading}
           </p>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹99</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹{price}</span>
         </div>
 
         <p style={{ fontSize: 10, fontWeight: 400, color: '#101010', lineHeight: 1.5, letterSpacing: '.02em' }}>
-          Rigid magnetic-close box · satin ribbon · message card
+          {description}
         </p>
 
         <button
@@ -994,7 +1003,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   return (
     <>
       {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
-      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} />}
+      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE} />}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
@@ -1626,7 +1635,14 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
             {/* Premium Gift Box upsell */}
             <p className="pdp-section-label" style={{ marginBottom: 12 }}>Make it a Gift</p>
-            <GiftBoxUpsell added={giftBoxAdded} onToggle={() => setGiftBoxAdded(v => !v)} />
+            <GiftBoxUpsell
+              added={giftBoxAdded}
+              onToggle={() => setGiftBoxAdded(v => !v)}
+              image={product.giftBox?.image || GIFT_BOX_IMAGE}
+              heading={product.giftBox?.heading || 'Premium Gift Box'}
+              description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
+              price={product.giftBox?.price ?? 99}
+            />
 
             <div className="pdp-divider" />
             <CompleteTheLookStrip />

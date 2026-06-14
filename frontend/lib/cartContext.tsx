@@ -7,8 +7,10 @@ import {
   useEffect,
   useCallback,
   ReactNode,
+  useState,
 } from 'react';
 import { applyCouponToCart } from '@/lib/catalogApi';
+import { getApiUrl } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface CartItem {
@@ -65,6 +67,11 @@ export interface CartItem {
   style?: string;
 }
 
+export const GIFT_OPTIONS = [
+  { id: 'classic', title: 'Classic Gift Wrap', sub: 'Kraft paper & satin ribbon', price: 25, image: '/smallerBox.png' },
+  { id: 'luxury', title: 'Luxury Gift Hamper', sub: 'Ideal for 4+ products', price: 250, image: '/Biggerbox.jpg' },
+];
+
 export interface CartState {
   items: CartItem[];
   isDrawerOpen: boolean;
@@ -72,6 +79,7 @@ export interface CartState {
   giftMessage: string;
   discountCode: string;
   discountAmount: number;
+  selectedGiftId: string | null;
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -82,6 +90,7 @@ type Action =
   | { type: 'OPEN_DRAWER'; openDrawer?: boolean }
   | { type: 'CLOSE_DRAWER' }
   | { type: 'TOGGLE_GIFT';  payload?: boolean }
+  | { type: 'SET_GIFT_ID';  payload: string | null }
   | { type: 'SET_GIFT_MSG'; payload: string }
   | { type: 'APPLY_DISCOUNT'; payload: { code: string; amount: number } }
   | { type: 'REMOVE_DISCOUNT' }
@@ -89,8 +98,7 @@ type Action =
   | { type: 'HYDRATE';      payload: CartState };
 
 // ─── Selectors (pure helpers) ─────────────────────────────────────────────────
-export const GIFT_CHARGE = 99;
-const FREE_SHIPPING_THRESHOLD = 598;
+const FREE_SHIPPING_THRESHOLD = 999;
 
 export function cartSubtotal(items: CartItem[]) {
   return items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -102,12 +110,13 @@ export function cartSavings(items: CartItem[]) {
   );
 }
 export function cartShipping(subtotal: number) {
-  return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 79;
+  return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 60;
 }
 export function cartTotal(state: CartState) {
   const sub      = cartSubtotal(state.items);
   const shipping = cartShipping(sub);
-  const gift     = state.isGift ? GIFT_CHARGE : 0;
+  const activeGift = state.selectedGiftId ? GIFT_OPTIONS.find(g => g.id === state.selectedGiftId) : null;
+  const gift     = (state.isGift && activeGift) ? activeGift.price : 0;
   return sub + shipping + gift - state.discountAmount;
 }
 export function cartItemCount(items: CartItem[]) {
@@ -122,6 +131,7 @@ const INITIAL: CartState = {
   giftMessage:    '',
   discountCode:   '',
   discountAmount: 0,
+  selectedGiftId: null,
 };
 
 function key(item: Partial<CartItem>) {
@@ -187,6 +197,12 @@ case 'ADD_ITEM': {
 
     case 'SET_GIFT_MSG': return { ...state, giftMessage: action.payload };
 
+    case 'SET_GIFT_ID':
+      return {
+        ...state,
+        selectedGiftId: action.payload,
+      };
+
     case 'APPLY_DISCOUNT':
       return {
         ...state,
@@ -217,6 +233,7 @@ interface CartContextValue {
   openDrawer:     () => void;
   closeDrawer:    () => void;
   toggleGift:     (val?: boolean) => void;
+  setGiftId:      (id: string | null) => void;
   setGiftMessage: (msg: string) => void;
   applyDiscount:  (code: string, amount: number) => void;
   applyCouponCode: (code: string) => Promise<{ success: boolean; message?: string }>;
@@ -226,6 +243,8 @@ interface CartContextValue {
   subtotal:   number;
   savings:    number;
   shipping:   number;
+  autoDiscountAmount: number;
+  appliedOffers: Array<{ id: string; title: string; amount: number }>;
   total:      number;
   itemCount:  number;
 }
@@ -266,12 +285,150 @@ const addItem = useCallback(
   const openDrawer     = useCallback(() => dispatch({ type: 'OPEN_DRAWER' }), []);
   const closeDrawer    = useCallback(() => dispatch({ type: 'CLOSE_DRAWER' }), []);
   const toggleGift     = useCallback((val?: boolean) => dispatch({ type: 'TOGGLE_GIFT', payload: val }), []);
+  const setGiftId      = useCallback((id: string | null) => dispatch({ type: 'SET_GIFT_ID', payload: id }), []);
   const setGiftMessage = useCallback((msg: string) => dispatch({ type: 'SET_GIFT_MSG', payload: msg }), []);
   const applyDiscount  = useCallback((code: string, amount: number) => dispatch({ type: 'APPLY_DISCOUNT', payload: { code, amount } }), []);
   const removeDiscount = useCallback(() => dispatch({ type: 'REMOVE_DISCOUNT' }), []);
   const clearCart      = useCallback(() => dispatch({ type: 'CLEAR_CART' }), []);
 
-  const sub  = cartSubtotal(state.items);
+  const [offers, setOffers] = useState<any[]>([]);
+
+  // Fetch active offers
+  useEffect(() => {
+    async function loadPublicOffers() {
+      try {
+        const url = getApiUrl('/offers/public');
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.offers)) {
+            setOffers(data.offers);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load public offers in cart context:', err);
+      }
+    }
+    loadPublicOffers();
+  }, []);
+
+  const sub = cartSubtotal(state.items);
+
+  // Calculate automatic discounts from store offers
+  let autoDiscountAmount = 0;
+  const appliedOffers: Array<{ id: string; title: string; amount: number }> = [];
+
+  // Helper to determine if item is applicable
+  const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string }, offer: any) => {
+    const productId = item.sourceId || item.id;
+    const hasProducts = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
+    if (hasProducts && !offer.applicableProducts.includes(productId)) {
+      return false;
+    }
+    const hasCategories = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
+    if (hasCategories && (!item.category || !offer.applicableCategories.includes(item.category))) {
+      return false;
+    }
+    return true;
+  };
+
+  // Build the pool of item instances
+  let pool: Array<{ id: string; sourceId?: string; category?: string; price: number }> = [];
+  state.items.forEach((item) => {
+    for (let q = 0; q < item.qty; q++) {
+      pool.push({
+        id: item.id,
+        sourceId: item.sourceId,
+        category: item.category,
+        price: item.price,
+      });
+    }
+  });
+
+  // Evaluate each active offer
+  offers.forEach((offer) => {
+    const matchingIndices: number[] = [];
+    pool.forEach((poolItem, index) => {
+      if (isPoolItemApplicable(poolItem, offer)) {
+        matchingIndices.push(index);
+      }
+    });
+
+    if (matchingIndices.length === 0) return;
+
+    let offerDiscount = 0;
+    const usedIndices = new Set<number>();
+
+    if (offer.offerType === 'buy_x_for_y') {
+      const X = offer.buyQuantity || 1;
+      const Y = offer.discountValue || 0;
+      
+      const matchingItems = matchingIndices.map(idx => ({ idx, price: pool[idx].price }));
+      matchingItems.sort((a, b) => b.price - a.price);
+
+      const numGroups = Math.floor(matchingItems.length / X);
+      for (let g = 0; g < numGroups; g++) {
+        const group = matchingItems.slice(g * X, (g + 1) * X);
+        const groupSum = group.reduce((sum, item) => sum + item.price, 0);
+        if (groupSum > Y) {
+          offerDiscount += (groupSum - Y);
+          group.forEach(item => usedIndices.add(item.idx));
+        }
+      }
+    } else if (offer.offerType === 'bogo') {
+      const X = offer.buyQuantity || 1;
+      const Y = offer.getQuantity || 1;
+      const groupSize = X + Y;
+
+      const matchingItems = matchingIndices.map(idx => ({ idx, price: pool[idx].price }));
+      matchingItems.sort((a, b) => b.price - a.price);
+
+      let i = 0;
+      while (i + groupSize <= matchingItems.length) {
+        const group = matchingItems.slice(i, i + groupSize);
+        const freeItems = group.slice(-Y);
+        offerDiscount += freeItems.reduce((sum, item) => sum + item.price, 0);
+        group.forEach(item => usedIndices.add(item.idx));
+        i += groupSize;
+      }
+    } else if (offer.offerType === 'percentage') {
+      const val = offer.discountValue || 0;
+      matchingIndices.forEach(idx => {
+        offerDiscount += pool[idx].price * (val / 100);
+        usedIndices.add(idx);
+      });
+    } else if (offer.offerType === 'fixed') {
+      const val = offer.discountValue || 0;
+      offerDiscount = val;
+      matchingIndices.forEach(idx => usedIndices.add(idx));
+    }
+
+    if (offerDiscount > 0) {
+      autoDiscountAmount += offerDiscount;
+      appliedOffers.push({
+        id: offer._id,
+        title: offer.title,
+        amount: Math.round(offerDiscount),
+      });
+
+      pool = pool.filter((_, idx) => !usedIndices.has(idx));
+    }
+  });
+
+  // Calculate free shipping from offers
+  const hasFreeShippingOffer = offers.some(offer => offer.offerType === "free_shipping" && state.items.some(item => {
+    const productId = item.sourceId || item.id;
+    const hasProducts = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
+    if (hasProducts && !offer.applicableProducts.includes(productId)) return false;
+    const hasCategories = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
+    if (hasCategories && (!item.category || !offer.applicableCategories.includes(item.category))) return false;
+    return true;
+  }));
+
+  const shippingVal = hasFreeShippingOffer ? 0 : cartShipping(sub);
+  const activeGift = state.selectedGiftId ? GIFT_OPTIONS.find(g => g.id === state.selectedGiftId) : null;
+  const gift = (state.isGift && activeGift) ? activeGift.price : 0;
+  const finalTotal = Math.max(0, sub + shippingVal + gift - state.discountAmount - Math.round(autoDiscountAmount));
 
   // Apply coupon via backend (validates targeting, min order, expiry, etc.)
   const applyCouponCode = useCallback(async (code: string) => {
@@ -313,14 +470,16 @@ const addItem = useCallback(
     state,
     addItem, removeItem, updateQty,
     openDrawer, closeDrawer,
-    toggleGift, setGiftMessage,
+    toggleGift, setGiftId, setGiftMessage,
     applyDiscount, removeDiscount,
     clearCart,
     applyCouponCode,
     subtotal:  sub,
     savings:   cartSavings(state.items),
-    shipping:  cartShipping(sub),
-    total:     cartTotal(state),
+    shipping:  shippingVal,
+    autoDiscountAmount: Math.round(autoDiscountAmount),
+    appliedOffers,
+    total:     finalTotal,
     itemCount: cartItemCount(state.items),
   };
 

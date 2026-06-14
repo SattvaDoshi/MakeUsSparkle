@@ -110,7 +110,7 @@ export type AdminCoupon = {
 	code: string;
 	name: string;
 	description?: string;
-	discountType: "percentage" | "fixed";
+	discountType: "percentage" | "fixed" | "free_shipping";
 	discountValue: number;
 	maxDiscount?: number;
 	minOrderValue?: number;
@@ -133,7 +133,7 @@ export type AdminOffer = {
 	_id: string;
 	title: string;
 	description?: string;
-	offerType: "bogo" | "percentage" | "fixed";
+	offerType: "bogo" | "percentage" | "fixed" | "buy_x_for_y" | "free_shipping";
 	discountValue: number;
 	buyQuantity: number;
 	getQuantity: number;
@@ -236,7 +236,7 @@ export type CouponFormState = {
 	code: string;
 	name: string;
 	description: string;
-	discountType: "percentage" | "fixed";
+	discountType: "percentage" | "fixed" | "free_shipping";
 	discountValue: string;
 	maxDiscount: string;
 	minOrderValue: string;
@@ -292,7 +292,7 @@ export type OfferFormState = {
 	id: string;
 	title: string;
 	description: string;
-	offerType: "bogo" | "percentage" | "fixed";
+	offerType: "bogo" | "percentage" | "fixed" | "buy_x_for_y" | "free_shipping";
 	discountValue: string;
 	buyQuantity: string;
 	getQuantity: string;

@@ -102,7 +102,7 @@ type AdminCoupon = {
 	code: string;
 	name: string;
 	description?: string;
-	discountType: "percentage" | "fixed";
+	discountType: "percentage" | "fixed" | "free_shipping";
 	discountValue: number;
 	maxDiscount?: number;
 	minOrderValue?: number;
@@ -125,7 +125,7 @@ type AdminOffer = {
 	_id: string;
 	title: string;
 	description?: string;
-	offerType: "bogo" | "percentage" | "fixed";
+	offerType: "bogo" | "percentage" | "fixed" | "buy_x_for_y" | "free_shipping";
 	discountValue: number;
 	buyQuantity: number;
 	getQuantity: number;
@@ -280,7 +280,7 @@ type CouponFormState = {
 	code: string;
 	name: string;
 	description: string;
-	discountType: "percentage" | "fixed";
+	discountType: "percentage" | "fixed" | "free_shipping";
 	discountValue: string;
 	maxDiscount: string;
 	minOrderValue: string;
@@ -303,7 +303,7 @@ type OfferFormState = {
 	id: string;
 	title: string;
 	description: string;
-	offerType: "bogo" | "percentage" | "fixed";
+	offerType: "bogo" | "percentage" | "fixed" | "buy_x_for_y" | "free_shipping";
 	discountValue: string;
 	buyQuantity: string;
 	getQuantity: string;
@@ -1226,7 +1226,7 @@ export default function AdminDashboardPage() {
 					code: entry.code ?? "",
 					name: entry.name ?? "",
 					description: entry.description ?? "",
-					discountType: entry.discountType === "fixed" ? "fixed" : "percentage",
+					discountType: entry.discountType === "fixed" ? "fixed" : entry.discountType === "free_shipping" ? "free_shipping" : "percentage",
 					discountValue: entry.discountValue != null ? String(entry.discountValue) : "",
 					maxDiscount: entry.maxDiscount != null ? String(entry.maxDiscount) : "",
 					minOrderValue: entry.minOrderValue != null ? String(entry.minOrderValue) : "0",
@@ -1437,9 +1437,10 @@ export default function AdminDashboardPage() {
 
 							<div className="admin-form-group">
 								<label>Discount Type</label>
-								<select value={couponForm.discountType ?? "percentage"} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as "percentage" | "fixed" }))}>
-									<option value="percentage">Percentage Off (%)</option>
-									<option value="fixed">Fixed Amount Off (₹)</option>
+								<select value={couponForm.discountType ?? "percentage"} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as "percentage" | "fixed" | "free_shipping" }))}>
+									<option value="percentage">Percentage</option>
+									<option value="fixed">Fixed Amount</option>
+									<option value="free_shipping">Free Shipping</option>
 								</select>
 							</div>
 
@@ -1566,30 +1567,43 @@ export default function AdminDashboardPage() {
 
 							<div className="admin-form-group">
 								<label>Offer Type</label>
-								<select value={offerForm.offerType ?? "percentage"} onChange={(event) => setOfferForm((prev) => ({ ...prev, offerType: event.target.value as "bogo" | "percentage" | "fixed" }))}>
-									<option value="percentage">Percentage Off (%)</option>
-									<option value="fixed">Fixed Amount Off (₹)</option>
-									<option value="bogo">Buy X Get Y Free</option>
+								<select value={offerForm.offerType ?? "percentage"} onChange={(event) => setOfferForm((prev) => ({ ...prev, offerType: event.target.value as "bogo" | "percentage" | "fixed" | "buy_x_for_y" | "free_shipping" }))}>
+									<option value="percentage">Percentage</option>
+									<option value="fixed">Fixed Amount</option>
+									<option value="bogo">Buy X Get Y</option>
+									<option value="buy_x_for_y">Buy X for Y Price</option>
+									<option value="free_shipping">Free Shipping</option>
 								</select>
 							</div>
 
 							{offerForm.offerType === "bogo" ? (
-								<>
+								<div className="admin-form-row">
 									<div className="admin-form-group">
 										<label>Buy Quantity</label>
-										<input type="number" min="1" value={offerForm.buyQuantity} onChange={(event) => setOfferForm((prev) => ({ ...prev, buyQuantity: event.target.value }))} required />
+										<input type="number" min="1" value={offerForm.buyQuantity} onChange={(e) => setOfferForm((prev) => ({ ...prev, buyQuantity: e.target.value }))} required />
 									</div>
 									<div className="admin-form-group">
-										<label>Get Quantity Free</label>
-										<input type="number" min="1" value={offerForm.getQuantity} onChange={(event) => setOfferForm((prev) => ({ ...prev, getQuantity: event.target.value }))} required />
+										<label>Get Quantity</label>
+										<input type="number" min="1" value={offerForm.getQuantity} onChange={(e) => setOfferForm((prev) => ({ ...prev, getQuantity: e.target.value }))} required />
 									</div>
-								</>
-							) : (
+								</div>
+							) : offerForm.offerType === "buy_x_for_y" ? (
+								<div className="admin-form-row">
+									<div className="admin-form-group">
+										<label>Buy Quantity (X)</label>
+										<input type="number" min="1" value={offerForm.buyQuantity} onChange={(e) => setOfferForm((prev) => ({ ...prev, buyQuantity: e.target.value }))} required />
+									</div>
+									<div className="admin-form-group">
+										<label>Target Price (Y)</label>
+										<input type="number" min="0" value={offerForm.discountValue} onChange={(e) => setOfferForm((prev) => ({ ...prev, discountValue: e.target.value }))} required />
+									</div>
+								</div>
+							) : offerForm.offerType !== "free_shipping" ? (
 								<div className="admin-form-group">
 									<label>Discount Value</label>
-									<input type="number" min="0" step="any" value={offerForm.discountValue} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))} required />
+									<input type="number" min="0" value={offerForm.discountValue} onChange={(e) => setOfferForm((prev) => ({ ...prev, discountValue: e.target.value }))} required />
 								</div>
-							)}
+							) : null}
 							
 							<div className="admin-form-group">
 								<label>Usage Limit (0 for unlimited)</label>

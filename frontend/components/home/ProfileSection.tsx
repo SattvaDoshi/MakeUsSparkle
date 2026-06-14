@@ -492,7 +492,8 @@ export default function ProfileSection() {
   const [addressBusy, setAddressBusy] = useState(false);
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState({
-    fullAddress: '',
+    addressLine1: '',
+    addressLine2: '',
     city: '',
     state: '',
     pincode: '',
@@ -569,25 +570,32 @@ export default function ProfileSection() {
     : 'Recently joined';
 
   const formatAddress = (address: NonNullable<typeof addresses>[number]) => {
-    const parts = [address.fullAddress, address.city, address.state, address.pincode].filter(Boolean);
+    const parts = [
+      address.addressLine1 || address.fullAddress,
+      address.addressLine2,
+      address.city,
+      address.state,
+      address.pincode
+    ].filter(Boolean);
     return parts.join(', ');
   };
 
   const resetAddressForm = () => {
-    setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+    setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(false);
   };
 
   const openAddAddressForm = () => {
-    setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+    setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(true);
   };
 
   const startEditAddress = (address: NonNullable<typeof addresses>[number]) => {
     setAddressForm({
-      fullAddress: address.fullAddress || '',
+      addressLine1: address.addressLine1 || address.fullAddress || '',
+      addressLine2: address.addressLine2 || '',
       city: address.city || '',
       state: address.state || '',
       pincode: address.pincode || '',
@@ -598,13 +606,15 @@ export default function ProfileSection() {
 
   const submitAddressForm = async () => {
     const payload = {
-      fullAddress: addressForm.fullAddress.trim(),
+      addressLine1: addressForm.addressLine1.trim(),
+      addressLine2: addressForm.addressLine2.trim(),
+      fullAddress: `${addressForm.addressLine1.trim()}${addressForm.addressLine2.trim() ? ', ' + addressForm.addressLine2.trim() : ''}`,
       city: addressForm.city.trim(),
       state: addressForm.state.trim(),
       pincode: addressForm.pincode.trim(),
     };
 
-    if (!payload.fullAddress || !payload.city || !payload.state || !payload.pincode) {
+    if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode) {
       setError('Please fill all address fields.');
       return;
     }
@@ -860,12 +870,20 @@ export default function ProfileSection() {
               <div className="pf-address-card">
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
-                  <label className="pf-label">Full Address
+                  <label className="pf-label">Address Line 1
                     <input
                       className="pf-input"
-                      value={addressForm.fullAddress}
-                      onChange={(event) => setAddressForm((prev) => ({ ...prev, fullAddress: event.target.value }))}
-                      placeholder="House no, street, area"
+                      value={addressForm.addressLine1}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, addressLine1: event.target.value }))}
+                      placeholder="House no, street name, apartment"
+                    />
+                  </label>
+                  <label className="pf-label">Address Line 2 (Optional)
+                    <input
+                      className="pf-input"
+                      value={addressForm.addressLine2}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, addressLine2: event.target.value }))}
+                      placeholder="Area, landmark"
                     />
                   </label>
                   <label className="pf-label">City

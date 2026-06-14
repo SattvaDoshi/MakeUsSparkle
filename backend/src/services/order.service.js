@@ -63,6 +63,8 @@ class OrderService {
 				advanceAmount: Number(orderData.advanceAmount || 0),
 				balanceAmount: Number(orderData.balanceAmount || 0),
 				paidAmount: Number(orderData.paidAmount || 0),
+				shippingAddress: orderData.shippingAddress,
+				billingAddress: orderData.billingAddress || orderData.shippingAddress,
 				address: orderData.shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,

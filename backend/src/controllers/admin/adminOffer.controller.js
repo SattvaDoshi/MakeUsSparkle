@@ -1,4 +1,5 @@
 import Offer from "../../models/offer.model.js";
+import { uploadToCloudinary } from "../../config/upload.config.js";
 
 export const createOffer = async (req, res) => {
 	try {
@@ -6,7 +7,8 @@ export const createOffer = async (req, res) => {
 
 		// Handle file upload
 		if (req.file) {
-			offerData.image = req.file.path; // Cloudinary multer setup usually populates req.file.path
+			const uploadResult = await uploadToCloudinary(req.file.buffer, "offers");
+			offerData.image = uploadResult.secure_url;
 		}
 
 		// Convert stringified arrays if sent via FormData
@@ -30,7 +32,8 @@ export const updateOffer = async (req, res) => {
 		const offerData = { ...req.body };
 
 		if (req.file) {
-			offerData.image = req.file.path;
+			const uploadResult = await uploadToCloudinary(req.file.buffer, "offers");
+			offerData.image = uploadResult.secure_url;
 		}
 
 		// Convert stringified arrays if sent via FormData

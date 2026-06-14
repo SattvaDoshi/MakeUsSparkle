@@ -105,7 +105,7 @@ const PRESET_MESSAGES = [
 ];
 
 // ─── Size Chart Lightbox ──────────────────────────────────────────────────────
-function SizeChartLightbox({ onClose }: { onClose: () => void }) {
+function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUrl: string }) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
@@ -159,7 +159,7 @@ function SizeChartLightbox({ onClose }: { onClose: () => void }) {
         <div style={{ overflow: 'auto', flexShrink: 1 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={SIZE_CHART_IMAGE}
+            src={imageUrl}
             alt="Size Chart"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
@@ -178,7 +178,16 @@ function SizeChartLightbox({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Premium Gift Box Upsell ──────────────────────────────────────────────────
-function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => void }) {
+function GiftBoxUpsell({
+  added, onToggle, image, heading, description, price,
+}: {
+  added: boolean;
+  onToggle: () => void;
+  image: string;
+  heading: string;
+  description: string;
+  price: number;
+}) {
   return (
     <div style={{
       display: 'flex', alignItems: 'stretch',
@@ -192,8 +201,8 @@ function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => vo
       <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={GIFT_BOX_IMAGE}
-          alt="Premium Gift Box"
+          src={image}
+          alt={heading}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
         <div style={{
@@ -218,13 +227,13 @@ function GiftBoxUpsell({ added, onToggle }: { added: boolean; onToggle: () => vo
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', letterSpacing: '.01em', lineHeight: 1.2 }}>
-            Premium Gift Box
+            {heading}
           </p>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹99</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹{price}</span>
         </div>
 
         <p style={{ fontSize: 10, fontWeight: 400, color: '#101010', lineHeight: 1.5, letterSpacing: '.02em' }}>
-          Rigid magnetic-close box · satin ribbon · message card
+          {description}
         </p>
 
         <button
@@ -701,7 +710,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   useEffect(() => {
     if (!product) return;
     const initialSize = product.sizes?.[0] || product.variants?.[0]?.size || '';
-    const totalItems = (product.numberOfProducts || 1) * qty;
+    const totalItems = product.numberOfProducts || 1;
     setSelections(prev => {
       const newSelections = [...prev];
       if (newSelections.length < totalItems) {
@@ -714,7 +723,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       return newSelections;
     });
     setActiveImg(0);
-  }, [product?.sourceId, product?.numberOfProducts, qty]);
+  }, [product?.sourceId, product?.numberOfProducts]);
 
   const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
     const cLabel = normalizeText(normalizedColors[colorIndex]?.label || '');
@@ -799,10 +808,9 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
 
     const itemsToCart: Omit<import("@/lib/cartContext").CartItem, "qty">[] = [];
     const sets = qty;
-    const itemsPerSet = product.numberOfProducts || 1;
 
     for (let i = 0; i < sets; i++) {
-      const setSelections = selections.slice(i * itemsPerSet, (i + 1) * itemsPerSet);
+      const setSelections = selections;
       
       let setPrice = discountedPrice || price;
       // Apply volume discount to this specific set
@@ -922,7 +930,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
   return (
     <>
       {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
-      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} />}
+      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE} />}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
@@ -1309,27 +1317,14 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
                 <div className="pdp-qty-row">
-                  <select
-                    value={qty}
-                    onChange={(e) => setQty(Number(e.target.value))}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1.5px solid rgba(61,74,34,0.2)',
-                      background: '#fff',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: 'var(--olive-600)',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      minWidth: '80px'
-                    }}
-                  >
-                    {Array.from({ length: Math.min(product?.maxQuantity || stock || 10, 10) }, (_, i) => i + 1).map(q => (
-                      <option key={q} value={q}>{q}</option>
-                    ))}
-                  </select>
-                  <span className="pdp-stock" style={{ marginLeft: 12 }}>Limit: {product?.maxQuantity ? `${product.maxQuantity} per order` : `${stock} left`}</span>
+                  <div className="pdp-qty">
+                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                    <span className="pdp-qty-val">{qty}</span>
+                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(product?.maxQuantity || stock, q + 1))}>+</button>
+                  </div>
+                  <span className="pdp-stock">
+                    {product?.maxQuantity ? `Limit: ${product.maxQuantity} per order` : `Only ${currentStock} left in stock!`}
+                  </span>
                 </div>
                 <div className="pdp-divider" />
               </>
@@ -1339,7 +1334,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               const selectedColorLabel = normalizeText(normalizedColors[sel.colorIndex]?.label || '');
               return (
                 <div key={pIdx} style={{ marginBottom: pIdx < selections.length - 1 ? 24 : 0 }}>
-                  {(numberOfProducts > 1 || qty > 1) && (
+                  {numberOfProducts > 1 && (
                     <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--olive-600)', marginBottom: 12, letterSpacing: '.05em', textTransform: 'uppercase' }}>
                       Item {pIdx + 1}
                     </h3>
@@ -1374,22 +1369,30 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                   </div>
 
 
-                  {sizeOptions.length > 0 && (
-                    <>
-                      <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>
-                      <div className="pdp-sizes">
-                        {sizeOptions.map((size) => {
-                          const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === selectedColorLabel && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
-                          return (
-                            <button key={size} type="button" className={`pdp-size-btn${sel.size === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(pIdx, size)}>{size}</button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
+            {sizeOptions.length > 0 && (
+              <>
+                <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>
+                <div className="pdp-sizes">
+                  {sizeOptions.map((size) => {
+                    const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === selectedColorLabel && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
+                    return (
+                      <button key={size} type="button" className={`pdp-size-btn${sel.size === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(pIdx, size)}>{size}</button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
                 </div>
               );
             })}
+
+            {/* Size chart link — always visible */}
+            <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+              </svg>
+              Size Chart
+            </button>
 
             {description && <p className="pdp-desc">{description}</p>}
 
@@ -1416,29 +1419,23 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               </>
             )}
 
-            {!isFromCombo && (
-              <>
-                <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
-                <div className="pdp-qty-row">
-                  <div className="pdp-qty">
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-                    <span className="pdp-qty-val">{qty}</span>
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock, q + 1))}>+</button>
-                  </div>
-                  <span className="pdp-stock">Only {currentStock} left in stock!</span>
-                </div>
-                <div className="pdp-divider" />
-              </>
-            )}
+
 
 
             {/* CHANGE 3: Premium Gift Box upsell — show when NOT in combo context */}
-            {!isFromCombo && (
+            {!isFromCombo && product.giftBox?.enabled !== false && (
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 12 }}>
                   Make it a Gift
                 </p>
-                <GiftBoxUpsell added={giftBoxAdded} onToggle={() => setGiftBoxAdded(v => !v)} />
+                <GiftBoxUpsell
+                  added={giftBoxAdded}
+                  onToggle={() => setGiftBoxAdded(v => !v)}
+                  image={product.giftBox?.image || GIFT_BOX_IMAGE}
+                  heading={product.giftBox?.heading || 'Premium Gift Box'}
+                  description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
+                  price={product.giftBox?.price ?? 99}
+                />
               </>
             )}
 

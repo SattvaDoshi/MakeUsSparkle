@@ -42,7 +42,7 @@ class CouponService {
 		}
 
 		if (payload.discountType !== undefined) {
-			payload.discountType = payload.discountType === "fixed" ? "fixed" : "percentage";
+			payload.discountType = payload.discountType === "fixed" ? "fixed" : payload.discountType === "free_shipping" ? "free_shipping" : "percentage";
 		}
 
 		if (payload.discountValue !== undefined) {

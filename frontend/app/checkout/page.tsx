@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import { useCart, GIFT_CHARGE } from '@/lib/cartContext';
+import { useCart, GIFT_OPTIONS } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
@@ -10,8 +10,8 @@ import { apiRequest } from '@/lib/api';
 
 const PAYMENT_METHODS = [
   { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via Razorpay', badge: 'Recommended' },
-  { id: 'PARTIAL_COD', label: 'Partial COD', sub: 'Pay a portion now, balance on delivery', badge: null },
-  { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives · +₹70 convenience fee', badge: null },
+  { id: 'PARTIAL_COD', label: 'Partial COD (20% Advance)', sub: 'Pay 20% advance online, pay balance on delivery · +₹80 convenience fee', badge: null },
+  { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives · +₹80 convenience fee', badge: null },
 ];
 
 const DELIVERY_OPTIONS = [
@@ -34,11 +34,10 @@ const DELIVERY_OPTIONS = [
 ];
 
 export default function CheckoutPage() {
-  const { state, savings, shipping, total, itemCount, toggleGift, clearCart } = useCart();
-  const { items, isGift, discountCode, discountAmount } = state;
+  const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers } = useCart();
+  const { items, isGift, discountCode, discountAmount, selectedGiftId } = state;
 
   const [selectedMethod, setSelectedMethod] = useState('ONLINE');
-  const [partialPercentage, setPartialPercentage] = useState<25 | 50>(25);
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showExpressPopup, setShowExpressPopup] = useState(false);
@@ -47,23 +46,23 @@ export default function CheckoutPage() {
   const { user, refreshUser } = useAuth();
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressForm, setAddressForm] = useState({ fullAddress: '', city: '', state: '', pincode: '' });
+  const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
   const [addressBusy, setAddressBusy] = useState(false);
 
-  const CHECKOUT_GIFT_OPTIONS = [
-    { id: 'classic', title: 'Classic Gift Wrap', sub: 'Kraft paper & satin ribbon', price: 25, image: '/smallerBox.png' },
-    { id: 'luxury', title: 'Luxury Gift Hamper', sub: 'Ideal for 4+ products', price: 250, image: '/Biggerbox.jpg' },
-  ];
-  const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
-  const [checkoutGiftMsg, setCheckoutGiftMsg] = useState('');
-  const activeCheckoutGift = CHECKOUT_GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
-  const giftCharge = activeCheckoutGift?.price ?? 0;
-  const deliveryCharge = deliveryType === 'express' ? 110 : 0;
-  const codCharge = selectedMethod === 'COD' ? 70 : 0;
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
+  const [showBillingAddressForm, setShowBillingAddressForm] = useState(false);
+  const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+  const [billingAddressBusy, setBillingAddressBusy] = useState(false);
 
-  const finalTotal = total + deliveryCharge + giftCharge + codCharge;
+  const activeGift = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
+  
+  const deliveryCharge = deliveryType === 'express' ? 110 : shipping;
+  const codCharge = (selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') ? 80 : 0;
+
+  const finalTotal = (total - shipping) + deliveryCharge + codCharge;
   let amountToPayNow = finalTotal;
-  if (selectedMethod === 'PARTIAL_COD') amountToPayNow = Math.round(finalTotal * (partialPercentage / 100));
+  if (selectedMethod === 'PARTIAL_COD') amountToPayNow = Math.round(finalTotal * 0.20);
   else if (selectedMethod === 'COD') amountToPayNow = 0;
 
   useEffect(() => {
@@ -83,25 +82,48 @@ export default function CheckoutPage() {
   };
 
   const handleSaveAddress = async () => {
-    if (!addressForm.fullAddress || !addressForm.city || !addressForm.state || !addressForm.pincode) {
+    if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode) {
       alert('Please fill all address fields.'); return;
     }
     setAddressBusy(true);
     try {
-      const addresses = [...(user?.addresses || []), addressForm];
+      const fullAddress = `${addressForm.addressLine1}${addressForm.addressLine2 ? ', ' + addressForm.addressLine2 : ''}`;
+      const addresses = [...(user?.addresses || []), { ...addressForm, fullAddress }];
       await apiRequest('/users/profile', { method: 'PUT', body: JSON.stringify({ addresses }) });
       await refreshUser();
       setShowAddressForm(false);
       setSelectedAddressIndex(addresses.length - 1);
-      setAddressForm({ fullAddress: '', city: '', state: '', pincode: '' });
+      setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
     } catch (err) { console.error(err); alert('Failed to save address.'); }
     finally { setAddressBusy(false); }
   };
 
+  const handleSaveBillingAddress = async () => {
+    if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode) {
+      alert('Please fill all address fields.'); return;
+    }
+    setBillingAddressBusy(true);
+    try {
+      const fullAddress = `${billingAddressForm.addressLine1}${billingAddressForm.addressLine2 ? ', ' + billingAddressForm.addressLine2 : ''}`;
+      const addresses = [...(user?.addresses || []), { ...billingAddressForm, fullAddress }];
+      await apiRequest('/users/profile', { method: 'PUT', body: JSON.stringify({ addresses }) });
+      await refreshUser();
+      setShowBillingAddressForm(false);
+      setSelectedBillingAddressIndex(addresses.length - 1);
+      setBillingAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+    } catch (err) { console.error(err); alert('Failed to save address.'); }
+    finally { setBillingAddressBusy(false); }
+  };
+
   const handlePay = useCallback(async () => {
     if (!selectedMethod) return;
-    const currentAddress = user?.addresses?.[selectedAddressIndex] ?? null;
-    if (!currentAddress) { alert('Please add a shipping address.'); return; }
+    const shippingAddress = user?.addresses?.[selectedAddressIndex] ?? null;
+    if (!shippingAddress) { alert('Please select a shipping address.'); return; }
+    const billingAddress = billingSameAsShipping
+      ? shippingAddress
+      : (user?.addresses?.[selectedBillingAddressIndex] ?? null);
+    if (!billingAddress) { alert('Please select a billing address.'); return; }
+
     setLoading(true);
     try {
       const orderPayload = {
@@ -129,7 +151,9 @@ export default function CheckoutPage() {
             quantity: item.qty, price: item.price, color: item.color, colorHex: item.colorHex, size: item.size, sku: item.sku, customNote: item.customNote, customImages: item.customImages,
             selectedCharms, selectionGroups };
         }),
-        shippingAddress: currentAddress, isGift, giftMessage: state.giftMessage,
+        shippingAddress,
+        billingAddress,
+        isGift, giftMessage: state.giftMessage,
       };
       if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
         const rzpOrder = await apiRequest<{ success: boolean; orderId: string; razorpayOrderId: string; amount: number; currency: string }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
@@ -157,7 +181,7 @@ export default function CheckoutPage() {
         clearCart(); setOrderPlaced(true);
       }
     } catch (err) { console.error('Order failed:', err); alert('Failed to place order. Please try again.'); setLoading(false); }
-  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, state.giftMessage, clearCart, user, selectedAddressIndex]);
+  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, state.giftMessage, clearCart, user, selectedAddressIndex, billingSameAsShipping, selectedBillingAddressIndex]);
 
   if (orderPlaced) {
     return (
@@ -181,10 +205,6 @@ export default function CheckoutPage() {
     );
   }
 
-  const handleCheckoutGiftSelect = (id: string) => {
-    if (selectedGiftId === id) { setSelectedGiftId(null); if (isGift) toggleGift(); }
-    else { setSelectedGiftId(id); if (!isGift) toggleGift(); }
-  };
 
   // ── Shared style tokens ──
   const ink = '#0f1a0f';
@@ -329,6 +349,51 @@ export default function CheckoutPage() {
         .ck-cod-note { padding: 11px 16px; background: rgba(181,52,28,.05); border-bottom: 1px solid rgba(181,52,28,.15); font-size: 12px; color: #5a1a0e; line-height: 1.6; word-break: break-word; font-weight: 500; }
         @media (min-width: 480px) { .ck-cod-note { padding: 12px 20px; } }
         .ck-cod-note strong { font-weight: 800; color: #3d0e06; }
+
+        .ck-express-schedule-note {
+          margin: 12px;
+          padding: 14px 16px;
+          background: #fff9e6;
+          border: 1.5px solid rgba(212,143,56,.25);
+          border-radius: 12px;
+          font-size: 12.5px;
+          color: #664d03;
+          line-height: 1.5;
+          animation: ckUp .3s ease;
+        }
+        @media (min-width: 480px) {
+          .ck-express-schedule-note {
+            margin: 14px 16px 16px;
+          }
+        }
+        .ck-es-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 700;
+          margin-bottom: 6px;
+          color: #856404;
+        }
+        .ck-es-icon {
+          font-size: 16px;
+        }
+        .ck-es-list {
+          padding-left: 18px;
+          margin: 0;
+        }
+        .ck-es-list li {
+          margin-bottom: 6px;
+        }
+        .ck-es-list li:last-child {
+          margin-bottom: 0;
+        }
+        .ck-popup-schedule {
+          background: #fff9e6;
+          border: 1px solid rgba(212,143,56,.25);
+          border-radius: 12px;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+        }
 
         .ck-partial-options { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
         .ck-partial-btn { flex: 1; min-width: 110px; padding: 8px 6px; border: 1.5px solid rgba(45,90,39,.15); border-radius: 8px; background: #ffffff; cursor: pointer; text-align: center; font-size: 12px; font-weight: 700; color: #0f1a0f; transition: all 0.2s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
@@ -504,6 +569,15 @@ export default function CheckoutPage() {
             <p className="ck-popup-body">
               Delivered in <strong>2–3 days</strong> (Metro) or <strong>3–4 days</strong> (Rest of India) at <strong>₹110</strong>.
             </p>
+            <div className="ck-popup-schedule">
+              <div style={{ fontWeight: 700, color: '#856404', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: '13px' }}>
+                <span>⏰</span> Dispatch Notice:
+              </div>
+              <ul style={{ paddingLeft: 16, textAlign: 'left', fontSize: '12px', color: '#664d03', lineHeight: '1.4' }}>
+                <li style={{ marginBottom: 4 }}>Orders placed <strong>after 11:00 AM</strong> will be dispatched the <strong>next day</strong>.</li>
+                <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Sunday</strong>.</li>
+              </ul>
+            </div>
             <div className="ck-popup-avail">
               <p className="ck-popup-avail-title">Available payment methods</p>
               <div className="ck-popup-avail-row">
@@ -547,7 +621,10 @@ export default function CheckoutPage() {
                         <input type="radio" name="address" checked={selectedAddressIndex === idx} onChange={() => { setSelectedAddressIndex(idx); setShowAddressForm(false); }} style={{ marginTop: 3, flexShrink: 0 }} />
                         <div>
                           <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{user.name}</div>
-                          <div style={{ color: ink2, fontSize: 12, lineHeight: 1.5, fontWeight: 500 }}>{addr.fullAddress}</div>
+                          <div style={{ color: ink2, fontSize: 12, lineHeight: 1.5, fontWeight: 500 }}>
+                            {addr.addressLine1 || addr.fullAddress}
+                            {addr.addressLine2 && <><br />{addr.addressLine2}</>}
+                          </div>
                           <div style={{ color: ink2, fontSize: 12, fontWeight: 500 }}>{addr.city}, {addr.state} - {addr.pincode}</div>
                         </div>
                       </label>
@@ -563,7 +640,8 @@ export default function CheckoutPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div className="ck-addr-grid">
-                      <input className="ck-addr-input ck-addr-full" placeholder="Full Address (House No, Street, Area)" value={addressForm.fullAddress} onChange={e => setAddressForm({ ...addressForm, fullAddress: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment)" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area, Landmark)" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
                       <input className="ck-addr-input" placeholder="Pincode" value={addressForm.pincode} onChange={e => setAddressForm({ ...addressForm, pincode: e.target.value })} />
@@ -576,7 +654,60 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 )}
+
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: ink }}>
+                  <input type="checkbox" checked={billingSameAsShipping} onChange={(e) => setBillingSameAsShipping(e.target.checked)} />
+                  Billing address same as shipping address
+                </label>
               </div>
+
+              {!billingSameAsShipping && (
+                <>
+                  <p className="ck-col-title" style={{ marginTop: 20 }}>Billing Address</p>
+                  <div className="ck-panel" style={{ padding: 16 }}>
+                    {user?.addresses && user.addresses.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: showBillingAddressForm ? 14 : 0 }}>
+                        {user.addresses.map((addr, idx) => (
+                          <label key={idx} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: '11px 12px', borderRadius: 10, border: selectedBillingAddressIndex === idx ? '2px solid #3a7a32' : '1.5px solid rgba(45,90,39,.15)', background: selectedBillingAddressIndex === idx ? '#eaf5ea' : 'transparent', transition: 'background .15s, border-color .2s' }}>
+                            <input type="radio" name="billingAddress" checked={selectedBillingAddressIndex === idx} onChange={() => { setSelectedBillingAddressIndex(idx); setShowBillingAddressForm(false); }} style={{ marginTop: 3, flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{user.name}</div>
+                              <div style={{ color: ink2, fontSize: 12, lineHeight: 1.5, fontWeight: 500 }}>
+                                {addr.addressLine1 || addr.fullAddress}
+                                {addr.addressLine2 && <><br />{addr.addressLine2}</>}
+                              </div>
+                              <div style={{ color: ink2, fontSize: 12, fontWeight: 500 }}>{addr.city}, {addr.state} - {addr.pincode}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 13, color: ink2, marginBottom: 14, fontWeight: 600 }}>No saved addresses.</div>
+                    )}
+                    {!showBillingAddressForm ? (
+                      <button onClick={() => setShowBillingAddressForm(true)} style={{ background: 'none', border: '1.5px dashed #4a9e40', color: g700, padding: '11px 12px', borderRadius: 8, cursor: 'pointer', width: '100%', fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>
+                        + Add New Address
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div className="ck-addr-grid">
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment)" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area, Landmark)" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="City" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="State" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="Pincode" value={billingAddressForm.pincode} onChange={e => setBillingAddressForm({ ...billingAddressForm, pincode: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                          <button onClick={() => setShowBillingAddressForm(false)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(45,90,39,.15)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: ink }}>Cancel</button>
+                          <button onClick={handleSaveBillingAddress} disabled={billingAddressBusy} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: 'none', background: g700, color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+                            {billingAddressBusy ? 'Saving…' : 'Save Address'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <p className="ck-col-title" style={{ marginTop: 20 }}>Payment Options</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
@@ -595,22 +726,16 @@ export default function CheckoutPage() {
                             {isDisabled && <span className="ck-method-no-express">Not for Express</span>}
                           </div>
                           <div className="ck-method-sub">{method.sub}</div>
-                          {isActive && method.id === 'PARTIAL_COD' && (
-                            <div className="ck-partial-options" onClick={e => e.stopPropagation()}>
-                              <button className={`ck-partial-btn${partialPercentage === 25 ? ' active' : ''}`} onClick={() => setPartialPercentage(25)}>Pay 25% Advance</button>
-                              <button className={`ck-partial-btn${partialPercentage === 50 ? ' active' : ''}`} onClick={() => setPartialPercentage(50)}>Pay 50% Advance</button>
-                            </div>
-                          )}
                         </div>
                       </div>
                       {isActive && method.id === 'PARTIAL_COD' && (
                         <div className="ck-cod-note">
-                          Pay <strong>₹{Math.round(finalTotal * (partialPercentage / 100)).toLocaleString('en-IN')} now</strong> via Razorpay. Balance of <strong>₹{(finalTotal - Math.round(finalTotal * (partialPercentage / 100))).toLocaleString('en-IN')}</strong> collected on delivery.
+                          Pay <strong>₹{Math.round(finalTotal * 0.20).toLocaleString('en-IN')} now</strong> via Razorpay (20% required upfront). Balance of <strong>₹{(finalTotal - Math.round(finalTotal * 0.20)).toLocaleString('en-IN')}</strong> collected on delivery.
                         </div>
                       )}
                       {isActive && method.id === 'COD' && (
                         <div className="ck-cod-note">
-                          Pay <strong>₹{(total + deliveryCharge + giftCharge).toLocaleString('en-IN')}</strong> + <strong>₹70 convenience fee</strong> in cash or UPI on delivery. Total: <strong>₹{finalTotal.toLocaleString('en-IN')}</strong>
+                          Pay <strong>₹{finalTotal.toLocaleString('en-IN')}</strong> (includes standard shipping and ₹80 COD convenience fee) in cash or UPI on delivery.
                         </div>
                       )}
                     </div>
@@ -653,6 +778,19 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
+                {deliveryType === 'express' && (
+                  <div className="ck-express-schedule-note">
+                    <div className="ck-es-header">
+                      <span className="ck-es-icon">⏰</span>
+                      <strong>Express Dispatch Schedule</strong>
+                    </div>
+                    <ul className="ck-es-list">
+                      <li>Orders placed <strong>after 11:00 AM</strong> will be dispatched the <strong>next day</strong> (delivery takes 2-3 days for Metro / 3-4 days for Rest of India from dispatch).</li>
+                      <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Sunday</strong> (with same transit timeline starting from Sunday).</li>
+                    </ul>
+                  </div>
+                )}
+
                 {/* Free shipping banner — full width inside panel */}
                 <div className="ck-free-ship">
                   <span className="ck-free-ship-icon">🎁</span>
@@ -660,35 +798,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Gift Box Selector */}
-              <div className="ck-panel" style={{ animationDelay: '.22s' }}>
-                <div className="ck-panel-head">
-                  <span>Make it a Gift</span>
-                  <span style={{ fontSize: 9, fontStyle: 'italic', textTransform: 'none', letterSpacing: 0, color: ink2, fontWeight: 600 }}>optional</span>
-                </div>
-                <div className="ck-gift-cards">
-                  {CHECKOUT_GIFT_OPTIONS.map(opt => {
-                    const isSel = selectedGiftId === opt.id;
-                    return (
-                      <div key={opt.id} className={`ck-gift-card${isSel ? ' active' : ''}`} onClick={() => handleCheckoutGiftSelect(opt.id)} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && handleCheckoutGiftSelect(opt.id)} aria-pressed={isSel}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={opt.image} alt={opt.title} />
-                        <div className="ck-gift-card-body">
-                          <div className="ck-gift-card-title">{opt.title}</div>
-                          <div className="ck-gift-card-sub">{opt.sub}</div>
-                          <div className="ck-gift-card-price">+₹{opt.price}</div>
-                        </div>
-                        <div className="ck-gift-card-badge" aria-hidden="true">✓</div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {selectedGiftId && (
-                  <div className="ck-gift-msg-wrap">
-                    <textarea className="ck-gift-msg" placeholder="Write a gift message (optional)…" value={checkoutGiftMsg} onChange={e => setCheckoutGiftMsg(e.target.value)} maxLength={160} />
-                  </div>
-                )}
-              </div>
+
             </div>
 
             {/* ── RIGHT COLUMN ── */}
@@ -735,32 +845,37 @@ export default function CheckoutPage() {
                     <span className="ck-row-value" style={{ color: g700 }}>−₹{discountAmount}</span>
                   </div>
                 )}
-                <div className="ck-row">
-                  <div className="ck-row-label">Shipping</div>
-                  <span className="ck-row-value">{shipping === 0 ? <span className="ck-free-badge">FREE</span> : `₹${shipping}`}</span>
-                </div>
-                {isGift && (
-                  <div className="ck-row">
-                    <div className="ck-row-label">Gift wrap</div>
-                    <span className="ck-row-value">₹{GIFT_CHARGE}</span>
-                  </div>
+                {autoDiscountAmount > 0 && (
+                  <>
+                    {appliedOffers.map((o) => (
+                      <div key={o.id} className="ck-row save">
+                        <div className="ck-row-label">Store Offer ({o.title})</div>
+                        <span className="ck-row-value" style={{ color: g700 }}>−₹{o.amount.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </>
                 )}
-                {deliveryType === 'express' && (
+                {deliveryType === 'standard' ? (
+                  <div className="ck-row">
+                    <div className="ck-row-label">Shipping (Standard)</div>
+                    <span className="ck-row-value">{shipping === 0 ? <span className="ck-free-badge">FREE</span> : `₹${shipping}`}</span>
+                  </div>
+                ) : (
                   <div className="ck-row">
                     <div className="ck-row-label">⚡ Express Delivery</div>
-                    <span className="ck-row-value">+₹110</span>
+                    <span className="ck-row-value">₹110</span>
                   </div>
                 )}
-                {activeCheckoutGift && (
+                {isGift && activeGift && (
                   <div className="ck-row">
-                    <div className="ck-row-label">🎁 {activeCheckoutGift.title}</div>
-                    <span className="ck-row-value">+₹{activeCheckoutGift.price}</span>
+                    <div className="ck-row-label">🎁 {activeGift.title}</div>
+                    <span className="ck-row-value">₹{activeGift.price}</span>
                   </div>
                 )}
-                {selectedMethod === 'COD' && (
+                {(selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') && (
                   <div className="ck-row">
-                    <div className="ck-row-label">COD Convenience Fee</div>
-                    <span className="ck-row-value">+₹70</span>
+                    <div className="ck-row-label">{selectedMethod === 'COD' ? 'COD Convenience Fee' : 'Partial COD Fee'}</div>
+                    <span className="ck-row-value">+₹80</span>
                   </div>
                 )}
                 <div className="ck-row total">

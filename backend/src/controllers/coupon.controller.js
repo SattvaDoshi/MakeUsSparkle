@@ -1,4 +1,5 @@
 import couponService from "../services/coupon.service.js";
+import { uploadToCloudinary } from "../config/upload.config.js";
 
 export async function getCoupons(req, res) {
 	try {
@@ -47,7 +48,8 @@ export async function createCoupon(req, res) {
 	try {
 		const payload = { ...req.body };
 		if (req.file) {
-			payload.image = req.file.path;
+			const uploadResult = await uploadToCloudinary(req.file.buffer, "coupons");
+			payload.image = uploadResult.secure_url;
 		}
 		const result = await couponService.createCoupon(payload);
 		res.status(201).json(result);
@@ -61,7 +63,8 @@ export async function updateCoupon(req, res) {
 	try {
 		const payload = { ...req.body };
 		if (req.file) {
-			payload.image = req.file.path;
+			const uploadResult = await uploadToCloudinary(req.file.buffer, "coupons");
+			payload.image = uploadResult.secure_url;
 		}
 		const result = await couponService.updateCoupon(req.params.id, payload);
 		res.json(result);

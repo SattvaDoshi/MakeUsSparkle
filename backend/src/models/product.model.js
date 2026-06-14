@@ -50,6 +50,26 @@ const productSchema = new mongoose.Schema(
     images: [String],
     imagePublicIds: [String],
 
+    // Per-product size chart image (Cloudinary URL)
+    sizeChartImage: { type: String, default: null },
+    sizeChartImagePublicId: { type: String, default: null },
+
+    // Per-product gift box upsell configuration
+    giftBox: {
+      enabled:       { type: Boolean, default: true },
+      heading:       { type: String,  default: "Premium Gift Box" },
+      description:   { type: String,  default: "Rigid magnetic-close box · satin ribbon · message card" },
+      price:         { type: Number,  default: 99 },
+      image:         { type: String,  default: null },
+      imagePublicId: { type: String,  default: null },
+    },
+
+    // Compulsory partial COD configuration
+    partialCOD: {
+      enabled: { type: Boolean, default: false },
+      percentage: { type: Number, default: 0 },
+    },
+
     // Available colors for this product
     colors: [
       {

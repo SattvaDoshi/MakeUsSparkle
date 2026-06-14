@@ -6,7 +6,7 @@ const offerSchema = new mongoose.Schema(
 		description: { type: String, default: "", trim: true },
 		offerType: {
 			type: String,
-			enum: ["bogo", "percentage", "fixed"],
+			enum: ["bogo", "percentage", "fixed", "buy_x_for_y", "free_shipping"],
 			required: true,
 		},
 		discountValue: { type: Number, default: 0, min: 0 },

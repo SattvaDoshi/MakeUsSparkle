@@ -86,6 +86,20 @@ export interface CatalogProduct {
   seoTags: string[];
   charmPieceOptions?: number[];
   totalCharms?: number;
+  /** Per-product size chart image URL (Cloudinary). Null = use default static fallback. */
+  sizeChartImage?: string | null;
+  /** Per-product gift box upsell configuration. */
+  giftBox?: {
+    enabled: boolean;
+    heading: string;
+    description: string;
+    price: number;
+    image: string | null;
+  } | null;
+  partialCOD?: {
+    enabled: boolean;
+    percentage: number;
+  };
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -158,6 +172,19 @@ interface BackendProduct {
   reviews?: BackendReview[];
   charmPieceOptions?: number[];
   totalCharms?: number;
+  sizeChartImage?: string | null;
+  giftBox?: {
+    enabled?: boolean;
+    heading?: string;
+    description?: string;
+    price?: number;
+    image?: string | null;
+    imagePublicId?: string | null;
+  } | null;
+  partialCOD?: {
+    enabled?: boolean;
+    percentage?: number;
+  };
 }
 
 interface BackendHomeSection {
@@ -323,9 +350,10 @@ function normalizeProduct(
 
   const rating = Number(item.rating ?? 0);
   const reviewCount = Array.isArray(item.reviews) ? item.reviews.length : 0;
-  const price = Number(item.price ?? 0);
+  const dbPrice = Number(item.price ?? 0);
   const discountedPrice = item.discountedPrice ? Number(item.discountedPrice) : null;
-  const originalPrice = discountedPrice ? price : (price > 0 ? Math.round(price * 1.25) : null);
+  const originalPrice = discountedPrice ? dbPrice : null;
+  const price = discountedPrice || dbPrice;
   // Use _id as slug so the detail page can call GET /products/:id directly
   const slug = item._id;
 
@@ -356,6 +384,10 @@ function normalizeProduct(
     gender: item.gender || "unisex",
     stock: Number(item.stock ?? 0),
     numberOfProducts: Number(item.numberOfProducts ?? 1),
+    partialCOD: item.partialCOD ? {
+      enabled: Boolean(item.partialCOD.enabled),
+      percentage: Number(item.partialCOD.percentage || 0),
+    } : undefined,
     badge: pickBadge(rating),
     offer: discountedPrice ? "Limited Time Deal" : null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
@@ -370,6 +402,16 @@ function normalizeProduct(
     seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
     charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
     totalCharms: Number(item.totalCharms ?? 0),
+    sizeChartImage: item.sizeChartImage || null,
+    giftBox: item.giftBox
+      ? {
+          enabled:     item.giftBox.enabled !== false,
+          heading:     item.giftBox.heading     || "Premium Gift Box",
+          description: item.giftBox.description || "Rigid magnetic-close box \u00b7 satin ribbon \u00b7 message card",
+          price:       Number(item.giftBox.price ?? 99),
+          image:       item.giftBox.image || null,
+        }
+      : null,
   };
 }
 
@@ -629,7 +671,17 @@ export interface OrderPayload {
   paidAmount?: number;
   paymentMode?: "COD" | "ONLINE" | "PARTIAL_COD";
   shippingAddress: {
-    fullAddress: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    fullAddress?: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  billingAddress?: {
+    addressLine1?: string;
+    addressLine2?: string;
+    fullAddress?: string;
     city: string;
     state: string;
     pincode: string;

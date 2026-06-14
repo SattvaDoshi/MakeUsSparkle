@@ -758,8 +758,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const sizeOptions   = availableSizes.length > 0 ? availableSizes : [];
 const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
   const deliveryCharge = shipping === 'express' ? 110 : ((discountedPrice || price) >= 999 ? 0 : 60);
-
-  const deliveryCharge = shipping === 'express' ? 110 : (computedPrice >= 999 ? 0 : 60);
   const codCharge      = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
   const wished = product ? isWished(product.id) : false;
@@ -779,14 +777,14 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
   return {
     id: String(product.sourceId), name: product.name || '', price: basePrice + (giftBoxAdded ? 99 : 0),
     originalPrice: price, image: displayImg, color: currentColor?.label || '',
-    colorHex: currentColor?.hex || '#c9a84c', size: activeSize || undefined, sku: product.sku,
+    colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
     href: product.href || `/products/${product.sourceId}`,
     customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
     customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
     giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
     giftBox: giftBoxAdded || undefined,
   };
-}, [product, discountedPrice, price, displayImg, currentColor, activeSize, customData, giftMessage, allowCustomization, giftBoxAdded]);
+}, [product, discountedPrice, price, displayImg, currentColor,  customData, giftMessage, allowCustomization, giftBoxAdded]);
   const buildCartItems = useCallback(() => {
     if (!product) return [];
 
@@ -1375,26 +1373,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                     ))}
                   </div>
 
-{sizeOptions.length > 0 && (
-  <>
-    <p className="pdp-section-label">Size: <span>{activeSize || sizeOptions[0]}</span></p>
-    <div className="pdp-sizes">
-      {sizeOptions.map((size) => {
-        const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === normalizedColor && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
-        return (
-          <button key={size} type="button" className={`pdp-size-btn${activeSize === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(size)}>{size}</button>
-        );
-      })}
-    </div>
-  </>
-)}
-{/* moved outside so it always renders */}
-<button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
-  </svg>
-  Size Chart
-</button>
+
                   {sizeOptions.length > 0 && (
                     <>
                       <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>

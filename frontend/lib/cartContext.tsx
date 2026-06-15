@@ -66,7 +66,10 @@ export interface CartItem {
     metadata?: Record<string, unknown>;
   }>;
   category?: string;
+  categoryId?: string;
+  subCategoryId?: string;
   style?: string;
+  styleId?: string;
 }
 
 export const GIFT_OPTIONS = [

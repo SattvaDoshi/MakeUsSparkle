@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import React, { useState, type FormEvent } from "react";
 
 type AdminProduct = {
 	_id: string;
@@ -51,47 +51,63 @@ export default function AdminNewArrivalsTab({
 
 	const getProductImage = (product: AdminProduct) => product.mainImage || product.images?.[0] || "";
 
+	const [searchQuery, setSearchQuery] = useState("");
+
+	const filteredProducts = React.useMemo(() => {
+		return products.filter((product) => {
+			if (!searchQuery) return true;
+			return product.title?.toLowerCase().includes(searchQuery.toLowerCase());
+		});
+	}, [products, searchQuery]);
+
 	return (
 		<section className="admin-content">
-			<div className="admin-panel">
-				<h2>New Arrivals</h2>
-				<form className="admin-form-grid" onSubmit={onSubmit} style={{ marginBottom: "1.5rem" }}>
-					<input
-						placeholder="Eyebrow text"
-						value={form.eyebrow}
-						onChange={(event) => onChange({ ...form, eyebrow: event.target.value })}
-					/>
-					<input
-						placeholder="Section title"
-						value={form.title}
-						onChange={(event) => onChange({ ...form, title: event.target.value })}
-						required
-					/>
-					<label className="admin-checkbox">
-						<input
-							type="checkbox"
-							checked={form.isActive}
-							onChange={(event) => onChange({ ...form, isActive: event.target.checked })}
-						/>
-						Active
-					</label>
-					<div className="admin-inline-actions">
-						<button className="admin-btn" type="submit">Save New Arrivals</button>
+			<form onSubmit={onSubmit} className="admin-panel" style={{ marginBottom: "2rem" }}>
+				<h2>Section Settings</h2>
+				<div className="admin-form-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: "1.5rem" }}>
+					<div className="admin-form-group">
+						<label>Eyebrow Text</label>
+						<input type="text" value={form.eyebrow} onChange={(e) => onChange({ ...form, eyebrow: e.target.value })} placeholder="e.g. WHAT'S NEW" />
 					</div>
-				</form>
+					<div className="admin-form-group">
+						<label>Main Title</label>
+						<input type="text" value={form.title} onChange={(e) => onChange({ ...form, title: e.target.value })} placeholder="e.g. New Arrivals" />
+					</div>
+				</div>
+				<div className="admin-form-group" style={{ marginBottom: "1.5rem" }}>
+					<label className="admin-checkbox">
+						<input type="checkbox" checked={form.isActive} onChange={(e) => onChange({ ...form, isActive: e.target.checked })} />
+						Show section on homepage
+					</label>
+				</div>
+				<button type="submit" className="admin-btn">Save Changes</button>
+			</form>
+
+			<div className="admin-panel">
+				<h2>Select Products ({selected.size} selected)</h2>
+				
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search products by title..." 
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+					/>
+				</div>
 
 				<div className="admin-table-wrap">
 					<table className="admin-table">
 						<thead>
 							<tr>
-								<th>Select</th>
+								<th style={{ width: 60 }}>Select</th>
 								<th>Product</th>
 								<th>Price</th>
 								<th>Order</th>
 							</tr>
 						</thead>
 						<tbody>
-							{products.map((product) => {
+							{filteredProducts.map((product) => {
 								const isSelected = selected.has(product._id);
 								const selectedIndex = form.products.indexOf(product._id);
 								const image = getProductImage(product);

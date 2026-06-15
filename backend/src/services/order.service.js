@@ -1,6 +1,7 @@
 import Order from "../models/order.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
+import Offer from "../models/offer.model.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {
@@ -71,7 +72,20 @@ class OrderService {
 				status: "placed",
 				paymentStatus: "pending",
 				paymentMode: orderData.paymentMode || "COD",
+				deliveryType: orderData.deliveryType || "standard",
+				discountAmount: orderData.discountAmount || 0,
+				discountCode: orderData.discountCode,
+				autoDiscountAmount: orderData.autoDiscountAmount || 0,
+				appliedOffers: orderData.appliedOffers || [],
 			});
+
+			if (orderData.appliedOffers && orderData.appliedOffers.length > 0) {
+				const offerIds = orderData.appliedOffers.map((o) => o.id);
+				await Offer.updateMany(
+					{ _id: { $in: offerIds } },
+					{ $inc: { usedCount: 1 } }
+				);
+			}
 
 			if (orderData.paymentMode === 'COD') {
 				const populatedOrder = await order.populate([

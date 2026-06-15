@@ -41,21 +41,6 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete }: Adm
 	return (
 		<section className="admin-content">
 			<style>{`
-				.ao-controls {
-					display: flex; gap: 16px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;
-				}
-				.ao-search {
-					flex: 1; min-width: 200px;
-					padding: 10px 14px; border: 1px solid #d9cdb8; border-radius: 8px;
-					font-family: 'Jost', sans-serif; font-size: 14px; outline: none;
-				}
-				.ao-search:focus { border-color: #7a8e3c; }
-				.ao-filter {
-					padding: 10px 14px; border: 1px solid #d9cdb8; border-radius: 8px;
-					font-family: 'Jost', sans-serif; font-size: 13px; outline: none;
-					background: white; cursor: pointer;
-				}
-				
 				.ao-card {
 					background: white; border: 1px solid rgba(61,74,34,0.08); border-radius: 12px;
 					margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
@@ -120,21 +105,21 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete }: Adm
 			<div className="admin-panel">
 				<h2>Orders</h2>
 				
-				<div className="ao-controls">
+				<div className="admin-controls">
 					<input 
 						type="text" 
-						className="ao-search" 
+						className="admin-search" 
 						placeholder="Search by Order ID, Customer Name, or Email..." 
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 					/>
 					
-					<select className="ao-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+					<select className="admin-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
 						<option value="all">All Statuses</option>
 						{orderStatuses.map(s => <option key={s} value={s}>{s?.toUpperCase()}</option>)}
 					</select>
 
-					<select className="ao-filter" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
+					<select className="admin-filter" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
 						{paymentStatuses.map(s => <option key={s} value={s}>{s === "all" ? "All Payments" : s.replace('_', ' ').toUpperCase()}</option>)}
 					</select>
 				</div>

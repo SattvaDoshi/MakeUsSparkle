@@ -8,7 +8,7 @@ import CartGoalMeter from '@/components/ui/ProgressBar';
 
 // ─── Main CartDrawer ──────────────────────────────────────────────────────────
 export default function CartDrawer() {
-  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal } = useCart();
+  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut } = useCart();
   const { isDrawerOpen, items } = state;
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -363,6 +363,29 @@ export default function CartDrawer() {
               <div className="drawer-subtotal-row">
                 <span>Subtotal ({itemCount} item{itemCount !== 1 ? 's' : ''})</span>
                 <strong>₹{subtotal.toLocaleString('en-IN')}</strong>
+              </div>
+              {applicableOffers.length > 0 && (
+                <div className="drawer-subtotal-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--olive-900)' }}>Available Store Offers</span>
+                  {applicableOffers.map((o) => (
+                    <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input
+                          type="checkbox"
+                          checked={o.applied}
+                          onChange={() => toggleOfferOptOut(o.id)}
+                          style={{ cursor: 'pointer', accentColor: 'var(--olive-600)' }}
+                        />
+                        <span>{o.title}</span>
+                      </label>
+                      <strong style={{ color: 'var(--green)', fontSize: 13 }}>-₹{o.amount.toLocaleString('en-IN')}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="drawer-subtotal-row">
+                <span>Total</span>
+                <strong>Rs {total.toLocaleString('en-IN')}</strong>
               </div>
               <div className="drawer-cta">
                 <Link href="/cart" className="drawer-btn-cart" onClick={closeDrawer}>

@@ -65,6 +65,17 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
     deliveryCharge: Number,
+    deliveryType: { type: String, enum: ["standard", "express"], default: "standard" },
+    discountAmount: { type: Number, default: 0 },
+    discountCode: String,
+    autoDiscountAmount: { type: Number, default: 0 },
+    appliedOffers: [
+      {
+        id: String,
+        title: String,
+        amount: Number,
+      }
+    ],
     shippingAddress: {
       addressLine1: String,
       addressLine2: String,

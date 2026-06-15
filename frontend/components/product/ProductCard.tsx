@@ -35,6 +35,10 @@ interface ProductCardProduct {
   colors: ProductColor[];
   href: string;
   sku?: string;
+  sourceId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  styleId?: string;
   rating?: number;
   reviewCount?: number;
   type?: string;
@@ -125,7 +129,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
   addItem(
     {
       id: String(product.id),
-      sourceId: product.sku ?? String(product.id),
+      sourceId: product.sourceId ?? String(product.id),
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? null,
@@ -134,6 +138,10 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
       colorHex: product.colors?.[0]?.hex ?? '#000000',
       sku: product.sku ?? `SKU-${product.id}`,
       href: product.href ?? '',
+      category: product.category,
+      categoryId: product.categoryId,
+      subCategoryId: product.subCategoryId,
+      styleId: product.styleId,
     },
     true,
   );

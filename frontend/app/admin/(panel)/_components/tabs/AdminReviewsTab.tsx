@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import React, { useState, useMemo, type FormEvent } from "react";
 
 import type { AdminReview } from "../../_lib/admin.types";
 
@@ -14,12 +14,37 @@ type AdminReviewsTabProps = {
 };
 
 export default function AdminReviewsTab({ reviews, editingReview, onChangeEditingReview, onSubmit, onEdit, onDelete }: AdminReviewsTabProps) {
+	const [searchQuery, setSearchQuery] = useState("");
+
+	const filteredReviews = useMemo(() => {
+		return reviews.filter(r => {
+			if (!searchQuery) return true;
+			const q = searchQuery.toLowerCase();
+			return (
+				(r.productTitle || "").toLowerCase().includes(q) ||
+				(r.user?.name || "").toLowerCase().includes(q) ||
+				(r.user?.email || "").toLowerCase().includes(q)
+			);
+		});
+	}, [reviews, searchQuery]);
+
 	return (
 		<section className="admin-content">
 			<div className="admin-panel">
 				<h2>Reviews</h2>
+				
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search reviews by product or user..." 
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+					/>
+				</div>
+
 				{!!editingReview && (
-					<form className="admin-form-grid" onSubmit={onSubmit}>
+					<form className="admin-form-grid" onSubmit={onSubmit} style={{ marginBottom: "1.5rem" }}>
 						<input type="number" min={1} max={5} value={editingReview.rating} onChange={(event) => onChangeEditingReview(editingReview ? ({ ...editingReview, rating: event.target.value }) : null)} required />
 						<textarea value={editingReview.comment} onChange={(event) => onChangeEditingReview(editingReview ? ({ ...editingReview, comment: event.target.value }) : null)} required />
 						<div className="admin-inline-actions">
@@ -33,7 +58,7 @@ export default function AdminReviewsTab({ reviews, editingReview, onChangeEditin
 					<table className="admin-table">
 						<thead><tr><th>Product</th><th>User</th><th>Rating</th><th>Comment</th><th>Actions</th></tr></thead>
 						<tbody>
-							{reviews.map((entry) => (
+							{filteredReviews.map((entry) => (
 								<tr key={entry.reviewId}>
 									<td>{entry.productTitle}</td>
 									<td>{entry.user?.name || entry.user?.email || "-"}</td>
@@ -47,6 +72,11 @@ export default function AdminReviewsTab({ reviews, editingReview, onChangeEditin
 									</td>
 								</tr>
 							))}
+							{filteredReviews.length === 0 && (
+								<tr>
+									<td colSpan={5} style={{ textAlign: "center", padding: "20px" }}>No reviews found.</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 				</div>

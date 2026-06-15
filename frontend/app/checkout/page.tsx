@@ -129,6 +129,7 @@ export default function CheckoutPage() {
       const orderPayload = {
         amount: amountToPayNow, totalAmount: finalTotal, advanceAmount: amountToPayNow,
         balanceAmount: Math.max(finalTotal - amountToPayNow, 0), paymentMode: selectedMethod,
+        discountCode, discountAmount, autoDiscountAmount, appliedOffers, deliveryType,
         items: items.map(item => {
           const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
           const mappedProduct = (!item.id.startsWith('custom-') && isValidObjectId) ? item.id : undefined;
@@ -569,15 +570,6 @@ export default function CheckoutPage() {
             <p className="ck-popup-body">
               Delivered in <strong>2–3 days</strong> (Metro) or <strong>3–4 days</strong> (Rest of India) at <strong>₹110</strong>.
             </p>
-            <div className="ck-popup-schedule">
-              <div style={{ fontWeight: 700, color: '#856404', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: '13px' }}>
-                <span>⏰</span> Dispatch Notice:
-              </div>
-              <ul style={{ paddingLeft: 16, textAlign: 'left', fontSize: '12px', color: '#664d03', lineHeight: '1.4' }}>
-                <li style={{ marginBottom: 4 }}>Orders placed <strong>after 11:00 AM</strong> will be dispatched the <strong>next day</strong>.</li>
-                <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Sunday</strong>.</li>
-              </ul>
-            </div>
             <div className="ck-popup-avail">
               <p className="ck-popup-avail-title">Available payment methods</p>
               <div className="ck-popup-avail-row">

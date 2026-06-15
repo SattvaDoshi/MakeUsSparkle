@@ -884,7 +884,7 @@ export default function CartPage() {
     itemCount, removeItem, updateQty,
     toggleGift, setGiftId, setGiftMessage,
     removeDiscount, applyCouponCode,
-    autoDiscountAmount, appliedOffers,
+    autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut
   } = useCart();
   const { items, isGift, giftMessage, discountCode, discountAmount, selectedGiftId } = state;
 
@@ -1388,11 +1388,22 @@ export default function CartPage() {
                       <span>−₹{discountAmount}</span>
                     </div>
                   )}
-                  {autoDiscountAmount > 0 && (
+                  {applicableOffers.length > 0 && (
                     <>
-                      {appliedOffers.map((o) => (
-                        <div key={o.id} className="cp-summary-row cp-summary-row--savings">
-                          <span>Store Offer ({o.title})</span>
+                      <div className="cp-summary-row" style={{ marginTop: 10, marginBottom: 6, fontWeight: 600, color: 'var(--olive-900)' }}>
+                        <span>Available Store Offers</span>
+                      </div>
+                      {applicableOffers.map((o) => (
+                        <div key={o.id} className="cp-summary-row cp-summary-row--savings" style={{ alignItems: 'center' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={o.applied}
+                              onChange={() => toggleOfferOptOut(o.id)}
+                              style={{ cursor: 'pointer', accentColor: 'var(--olive-600)' }}
+                            />
+                            <span>{o.title}</span>
+                          </label>
                           <span>−₹{o.amount.toLocaleString('en-IN')}</span>
                         </div>
                       ))}

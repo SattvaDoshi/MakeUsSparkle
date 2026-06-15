@@ -161,17 +161,35 @@ export default function AdminCombosTab({
 		closeModal();
 	};
 
+	const [searchQuery, setSearchQuery] = useState("");
+
 	const confirmDelete = (id: string) => {
 		if (!window.confirm(`Delete this combo?`)) return;
 		onDeleteCombo(id);
 	};
 
-	const visibleCombos = safeCombos.filter((c) => c.type === activeTab);
+	const visibleCombos = React.useMemo(() => {
+		return safeCombos.filter((c) => {
+			if (c.type !== activeTab) return false;
+			const q = searchQuery.toLowerCase();
+			return !q || c.name.toLowerCase().includes(q);
+		});
+	}, [safeCombos, activeTab, searchQuery]);
 
 	const renderTable = () => {
 		return (
-			<div className="admin-table-wrap">
-				<table className="admin-table">
+			<div>
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search combos by name..." 
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+					/>
+				</div>
+				<div className="admin-table-wrap">
+					<table className="admin-table">
 					<thead>
 						<tr>
 							<th style={{ width: 64 }}>Image</th>
@@ -234,6 +252,7 @@ export default function AdminCombosTab({
 					</tbody>
 				</table>
 			</div>
+		</div>
 		);
 	};
 

@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import type { AdminCoupon, AdminOffer } from "../../_lib/admin.types";
 
 type AdminCouponsTabProps = {
@@ -21,6 +22,30 @@ export default function AdminCouponsTab({
 	onAddCoupon,
 	onAddOffer,
 }: AdminCouponsTabProps) {
+	const [offerSearch, setOfferSearch] = useState("");
+	const [offerTypeFilter, setOfferTypeFilter] = useState("all");
+
+	const [couponSearch, setCouponSearch] = useState("");
+	const [couponTypeFilter, setCouponTypeFilter] = useState("all");
+
+	const filteredOffers = useMemo(() => {
+		return offers.filter(o => {
+			const q = offerSearch.toLowerCase();
+			const matchesSearch = !q || o.title.toLowerCase().includes(q);
+			const matchesType = offerTypeFilter === "all" || o.offerType === offerTypeFilter;
+			return matchesSearch && matchesType;
+		});
+	}, [offers, offerSearch, offerTypeFilter]);
+
+	const filteredCoupons = useMemo(() => {
+		return coupons.filter(c => {
+			const q = couponSearch.toLowerCase();
+			const matchesSearch = !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+			const matchesType = couponTypeFilter === "all" || c.discountType === couponTypeFilter;
+			return matchesSearch && matchesType;
+		});
+	}, [coupons, couponSearch, couponTypeFilter]);
+
 	return (
 		<section className="admin-content">
 			<div className="admin-panel">
@@ -28,11 +53,28 @@ export default function AdminCouponsTab({
 					<h2>Offers</h2>
 					<button className="admin-btn" onClick={onAddOffer}>Add Offer</button>
 				</div>
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search offers by title..." 
+						value={offerSearch}
+						onChange={(e) => setOfferSearch(e.target.value)}
+					/>
+					<select className="admin-filter" value={offerTypeFilter} onChange={(e) => setOfferTypeFilter(e.target.value)}>
+						<option value="all">All Types</option>
+						<option value="bogo">BOGO</option>
+						<option value="percentage">Percentage</option>
+						<option value="fixed">Fixed</option>
+						<option value="buy_x_for_y">Buy X for Y</option>
+						<option value="free_shipping">Free Shipping</option>
+					</select>
+				</div>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
 						<thead><tr><th>Title</th><th>Type</th><th>Value</th><th>Usage</th><th>Expiry</th><th>Active</th><th>Actions</th></tr></thead>
 						<tbody>
-							{offers.map((entry) => (
+							{filteredOffers.map((entry) => (
 								<tr key={entry._id}>
 									<td>{entry.title}</td>
 									<td>{entry.offerType === "bogo" ? `Buy ${entry.buyQuantity} Get ${entry.getQuantity}` : entry.offerType === "buy_x_for_y" ? `Buy ${entry.buyQuantity} for ${entry.discountValue}` : entry.offerType === "free_shipping" ? "Free Shipping" : entry.offerType}</td>
@@ -48,7 +90,7 @@ export default function AdminCouponsTab({
 									</td>
 								</tr>
 							))}
-							{offers.length === 0 && (
+							{filteredOffers.length === 0 && (
 								<tr><td colSpan={7} style={{ textAlign: "center" }}>No offers found.</td></tr>
 							)}
 						</tbody>
@@ -61,11 +103,26 @@ export default function AdminCouponsTab({
 					<h2>Coupons List</h2>
 					<button className="admin-btn" onClick={onAddCoupon}>Add Coupon</button>
 				</div>
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search coupons by code or name..." 
+						value={couponSearch}
+						onChange={(e) => setCouponSearch(e.target.value)}
+					/>
+					<select className="admin-filter" value={couponTypeFilter} onChange={(e) => setCouponTypeFilter(e.target.value)}>
+						<option value="all">All Types</option>
+						<option value="percentage">Percentage</option>
+						<option value="fixed">Fixed</option>
+						<option value="free_shipping">Free Shipping</option>
+					</select>
+				</div>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
 						<thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used/Limit</th><th>Expiry</th><th>Active</th><th>Actions</th></tr></thead>
 						<tbody>
-							{coupons.map((entry) => (
+							{filteredCoupons.map((entry) => (
 								<tr key={entry._id}>
 									<td>{entry.code}</td>
 									<td>{entry.name}</td>
@@ -83,7 +140,7 @@ export default function AdminCouponsTab({
 									</td>
 								</tr>
 							))}
-							{coupons.length === 0 && (
+							{filteredCoupons.length === 0 && (
 								<tr><td colSpan={9} style={{ textAlign: "center" }}>No coupons found.</td></tr>
 							)}
 						</tbody>

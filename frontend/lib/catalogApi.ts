@@ -57,10 +57,13 @@ export interface CatalogProduct {
   images: string[];
   mainImage?: string | null;
   category: string;
+  categoryId?: string;
   categorySlug: string;
   subCategory: string;
+  subCategoryId?: string;
   subCategorySlug: string;
   style: string;
+  styleId?: string;
   styleSlug: string;
   type: string;
   subtype?: string;
@@ -374,10 +377,13 @@ function normalizeProduct(
     rating,
     reviewCount,
     category: categoryName,
+    categoryId,
     categorySlug,
     subCategory: subCategoryName,
+    subCategoryId,
     subCategorySlug,
     style: styleName,
+    styleId,
     styleSlug: style?.slug || "",
     type: subCategorySlug || categorySlug,
     subtype: subCategorySlug || undefined,

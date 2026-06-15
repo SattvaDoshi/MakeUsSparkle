@@ -82,6 +82,7 @@ export interface CartState {
   discountCode: string;
   discountAmount: number;
   selectedGiftId: string | null;
+  optedOutOffers: string[];
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ type Action =
   | { type: 'APPLY_DISCOUNT'; payload: { code: string; amount: number } }
   | { type: 'REMOVE_DISCOUNT' }
   | { type: 'CLEAR_CART' }
+  | { type: 'TOGGLE_OFFER_OPTOUT'; payload: string }
   | { type: 'HYDRATE';      payload: CartState };
 
 // ─── Selectors (pure helpers) ─────────────────────────────────────────────────
@@ -134,6 +136,7 @@ const INITIAL: CartState = {
   discountCode:   '',
   discountAmount: 0,
   selectedGiftId: null,
+  optedOutOffers: [],
 };
 
 function key(item: Partial<CartItem>) {
@@ -215,6 +218,16 @@ case 'ADD_ITEM': {
     case 'REMOVE_DISCOUNT':
       return { ...state, discountCode: '', discountAmount: 0 };
 
+    case 'TOGGLE_OFFER_OPTOUT': {
+      const isOptedOut = state.optedOutOffers?.includes(action.payload);
+      return {
+        ...state,
+        optedOutOffers: isOptedOut
+          ? state.optedOutOffers.filter(id => id !== action.payload)
+          : [...(state.optedOutOffers || []), action.payload],
+      };
+    }
+
     case 'CLEAR_CART':
       return { ...INITIAL };
 
@@ -247,6 +260,8 @@ interface CartContextValue {
   shipping:   number;
   autoDiscountAmount: number;
   appliedOffers: Array<{ id: string; title: string; amount: number }>;
+  applicableOffers: Array<{ id: string; title: string; amount: number; applied: boolean }>;
+  toggleOfferOptOut: (id: string) => void;
   total:      number;
   itemCount:  number;
 }
@@ -319,6 +334,7 @@ const addItem = useCallback(
   // Calculate automatic discounts from store offers
   let autoDiscountAmount = 0;
   const appliedOffers: Array<{ id: string; title: string; amount: number }> = [];
+  const applicableOffers: Array<{ id: string; title: string; amount: number; applied: boolean }> = [];
 
   // Helper to determine if item is applicable
   const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string }, offer: any) => {
@@ -406,14 +422,23 @@ const addItem = useCallback(
     }
 
     if (offerDiscount > 0) {
-      autoDiscountAmount += offerDiscount;
-      appliedOffers.push({
+      const isApplied = !(state.optedOutOffers || []).includes(offer._id);
+      applicableOffers.push({
         id: offer._id,
         title: offer.title,
         amount: Math.round(offerDiscount),
+        applied: isApplied,
       });
 
-      pool = pool.filter((_, idx) => !usedIndices.has(idx));
+      if (isApplied) {
+        autoDiscountAmount += offerDiscount;
+        appliedOffers.push({
+          id: offer._id,
+          title: offer.title,
+          amount: Math.round(offerDiscount),
+        });
+        pool = pool.filter((_, idx) => !usedIndices.has(idx));
+      }
     }
   });
 
@@ -472,15 +497,17 @@ const addItem = useCallback(
     state,
     addItem, removeItem, updateQty,
     openDrawer, closeDrawer,
-    toggleGift, setGiftId, setGiftMessage,
+    toggleGift, setGiftId,    setGiftMessage,
     applyDiscount, removeDiscount,
     clearCart,
     applyCouponCode,
+    toggleOfferOptOut: (id: string) => dispatch({ type: 'TOGGLE_OFFER_OPTOUT', payload: id }),
     subtotal:  sub,
     savings:   cartSavings(state.items),
     shipping:  shippingVal,
     autoDiscountAmount: Math.round(autoDiscountAmount),
     appliedOffers,
+    applicableOffers,
     total:     finalTotal,
     itemCount: cartItemCount(state.items),
   };

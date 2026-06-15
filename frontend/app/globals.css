@@ -602,6 +602,40 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.82rem;
 }
 
+.admin-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid #d9cdb8;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-search:focus {
+  border-color: #7a8e3c;
+}
+
+.admin-filter {
+  padding: 10px 14px;
+  border: 1px solid #d9cdb8;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  background: white;
+  cursor: pointer;
+}
+
 .admin-btn:hover {
   background: var(--olive-dark);
 }

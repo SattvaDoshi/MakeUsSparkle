@@ -148,6 +148,8 @@ export default function AdminCategoriesTab({
     return fd;
   };
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!modal || !modal.name.trim()) return;
@@ -173,21 +175,24 @@ export default function AdminCategoriesTab({
     else if (kind === "genders") onDeleteGender(id);
   };
 
-  const visibleCategories = genderFilter === "all"
-    ? categories
-    : categories.filter((category) => {
-        const genderId = typeof category.gender === "string" ? category.gender : category.gender?._id || "";
-        return genderId === genderFilter;
-      });
+  const applySearch = (name?: string) => !searchQuery || (name || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-  const visibleStyles = genderFilter === "all"
-    ? styles
-    : styles.filter((style) => {
-        const genderId = typeof style.gender === "string" ? style.gender : style.gender?._id || "";
-        return genderId === genderFilter;
-      });
+  const visibleCategories = categories.filter((category) => {
+    if (!applySearch(category.name)) return false;
+    if (genderFilter === "all") return true;
+    const genderId = typeof category.gender === "string" ? category.gender : category.gender?._id || "";
+    return genderId === genderFilter;
+  });
+
+  const visibleStyles = styles.filter((style) => {
+    if (!applySearch(style.name)) return false;
+    if (genderFilter === "all") return true;
+    const genderId = typeof style.gender === "string" ? style.gender : style.gender?._id || "";
+    return genderId === genderFilter;
+  });
 
   const visibleSubcategories = subcategories.filter((subcategory) => {
+    if (!applySearch(subcategory.name)) return false;
     if (genderFilter === "all") return true;
     const category = typeof subcategory.category === "string" ? null : subcategory.category;
     const genderId = category?.gender
@@ -197,6 +202,8 @@ export default function AdminCategoriesTab({
       : "";
     return genderId === genderFilter;
   });
+
+  const visibleGenders = genders.filter(g => applySearch(g.name));
 
   const renderTable = () => {
     if (activeTab === "categories") {
@@ -467,6 +474,15 @@ export default function AdminCategoriesTab({
 
       {/* Table content */}
       <div className="admin-panel" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="admin-controls" style={{ padding: "1rem" }}>
+          <input 
+            type="text" 
+            className="admin-search" 
+            placeholder={`Search ${tabLabels[activeTab].toLowerCase()} by name...`} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
         {renderTable()}
       </div>
 

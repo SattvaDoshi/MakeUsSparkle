@@ -18,6 +18,10 @@ interface Product {
   id: number;
   name: string;
   category: string;
+  sourceId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  styleId?: string;
   price: number;
   originalPrice?: number | null;
   badge?: string | null;
@@ -105,6 +109,7 @@ function ProductCard({
     addItem(
       {
         id: String(product.id),
+        sourceId: product.sourceId ?? String(product.id),
         name: product.name,
         price: product.price,
         originalPrice: product.originalPrice ?? undefined,
@@ -112,6 +117,10 @@ function ProductCard({
         color: colors[0]?.label ?? "",
         colorHex: colors[0]?.hex ?? "#c9a84c",
         href: product.href,
+        category: product.category,
+        categoryId: product.categoryId,
+        subCategoryId: product.subCategoryId,
+        styleId: product.styleId,
         // sku is required by CartItem; use a slug-based fallback
         sku: `NA-${product.id}`,
       },

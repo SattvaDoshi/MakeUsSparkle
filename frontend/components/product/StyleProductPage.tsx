@@ -711,6 +711,11 @@ function Card({ product, index }: { product: Product; index: number }) {
       colorHex: product.colors?.[0]?.hex ?? '#000000',
         sku: product.sku ?? `SKU-${product.id}`,
         href: product.href,
+        category: product.category,
+        categoryId: product.categoryId,
+        subCategoryId: product.subCategoryId,
+        style: product.style,
+        styleId: product.styleId,
       },
       true, // openDrawer = true â†’ CartDrawer slides open
     );

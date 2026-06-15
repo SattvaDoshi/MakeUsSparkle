@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { AdminBanner, MainBanner } from "../../_lib/admin.types";
 
 type AdminBannersTabProps = {
@@ -24,6 +24,19 @@ export default function AdminBannersTab({
 	const [mainIsActive, setMainIsActive] = useState(true);
 	const [mainImageFile, setMainImageFile] = useState<File | null>(null);
 	const [editingMainId, setEditingMainId] = useState<string | null>(null);
+
+	const [bannerSearch, setBannerSearch] = useState("");
+	const [bannerFilter, setBannerFilter] = useState("all");
+
+	const filteredBanners = useMemo(() => {
+		return banners.filter(b => {
+			const q = bannerSearch.toLowerCase();
+			const matchesSearch = !q || b.title?.toLowerCase().includes(q) || b.text?.toLowerCase().includes(q);
+			const activeStatus = b.isActive === false ? "inactive" : "active";
+			const matchesActive = bannerFilter === "all" || activeStatus === bannerFilter;
+			return matchesSearch && matchesActive;
+		});
+	}, [banners, bannerSearch, bannerFilter]);
 
 	const resetMainForm = () => {
 		setMainLink("");
@@ -126,12 +139,28 @@ export default function AdminBannersTab({
 					</table>
 				</div>
 
-				<h2>Banners List</h2>
+				<div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+					<h2>Banners List</h2>
+				</div>
+				<div className="admin-controls">
+					<input 
+						type="text" 
+						className="admin-search" 
+						placeholder="Search banners by title or text..." 
+						value={bannerSearch}
+						onChange={(e) => setBannerSearch(e.target.value)}
+					/>
+					<select className="admin-filter" value={bannerFilter} onChange={(e) => setBannerFilter(e.target.value)}>
+						<option value="all">All Statuses</option>
+						<option value="active">Active</option>
+						<option value="inactive">Inactive</option>
+					</select>
+				</div>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
 						<thead><tr><th>Title</th><th>Tag</th><th>Active</th><th>Order</th><th>Link</th><th>Actions</th></tr></thead>
 						<tbody>
-							{banners.map((entry) => (
+							{filteredBanners.map((entry) => (
 								<tr key={entry._id}>
 									<td>{entry.title || entry.text || "-"}</td>
 									<td>{entry.tag || "-"}</td>
@@ -146,6 +175,9 @@ export default function AdminBannersTab({
 									</td>
 								</tr>
 							))}
+							{filteredBanners.length === 0 && (
+								<tr><td colSpan={6} style={{ textAlign: "center" }}>No banners found.</td></tr>
+							)}
 						</tbody>
 					</table>
 				</div>

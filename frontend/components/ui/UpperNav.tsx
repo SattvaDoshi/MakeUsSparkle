@@ -397,7 +397,7 @@
 //           >
 //             Shipping Policy
 //           </Link>
-          
+
 //           <Link 
 //             className="sparkle-policy-link" 
 //             href="/refund-policy" 
@@ -405,7 +405,7 @@
 //           >
 //             Return &amp; Refund Policy
 //           </Link>
-          
+
 //           <Link 
 //             className="sparkle-policy-link" 
 //             href="/affiliate" 
@@ -413,7 +413,7 @@
 //           >
 //             Affiliate
 //           </Link>
-          
+
 //           <button
 //             className="sparkle-policy-link"
 //             onClick={() => {
@@ -444,7 +444,7 @@ export default function TopNav() {
   const { itemCount } = useCart();
   const { isAuthenticated, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const theme = "light"; // Constant theme
   const navRef = useRef<HTMLElement | null>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -502,62 +502,7 @@ export default function TopNav() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
-    type RGBA = { r: number; g: number; b: number; a: number };
-
-    function parseRgb(str: string): RGBA | null {
-      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-      if (!m) return null;
-      return {
-        r: Number(m[1]),
-        g: Number(m[2]),
-        b: Number(m[3]),
-        a: m[4] !== undefined ? Number(m[4]) : 1,
-      };
-    }
-
-    function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }) {
-      return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    }
-
-    function getComputedBgColor(x: number, y: number): RGBA {
-      const el = document.elementFromPoint(x, y);
-      if (!el) return { r: 255, g: 255, b: 255, a: 1 };
-      let node: HTMLElement | null = el as HTMLElement;
-      while (node && node !== document.documentElement) {
-        const bg = getComputedStyle(node).backgroundColor;
-        const parsed = parseRgb(bg);
-        if (parsed && parsed.a > 0.05) return parsed;
-        node = node.parentElement;
-      }
-      const bodyBg = parseRgb(getComputedStyle(document.body).backgroundColor);
-      return bodyBg || { r: 255, g: 255, b: 255, a: 1 };
-    }
-
-    function updateTheme() {
-      if (!navRef.current) return;
-      const navH = navRef.current.getBoundingClientRect().height;
-      const bgColor = getComputedBgColor(window.innerWidth / 2, navH + 4);
-      const lum = relativeLuminance(bgColor);
-      setTheme(lum > 0.4 ? "light" : "dark");
-    }
-
-    updateTheme();
-
-    let ticking = false;
-    const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          updateTheme();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  // Removed dynamic scroll theme logic as nav is now constant and sticky
 
   return (
     <>
@@ -566,12 +511,14 @@ export default function TopNav() {
 
         /* ── NAV SHELL ── */
         .sparkle-nav {
-          position: fixed;
+          position: sticky;
           top: 0; left: 0; right: 0;
           z-index: 200;
           padding: 0 24px;
-          background: transparent;
-          border-bottom: none;
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
           transition: color 0.25s;
         }
         .sparkle-nav-inner {
@@ -896,7 +843,7 @@ export default function TopNav() {
       {/* ── MAIN NAV BAR ── */}
       <nav ref={navRef} className="sparkle-nav" data-theme={theme}>
         <div className="sparkle-nav-inner">
-          
+
           {/* LEFT: Hamburger Menu Trigger */}
           <button
             className={`sparkle-hamburger${menuOpen ? " open" : ""}`}
@@ -912,10 +859,10 @@ export default function TopNav() {
           <div className="sparkle-nav-right">
             <div className="sparkle-search-wrap" ref={searchDropdownRef}>
               <div className="sparkle-search-box">
-                <input 
-                  type="text" 
-                  placeholder="Search jewels…" 
-                  aria-label="Search jewels" 
+                <input
+                  type="text"
+                  placeholder="Search jewels…"
+                  aria-label="Search jewels"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => {
@@ -942,9 +889,9 @@ export default function TopNav() {
                         <div>
                           <div className="sparkle-search-section-title">Categories</div>
                           {searchResults.categories.map((cat) => (
-                            <Link 
-                              key={cat._id} 
-                              href={`/categories/${cat._id}`} 
+                            <Link
+                              key={cat._id}
+                              href={`/categories/${cat._id}`}
                               className="sparkle-search-item"
                               onClick={() => setShowDropdown(false)}
                             >
@@ -961,9 +908,9 @@ export default function TopNav() {
                         <div>
                           <div className="sparkle-search-section-title">Styles</div>
                           {searchResults.styles.map((style) => (
-                            <Link 
-                              key={style._id} 
-                              href={`/styles/${style._id}`} 
+                            <Link
+                              key={style._id}
+                              href={`/styles/${style._id}`}
                               className="sparkle-search-item"
                               onClick={() => setShowDropdown(false)}
                             >
@@ -980,18 +927,18 @@ export default function TopNav() {
                         <div>
                           <div className="sparkle-search-section-title">Products</div>
                           {searchResults.products.map((product) => (
-                            <Link 
-                              key={product._id} 
-                              href={`/products/${product._id}`} 
+                            <Link
+                              key={product._id}
+                              href={`/products/${product._id}`}
                               className="sparkle-search-item"
                               onClick={() => setShowDropdown(false)}
                             >
                               {product.mainImage && (
-                                <Image 
-                                  src={product.mainImage} 
-                                  alt={product.title} 
-                                  width={32} height={32} 
-                                  className="sparkle-search-item-img" 
+                                <Image
+                                  src={product.mainImage}
+                                  alt={product.title}
+                                  width={32} height={32}
+                                  className="sparkle-search-item-img"
                                 />
                               )}
                               <div className="sparkle-search-item-info">
@@ -1042,36 +989,37 @@ export default function TopNav() {
       {/* ── DROPDOWN MENU (Policies Only) ── */}
       <div className={`sparkle-menu-dropdown${menuOpen ? " open" : ""}`}>
         <div className="sparkle-policy-group">
-          <Link 
-            className="sparkle-policy-link" 
-            href="/shipping-policy" 
+          <Link
+            className="sparkle-policy-link"
+            href="/categories"
+            onClick={() => setMenuOpen(false)}
+          >
+            Categories
+          </Link>
+          <Link
+            className="sparkle-policy-link"
+            href="/shipping-policy"
             onClick={() => setMenuOpen(false)}
           >
             Shipping Policy
           </Link>
-          
-          <Link 
-            className="sparkle-policy-link" 
-            href="/refund-policy" 
+
+          <Link
+            className="sparkle-policy-link"
+            href="/refund-policy"
             onClick={() => setMenuOpen(false)}
           >
             Return &amp; Refund Policy
           </Link>
-          
-          <Link 
-            className="sparkle-policy-link" 
-            href="/affiliate" 
+
+          <Link
+            className="sparkle-policy-link"
+            href="/affiliate"
             onClick={() => setMenuOpen(false)}
           >
             Affiliate
           </Link>
-<Link 
-  className="sparkle-policy-link" 
-  href="/categories" 
-  onClick={() => setMenuOpen(false)}
-> 
-  Categories
-</Link>
+          
           <button
             className="sparkle-policy-link"
             onClick={() => {

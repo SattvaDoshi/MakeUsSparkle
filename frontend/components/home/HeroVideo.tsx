@@ -4,16 +4,30 @@ import Image from "next/image";
 import { useGender } from "@/lib/genderContext";
 import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api";
 
 type Category = "women" | "men" | "kids";
 
-const heroContent = {
+type HomeContentResponse = {
+  success: boolean;
+  homeContent: {
+    marqueeItems: string[];
+    heroContent: {
+      women?: { image: string };
+      men?: { image: string };
+      kids?: { image: string };
+    };
+  };
+};
+
+const defaultHeroContent = {
   women: { image: "/island-girl.jpg" },
   men:   { image: "/trial.png" },
   kids:  { image: "/trial.png" },
 };
 
-const marqueeItems = [
+const defaultMarqueeItems = [
   '✦ Free Shipping above ₹999',
   '✦ Custom Jewellery',
   '✦ Free Gifts on all Orders',
@@ -24,10 +38,37 @@ export default function Hero() {
   const activeCategory = (["women", "men", "kids"].includes(rawCategory)
     ? rawCategory
     : "women") as Category;
-  const content = heroContent[activeCategory];
-
+    
   const { isAuthenticated, signOut } = useAuth();
   const router = useRouter();
+
+  const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
+  const [heroContent, setHeroContent] = useState(defaultHeroContent);
+
+  useEffect(() => {
+    async function loadHomeContent() {
+      try {
+        const data = await apiRequest<HomeContentResponse>("/home-content");
+        if (data.success && data.homeContent) {
+          if (data.homeContent.marqueeItems && data.homeContent.marqueeItems.length > 0) {
+            setMarqueeItems(data.homeContent.marqueeItems);
+          }
+          if (data.homeContent.heroContent) {
+            setHeroContent({
+              women: { image: data.homeContent.heroContent.women?.image || defaultHeroContent.women.image },
+              men: { image: data.homeContent.heroContent.men?.image || defaultHeroContent.men.image },
+              kids: { image: data.homeContent.heroContent.kids?.image || defaultHeroContent.kids.image },
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load home content:", err);
+      }
+    }
+    loadHomeContent();
+  }, []);
+
+  const content = heroContent[activeCategory];
 
   const handleAuthClick = () => {
     if (isAuthenticated) {

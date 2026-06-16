@@ -1,24 +1,48 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { AdminBanner, MainBanner } from "../../_lib/admin.types";
+
+type AdminHomeContent = {
+	marqueeItems: string[];
+	heroContent: {
+		women?: { image?: string };
+		men?: { image?: string };
+		kids?: { image?: string };
+	};
+	promoBanners?: {
+		_id?: string;
+		tag?: string;
+		headline?: string;
+		cta?: string;
+		link?: string;
+		image?: string;
+		textSide?: "left" | "right";
+	}[];
+};
 
 type AdminBannersTabProps = {
 	banners: AdminBanner[];
 	mainBanners: MainBanner[];
+	homeContent: AdminHomeContent | null;
 	onEdit: (banner: AdminBanner) => void;
 	onDelete: (id: string) => void;
 	onCreateMainBanner: (payload: FormData) => Promise<void>;
 	onUpdateMainBanner: (id: string, payload: FormData) => Promise<void>;
 	onDeleteMainBanner: (id: string) => void;
+	onUpdateHomeContent: (payload: FormData) => Promise<void>;
+	onAddPromoBanner: () => void;
 };
 
 export default function AdminBannersTab({
 	banners,
 	mainBanners,
+	homeContent,
 	onEdit,
 	onDelete,
 	onCreateMainBanner,
 	onUpdateMainBanner,
 	onDeleteMainBanner,
+	onUpdateHomeContent,
+	onAddPromoBanner,
 }: AdminBannersTabProps) {
 	const [mainLink, setMainLink] = useState("");
 	const [mainIsActive, setMainIsActive] = useState(true);
@@ -28,8 +52,36 @@ export default function AdminBannersTab({
 	const [bannerSearch, setBannerSearch] = useState("");
 	const [bannerFilter, setBannerFilter] = useState("all");
 
+	// Hero Content States
+	const [marqueeItems, setMarqueeItems] = useState<string>("");
+	const [womenImageFile, setWomenImageFile] = useState<File | null>(null);
+	const [menImageFile, setMenImageFile] = useState<File | null>(null);
+	const [kidsImageFile, setKidsImageFile] = useState<File | null>(null);
+
+	// Promo Banners States
+	const defaultPromo = { tag: "", headline: "", cta: "", link: "", textSide: "right" as const };
+	const [promoBanners, setPromoBanners] = useState<any[]>([defaultPromo, defaultPromo]);
+	const [promoImageFiles, setPromoImageFiles] = useState<(File | null)[]>([null, null]);
+
+	useEffect(() => {
+		if (homeContent) {
+			setMarqueeItems(homeContent.marqueeItems.join(", "));
+			if (homeContent.promoBanners && homeContent.promoBanners.length > 0) {
+				setPromoBanners([
+					homeContent.promoBanners[0] || defaultPromo,
+					homeContent.promoBanners[1] || defaultPromo,
+				]);
+			} else {
+				setPromoBanners([
+					{ tag: "Gift Combos", headline: "FLAT 50%\nOFF", cta: "Shop Now", link: "/categories/women/gift-boxes", textSide: "right" },
+					{ tag: "Custom Charm", headline: "DESIGN\nYOUR STORY", cta: "Customise", link: "/categories/women/custom-charm", textSide: "right" }
+				]);
+			}
+		}
+	}, [homeContent]);
+
 	const filteredBanners = useMemo(() => {
-		return banners.filter(b => {
+		return banners.filter((b) => {
 			const q = bannerSearch.toLowerCase();
 			const matchesSearch = !q || b.title?.toLowerCase().includes(q) || b.text?.toLowerCase().includes(q);
 			const activeStatus = b.isActive === false ? "inactive" : "active";
@@ -80,10 +132,127 @@ export default function AdminBannersTab({
 		await onUpdateMainBanner(banner._id, formData);
 	};
 
+	const handleHomeContentSubmit = async () => {
+		const formData = new FormData();
+		
+		const parsedMarquee = marqueeItems
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+		formData.append("marqueeItems", JSON.stringify(parsedMarquee));
+		formData.append("promoBanners", JSON.stringify(promoBanners));
+
+		if (womenImageFile) formData.append("women", womenImageFile);
+		if (menImageFile) formData.append("men", menImageFile);
+		if (kidsImageFile) formData.append("kids", kidsImageFile);
+		if (promoImageFiles[0]) formData.append("promoImage_0", promoImageFiles[0]);
+		if (promoImageFiles[1]) formData.append("promoImage_1", promoImageFiles[1]);
+
+		await onUpdateHomeContent(formData);
+		setWomenImageFile(null);
+		setMenImageFile(null);
+		setKidsImageFile(null);
+		setPromoImageFiles([null, null]);
+	};
+
+	const updatePromoBanner = (index: number, field: string, value: string) => {
+		setPromoBanners(prev => {
+			const newBanners = [...prev];
+			newBanners[index] = { ...newBanners[index], [field]: value };
+			return newBanners;
+		});
+	};
+
 	return (
 		<section className="admin-content">
 			<div className="admin-panel">
-				<h2>Main Banner</h2>
+				<h2>Hero Content</h2>
+				<div className="admin-form-grid" style={{ marginBottom: "1rem" }}>
+					<textarea
+						placeholder="Marquee Items (comma separated)"
+						value={marqueeItems}
+						onChange={(e) => setMarqueeItems(e.target.value)}
+						style={{ gridColumn: "1 / -1" }}
+					/>
+					<div>
+						<label>Women Image</label>
+						<input type="file" accept="image/*" onChange={(e) => setWomenImageFile(e.target.files?.[0] || null)} />
+						{homeContent?.heroContent?.women?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.women.image}</p>}
+					</div>
+					<div>
+						<label>Men Image</label>
+						<input type="file" accept="image/*" onChange={(e) => setMenImageFile(e.target.files?.[0] || null)} />
+						{homeContent?.heroContent?.men?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.men.image}</p>}
+					</div>
+					<div>
+						<label>Kids Image</label>
+						<input type="file" accept="image/*" onChange={(e) => setKidsImageFile(e.target.files?.[0] || null)} />
+						{homeContent?.heroContent?.kids?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.kids.image}</p>}
+					</div>
+				</div>
+
+				<h2 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Promo Banners (Under Hero)</h2>
+				<div style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
+					{[0, 1].map((index) => (
+						<div key={index} style={{ border: "1px solid #e8e8e8", padding: "1.5rem", borderRadius: "8px" }}>
+							<h3 style={{ marginBottom: "1rem" }}>Banner {index + 1}</h3>
+							<div className="admin-form-grid">
+								<input 
+									placeholder="Tag (e.g. Gift Combos)" 
+									value={promoBanners[index].tag || ""} 
+									onChange={(e) => updatePromoBanner(index, "tag", e.target.value)} 
+								/>
+								<input 
+									placeholder="Headline (e.g. FLAT 50% OFF)" 
+									value={promoBanners[index].headline || ""} 
+									onChange={(e) => updatePromoBanner(index, "headline", e.target.value)} 
+								/>
+								<input 
+									placeholder="CTA Text (e.g. Shop Now)" 
+									value={promoBanners[index].cta || ""} 
+									onChange={(e) => updatePromoBanner(index, "cta", e.target.value)} 
+								/>
+								<input 
+									placeholder="Link URL" 
+									value={promoBanners[index].link || ""} 
+									onChange={(e) => updatePromoBanner(index, "link", e.target.value)} 
+								/>
+								<select 
+									value={promoBanners[index].textSide || "right"} 
+									onChange={(e) => updatePromoBanner(index, "textSide", e.target.value)}
+								>
+									<option value="right">Text on Right</option>
+									<option value="left">Text on Left</option>
+								</select>
+								<div>
+									<label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Image</label>
+									<input 
+										type="file" 
+										accept="image/*" 
+										onChange={(e) => {
+											const file = e.target.files?.[0] || null;
+											setPromoImageFiles(prev => {
+												const newFiles = [...prev];
+												newFiles[index] = file;
+												return newFiles;
+											});
+										}} 
+									/>
+									{homeContent?.promoBanners?.[index]?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current image uploaded.</p>}
+								</div>
+							</div>
+						</div>
+					))}
+					<div className="admin-inline-actions">
+						<button className="admin-btn" type="button" onClick={() => void handleHomeContentSubmit()}>
+							Save Home & Promo Content
+						</button>
+					</div>
+				</div>
+
+				<div style={{ marginTop: "2rem" }}>
+					<h2>Main Banner</h2>
+				</div>
 				<div className="admin-form-grid" style={{ marginBottom: "1rem" }}>
 					<input
 						type="file"
@@ -140,13 +309,14 @@ export default function AdminBannersTab({
 				</div>
 
 				<div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-					<h2>Banners List</h2>
+					<h2>General Banners List</h2>
+					<button className="admin-btn" onClick={onAddPromoBanner}>Add Banner</button>
 				</div>
 				<div className="admin-controls">
-					<input 
-						type="text" 
-						className="admin-search" 
-						placeholder="Search banners by title or text..." 
+					<input
+						type="text"
+						className="admin-search"
+						placeholder="Search banners by title or text..."
 						value={bannerSearch}
 						onChange={(e) => setBannerSearch(e.target.value)}
 					/>

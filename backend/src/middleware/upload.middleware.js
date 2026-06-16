@@ -1,4 +1,4 @@
-import { uploadSingle, uploadMultiple, uploadProductImages } from "../config/upload.config.js";
+import { uploadSingle, uploadMultiple, uploadProductImages, uploadHomeContentImages } from "../config/upload.config.js";
 
 // Middleware for single file upload
 export const uploadSingleImage = (req, res, next) => {
@@ -23,6 +23,15 @@ export const uploadMultipleImages = (req, res, next) => {
 // Middleware for product images (mainImage + images[] + variantImage_N)
 export const uploadProductImageFields = (req, res, next) => {
 	uploadProductImages(req, res, (err) => {
+		if (err) {
+			return res.status(400).json({ success: false, message: err.message });
+		}
+		next();
+	});
+};
+
+export const uploadHomeContent = (req, res, next) => {
+	uploadHomeContentImages(req, res, (err) => {
 		if (err) {
 			return res.status(400).json({ success: false, message: err.message });
 		}

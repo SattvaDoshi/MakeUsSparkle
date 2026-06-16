@@ -162,6 +162,7 @@ export type AdminBanner = {
 	imageAlt?: string;
 	isActive?: boolean;
 	sortOrder?: number;
+	textSide?: "left" | "right";
 	product?: {
 		_id: string;
 		title?: string;
@@ -271,6 +272,7 @@ export type BannerFormState = {
 	imageAlt: string;
 	isActive: boolean;
 	sortOrder: string;
+	textSide: "left" | "right";
 };
 
 export type CharmFormState = {
@@ -364,6 +366,7 @@ export const defaultBannerForm: BannerFormState = {
 	imageAlt: "",
 	isActive: true,
 	sortOrder: "0",
+	textSide: "right",
 };
 
 export const defaultCharmForm: CharmFormState = {

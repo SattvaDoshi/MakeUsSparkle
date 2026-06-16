@@ -59,6 +59,25 @@ export const uploadProductImages = multer({
 	...Array.from({ length: 20 }, (_, i) => ({ name: `colorImage_${i}`, maxCount: 1 })),
 ]);
 
+// Home Content multer
+export const uploadHomeContentImages = multer({
+	storage: uploadStorage,
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+		if (allowedMimes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
+		}
+	},
+}).fields([
+	{ name: "women", maxCount: 1 },
+	{ name: "men", maxCount: 1 },
+	{ name: "kids", maxCount: 1 },
+	{ name: "promoImage_0", maxCount: 1 },
+	{ name: "promoImage_1", maxCount: 1 }
+]);
+
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {
 	return new Promise((resolve, reject) => {

@@ -67,6 +67,11 @@ const bannerSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    textSide: {
+      type: String,
+      enum: ["left", "right"],
+      default: "right",
+    },
     isActive: {
       type: Boolean,
       default: true,

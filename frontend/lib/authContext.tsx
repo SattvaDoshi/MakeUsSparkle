@@ -18,6 +18,9 @@ export type AuthUser = {
 		city?: string;
 		state?: string;
 		pincode?: string;
+		landmark?: string;
+		phone?: string;
+		alternativePhone?: string;
 	}>;
 };
 

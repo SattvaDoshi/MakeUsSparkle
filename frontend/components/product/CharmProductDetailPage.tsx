@@ -1000,7 +1000,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
-    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once dispatched.' },
+    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
     { id: 'shipping', emoji: '🚚', label: 'Shipping & Returns', content: 'STANDARD DELIVERY (3–5 business days) — ₹60 delivery charge. Free on orders above ₹999.\nEXPRESS DELIVERY (2–3 business days) — ₹120 delivery charge.\n\nReturns accepted within 7 days of delivery.' },
   ];
 

@@ -68,6 +68,7 @@ class BannerService {
 			product: data.product || undefined,
 			image: typeof data.image === "string" ? data.image.trim() : "",
 			imageAlt: (data.imageAlt || "").trim(),
+			textSide: data.textSide === "left" ? "left" : "right",
 			isActive: this.parseBoolean(data.isActive, true),
 			sortOrder: Number.isFinite(Number(data.sortOrder)) ? Number(data.sortOrder) : 0,
 		};

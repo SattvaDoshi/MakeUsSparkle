@@ -1,6 +1,6 @@
 
 
-'use client';   
+'use client';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
@@ -56,12 +56,12 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="18" width="28" height="18" rx="2"/>
-        <path d="M32 22h4l6 8v6h-10V22z"/>
-        <circle cx="14" cy="38" r="3"/>
-        <circle cx="36" cy="38" r="3"/>
-        <path d="M4 26h28"/>
-        <path d="M10 14h4M16 11v6"/>
+        <rect x="4" y="18" width="28" height="18" rx="2" />
+        <path d="M32 22h4l6 8v6h-10V22z" />
+        <circle cx="14" cy="38" r="3" />
+        <circle cx="36" cy="38" r="3" />
+        <path d="M4 26h28" />
+        <path d="M10 14h4M16 11v6" />
       </svg>
     ),
     title: 'Free Shipping',
@@ -70,8 +70,8 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/>
-        <path d="M20 22l3 3 6-6"/>
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z" />
+        <path d="M20 22l3 3 6-6" />
       </svg>
     ),
     title: 'COD Available',
@@ -80,9 +80,9 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 24h26M24 14l12 10-12 10"/>
-        <circle cx="38" cy="24" r="6"/>
-        <path d="M6 16v16"/>
+        <path d="M6 24h26M24 14l12 10-12 10" />
+        <circle cx="38" cy="24" r="6" />
+        <path d="M6 16v16" />
       </svg>
     ),
     title: 'Express Delivery',
@@ -151,7 +151,7 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -221,7 +221,7 @@ function GiftBoxUpsell({
           fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
           color: '#8c6b20',
         }}>
-         
+
           7 in 10 gifters choose this
         </div>
 
@@ -253,12 +253,12 @@ function GiftBoxUpsell({
         >
           {added ? (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
               Added
             </>
           ) : (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
               Add to order
             </>
           )}
@@ -276,7 +276,7 @@ function ReviewsSection({ productId }: { productId: string }) {
   const [formState, setFormState] = useState({ rating: 5, title: '', body: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   const { user, token } = useAuth();
 
   useEffect(() => {
@@ -308,7 +308,7 @@ function ReviewsSection({ productId }: { productId: string }) {
 
   const totalReviews = reviews.length;
   const avgRating = totalReviews ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
-  const ratingDist = [5,4,3,2,1].map(stars => {
+  const ratingDist = [5, 4, 3, 2, 1].map(stars => {
     const count = reviews.filter(r => r.rating === stars).length;
     const pct = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
     return { stars, count, pct };
@@ -358,9 +358,9 @@ function ReviewsSection({ productId }: { productId: string }) {
           <h3 style={{ fontSize: 16, color: 'var(--olive-900)', marginBottom: 16 }}>Write a Review</h3>
           {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-             {[1,2,3,4,5].map(star => (
-               <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
-             ))}
+            {[1, 2, 3, 4, 5].map(star => (
+              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
+            ))}
           </div>
           <input required placeholder="Review Title" value={formState.title} onChange={e => setFormState(s => ({ ...s, title: e.target.value }))} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 12, fontSize: 13, outline: 'none' }} />
           <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 13, outline: 'none', resize: 'vertical' }} />
@@ -382,7 +382,7 @@ function ReviewsSection({ productId }: { productId: string }) {
               <div className="rev-meta">
                 <div className="rev-meta-row">
                   <span className="rev-name">{r.user?.firstName} {r.user?.lastName}</span>
-                  {r.isVerifiedPurchase && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
+                  {r.isVerifiedPurchase && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
                 </div>
                 <div className="rev-meta-row" style={{ marginTop: 3 }}>
                   <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
@@ -449,7 +449,7 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
       <button className="acc-head" onClick={onToggle}>
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
       </button>
       <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
         <div ref={bodyRef} className="acc-body">
@@ -460,7 +460,7 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
           {item.linkHref && item.linkLabel && (
             <Link href={item.linkHref} className="acc-policy-link">
               {item.linkLabel}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </Link>
           )}
         </div>
@@ -523,7 +523,7 @@ function Sparkles({ active }: { active: boolean }) {
   if (!active) return null;
   const pts = Array.from({ length: 10 }, (_, i) => {
     const angle = (i / 10) * 360;
-    const dist  = 30 + Math.random() * 24;
+    const dist = 30 + Math.random() * 24;
     return { x: Math.cos((angle * Math.PI) / 180) * dist, y: Math.sin((angle * Math.PI) / 180) * dist, size: 4 + Math.random() * 5, delay: Math.random() * 0.15 };
   });
   return (
@@ -538,10 +538,10 @@ function Sparkles({ active }: { active: boolean }) {
 // ─── Customisation Panel ──────────────────────────────────────────────────────
 function CustomisationPanel({ category, onChange }: { category: string, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
-  const [uploads, setUploads]       = useState<UploadItem[]>([]);
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
-  const [dragOver, setDragOver]     = useState(false);
-  const fileInputRef                = useRef<HTMLInputElement | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (onChange) onChange({ wantCustom, uploads: uploads.map(u => u.preview), globalNote });
@@ -559,7 +559,7 @@ function CustomisationPanel({ category, onChange }: { category: string, onChange
   }, [uploads.length]);
 
   const removeUpload = (id: number) => setUploads(prev => prev.filter(u => u.id !== id));
-  const updateNote   = (id: number, note: string) => setUploads(prev => prev.map(u => u.id === id ? { ...u, note } : u));
+  const updateNote = (id: number, note: string) => setUploads(prev => prev.map(u => u.id === id ? { ...u, note } : u));
   const handleDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); };
   const handleToggle = (val: boolean) => { setWantCustom(val); if (!val) { setUploads([]); setGlobalNote(''); } };
   const catLabel = category === 'Key Chain/Charm' ? 'key chain / charm' : category === 'Fan Box' ? 'fan box' : 'gift box';
@@ -568,17 +568,17 @@ function CustomisationPanel({ category, onChange }: { category: string, onChange
     <>
       <div style={{ display: 'flex', gap: 10 }}>
         <button className={`cust-toggle-btn yes${wantCustom === true ? ' sel' : ''}`} onClick={() => handleToggle(true)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Yes, Customise
         </button>
         <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => handleToggle(false)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
           No, Standard
         </button>
       </div>
       {wantCustom === false && (
         <div className="cust-info-chip" style={{ marginTop: 12 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
           <p>You'll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours of placing your order.</p>
         </div>
       )}
@@ -589,10 +589,10 @@ function CustomisationPanel({ category, onChange }: { category: string, onChange
             <div className={`cust-drop${dragOver ? ' drag-over' : ''}`} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
               <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e: ChangeEvent<HTMLInputElement>) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); }} />
               <div style={{ width: 44, height: 44, margin: '0 auto 10px', color: 'var(--olive-400)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
               </div>
               <p className="cust-drop-title">Upload your photos</p>
-              <p className="cust-drop-sub">Drag &amp; drop here, or click to browse<br/>JPG · PNG · WEBP · HEIC &nbsp;·&nbsp; Max 10 MB each</p>
+              <p className="cust-drop-sub">Drag &amp; drop here, or click to browse<br />JPG · PNG · WEBP · HEIC &nbsp;·&nbsp; Max 10 MB each</p>
               <span className="cust-drop-btn">Choose Photos</span>
             </div>
           )}
@@ -610,7 +610,7 @@ function CustomisationPanel({ category, onChange }: { category: string, onChange
             </div>
           )}
           <div className="cust-info-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <p>Our team reviews your photos within <strong>2 business hours</strong> and confirms the design before production. Customised items are <strong>non-returnable</strong> unless damaged or incorrect.</p>
           </div>
         </div>
@@ -625,7 +625,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
     <div className="gift-msg-panel">
       <div className="gift-msg-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--gold)' }}>
-          <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+          <path d="M20 12v10H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
         </svg>
         <span className="gift-msg-title">Add a Gift Message</span>
         <span className="gift-msg-optional">Optional</span>
@@ -636,12 +636,12 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
           <select className="gift-msg-select" value={value.preset} onChange={e => onChange({ preset: e.target.value, customMessage: value.customMessage })}>
             {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
         </div>
       </div>
       <div className="gift-msg-free-wrap">
         <label className="gift-msg-label gift-msg-label--free">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Type your message
         </label>
         <textarea className="gift-msg-free-textarea" rows={3} maxLength={200} placeholder="Write a heartfelt note to be included with the order…" value={value.customMessage} onChange={e => onChange({ ...value, customMessage: e.target.value })} />
@@ -663,16 +663,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [selections, setSelections] = useState<{ colorIndex: number; size: string }[]>([]);
-  const [activeImg,     setActiveImg]     = useState(0);
-  const [shipping,      setShipping]      = useState('standard');
-  const [payment,       setPayment]       = useState('prepaid');
-  const [qty,           setQty]           = useState(1);
-  const [cartAnim,      setCartAnim]      = useState(false);
-  const [sparkleAnim,   setSparkleAnim]   = useState(false);
+  const [activeImg, setActiveImg] = useState(0);
+  const [shipping, setShipping] = useState('standard');
+  const [payment, setPayment] = useState('prepaid');
+  const [qty, setQty] = useState(1);
+  const [cartAnim, setCartAnim] = useState(false);
+  const [sparkleAnim, setSparkleAnim] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
   const [showSizeChart, setShowSizeChart] = useState(false);
-  const [giftBoxAdded,  setGiftBoxAdded]  = useState(false);
-  const [errorToast,    setErrorToast]    = useState('');
+  const [giftBoxAdded, setGiftBoxAdded] = useState(false);
+  const [errorToast, setErrorToast] = useState('');
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
@@ -695,23 +695,23 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     return () => { mounted = false; };
   }, [slug]);
 
-  const category        = product?.category ?? '';
-  const gender          = product?.gender ?? '';
-  const price           = product?.price ?? 0;
-  const originalPrice   = product?.originalPrice ?? null;
+  const category = product?.category ?? '';
+  const gender = product?.gender ?? '';
+  const price = product?.price ?? 0;
+  const originalPrice = product?.originalPrice ?? null;
   const discountedPrice = product?.discountedPrice ?? null;
-  const discountTag     = product?.discountTag ?? null;
-  const stock           = product?.stock ?? 0;
-  const tags            = product?.seoTags ?? [];
-  const faqs            = product?.faqs ?? [];
-  const about           = product?.about ?? '';
+  const discountTag = product?.discountTag ?? null;
+  const stock = product?.stock ?? 0;
+  const tags = product?.seoTags ?? [];
+  const faqs = product?.faqs ?? [];
+  const about = product?.about ?? '';
 
   const normalizedColors = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c', image: c.image || undefined }));
-  const sizes    = product?.sizes ?? [];
+  const sizes = product?.sizes ?? [];
   const variants = product?.variants ?? [];
   const numberOfProducts = product?.numberOfProducts || 1;
   const mainImage = product?.mainImage;
-  const images   = product?.images ?? [];
+  const images = product?.images ?? [];
 
   const allowCustomization = product?.allowCustomization === true;
 
@@ -744,7 +744,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const matchingVariant = selections.length > 0 ? getVariantForSelection(selections[0].colorIndex, selections[0].size) : undefined;
 
   const currentImages = dedupeImages([matchingVariant?.image, mainImage, ...images]).filter(Boolean) as string[];
-  const displayImg    = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
+  const displayImg = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
 
   let volumeDiscountPct = 0;
   if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
@@ -764,17 +764,17 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   if (discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
   else if (originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
 
-  const currentStock  = selections.length > 0
+  const currentStock = selections.length > 0
     ? selections.reduce((min, sel) => {
-        const v = getVariantForSelection(sel.colorIndex, sel.size);
-        return Math.min(min, v?.stock ?? stock);
-      }, stock)
+      const v = getVariantForSelection(sel.colorIndex, sel.size);
+      return Math.min(min, v?.stock ?? stock);
+    }, stock)
     : stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
-  const sizeOptions   = availableSizes.length > 0 ? availableSizes : [];
-const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
+  const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
+  const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
   const deliveryCharge = shipping === 'express' ? 110 : ((discountedPrice || price) >= 999 ? 0 : 60);
-  const codCharge      = payment === 'cod' && shipping !== 'express' ? 70 : 0;
+  const codCharge = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
   const wished = product ? isWished(product.id) : false;
 
@@ -788,25 +788,25 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
   const handleWishToggle = useCallback(() => { if (!wishlistItem) return; toggleItem(wishlistItem); }, [toggleItem, wishlistItem]);
 
   const buildCartItem = useCallback(() => {
-  if (!product) return null;
-  const basePrice = discountedPrice || price;
-  return {
-    id: String(product.sourceId), name: product.name || '', price: basePrice + (giftBoxAdded ? 99 : 0),
-    originalPrice: price, image: displayImg, color: currentColor?.label || '',
-    colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
-    href: product.href || `/products/${product.sourceId}`,
-    sourceId: String(product.sourceId),
-    category: product.category || '',
-    categoryId: product.categoryId,
-    subCategoryId: product.subCategoryId,
-    style: product.style,
-    styleId: product.styleId,
-    customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
-    customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
-    giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
-    giftBox: giftBoxAdded || undefined,
-  };
-}, [product, discountedPrice, price, displayImg, currentColor,  customData, giftMessage, allowCustomization, giftBoxAdded]);
+    if (!product) return null;
+    const basePrice = discountedPrice || price;
+    return {
+      id: String(product.sourceId), name: product.name || '', price: basePrice + (giftBoxAdded ? 99 : 0),
+      originalPrice: price, image: displayImg, color: currentColor?.label || '',
+      colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
+      href: product.href || `/products/${product.sourceId}`,
+      sourceId: String(product.sourceId),
+      category: product.category || '',
+      categoryId: product.categoryId,
+      subCategoryId: product.subCategoryId,
+      style: product.style,
+      styleId: product.styleId,
+      customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
+      customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
+      giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
+      giftBox: giftBoxAdded || undefined,
+    };
+  }, [product, discountedPrice, price, displayImg, currentColor, customData, giftMessage, allowCustomization, giftBoxAdded]);
   const buildCartItems = useCallback(() => {
     if (!product) return [];
 
@@ -824,7 +824,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
 
     for (let i = 0; i < sets; i++) {
       const setSelections = selections;
-      
+
       let setPrice = discountedPrice || price;
       // Apply volume discount to this specific set
       const discountedSetPrice = setPrice * (1 - volumeDiscountPct / 100);
@@ -867,7 +867,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
     return itemsToCart;
   }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
 
-  const isSelectionComplete = selections.length > 0 && selections.every(sel => 
+  const isSelectionComplete = selections.length > 0 && selections.every(sel =>
     sel.colorIndex !== -1 && (sizeOptions.length === 0 || sel.size !== '')
   );
 
@@ -909,7 +909,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
     setActiveImg(0);
   }, [normalizedColors, variants]);
 
-  const handleSizeChange = useCallback((productIndex: number, size: string) => { 
+  const handleSizeChange = useCallback((productIndex: number, size: string) => {
     setSelections(prev => {
       const next = [...prev];
       next[productIndex] = { ...next[productIndex], size };
@@ -945,7 +945,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
     ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
-    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Orders can be cancelled free of charge within 24 hours of placing. After 24 hours, cancellations are not accepted once the order is dispatched. For damaged or wrong items received, contact us within 48 hours of delivery.' },
+    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
   ];
 
   function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
@@ -956,7 +956,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
           {label}
         </span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
+          <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
       </Link>
     );
@@ -1314,7 +1314,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               {!isFromCombo && (
                 <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                   </svg>
                 </button>
               )}
@@ -1387,23 +1387,23 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                       Item {pIdx + 1}
                     </h3>
                   )}
-                  
+
                   <div className="pdp-swatches">
                     {normalizedColors.map((c, i) => (
                       <button key={c.label + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(pIdx, i)} title={c.label}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={c.image || FALLBACK_PRODUCT_IMAGE} 
-                          alt={c.label} 
-                          style={{ 
-                            width: '56px', 
-                            height: '56px', 
-                            borderRadius: '4px', 
-                            objectFit: 'cover', 
+                        <img
+                          src={c.image || FALLBACK_PRODUCT_IMAGE}
+                          alt={c.label}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '4px',
+                            objectFit: 'cover',
                             border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
                             padding: sel.colorIndex === i ? '2px' : '0',
                             transition: 'all 0.2s',
-                          }} 
+                          }}
                         />
                         <span className="pdp-swatch-label" style={{ fontSize: '13px' }}>{c.label}</span>
                       </button>
@@ -1411,19 +1411,19 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                   </div>
 
 
-            {sizeOptions.length > 0 && (
-              <>
-                <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>
-                <div className="pdp-sizes">
-                  {sizeOptions.map((size) => {
-                    const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === selectedColorLabel && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
-                    return (
-                      <button key={size} type="button" className={`pdp-size-btn${sel.size === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(pIdx, size)}>{size}</button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+                  {sizeOptions.length > 0 && (
+                    <>
+                      <p className="pdp-section-label">Size: <span>{sel.size || sizeOptions[0]}</span></p>
+                      <div className="pdp-sizes">
+                        {sizeOptions.map((size) => {
+                          const isAvailable = Boolean(variants.find((v) => normalizeText(v.color) === selectedColorLabel && normalizeText(v.size) === normalizeText(size)) || variants.some((v) => normalizeText(v.size) === normalizeText(size)));
+                          return (
+                            <button key={size} type="button" className={`pdp-size-btn${sel.size === size ? ' active' : ''}`} disabled={!isAvailable} onClick={() => handleSizeChange(pIdx, size)}>{size}</button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -1432,7 +1432,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
             {product?.sizeChartImage && (
               <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+                  <path d="M21 6H3" /><path d="M3 10h18" /><path d="M3 14h18" /><path d="M21 18H3" />
                 </svg>
                 Size Chart
               </button>
@@ -1453,7 +1453,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               <>
                 <div className="pdp-cust-banner">
                   <div className="pdp-cust-banner-head">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
                     Make it Yours — Customise this {category}
                   </div>
                   <p className="pdp-cust-banner-sub">This {category.toLowerCase()} can be personalised with your own photos, names, or a special message.</p>
@@ -1506,7 +1506,7 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                   </p>
                   <button className="pdp-combo-back-btn" onClick={() => router.back()}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M19 12H5M12 5l-7 7 7 7"/>
+                      <path d="M19 12H5M12 5l-7 7 7 7" />
                     </svg>
                     Back to Hamper
                   </button>
@@ -1516,19 +1516,19 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
               <div className="pdp-cta-row">
                 <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                   <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                   </svg>
                   {wished ? 'Wished' : 'Wishlist'}
                 </button>
                 <div className="pdp-btn-cart-wrap">
-                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart}>
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-  {cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
-</button>
+                  <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+                    {cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
+                  </button>
                   <Sparkles active={sparkleAnim} />
                 </div>
                 <button className="pdp-btn-buy" onClick={handleBuyNow}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                   Buy It Now
                 </button>
               </div>

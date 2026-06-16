@@ -62,6 +62,24 @@ type AdminHomeSection = {
 	isActive?: boolean;
 };
 
+type AdminHomeContent = {
+	marqueeItems: string[];
+	heroContent: {
+		women?: { image?: string };
+		men?: { image?: string };
+		kids?: { image?: string };
+	};
+	promoBanners?: {
+		_id?: string;
+		tag?: string;
+		headline?: string;
+		cta?: string;
+		link?: string;
+		image?: string;
+		textSide?: "left" | "right";
+	}[];
+};
+
 type AdminOrder = {
 	_id: string;
 	totalAmount?: number;
@@ -260,7 +278,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
 	{ key: "coupons", label: "Offers & Coupons" },
-	{ key: "banners", label: "Banners" },
+	{ key: "banners", label: "Home Page" },
 	{ key: "reviews", label: "Reviews" },
 ];
 
@@ -330,6 +348,7 @@ type BannerFormState = {
 	product: string;
 	image: string;
 	imageAlt: string;
+	textSide: "left" | "right";
 	isActive: boolean;
 	sortOrder: string;
 };
@@ -415,6 +434,7 @@ const defaultBannerForm: BannerFormState = {
 	product: "",
 	image: "",
 	imageAlt: "",
+	textSide: "right",
 	isActive: true,
 	sortOrder: "0",
 };
@@ -470,6 +490,7 @@ export default function AdminDashboardPage() {
 	const [offers, setOffers] = useState<AdminOffer[]>([]);
 	const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
 	const [banners, setBanners] = useState<AdminBanner[]>([]);
+	const [homeContent, setHomeContent] = useState<AdminHomeContent | null>(null);
 	const [mainBanners, setMainBanners] = useState<MainBanner[]>([]);
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
@@ -573,6 +594,11 @@ export default function AdminDashboardPage() {
 		setMainBanners(result.banners || []);
 	}, []);
 
+	const loadHomeContent = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; homeContent: AdminHomeContent }>("/admin/home-content");
+		setHomeContent(result.homeContent);
+	}, []);
+
 	const loadReviews = useCallback(async () => {
 		const reviewsResult = await apiRequest<PagedResponse<AdminReview, "reviews">>("/admin/reviews?limit=100");
 		setReviews(reviewsResult.reviews);
@@ -634,7 +660,7 @@ export default function AdminDashboardPage() {
 				await loadCoupons();
 				await loadOffers();
 			}
-			if (tab === "banners") await Promise.all([loadBanners(), loadMainBanners()]);
+			if (tab === "banners") await Promise.all([loadBanners(), loadMainBanners(), loadHomeContent()]);
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
@@ -645,7 +671,7 @@ export default function AdminDashboardPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
+	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -748,6 +774,16 @@ export default function AdminDashboardPage() {
 			await loadOrders();
 			await loadHome();
 		}, "Order deleted");
+	};
+
+	const handleUpdateHomeContent = async (formData: FormData) => {
+		await runAction(async () => {
+			await apiRequest("/admin/home-content", {
+				method: "PUT",
+				body: formData,
+			});
+			await loadHomeContent();
+		}, "Home page content updated");
 	};
 
 	const handleUserSubmit = async (event: FormEvent) => {
@@ -1031,6 +1067,7 @@ export default function AdminDashboardPage() {
 			JSON.stringify(bannerForm.tags.split(",").map((item) => item.trim()).filter(Boolean))
 		);
 		formData.append("imageAlt", bannerForm.imageAlt);
+		formData.append("textSide", bannerForm.textSide);
 		formData.append("isActive", String(bannerForm.isActive));
 		formData.append("sortOrder", String(Number(bannerForm.sortOrder || 0)));
 
@@ -1288,13 +1325,14 @@ export default function AdminDashboardPage() {
 				product: entry.product?._id ?? "",
 				image: entry.image ?? "",
 				imageAlt: entry.imageAlt ?? "",
+				textSide: (entry.textSide as "left" | "right") ?? "right",
 				isActive: entry.isActive !== false,
 				sortOrder: String(entry.sortOrder ?? 0),
 			});
 			setBannerImageFile(null);
 			setModalMode("edit");
 			setModalKind("banner");
-		}} onDelete={handleDeleteBanner} onCreateMainBanner={handleCreateMainBanner} onUpdateMainBanner={handleUpdateMainBanner} onDeleteMainBanner={handleDeleteMainBanner} />;
+		}} onDelete={handleDeleteBanner} onCreateMainBanner={handleCreateMainBanner} onUpdateMainBanner={handleUpdateMainBanner} onDeleteMainBanner={handleDeleteMainBanner} homeContent={homeContent} onUpdateHomeContent={handleUpdateHomeContent} onAddPromoBanner={() => { setModalMode("create"); setModalKind("banner"); setBannerForm(defaultBannerForm); setBannerImageFile(null); }} />;
 		if (activeTab === "charms") return <AdminCharmsTab charms={charms} onEdit={(entry) => {
 			setCharmForm({
 				id: entry._id,
@@ -1747,6 +1785,10 @@ export default function AdminDashboardPage() {
 							setBannerImageFile(file);
 						}} />
 						<input placeholder="Image Alt" value={bannerForm.imageAlt ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, imageAlt: event.target.value }))} />
+						<select value={bannerForm.textSide ?? "right"} onChange={(event) => setBannerForm((prev) => ({ ...prev, textSide: event.target.value as "left" | "right" }))}>
+							<option value="right">Text on Right</option>
+							<option value="left">Text on Left</option>
+						</select>
 						<input placeholder="Sort Order" type="number" value={bannerForm.sortOrder ?? "0"} onChange={(event) => setBannerForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
 						<label className="admin-checkbox"><input type="checkbox" checked={bannerForm.isActive} onChange={(event) => setBannerForm((prev) => ({ ...prev, isActive: event.target.checked }))} />Active</label>
 						<div className="admin-inline-actions">

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { apiRequest } from '@/lib/api';
 
 /*
   REPLACE these with your actual Palmonas image assets:
@@ -10,7 +11,7 @@ import Link from 'next/link';
 */
 
 type Banner = {
-  id: number;
+  id: string;
   tag: string;
   headline: string;
   cta: string;
@@ -20,33 +21,6 @@ type Banner = {
   textSide: 'left' | 'right';
 };
 
-const banners: Banner[] = [
-  {
-    id: 1,
-    tag: 'Gift Combos',
-    headline: 'FLAT 50%\nOFF',
-    cta: 'Shop Now',
-    href: '/categories/women/gift-boxes',
-    imgDesktop:
-      'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=900&q=85&auto=format&fit=crop',
-    imgAlt: 'Palmonas gift boxes — flat 50% off',
-    textSide: 'right',
-  },
-  {
-    id: 2,
-    tag: 'Custom Charm',
-    headline: 'DESIGN\nYOUR STORY',
-    cta: 'Customise',
-    href: '/categories/women/custom-charm',
-    imgDesktop:
-      'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=900&q=85&auto=format&fit=crop',
-    imgAlt: 'Custom charm jewellery',
-    textSide: 'right',
-  },
-
-
-];
-
 // Desktop shows 2 cards at a time
 const DESKTOP_VISIBLE = 2;
 
@@ -54,17 +28,66 @@ export default function BannerSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
-
-  const maxIndex = banners.length - DESKTOP_VISIBLE; // last valid left-card index
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function fetchBanners() {
+      try {
+        const data = await apiRequest<{ success: boolean; homeContent: any }>('/home-content');
+        if (data.success && data.homeContent?.promoBanners) {
+          const promoBanners = data.homeContent.promoBanners;
+          const formattedBanners: Banner[] = promoBanners.map((b: any, index: number) => ({
+              id: b._id || String(index),
+              tag: b.tag || '',
+              headline: b.headline || '',
+              cta: b.cta || 'Shop Now',
+              href: b.link || '#',
+              imgDesktop: b.image || '',
+              imgAlt: b.headline || 'Promo Banner',
+              textSide: (b.textSide as 'left' | 'right') || 'right',
+            }));
+          
+          if (formattedBanners.length > 0) {
+            setBanners(formattedBanners);
+          } else {
+            // Fallback default
+            setBanners([
+              { id: "1", tag: "Gift Combos", headline: "FLAT 50%\nOFF", cta: "Shop Now", href: "/categories/women/gift-boxes", imgDesktop: "/gift_box.jpg", imgAlt: "", textSide: "right" },
+              { id: "2", tag: "Custom Charm", headline: "DESIGN\nYOUR STORY", cta: "Customise", href: "/categories/women/custom-charm", imgDesktop: "/2_new.jpg", imgAlt: "", textSide: "right" }
+            ]);
+          }
+        } else {
+          // Fallback default if not in DB yet
+          setBanners([
+            { id: "1", tag: "Gift Combos", headline: "FLAT 50%\nOFF", cta: "Shop Now", href: "/categories/women/gift-boxes", imgDesktop: "/gift_box.jpg", imgAlt: "", textSide: "right" },
+            { id: "2", tag: "Custom Charm", headline: "DESIGN\nYOUR STORY", cta: "Customise", href: "/categories/women/custom-charm", imgDesktop: "/2_new.jpg", imgAlt: "", textSide: "right" }
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load banners:', err);
+        setBanners([
+          { id: "1", tag: "Gift Combos", headline: "FLAT 50%\nOFF", cta: "Shop Now", href: "/categories/women/gift-boxes", imgDesktop: "/gift_box.jpg", imgAlt: "", textSide: "right" },
+          { id: "2", tag: "Custom Charm", headline: "DESIGN\nYOUR STORY", cta: "Customise", href: "/categories/women/custom-charm", imgDesktop: "/2_new.jpg", imgAlt: "", textSide: "right" }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBanners();
+  }, []);
+
+  const maxIndex = Math.max(0, banners.length - DESKTOP_VISIBLE); // last valid left-card index
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setVisible(true); },
       { threshold: 0.08 }
     );
-    if (sectionRef.current) observer.observe(sectionRef.current);
+    observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [loading]);
 
   const prev = useCallback(() => setSlideIndex((i) => Math.max(0, i - 1)), []);
   const next = useCallback(() => setSlideIndex((i) => Math.min(maxIndex, i + 1)), [maxIndex]);
@@ -73,6 +96,14 @@ export default function BannerSection() {
   // card width on desktop = 50% of track - half gap (gap 20px)
   // We express this as a percentage of the viewport (track width)
   const trackShift = slideIndex * (50 + (10 / 100)); // approximate — refined via CSS var
+
+  if (loading && banners.length === 0) {
+    return <div style={{ height: "400px", display: "flex", justifyContent: "center", alignItems: "center" }}>Loading...</div>;
+  }
+
+  if (banners.length === 0) {
+    return null;
+  }
 
   return (
     <>

@@ -17,7 +17,7 @@ type AuthResponse = {
 };
 
 export default function LoginPopup() {
-  const { signIn } = useAuth();
+  const { signIn, isAuthenticated } = useAuth();
   const [visible, setVisible] = useState(false);
   const [closed, setClosed] = useState(false);
   const [tab, setTab] = useState<'login' | 'register'>('register');
@@ -29,13 +29,14 @@ export default function LoginPopup() {
   });
 
   useEffect(() => {
-    if (sessionStorage.getItem('loginPopupDismissed')) return;
+    if (isAuthenticated || sessionStorage.getItem('loginPopupDismissed')) return;
     const timer = setTimeout(() => { if (!closed) setVisible(true); }, 15000);
     return () => clearTimeout(timer);
-  }, [closed]);
+  }, [closed, isAuthenticated]);
 
   useEffect(() => {
     const open = (e: Event) => {
+      if (isAuthenticated) return;
       const ev = e as CustomEvent<{ tab?: 'login' | 'register' }>;
       setTab(ev.detail?.tab || 'register');
       setVisible(true);
@@ -43,7 +44,7 @@ export default function LoginPopup() {
     };
     window.addEventListener('makeussparkle:auth-open', open);
     return () => window.removeEventListener('makeussparkle:auth-open', open);
-  }, []);
+  }, [isAuthenticated]);
 
   const handleClose = () => {
     setVisible(false);
@@ -92,7 +93,7 @@ export default function LoginPopup() {
     }
   };
 
-  if (!visible) return null;
+  if (!visible || isAuthenticated) return null;
 
   return (
     <>

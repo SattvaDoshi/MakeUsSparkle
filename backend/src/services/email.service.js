@@ -45,6 +45,22 @@ class EmailService {
 		}
 	}
 
+	async sendPasswordResetOtpEmail(userEmail, otp) {
+		try {
+			const template = emailTemplates.resetPasswordOtpEmail(otp);
+			await this.getTransporter().sendMail({
+				from: process.env.EMAIL_USER,
+				to: userEmail,
+				...template,
+			});
+			console.log(`Password reset OTP email sent to ${userEmail}`);
+			return { success: true, message: "Password reset OTP email sent" };
+		} catch (error) {
+			console.error("Error sending password reset OTP email:", error);
+			throw error;
+		}
+	}
+
 	async sendOrderConfirmationEmail(userEmail, orderNumber, items, total) {
 		try {
 			const template = emailTemplates.orderConfirmationEmail(orderNumber, items, total);

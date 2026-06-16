@@ -37,6 +37,7 @@ export interface CatalogGender {
 export interface CatalogColor {
   label: string;
   hex: string;
+  image?: string;
 }
 
 export interface CatalogProduct {
@@ -153,7 +154,7 @@ interface BackendProduct {
   rating?: number;
   images?: string[];
   mainImage?: string;
-  colors?: Array<{ name?: string; hex?: string }>;
+  colors?: Array<{ name?: string; hex?: string; image?: string; imagePublicId?: string }>;
   sizes?: string[];
   variants?: Array<{
     color?: string;
@@ -331,12 +332,14 @@ function normalizeProduct(
     .map((color) => ({
       label: color.name || "Color",
       hex: color.hex || "#c9a84c",
+      image: color.image,
     }))
     .filter((color, index, array) => array.findIndex((entry) => entry.label.toLowerCase() === color.label.toLowerCase()) === index);
 
   const colorsFromVariants = uniqueStrings(variants.map((variant) => variant.color)).map((label, index) => ({
     label,
     hex: colorsFromBackend[index]?.hex || "#c9a84c",
+    image: colorsFromBackend[index]?.image,
   }));
 
   const colors = colorsFromBackend.length > 0 ? colorsFromBackend : colorsFromVariants;

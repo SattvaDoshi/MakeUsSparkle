@@ -672,10 +672,18 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [giftBoxAdded,  setGiftBoxAdded]  = useState(false);
+  const [errorToast,    setErrorToast]    = useState('');
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
   const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+
+  useEffect(() => {
+    if (errorToast) {
+      const timer = setTimeout(() => setErrorToast(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [errorToast]);
 
   useEffect(() => {
     let mounted = true;
@@ -709,13 +717,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!product) return;
-    const initialSize = product.sizes?.[0] || product.variants?.[0]?.size || '';
     const totalItems = product.numberOfProducts || 1;
     setSelections(prev => {
       const newSelections = [...prev];
       if (newSelections.length < totalItems) {
         for (let i = newSelections.length; i < totalItems; i++) {
-          newSelections.push({ colorIndex: 0, size: initialSize });
+          newSelections.push({ colorIndex: -1, size: '' });
         }
       } else if (newSelections.length > totalItems) {
         newSelections.length = totalItems;
@@ -860,33 +867,47 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
     return itemsToCart;
   }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
 
+  const isSelectionComplete = selections.length > 0 && selections.every(sel => 
+    sel.colorIndex !== -1 && (sizeOptions.length === 0 || sel.size !== '')
+  );
+
   const handleBuyNow = useCallback(() => {
+    if (!isSelectionComplete) {
+      setErrorToast('Please select a color and size before proceeding.');
+      return;
+    }
     const items = buildCartItems(); if (items.length === 0) return;
     items.forEach(item => addItem(item, false));
     router.push('/cart');
-  }, [buildCartItems, addItem, router]);
+  }, [buildCartItems, addItem, router, isSelectionComplete]);
 
   const handleAddToCart = useCallback(() => {
+    if (!isSelectionComplete) {
+      setErrorToast('Please select a color and size before adding to cart.');
+      return;
+    }
     const items = buildCartItems(); if (items.length === 0) return;
     items.forEach(item => addItem(item));
     fireConfetti(cartBtnRef.current);
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [buildCartItems, addItem]);
+  }, [buildCartItems, addItem, isSelectionComplete]);
 
   const handleColorChange = useCallback((productIndex: number, colorIndex: number) => {
     setSelections(prev => {
       const next = [...prev];
       const nextColor = normalizedColors[colorIndex];
       if (nextColor) {
-        const nextSize = variants.find((v) => normalizeText(v.color) === normalizeText(nextColor.label))?.size || sizeOptions[0] || '';
-        next[productIndex] = { colorIndex, size: nextSize };
+        // Keep the currently selected size if it's still valid for this color, otherwise clear it.
+        const currentSize = next[productIndex]?.size || '';
+        const sizeValid = currentSize && variants.some((v) => normalizeText(v.color) === normalizeText(nextColor.label) && normalizeText(v.size) === normalizeText(currentSize));
+        next[productIndex] = { colorIndex, size: sizeValid ? currentSize : '' };
       }
       return next;
     });
     setActiveImg(0);
-  }, [normalizedColors, variants, sizeOptions]);
+  }, [normalizedColors, variants]);
 
   const handleSizeChange = useCallback((productIndex: number, size: string) => { 
     setSelections(prev => {
@@ -945,6 +966,19 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
     <>
       {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
       {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE} />}
+
+      {/* Error Toast */}
+      {errorToast && (
+        <div style={{
+          position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--red)', color: 'white', padding: '14px 28px',
+          borderRadius: '50px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
+          boxShadow: '0 12px 32px rgba(192, 57, 43, 0.35)', animation: 'fadeUp 0.35s ease both',
+          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em', whiteSpace: 'nowrap'
+        }}>
+          {errorToast}
+        </div>
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
@@ -1356,28 +1390,22 @@ const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
                   
                   <div className="pdp-swatches">
                     {normalizedColors.map((c, i) => (
-                      <button key={c.hex + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(pIdx, i)} title={c.label}>
-                        {c.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img 
-                            src={c.image} 
-                            alt={c.label} 
-                            style={{ 
-                              width: '44px', 
-                              height: '28px', 
-                              borderRadius: '4px', 
-                              objectFit: 'cover', 
-                              border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
-                              padding: sel.colorIndex === i ? '2px' : '0',
-                              transition: 'all 0.2s',
-                            }} 
-                          />
-                        ) : (
-                          <>
-                            <div className={`pdp-swatch${sel.colorIndex === i ? ' active' : ''}`} style={{ background: c.hex, border: c.hex === '#ffffff' ? '2px solid #d9cdb8' : undefined }} />
-                            <span className="pdp-swatch-label">{c.label}</span>
-                          </>
-                        )}
+                      <button key={c.label + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(pIdx, i)} title={c.label}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={c.image || FALLBACK_PRODUCT_IMAGE} 
+                          alt={c.label} 
+                          style={{ 
+                            width: '56px', 
+                            height: '56px', 
+                            borderRadius: '4px', 
+                            objectFit: 'cover', 
+                            border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
+                            padding: sel.colorIndex === i ? '2px' : '0',
+                            transition: 'all 0.2s',
+                          }} 
+                        />
+                        <span className="pdp-swatch-label" style={{ fontSize: '13px' }}>{c.label}</span>
                       </button>
                     ))}
                   </div>

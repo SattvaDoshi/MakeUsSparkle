@@ -494,9 +494,12 @@ export default function ProfileSection() {
   const [addressForm, setAddressForm] = useState({
     addressLine1: '',
     addressLine2: '',
+    landmark: '',
     city: '',
     state: '',
     pincode: '',
+    phone: '',
+    alternativePhone: '',
   });
 
   useEffect(() => {
@@ -581,13 +584,13 @@ export default function ProfileSection() {
   };
 
   const resetAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(false);
   };
 
   const openAddAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(true);
   };
@@ -596,9 +599,12 @@ export default function ProfileSection() {
     setAddressForm({
       addressLine1: address.addressLine1 || address.fullAddress || '',
       addressLine2: address.addressLine2 || '',
+      landmark: address.landmark || '',
       city: address.city || '',
       state: address.state || '',
       pincode: address.pincode || '',
+      phone: address.phone || '',
+      alternativePhone: address.alternativePhone || '',
     });
     setEditingAddressId(address._id || null);
     setIsAddressFormOpen(true);
@@ -608,15 +614,27 @@ export default function ProfileSection() {
     const payload = {
       addressLine1: addressForm.addressLine1.trim(),
       addressLine2: addressForm.addressLine2.trim(),
+      landmark: addressForm.landmark.trim(),
       fullAddress: `${addressForm.addressLine1.trim()}${addressForm.addressLine2.trim() ? ', ' + addressForm.addressLine2.trim() : ''}`,
       city: addressForm.city.trim(),
       state: addressForm.state.trim(),
       pincode: addressForm.pincode.trim(),
+      phone: addressForm.phone.trim(),
+      alternativePhone: addressForm.alternativePhone.trim(),
     };
 
-    if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode) {
-      setError('Please fill all address fields.');
+    if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
+      setError('Please fill all mandatory address fields.');
       return;
+    }
+    if (payload.pincode.length !== 6 || !/^\d{6}$/.test(payload.pincode)) {
+      setError('Pincode must be exactly 6 digits.'); return;
+    }
+    if (payload.phone.length !== 10 || !/^\d{10}$/.test(payload.phone)) {
+      setError('Phone number must be exactly 10 digits.'); return;
+    }
+    if (payload.alternativePhone && (payload.alternativePhone.length !== 10 || !/^\d{10}$/.test(payload.alternativePhone))) {
+      setError('Alternative phone number must be exactly 10 digits.'); return;
     }
 
     try {
@@ -870,7 +888,7 @@ export default function ProfileSection() {
               <div className="pf-address-card">
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
-                  <label className="pf-label">Address Line 1
+                  <label className="pf-label">Address Line 1 *
                     <input
                       className="pf-input"
                       value={addressForm.addressLine1}
@@ -883,10 +901,18 @@ export default function ProfileSection() {
                       className="pf-input"
                       value={addressForm.addressLine2}
                       onChange={(event) => setAddressForm((prev) => ({ ...prev, addressLine2: event.target.value }))}
-                      placeholder="Area, landmark"
+                      placeholder="Area"
                     />
                   </label>
-                  <label className="pf-label">City
+                  <label className="pf-label">Landmark (Optional)
+                    <input
+                      className="pf-input"
+                      value={addressForm.landmark}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, landmark: event.target.value }))}
+                      placeholder="Landmark"
+                    />
+                  </label>
+                  <label className="pf-label">City *
                     <input
                       className="pf-input"
                       value={addressForm.city}
@@ -894,7 +920,7 @@ export default function ProfileSection() {
                       placeholder="City"
                     />
                   </label>
-                  <label className="pf-label">State
+                  <label className="pf-label">State *
                     <input
                       className="pf-input"
                       value={addressForm.state}
@@ -902,12 +928,31 @@ export default function ProfileSection() {
                       placeholder="State"
                     />
                   </label>
-                  <label className="pf-label">Pincode
+                  <label className="pf-label">Pincode (6 digits) *
                     <input
                       className="pf-input"
+                      maxLength={6}
                       value={addressForm.pincode}
-                      onChange={(event) => setAddressForm((prev) => ({ ...prev, pincode: event.target.value }))}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, pincode: event.target.value.replace(/\D/g, '') }))}
                       placeholder="Pincode"
+                    />
+                  </label>
+                  <label className="pf-label">Phone Number (10 digits) *
+                    <input
+                      className="pf-input"
+                      maxLength={10}
+                      value={addressForm.phone}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '') }))}
+                      placeholder="Phone Number"
+                    />
+                  </label>
+                  <label className="pf-label">Alternative Phone (Optional)
+                    <input
+                      className="pf-input"
+                      maxLength={10}
+                      value={addressForm.alternativePhone}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, alternativePhone: event.target.value.replace(/\D/g, '') }))}
+                      placeholder="Alternative Phone"
                     />
                   </label>
                   <div className="pf-dialog-actions">

@@ -134,22 +134,22 @@ class AuthService {
 				// Don't reveal if email exists
 				return {
 					success: true,
-					message: "If email exists, reset link has been sent",
+					message: "If email exists, OTP has been sent",
 				};
 			}
 
-			// Generate reset token (valid for 1 hour)
-			const resetToken = jwt.sign({ sub: String(user._id) }, process.env.JWT_SECRET || "dev-secret", {
-				expiresIn: "1h",
-			});
+			// Generate 6 digit OTP
+			const otp = Math.floor(100000 + Math.random() * 900000).toString();
+			user.resetPasswordOtp = otp;
+			user.resetPasswordOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+			await user.save();
 
-			// Send reset email
-			const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-			await emailService.sendPasswordResetEmail(user.email, resetLink);
+			// Send OTP email
+			await emailService.sendPasswordResetOtpEmail(user.email, otp);
 
 			return {
 				success: true,
-				message: "Password reset email sent",
+				message: "Password reset OTP sent",
 			};
 		} catch (error) {
 			console.error("Password reset request error:", error);
@@ -157,15 +157,16 @@ class AuthService {
 		}
 	}
 
-	async resetPassword(token, newPassword) {
+	async resetPassword(email, otp, newPassword) {
 		try {
-			// Verify token
-			const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-
 			// Find user
-			const user = await User.findById(decoded.sub);
+			const user = await User.findOne({ email });
 			if (!user) {
-				throw new Error("User not found");
+				throw new Error("Invalid or expired OTP");
+			}
+
+			if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp || user.resetPasswordOtpExpiry < new Date()) {
+				throw new Error("Invalid or expired OTP");
 			}
 
 			// Hash new password
@@ -173,6 +174,8 @@ class AuthService {
 
 			// Update password
 			user.password = hashedPassword;
+			user.resetPasswordOtp = undefined;
+			user.resetPasswordOtpExpiry = undefined;
 			await user.save();
 
 			return {

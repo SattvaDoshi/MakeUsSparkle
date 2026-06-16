@@ -46,13 +46,13 @@ export default function CheckoutPage() {
   const { user, refreshUser } = useAuth();
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+  const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [addressBusy, setAddressBusy] = useState(false);
 
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
   const [showBillingAddressForm, setShowBillingAddressForm] = useState(false);
-  const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+  const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [billingAddressBusy, setBillingAddressBusy] = useState(false);
 
   const activeGift = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
@@ -82,9 +82,19 @@ export default function CheckoutPage() {
   };
 
   const handleSaveAddress = async () => {
-    if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode) {
-      alert('Please fill all address fields.'); return;
+    if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
+      alert('Please fill all mandatory address fields.'); return;
     }
+    if (addressForm.pincode.length !== 6 || !/^\d{6}$/.test(addressForm.pincode)) {
+      alert('Pincode must be exactly 6 digits.'); return;
+    }
+    if (addressForm.phone.length !== 10 || !/^\d{10}$/.test(addressForm.phone)) {
+      alert('Phone number must be exactly 10 digits.'); return;
+    }
+    if (addressForm.alternativePhone && (addressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(addressForm.alternativePhone))) {
+      alert('Alternative phone number must be exactly 10 digits.'); return;
+    }
+
     setAddressBusy(true);
     try {
       const fullAddress = `${addressForm.addressLine1}${addressForm.addressLine2 ? ', ' + addressForm.addressLine2 : ''}`;
@@ -93,15 +103,25 @@ export default function CheckoutPage() {
       await refreshUser();
       setShowAddressForm(false);
       setSelectedAddressIndex(addresses.length - 1);
-      setAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+      setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     } catch (err) { console.error(err); alert('Failed to save address.'); }
     finally { setAddressBusy(false); }
   };
 
   const handleSaveBillingAddress = async () => {
-    if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode) {
-      alert('Please fill all address fields.'); return;
+    if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
+      alert('Please fill all mandatory billing address fields.'); return;
     }
+    if (billingAddressForm.pincode.length !== 6 || !/^\d{6}$/.test(billingAddressForm.pincode)) {
+      alert('Pincode must be exactly 6 digits.'); return;
+    }
+    if (billingAddressForm.phone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.phone)) {
+      alert('Phone number must be exactly 10 digits.'); return;
+    }
+    if (billingAddressForm.alternativePhone && (billingAddressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.alternativePhone))) {
+      alert('Alternative phone number must be exactly 10 digits.'); return;
+    }
+
     setBillingAddressBusy(true);
     try {
       const fullAddress = `${billingAddressForm.addressLine1}${billingAddressForm.addressLine2 ? ', ' + billingAddressForm.addressLine2 : ''}`;
@@ -110,7 +130,7 @@ export default function CheckoutPage() {
       await refreshUser();
       setShowBillingAddressForm(false);
       setSelectedBillingAddressIndex(addresses.length - 1);
-      setBillingAddressForm({ addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+      setBillingAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     } catch (err) { console.error(err); alert('Failed to save address.'); }
     finally { setBillingAddressBusy(false); }
   };
@@ -200,7 +220,7 @@ export default function CheckoutPage() {
           <div className="ck-s-icon">✅</div>
           <h1 className="ck-s-title">Order Placed!</h1>
           <p className="ck-s-sub">Your order is confirmed. You&apos;ll receive a confirmation email shortly.</p>
-          <Link href="/shop" className="ck-s-btn">Continue Shopping</Link>
+          <Link href="/" className="ck-s-btn">Continue Shopping</Link>
         </div>
       </>
     );
@@ -632,11 +652,14 @@ export default function CheckoutPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div className="ck-addr-grid">
-                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment)" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
-                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area, Landmark)" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
-                      <input className="ck-addr-input" placeholder="City" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
-                      <input className="ck-addr-input" placeholder="State" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
-                      <input className="ck-addr-input" placeholder="Pincode" value={addressForm.pincode} onChange={e => setAddressForm({ ...addressForm, pincode: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
+                      <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
+                      <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
+                      <input className="ck-addr-input" placeholder="Pincode (6 digits) *" maxLength={6} value={addressForm.pincode} onChange={e => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '') })} />
+                      <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={addressForm.phone} onChange={e => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={addressForm.alternativePhone} onChange={e => setAddressForm({ ...addressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                       <button onClick={() => setShowAddressForm(false)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(45,90,39,.15)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: ink }}>Cancel</button>
@@ -683,11 +706,14 @@ export default function CheckoutPage() {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div className="ck-addr-grid">
-                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment)" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
-                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area, Landmark)" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
-                          <input className="ck-addr-input" placeholder="City" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
-                          <input className="ck-addr-input" placeholder="State" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
-                          <input className="ck-addr-input" placeholder="Pincode" value={billingAddressForm.pincode} onChange={e => setBillingAddressForm({ ...billingAddressForm, pincode: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={billingAddressForm.landmark} onChange={e => setBillingAddressForm({ ...billingAddressForm, landmark: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="City *" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="State *" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
+                          <input className="ck-addr-input" placeholder="Pincode (6 digits) *" maxLength={6} value={billingAddressForm.pincode} onChange={e => setBillingAddressForm({ ...billingAddressForm, pincode: e.target.value.replace(/\D/g, '') })} />
+                          <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={billingAddressForm.phone} onChange={e => setBillingAddressForm({ ...billingAddressForm, phone: e.target.value.replace(/\D/g, '') })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={billingAddressForm.alternativePhone} onChange={e => setBillingAddressForm({ ...billingAddressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                         </div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                           <button onClick={() => setShowBillingAddressForm(false)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(45,90,39,.15)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: ink }}>Cancel</button>
@@ -778,7 +804,7 @@ export default function CheckoutPage() {
                     </div>
                     <ul className="ck-es-list">
                       <li>Orders placed <strong>after 11:00 AM</strong> will be dispatched the <strong>next day</strong> (delivery takes 2-3 days for Metro / 3-4 days for Rest of India from dispatch).</li>
-                      <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Sunday</strong> (with same transit timeline starting from Sunday).</li>
+                      <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Monday</strong> (with same transit timeline starting from Sunday).</li>
                     </ul>
                   </div>
                 )}

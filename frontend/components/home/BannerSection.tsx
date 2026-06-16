@@ -47,12 +47,6 @@ const banners: Banner[] = [
 
 ];
 
-const marqueeItems = [
-  '✦ Free Shipping above ₹999',
-  '✦ Custom Jewellery',
-  '✦ Free Gifts on all Orders',
-];
-
 // Desktop shows 2 cards at a time
 const DESKTOP_VISIBLE = 2;
 
@@ -92,34 +86,6 @@ export default function BannerSection() {
           --bg: #fafaf7;
           --card-gap: 1.25rem;
           --card-radius: 10px;
-        }
-
-        /* ─── Marquee ─── */
-        .bs-marquee-wrap {
-          width: 100%;
-          overflow: hidden;
-          background: var(--olive-dark);
-          padding: 0.35rem 0;
-        }
-        .bs-marquee-track {
-          display: flex;
-          width: max-content;
-          animation: bsMarquee 28s linear infinite;
-        }
-        .bs-marquee-track:hover { animation-play-state: paused; }
-        @keyframes bsMarquee {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        .bs-marquee-item {
-          font-size: 0.68rem;
-          font-weight: 400;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: var(--gold-pale);
-          padding: 0 2.5rem;
-          white-space: nowrap;
-          opacity: 0.85;
         }
 
         /* ─── Section ─── */
@@ -437,17 +403,6 @@ export default function BannerSection() {
       `}</style>
 
       <section ref={sectionRef} className="bs-section">
-
-        {/* ── Marquee ── */}
-        <div className="bs-marquee-wrap">
-          <div className="bs-marquee-track">
-            {Array.from({ length: 4 }).flatMap((_, i) =>
-              marqueeItems.map((t) => (
-                <span key={`${i}-${t}`} className="bs-marquee-item">{t}</span>
-              ))
-            )}
-          </div>
-        </div>
 
         {/* ── Slider / mobile stack ── */}
         <div className="bs-slider-shell">

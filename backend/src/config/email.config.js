@@ -51,6 +51,21 @@ export const emailTemplates = {
     `,
 	}),
 
+	resetPasswordOtpEmail: (otp) => ({
+		subject: "Reset Your MakeUsSparkle Password",
+		html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>We received a request to reset your password. Here is your One-Time Password (OTP):</p>
+        <div style="margin: 24px 0; padding: 18px; border: 1px solid #eee; border-radius: 12px; background: #faf7ef; text-align: center;">
+          <p style="margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 0.2em; color: #2f3a25;">${otp}</p>
+        </div>
+        <p style="color: #999; font-size: 12px;">This OTP will expire in 10 minutes.</p>
+        <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+      </div>
+    `,
+	}),
+
 	orderConfirmationEmail: (orderNumber, items, total) => {
 		const shortId = orderNumber.toString().slice(-8).toUpperCase();
 		return {

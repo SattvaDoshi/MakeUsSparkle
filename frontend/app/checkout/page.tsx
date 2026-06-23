@@ -828,7 +828,7 @@ export default function CheckoutPage() {
                     </div>
                     <ul className="ck-es-list">
                       <li>Orders placed <strong>after 11:00 AM</strong> will be dispatched the <strong>next day</strong> (delivery takes 2-3 days for Metro / 3-4 days for Rest of India from dispatch).</li>
-                      <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Monday</strong> (with same transit timeline starting from Sunday).</li>
+                      <li>Orders placed on <strong>Saturday post 11:00 AM</strong> will be dispatched on <strong>Monday</strong> (with same transit timeline starting from Monday).</li>
                     </ul>
                   </div>
                 )}

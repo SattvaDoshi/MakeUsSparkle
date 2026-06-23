@@ -1,4 +1,5 @@
 import adminService from "../services/admin.service.js";
+import { getSetting, setSetting } from "../models/appSettings.model.js";
 
 export async function getDashboard(req, res) {
 	try {
@@ -194,6 +195,34 @@ export async function deleteReview(req, res) {
 		res.json(result);
 	} catch (error) {
 		console.error("Delete review error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getRewardsSettings(req, res) {
+	try {
+		const pointsPerReview = await getSetting("pointsPerReview", 50);
+		res.json({ success: true, pointsPerReview });
+	} catch (error) {
+		console.error("Get rewards settings error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateRewardsSettings(req, res) {
+	try {
+		const { pointsPerReview } = req.body;
+		if (pointsPerReview === undefined || pointsPerReview === null) {
+			return res.status(400).json({ success: false, message: "pointsPerReview is required" });
+		}
+		const parsed = Number(pointsPerReview);
+		if (isNaN(parsed) || parsed < 0) {
+			return res.status(400).json({ success: false, message: "pointsPerReview must be a non-negative number" });
+		}
+		await setSetting("pointsPerReview", parsed);
+		res.json({ success: true, pointsPerReview: parsed });
+	} catch (error) {
+		console.error("Update rewards settings error:", error);
 		res.status(400).json({ success: false, message: error.message });
 	}
 }

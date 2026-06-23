@@ -1,4 +1,5 @@
 import Order from "../models/order.model.js";
+import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
@@ -57,6 +58,16 @@ class OrderService {
 
 			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
+			// Handle reward points redemption
+			const rewardPointsToRedeem = Number(orderData.rewardPointsRedeemed || 0);
+			if (rewardPointsToRedeem > 0) {
+				const userDoc = await User.findById(userId).select("rewardPoints");
+				if (!userDoc || (userDoc.rewardPoints || 0) < rewardPointsToRedeem) {
+					throw new Error("Insufficient reward points");
+				}
+				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
+			}
+
 			const order = await Order.create({
 				user: userId,
 				items: orderItems,
@@ -76,6 +87,7 @@ class OrderService {
 				discountAmount: orderData.discountAmount || 0,
 				discountCode: orderData.discountCode,
 				autoDiscountAmount: orderData.autoDiscountAmount || 0,
+				rewardPointsRedeemed: rewardPointsToRedeem,
 				appliedOffers: orderData.appliedOffers || [],
 			});
 

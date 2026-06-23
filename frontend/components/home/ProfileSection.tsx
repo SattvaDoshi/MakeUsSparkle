@@ -10,6 +10,7 @@ type View = 'main' | 'orders' | 'address' | 'password';
 
 interface OrderItem {
   name: string;
+  productId: string; // MongoDB _id for review API
   reviewed: boolean;
   rating: number;
   reviewText: string;
@@ -28,8 +29,8 @@ const INITIAL_ORDERS: Order[] = [
     id: 'MUS2401',
     date: '12 Apr 2025',
     items: [
-      { name: 'Pearl Necklace', reviewed: false, rating: 0, reviewText: '' },
-      { name: 'Stud Earrings', reviewed: false, rating: 0, reviewText: '' },
+      { productId: 'dummy1', name: 'Pearl Necklace', reviewed: false, rating: 0, reviewText: '' },
+      { productId: 'dummy2', name: 'Stud Earrings', reviewed: false, rating: 0, reviewText: '' },
     ],
     amount: '₹1,299',
     status: 'Delivered',
@@ -38,7 +39,7 @@ const INITIAL_ORDERS: Order[] = [
     id: 'MUS2389',
     date: '28 Mar 2025',
     items: [
-      { name: 'Custom Charm Bracelet', reviewed: false, rating: 0, reviewText: '' },
+      { productId: 'dummy3', name: 'Custom Charm Bracelet', reviewed: false, rating: 0, reviewText: '' },
     ],
     amount: '₹849',
     status: 'Delivered',
@@ -47,7 +48,7 @@ const INITIAL_ORDERS: Order[] = [
     id: 'MUS2378',
     date: '10 Mar 2025',
     items: [
-      { name: 'Gift Box — Couple Set', reviewed: false, rating: 0, reviewText: '' },
+      { productId: 'dummy4', name: 'Gift Box — Couple Set', reviewed: false, rating: 0, reviewText: '' },
     ],
     amount: '₹1,999',
     status: 'Delivered',
@@ -58,14 +59,23 @@ const POINTS_PER_REVIEW = 50;
 
 interface ReviewModalProps {
   itemName: string;
+  pointsPerReview: number;
   onClose: () => void;
   onSubmit: (rating: number, text: string) => void;
 }
 
-function ReviewModal({ itemName, onClose, onSubmit }: ReviewModalProps) {
+function ReviewModal({ itemName, pointsPerReview, onClose, onSubmit }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const handleSubmit = async () => {
+    if (rating === 0 || busy) return;
+    setBusy(true);
+    await onSubmit(rating, text);
+    setBusy(false);
+  };
 
   return (
     <div className="pf-overlay" onClick={onClose}>
@@ -97,16 +107,16 @@ function ReviewModal({ itemName, onClose, onSubmit }: ReviewModalProps) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
-          Earn <strong>{POINTS_PER_REVIEW} Sparkle Points</strong> for this review
+          Earn <strong>{pointsPerReview} Sparkle Points</strong> for this review
         </div>
         <div className="pf-dialog-actions">
-          <button className="pf-dialog-cancel" onClick={onClose}>Cancel</button>
+          <button className="pf-dialog-cancel" onClick={onClose} disabled={busy}>Cancel</button>
           <button
             className="pf-dialog-confirm pf-review-submit"
-            disabled={rating === 0}
-            onClick={() => rating > 0 && onSubmit(rating, text)}
+            disabled={rating === 0 || busy}
+            onClick={handleSubmit}
           >
-            Submit & Earn
+            {busy ? 'Submitting…' : 'Submit & Earn'}
           </button>
         </div>
       </div>
@@ -451,6 +461,7 @@ export function LegacyProfileSection() {
         {reviewTarget && reviewingItem && (
           <ReviewModal
             itemName={reviewingItem.name}
+            pointsPerReview={POINTS_PER_REVIEW}
             onClose={() => setReviewTarget(null)}
             onSubmit={handleSubmitReview}
           />
@@ -470,7 +481,7 @@ export function LegacyProfileSection() {
 type BackendOrder = {
   _id: string;
   items: Array<{
-    product?: { name?: string } | string;
+    product?: { _id?: string; name?: string } | string;
     quantity?: number;
     price?: number;
   }>;
@@ -530,6 +541,7 @@ export default function ProfileSection() {
             : 'Recently',
           items: (order.items || []).map((item) => ({
             name: typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item',
+            productId: typeof item.product === 'object' && item.product ? item.product._id || '' : '',
             reviewed: false,
             rating: 0,
             reviewText: '',
@@ -556,8 +568,29 @@ export default function ProfileSection() {
   }, [isAuthenticated]);
 
   const addresses = user?.addresses ?? [];
-  const rewardPoints = useMemo(() => Math.max(120, orders.length * 40 + addresses.length * 10), [orders.length, addresses.length]);
-  const pendingReviews = orders.reduce((count, order) => count + order.items.length, 0);
+  const [rewardPoints, setRewardPoints] = useState(0);
+  const [pointsPerReview, setPointsPerReview] = useState(50);
+  const [reviewTarget, setReviewTarget] = useState<{ orderId: string; itemIndex: number } | null>(null);
+  const [justEarned, setJustEarned] = useState<number | null>(null);
+
+  // Fetch real reward points balance from backend
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiRequest<{ success: boolean; rewardPoints: number }>('/rewards/points')
+      .then((data) => setRewardPoints(data.rewardPoints || 0))
+      .catch(() => setRewardPoints(0));
+  }, [isAuthenticated]);
+
+  // Fetch points-per-review setting (for display in review modal)
+  useEffect(() => {
+    apiRequest<{ success: boolean; pointsPerReview: number }>('/rewards/settings')
+      .then((data) => setPointsPerReview(data.pointsPerReview || 50))
+      .catch(() => setPointsPerReview(50));
+  }, []);
+
+  const pendingReviews = orders
+    .filter((o) => o.status === 'Delivered')
+    .reduce((count, order) => count + order.items.filter((i) => !i.reviewed).length, 0);
 
   const tier =
     rewardPoints >= 500 ? { name: 'Gold', color: '#c8992e', next: null, nextAt: 500 } :
@@ -689,6 +722,61 @@ export default function ProfileSection() {
   const handleLogout = () => {
     signOut();
     router.push('/');
+  };
+
+  const handleSubmitReview = async (rating: number, text: string) => {
+    if (!reviewTarget) return;
+    const order = orders.find((o) => o.id === reviewTarget.orderId);
+    const item = order?.items[reviewTarget.itemIndex];
+    if (!item || !item.productId) {
+      setError('Could not identify the product. Please try again.');
+      setReviewTarget(null);
+      return;
+    }
+    try {
+      const result = await apiRequest<{
+        success: boolean;
+        pointsAwarded: number;
+        isVerifiedPurchase: boolean;
+      }>('/reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: item.productId,
+          rating,
+          body: text || item.name,
+        }),
+      });
+
+      // Mark item as reviewed in local state
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === reviewTarget.orderId
+            ? {
+                ...o,
+                items: o.items.map((it, idx) =>
+                  idx === reviewTarget.itemIndex
+                    ? { ...it, reviewed: true, rating }
+                    : it
+                ),
+              }
+            : o
+        )
+      );
+
+      // Update points balance
+      if (result.pointsAwarded > 0) {
+        setRewardPoints((p) => p + result.pointsAwarded);
+        setJustEarned(result.pointsAwarded);
+        setTimeout(() => setJustEarned(null), 3500);
+      } else {
+        setJustEarned(0); // submitted but no points (non-purchaser)
+        setTimeout(() => setJustEarned(null), 3500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit review. Please try again.');
+    } finally {
+      setReviewTarget(null);
+    }
   };
 
   if (authLoading || loading) {
@@ -826,6 +914,17 @@ export default function ProfileSection() {
           <div className="pf-body">
             <button className="pf-back" onClick={() => setView('main')}>← Back</button>
             <div className="pf-section-label">Order History</div>
+
+            {pendingReviews > 0 && (
+              <div className="pf-review-banner">
+                <div className="pf-review-banner-icon">✦</div>
+                <div>
+                  <p className="pf-review-banner-title">Review & Earn</p>
+                  <p className="pf-review-banner-sub">Earn {pointsPerReview} Sparkle Points per review. {pendingReviews} item{pendingReviews > 1 ? 's' : ''} waiting!</p>
+                </div>
+              </div>
+            )}
+
             <div className="pf-orders">
               {orders.length > 0 ? orders.map((order) => (
                 <div key={order.id} className="pf-order">
@@ -842,8 +941,24 @@ export default function ProfileSection() {
                       <div key={index} className="pf-product-row">
                         <div className="pf-product-info">
                           <span className="pf-product-name">{item.name}</span>
-                          <span className="pf-item-sub">Purchased item</span>
+                          {item.reviewed && (
+                            <span className="pf-product-stars">
+                              {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
+                            </span>
+                          )}
                         </div>
+                        {order.status === 'Delivered' && (
+                          item.reviewed ? (
+                            <span className="pf-reviewed-badge">✓ Reviewed</span>
+                          ) : (
+                            <button
+                              className="pf-review-btn"
+                              onClick={() => setReviewTarget({ orderId: order.id, itemIndex: index })}
+                            >
+                              Review &amp; Earn
+                            </button>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>
@@ -991,6 +1106,26 @@ export default function ProfileSection() {
                 <button className="pf-dialog-confirm" onClick={handleLogout}>Log out</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {reviewTarget && (() => {
+          const order = orders.find(o => o.id === reviewTarget.orderId);
+          const item = order?.items[reviewTarget.itemIndex];
+          if (!item) return null;
+          return (
+            <ReviewModal
+              itemName={item.name}
+              pointsPerReview={pointsPerReview}
+              onClose={() => setReviewTarget(null)}
+              onSubmit={handleSubmitReview}
+            />
+          );
+        })()}
+
+        {justEarned !== null && (
+          <div className="pf-toast">
+            {justEarned > 0 ? `✦ +${justEarned} Sparkle Points earned!` : '✓ Review submitted successfully!'}
           </div>
         )}
 

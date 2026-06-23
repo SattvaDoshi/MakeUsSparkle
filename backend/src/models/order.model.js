@@ -69,6 +69,7 @@ const orderSchema = new mongoose.Schema(
     discountAmount: { type: Number, default: 0 },
     discountCode: String,
     autoDiscountAmount: { type: Number, default: 0 },
+    rewardPointsRedeemed: { type: Number, default: 0 },
     appliedOffers: [
       {
         id: String,

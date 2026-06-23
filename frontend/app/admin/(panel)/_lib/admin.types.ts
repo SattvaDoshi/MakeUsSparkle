@@ -1,3 +1,10 @@
+export type AdminExitSurvey = {
+	_id: string;
+	reason: string;
+	otherText?: string;
+	createdAt: string;
+};
+
 export type DashboardStatsResponse = {
 	success: boolean;
 	stats: {
@@ -183,6 +190,7 @@ export type AdminReview = {
 	reviewId: string;
 	rating?: number;
 	comment?: string;
+	isVerifiedPurchase?: boolean;
 	user?: {
 		name?: string;
 		email?: string;

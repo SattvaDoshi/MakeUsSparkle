@@ -18,6 +18,8 @@ import {
 	updateReview,
 	updateUser,
 	updatePaymentStatus,
+	getRewardsSettings,
+	updateRewardsSettings,
 } from "../../controllers/admin.controller.js";
 import { requireAdmin, requireAuth } from "../../middleware/auth.middleware.js";
 
@@ -43,5 +45,7 @@ router.delete("/reviews/:productId/:reviewId", deleteReview);
 router.get("/analytics/sales", getAnalyticsSales);
 router.get("/analytics/products", getAnalyticsProducts);
 router.get("/analytics/orders", getAnalyticsOrders);
+router.get("/rewards-settings", getRewardsSettings);
+router.put("/rewards-settings", updateRewardsSettings);
 
 export default router;

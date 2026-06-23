@@ -853,9 +853,11 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
+import { useAuth } from '@/lib/authContext';
+import { apiRequest } from '@/lib/api';
 import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
 import CartGoalMeter from '@/components/ui/ProgressBar'; // ← new import
@@ -883,10 +885,29 @@ export default function CartPage() {
     state, subtotal, savings, shipping, total,
     itemCount, removeItem, updateQty,
     toggleGift, setGiftId, setGiftMessage,
-    removeDiscount, applyCouponCode,
+    removeDiscount, applyCouponCode, setRewardPointsRedeemed,
     autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut
   } = useCart();
-  const { items, isGift, giftMessage, discountCode, discountAmount, selectedGiftId } = state;
+  const { items, isGift, giftMessage, discountCode, discountAmount, selectedGiftId, rewardPointsRedeemed } = state;
+  const { user } = useAuth();
+  
+  const [userRewardPoints, setUserRewardPoints] = useState(0);
+  const [pointsInput, setPointsInput] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      apiRequest<{ success: boolean; rewardPoints: number }>('/rewards/points')
+        .then(data => setUserRewardPoints(data.rewardPoints || 0))
+        .catch(console.error);
+    }
+  }, [user]);
+
+  // Sync initial input if there's already points redeemed in state
+  useEffect(() => {
+    if (rewardPointsRedeemed > 0 && !pointsInput) {
+      setPointsInput(rewardPointsRedeemed.toString());
+    }
+  }, [rewardPointsRedeemed, pointsInput]);
 
   const handleSelectGift = (id: string) => {
     if (selectedGiftId === id) {
@@ -899,7 +920,10 @@ export default function CartPage() {
   };
 
   const activeGift  = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
-  const displayTotal = total;
+  const baseTotal = total;
+  const safeRewardPointsRedeemed = rewardPointsRedeemed || 0;
+  const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, userRewardPoints, baseTotal);
+  const displayTotal = baseTotal - actualRedeemedPoints;
 
   const [couponInput,   setCouponInput  ] = useState('');
   const [couponError,   setCouponError  ] = useState('');
@@ -1370,6 +1394,46 @@ export default function CartPage() {
                   )}
                 </div>
 
+                {/* Reward Points */}
+                {userRewardPoints > 0 && (
+                  <div className="cp-panel" style={{ padding: '18px 20px', marginTop: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <p className="cp-panel-head" style={{ padding: 0, border: 'none' }}>Redeem Points</p>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--olive-500)', background: 'var(--olive-50)', padding: '2px 6px', borderRadius: 4 }}>
+                        Balance: {userRewardPoints}
+                      </span>
+                    </div>
+                    <div className="cp-coupon-row">
+                      <input 
+                        className="cp-coupon-input"
+                        type="number" 
+                        min="0" 
+                        max={Math.min(userRewardPoints, baseTotal)}
+                        value={pointsInput} 
+                        onChange={(e) => setPointsInput(e.target.value)}
+                        placeholder={`Up to ${Math.min(userRewardPoints, baseTotal)}`}
+                      />
+                      <button 
+                        className="cp-coupon-btn"
+                        onClick={() => {
+                          const parsedVal = parseInt(pointsInput, 10);
+                          const val = Math.max(0, Math.min(isNaN(parsedVal) ? 0 : parsedVal, userRewardPoints, baseTotal));
+                          setRewardPointsRedeemed(val);
+                          setPointsInput(val.toString());
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {actualRedeemedPoints > 0 && (
+                      <div className="cp-coupon-applied" style={{ marginTop: 8 }}>
+                        <span>−₹{actualRedeemedPoints} points redeemed</span>
+                        <button className="cp-coupon-remove" onClick={() => { setRewardPointsRedeemed(0); setPointsInput(''); }}>×</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Price summary */}
                 <div className="cp-panel" style={{ padding: '20px 22px' }}>
                   <div className="cp-summary-row">
@@ -1386,6 +1450,12 @@ export default function CartPage() {
                     <div className="cp-summary-row cp-summary-row--savings">
                       <span>Coupon ({discountCode})</span>
                       <span>−₹{discountAmount}</span>
+                    </div>
+                  )}
+                  {actualRedeemedPoints > 0 && (
+                    <div className="cp-summary-row cp-summary-row--savings">
+                      <span>Sparkle Points</span>
+                      <span>−₹{actualRedeemedPoints}</span>
                     </div>
                   )}
                   {applicableOffers.length > 0 && (

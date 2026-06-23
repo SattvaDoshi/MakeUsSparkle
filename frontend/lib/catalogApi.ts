@@ -50,6 +50,7 @@ export interface CatalogProduct {
   discountedPrice?: number | null;
   discountTag?: string | null;
   allowCustomization?: boolean;
+  maxCustomImages?: number;
   maxQuantity?: number;
   volumeDiscounts?: { quantity: number; discountPercentage: number }[];
   originalPrice: number | null;
@@ -88,10 +89,13 @@ export interface CatalogProduct {
   faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
   seoTags: string[];
+  quantityVariants?: { label: string; quantity: number; price: number }[];
   charmPieceOptions?: number[];
   totalCharms?: number;
   /** Per-product size chart image URL (Cloudinary). Null = use default static fallback. */
   sizeChartImage?: string | null;
+  /** Steps to measure for the size chart */
+  sizeChartSteps?: string;
   /** Per-product gift box upsell configuration. */
   giftBox?: {
     enabled: boolean;
@@ -150,7 +154,9 @@ interface BackendProduct {
   price?: number;
   discountedPrice?: number;
   discountTag?: string;
+  productLabel?: string;
   allowCustomization?: boolean;
+  maxCustomImages?: number;
   rating?: number;
   images?: string[];
   mainImage?: string;
@@ -172,11 +178,13 @@ interface BackendProduct {
   numberOfProducts?: number;
   tags?: string[];
   seoTags?: string[];
+  quantityVariants?: Array<{ label: string; quantity: number; price: number }>;
   faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
   charmPieceOptions?: number[];
   totalCharms?: number;
   sizeChartImage?: string | null;
+  sizeChartSteps?: string;
   giftBox?: {
     enabled?: boolean;
     heading?: string;
@@ -376,6 +384,7 @@ function normalizeProduct(
     discountedPrice,
     discountTag: item.discountTag || null,
     allowCustomization: item.allowCustomization === true,
+    maxCustomImages: item.maxCustomImages,
     originalPrice,
     rating,
     reviewCount,
@@ -393,12 +402,13 @@ function normalizeProduct(
     gender: item.gender || "unisex",
     stock: Number(item.stock ?? 0),
     numberOfProducts: Number(item.numberOfProducts ?? 1),
+    quantityVariants: Array.isArray(item.quantityVariants) ? item.quantityVariants : undefined,
     partialCOD: item.partialCOD ? {
       enabled: Boolean(item.partialCOD.enabled),
       percentage: Number(item.partialCOD.percentage || 0),
     } : undefined,
-    badge: pickBadge(rating),
-    offer: discountedPrice ? "Limited Time Deal" : null,
+    badge: item.productLabel || pickBadge(rating),
+    offer: item.discountTag || null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
     href: `/products/${slug}`,
     colors: colors.length > 0 ? colors : [],
@@ -412,6 +422,7 @@ function normalizeProduct(
     charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
     totalCharms: Number(item.totalCharms ?? 0),
     sizeChartImage: item.sizeChartImage || null,
+    sizeChartSteps: item.sizeChartSteps || "",
     giftBox: item.giftBox
       ? {
           enabled:     item.giftBox.enabled !== false,
@@ -747,7 +758,6 @@ export interface ReviewData {
     lastName: string;
   };
   rating: number;
-  title: string;
   body: string;
   isVerifiedPurchase: boolean;
   createdAt: string;
@@ -764,7 +774,7 @@ export async function fetchProductReviews(productId: string): Promise<ReviewData
 }
 
 export async function submitProductReview(
-  payload: { productId: string; rating: number; title: string; body: string },
+  payload: { productId: string; rating: number; body: string },
   token: string
 ): Promise<{ success: boolean; message?: string; review?: ReviewData }> {
   try {

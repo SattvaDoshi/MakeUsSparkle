@@ -20,6 +20,8 @@ import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
 import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
 import AdminCombosTab from "./_components/tabs/AdminCombosTab";
+import AdminExitSurveysTab from "./_components/tabs/AdminExitSurveysTab";
+import type { AdminExitSurvey } from "./_lib/admin.types";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -267,7 +269,7 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
@@ -280,6 +282,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "coupons", label: "Offers & Coupons" },
 	{ key: "banners", label: "Home Page" },
 	{ key: "reviews", label: "Reviews" },
+	{ key: "surveys", label: "Exit Surveys" },
 ];
 
 // order/payment status lists moved to dedicated tab components
@@ -501,7 +504,9 @@ export default function AdminDashboardPage() {
 	const [styles, setStyles] = useState<AdminStyle[]>([]);
 	const [genders, setGenders] = useState<AdminGender[]>([]);
 	const [combos, setCombos] = useState<AdminCombo[]>([]);
+	const [surveys, setSurveys] = useState<AdminExitSurvey[]>([]);
 
+	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [offerForm, setOfferForm] = useState(defaultOfferForm);
 	const [couponForm, setCouponForm] = useState(defaultCouponForm);
@@ -509,7 +514,6 @@ export default function AdminDashboardPage() {
 	const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 	const [charmForm, setCharmForm] = useState(defaultCharmForm);
 	const [modalKind, setModalKind] = useState<ModalKind>(null);
-	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
 
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
@@ -645,6 +649,11 @@ export default function AdminDashboardPage() {
 		});
 	}, []);
 
+	const loadSurveys = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; surveys: AdminExitSurvey[] }>("/admin/exit-surveys");
+		setSurveys(result.surveys || []);
+	}, []);
+
 	const loadActiveTab = useCallback(async (tab: TabKey) => {
 		setLoading(true);
 		setError(null);
@@ -666,12 +675,13 @@ export default function AdminDashboardPage() {
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
 			if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
+			if (tab === "surveys") await loadSurveys();
 		} catch (error) {
 			console.error("Error loading tab data:", error);
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos]);
+	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos, loadSurveys]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -1385,6 +1395,7 @@ export default function AdminDashboardPage() {
 		onEditCombo={handleEditCombo}
 		onDeleteCombo={handleDeleteCombo}
 	/>;
+		if (activeTab === "surveys") return <AdminExitSurveysTab surveys={surveys} />;
 		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};
 

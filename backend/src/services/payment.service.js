@@ -1,5 +1,6 @@
 import { createRazorpayOrder, verifyRazorpaySignature } from "../config/payment.config.js";
 import Order from "../models/order.model.js";
+import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId } from "./orderItemSelection.service.js";
 
@@ -26,6 +27,16 @@ class PaymentService {
 			// Create order record in database
 			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
+			// Handle reward points redemption
+			const rewardPointsToRedeem = Number(orderData.rewardPointsRedeemed || 0);
+			if (rewardPointsToRedeem > 0) {
+				const userDoc = await User.findById(userId).select("rewardPoints");
+				if (!userDoc || (userDoc.rewardPoints || 0) < rewardPointsToRedeem) {
+					throw new Error("Insufficient reward points");
+				}
+				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
+			}
+
 			const order = await Order.create({
 				user: userId,
 				items: orderItems,
@@ -40,6 +51,7 @@ class PaymentService {
 				status: "placed",
 				paymentStatus: "pending",
 				paymentMode,
+				rewardPointsRedeemed: rewardPointsToRedeem,
 			});
 
 			return {

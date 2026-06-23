@@ -86,10 +86,18 @@ class ProductService {
 			let productQuery = Product.find(query);
 
 			// Apply sorting
-			if (queryParams.sort === "price_asc") productQuery = productQuery.sort({ price: 1 });
-			if (queryParams.sort === "price_desc") productQuery = productQuery.sort({ price: -1 });
-			if (queryParams.sort === "rating_desc") productQuery = productQuery.sort({ rating: -1 });
-			if (queryParams.sort === "rating_asc") productQuery = productQuery.sort({ rating: 1 });
+			if (queryParams.sort === "price_asc") {
+				productQuery = productQuery.sort({ price: 1 });
+			} else if (queryParams.sort === "price_desc") {
+				productQuery = productQuery.sort({ price: -1 });
+			} else if (queryParams.sort === "rating_desc") {
+				productQuery = productQuery.sort({ rating: -1 });
+			} else if (queryParams.sort === "rating_asc") {
+				productQuery = productQuery.sort({ rating: 1 });
+			} else {
+				// Default sort
+				productQuery = productQuery.sort({ displayOrder: -1, _id: -1 });
+			}
 
 			const products = await productQuery;
 			return { success: true, products };
@@ -205,6 +213,36 @@ class ProductService {
 			}
 			if (Array.isArray(productData.charmPieceOptions)) {
 				return productData.charmPieceOptions.map(Number).filter(n => Number.isFinite(n) && n > 0);
+			}
+		} catch (_) {}
+		return [];
+	}
+
+	/**
+	 * Parse styles JSON string
+	 */
+	_parseStyles(productData) {
+		try {
+			if (typeof productData.styles === "string") {
+				return JSON.parse(productData.styles);
+			}
+			if (Array.isArray(productData.styles)) {
+				return productData.styles;
+			}
+		} catch (_) {}
+		return [];
+	}
+
+	/**
+	 * Parse quantityVariants JSON string
+	 */
+	_parseQuantityVariants(productData) {
+		try {
+			if (typeof productData.quantityVariants === "string") {
+				return JSON.parse(productData.quantityVariants);
+			}
+			if (Array.isArray(productData.quantityVariants)) {
+				return productData.quantityVariants;
 			}
 		} catch (_) {}
 		return [];
@@ -330,25 +368,33 @@ class ProductService {
 			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
 			const volumeDiscounts = this._parseVolumeDiscounts(productData);
+			const styles = this._parseStyles(productData);
+			const quantityVariants = this._parseQuantityVariants(productData);
 
 			const product = await Product.create({
 				title: productData.title,
 				description: stripHtml(productData.description),
 				about: stripHtml(productData.about),
 				price: productData.price ? Number(productData.price) : undefined,
+				costPrice: productData.costPrice ? Number(productData.costPrice) : undefined,
 				discountedPrice: productData.discountedPrice ? Number(productData.discountedPrice) : undefined,
 				discountTag: productData.discountTag,
+				productLabel: productData.productLabel,
+				displayOrder: productData.displayOrder ? Number(productData.displayOrder) : 0,
 				allowCustomization: parseBoolean(productData.allowCustomization),
+				maxCustomImages: productData.maxCustomImages !== undefined ? Number(productData.maxCustomImages) : 1,
 				maxQuantity: productData.maxQuantity !== undefined ? Number(productData.maxQuantity) : 10,
 				volumeDiscounts,
 				numberOfProducts: productData.numberOfProducts ? Number(productData.numberOfProducts) : 1,
+				quantityVariants,
 				charmPieceOptions,
 				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
 				stock: productData.stock ? Number(productData.stock) : undefined,
 				gender,
 				category: productData.category || undefined,
 				subCategory: productData.subCategory || undefined,
-				style: productData.style || undefined,
+				style: styles.length > 0 ? styles[0] : (productData.style || undefined),
+				styles: styles,
 				tags: normalizeStringArray(productData.tags),
 				seoTags: normalizeStringArray(productData.seoTags),
 				mainImage,
@@ -360,6 +406,7 @@ class ProductService {
 				variants,
 				sizeChartImage,
 				sizeChartImagePublicId,
+				sizeChartSteps: productData.sizeChartSteps || "",
 				giftBox: {
 					enabled:       productData.giftBoxEnabled !== undefined ? parseBoolean(productData.giftBoxEnabled) : true,
 					heading:       productData.giftBoxHeading || "Premium Gift Box",
@@ -590,6 +637,7 @@ class ProductService {
 					discountedPrice: updateData.discountedPrice ? Number(updateData.discountedPrice) : undefined,
 					discountTag: updateData.discountTag,
 					allowCustomization: updateData.allowCustomization === undefined ? product.allowCustomization : parseBoolean(updateData.allowCustomization),
+					maxCustomImages: updateData.maxCustomImages !== undefined ? Number(updateData.maxCustomImages) : product.maxCustomImages,
 					maxQuantity: updateData.maxQuantity !== undefined ? Number(updateData.maxQuantity) : product.maxQuantity,
 					volumeDiscounts,
 					numberOfProducts: updateData.numberOfProducts !== undefined ? Number(updateData.numberOfProducts) : product.numberOfProducts,
@@ -599,9 +647,14 @@ class ProductService {
 					gender: updateData.gender === undefined ? product.gender : gender,
 					category: updateData.category || undefined,
 					subCategory: updateData.subCategory || undefined,
-					style: updateData.style || undefined,
 					tags: normalizeStringArray(updateData.tags),
 					seoTags: normalizeStringArray(updateData.seoTags),
+					costPrice: updateData.costPrice ? Number(updateData.costPrice) : undefined,
+					productLabel: updateData.productLabel,
+					displayOrder: updateData.displayOrder ? Number(updateData.displayOrder) : 0,
+					styles: updateData.styles !== undefined ? this._parseStyles(updateData) : undefined,
+					style: updateData.styles !== undefined && this._parseStyles(updateData).length > 0 ? this._parseStyles(updateData)[0] : (updateData.style || undefined),
+					quantityVariants: updateData.quantityVariants !== undefined ? this._parseQuantityVariants(updateData) : undefined,
 					mainImage,
 					mainImagePublicId,
 					images: imageUrls,
@@ -611,6 +664,7 @@ class ProductService {
 					variants,
 					sizeChartImage,
 					sizeChartImagePublicId,
+					sizeChartSteps: updateData.sizeChartSteps !== undefined ? updateData.sizeChartSteps : product.sizeChartSteps,
 					giftBox: {
 						enabled:       updateData.giftBoxEnabled !== undefined ? parseBoolean(updateData.giftBoxEnabled) : (product.giftBox?.enabled ?? true),
 						heading:       updateData.giftBoxHeading || product.giftBox?.heading || "Premium Gift Box",

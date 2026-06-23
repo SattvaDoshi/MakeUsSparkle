@@ -34,6 +34,10 @@ import adminCharmItemRoutes from "./routes/admin/adminCharmItem.routes.js";
 import adminOfferRoutes from "./routes/admin/adminOffer.routes.js";
 import adminHomeContentRoutes from "./routes/admin/adminHomeContent.routes.js";
 import homeContentRoutes from "./routes/homeContent.routes.js";
+import rewardsRoutes from "./routes/rewards.routes.js";
+import exitSurveyRoutes from "./routes/exitSurvey.routes.js";
+import adminExitSurveyRoutes from "./routes/admin/adminExitSurvey.routes.js";
+
 const app = express();
 
 app.use(express.json());
@@ -131,9 +135,12 @@ app.use("/admin/charm-items", adminCharmItemRoutes);
 app.use("/admin/offers", adminOfferRoutes);
 app.use("/genders", genderRoutes);
 app.use("/admin/genders", adminGenderRoutes);
+app.use("/exit-surveys", exitSurveyRoutes);
+app.use("/admin/exit-surveys", adminExitSurveyRoutes);
 app.use("/home-content", homeContentRoutes);
 app.use("/admin/home-content", adminHomeContentRoutes);
 app.use("/abandoned", abandonedRoutes);
 app.use("/reviews", reviewRoutes);
+app.use("/rewards", rewardsRoutes);
 
 export default app;

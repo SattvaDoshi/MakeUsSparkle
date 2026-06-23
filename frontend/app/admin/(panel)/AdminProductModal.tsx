@@ -103,12 +103,16 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		title: initialData?.title || "",
 		category: initialData?.category?._id || initialData?.category || "",
 		subCategory: initialData?.subCategory?._id || initialData?.subCategory || "",
-		style: initialData?.style?._id || initialData?.style || "",
+		styles: initialData?.styles?.map((s: any) => s._id || s) || (initialData?.style ? [initialData?.style?._id || initialData?.style] : []),
 		gender: getGenderSlug(initialData?.gender),
 		price: initialData?.price?.toString() || "",
+		costPrice: initialData?.costPrice?.toString() || "",
 		discountedPrice: initialData?.discountedPrice?.toString() || "",
 		discountTag: initialData?.discountTag || "",
+		productLabel: initialData?.productLabel || "",
+		displayOrder: initialData?.displayOrder?.toString() || "0",
 		allowCustomization: Boolean(initialData?.allowCustomization),
+		maxCustomImages: initialData?.maxCustomImages?.toString() || "1",
 		maxQuantity: initialData?.maxQuantity?.toString() || "10",
 		numberOfProducts: initialData?.numberOfProducts?.toString() || "1",
 		stock: initialData?.stock?.toString() || "",
@@ -120,6 +124,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		galleryImages: initialData?.images || [],
 		totalCharms: initialData?.totalCharms?.toString() || "0",
 		sizeChartImage: initialData?.sizeChartImage || null,
+		sizeChartSteps: initialData?.sizeChartSteps || "",
 		giftBoxEnabled: initialData?.giftBox?.enabled ?? true,
 		giftBoxHeading: initialData?.giftBox?.heading || "Premium Gift Box",
 		giftBoxDescription: initialData?.giftBox?.description || "Rigid magnetic-close box · satin ribbon · message card",
@@ -138,6 +143,11 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	// Volume discounts
 	const [volumeDiscounts, setVolumeDiscounts] = useState<{ quantity: number; discountPercentage: number }[]>(
 		Array.isArray(initialData?.volumeDiscounts) ? initialData.volumeDiscounts : []
+	);
+
+	// Quantity Variants
+	const [quantityVariants, setQuantityVariants] = useState<{ label: string; quantity: number; price: number }[]>(
+		Array.isArray(initialData?.quantityVariants) ? initialData.quantityVariants : []
 	);
 
 	// Colors management
@@ -330,20 +340,28 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			formData.append("description", toPlainText(form.description));
 			formData.append("about", toPlainText(form.about));
 			formData.append("price", String(form.price));
+			if (form.costPrice) formData.append("costPrice", String(form.costPrice));
 			if (form.discountedPrice) formData.append("discountedPrice", String(form.discountedPrice));
 			if (form.discountTag) formData.append("discountTag", form.discountTag);
+			if (form.productLabel) formData.append("productLabel", form.productLabel);
+			formData.append("displayOrder", String(form.displayOrder || 0));
 			formData.append("allowCustomization", String(form.allowCustomization));
+			if (form.allowCustomization) {
+				formData.append("maxCustomImages", String(form.maxCustomImages));
+			}
 			formData.append("maxQuantity", String(form.maxQuantity));
 			formData.append("volumeDiscounts", JSON.stringify(volumeDiscounts));
+			formData.append("quantityVariants", JSON.stringify(quantityVariants));
 			formData.append("numberOfProducts", String(form.numberOfProducts));
 			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
 			formData.append("stock", String(form.stock));
+			formData.append("sizeChartSteps", form.sizeChartSteps);
 			if (form.gender) formData.append("gender", form.gender);
 
 			if (form.category) formData.append("category", form.category);
 			if (form.subCategory) formData.append("subCategory", form.subCategory);
-			if (form.style) formData.append("style", form.style);
+			if (form.styles.length > 0) formData.append("styles", JSON.stringify(form.styles));
 
 			form.tags.forEach((t: string) => formData.append("tags", t));
 			form.seoTags.forEach((t: string) => formData.append("seoTags", t));
@@ -560,6 +578,51 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 								<div className="input-group" style={{ display: "grid", gap: "0.4rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										Product Label (e.g. Best Seller)
+									</label>
+									<input
+										placeholder="e.g. Best Seller, New Arrival"
+										value={form.productLabel}
+										onChange={(e) => setForm({ ...form, productLabel: e.target.value })}
+										list="label-options"
+										style={{
+											padding: "0.7rem",
+											border: "1px solid #d4d4c8",
+											borderRadius: "6px",
+											fontSize: "0.95rem",
+										}}
+									/>
+									<datalist id="label-options">
+										<option value="Best Seller" />
+										<option value="New Arrival" />
+										<option value="Limited Edition" />
+										<option value="Trending" />
+									</datalist>
+								</div>
+
+								<div className="input-group" style={{ display: "grid", gap: "0.4rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+										Display Order
+									</label>
+									<input
+										type="number"
+										placeholder="0"
+										value={form.displayOrder}
+										onChange={(e) => setForm({ ...form, displayOrder: e.target.value })}
+										style={{
+											padding: "0.7rem",
+											border: "1px solid #d4d4c8",
+											borderRadius: "6px",
+											fontSize: "0.95rem",
+										}}
+									/>
+									<span style={{ fontSize: "0.75rem", color: "#6b6b60" }}>
+										Higher number = appears first (e.g. 10 shows before 0)
+									</span>
+								</div>
+
+								<div className="input-group" style={{ display: "grid", gap: "0.4rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
 										Gender Focus
 									</label>
 									<select
@@ -570,7 +633,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												gender: e.target.value as GenderValue | "",
 												category: "",
 												subCategory: "",
-												style: "",
+												styles: [],
 											})
 										}
 										style={{
@@ -649,29 +712,39 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 								</div>
 
 								<div className="input-group" style={{ display: "grid", gap: "0.4rem" }}>
-									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Style</label>
-									<select
-										value={form.style}
-										onChange={(e) => setForm({ ...form, style: e.target.value })}
-										disabled={!form.gender}
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Styles (Multi-select)</label>
+									<div
 										style={{
 											padding: "0.7rem",
 											border: "1px solid #d4d4c8",
 											borderRadius: "6px",
 											fontSize: "0.95rem",
 											background: "#fff",
+											maxHeight: "150px",
+											overflowY: "auto",
 											opacity: !form.gender ? 0.6 : 1,
+											pointerEvents: !form.gender ? "none" : "auto",
 										}}
 									>
-										<option value="">
-											{form.gender ? "Select Style..." : "Select gender first"}
-										</option>
-										{filteredStyles.map((c) => (
-											<option key={c._id} value={c._id}>
-												{c.name || c.title}
-											</option>
+										{!form.gender && (
+											<span style={{ color: "#6b6b60" }}>Select gender first</span>
+										)}
+										{form.gender && filteredStyles.map((c) => (
+											<label key={c._id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem", cursor: "pointer" }}>
+												<input
+													type="checkbox"
+													checked={form.styles.includes(c._id)}
+													onChange={(e) => {
+														const newStyles = e.target.checked
+															? [...form.styles, c._id]
+															: form.styles.filter((id: string) => id !== c._id);
+														setForm({ ...form, styles: newStyles });
+													}}
+												/>
+												<span style={{ fontSize: "0.9rem" }}>{c.name || c.title}</span>
+											</label>
 										))}
-									</select>
+									</div>
 								</div>
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
@@ -768,23 +841,92 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									</span>
 								</label>
 
-								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
+								{form.allowCustomization && (
+									<div className="input-group" style={{ gridColumn: "1 / -1", marginTop: "-0.5rem", padding: "0 1rem 1rem 1rem", borderBottom: "1px solid #e1e1d8" }}>
+										<label htmlFor="maxCustomImages" style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20", marginBottom: "0.2rem" }}>
+											Maximum Custom Images Allowed
+										</label>
+										<input
+											id="maxCustomImages"
+											type="number"
+											min="0"
+											max="10"
+											value={form.maxCustomImages}
+											onChange={(e) => setForm({ ...form, maxCustomImages: e.target.value })}
+											style={{
+												width: "100%",
+												maxWidth: "200px",
+												padding: "0.6rem 0.8rem",
+												border: "1.5px solid #d4d4c8",
+												borderRadius: "6px",
+												fontSize: "0.9rem",
+												outline: "none",
+											}}
+										/>
+										<span style={{ display: "block", fontSize: "0.75rem", color: "#6b6b60", marginTop: "0.3rem" }}>
+											How many images the user is allowed to upload.
+										</span>
+									</div>
+								)}
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem", padding: "1rem", border: "1px solid #d4d4c8", borderRadius: "8px", background: "#f9f9f7" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-										Number of Items in Set (e.g., 2 for couple bracelets)
+										Quantity Variants (e.g. Single, Pair)
 									</label>
-									<input
-										type="number"
-										min="1"
-										placeholder="1"
-										value={form.numberOfProducts}
-										onChange={(e) => setForm({ ...form, numberOfProducts: e.target.value })}
-										style={{
-											padding: "0.7rem",
-											border: "1px solid #d4d4c8",
-											borderRadius: "6px",
-											fontSize: "0.95rem",
-										}}
-									/>
+									<span style={{ fontSize: "0.75rem", color: "#6b6b60", marginBottom: "0.5rem" }}>
+										Replaces the old "Number of items in set". Leave empty if not applicable.
+									</span>
+									{quantityVariants.map((qv, idx) => (
+										<div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+											<input
+												type="text"
+												placeholder="Label (e.g. Single)"
+												value={qv.label}
+												onChange={(e) => {
+													const newQv = [...quantityVariants];
+													newQv[idx].label = e.target.value;
+													setQuantityVariants(newQv);
+												}}
+												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
+											/>
+											<input
+												type="number"
+												placeholder="Quantity (e.g. 1)"
+												value={qv.quantity}
+												onChange={(e) => {
+													const newQv = [...quantityVariants];
+													newQv[idx].quantity = Number(e.target.value);
+													setQuantityVariants(newQv);
+												}}
+												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
+											/>
+											<input
+												type="number"
+												placeholder="Price (₹)"
+												value={qv.price}
+												onChange={(e) => {
+													const newQv = [...quantityVariants];
+													newQv[idx].price = Number(e.target.value);
+													setQuantityVariants(newQv);
+												}}
+												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
+											/>
+											<button
+												type="button"
+												onClick={() => setQuantityVariants(quantityVariants.filter((_, i) => i !== idx))}
+												style={{ background: "#ffebee", color: "#c62828", border: "none", borderRadius: "4px", padding: "0.4rem 0.6rem", cursor: "pointer" }}
+											>
+												Remove
+											</button>
+										</div>
+									))}
+									<button
+										type="button"
+										onClick={() => setQuantityVariants([...quantityVariants, { label: "", quantity: 1, price: 0 }])}
+										style={{ alignSelf: "flex-start", background: "#4a5c22", color: "#fff", border: "none", borderRadius: "4px", padding: "0.5rem 1rem", fontSize: "0.8rem", cursor: "pointer", marginTop: "0.5rem" }}
+									>
+										+ Add Quantity Variant
+									</button>
 								</div>
 
 								{/* Number of Pieces — only for Custom Charms / Keychains */}
@@ -970,6 +1112,45 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											fontSize: "0.95rem",
 										}}
 									/>
+								</div>
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.2rem", padding: "1rem", border: "1px solid #d4d4c8", borderRadius: "8px", background: "#f9f9f7" }}>
+									<div style={{ display: "grid", gap: "0.4rem" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+											Cost Price (INR)
+										</label>
+										<input
+											placeholder="0 (For profit calculation)"
+											type="number"
+											value={form.costPrice}
+											onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+											style={{
+												padding: "0.7rem",
+												border: "1px solid #d4d4c8",
+												borderRadius: "6px",
+												fontSize: "0.95rem",
+											}}
+										/>
+									</div>
+									<div style={{ display: "grid", gap: "0.4rem", alignContent: "center" }}>
+										<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+											Estimated Profit
+										</label>
+										{(() => {
+											const cp = Number(form.costPrice) || 0;
+											const sp = Number(form.discountedPrice) || Number(form.price) || 0;
+											if (cp > 0 && sp > 0) {
+												const profit = sp - cp;
+												const margin = ((profit / sp) * 100).toFixed(1);
+												return (
+													<div style={{ color: profit >= 0 ? "#4a5c22" : "#c62828", fontWeight: 600, fontSize: "1.1rem" }}>
+														₹{profit} <span style={{ fontSize: "0.85rem", fontWeight: 500 }}>({margin}% margin)</span>
+													</div>
+												);
+											}
+											return <span style={{ color: "#6b6b60", fontSize: "0.9rem" }}>Enter price and cost price</span>;
+										})()}
+									</div>
 								</div>
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
@@ -1828,6 +2009,33 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										</label>
 									</div>
 								</div>
+
+								{/* Steps to measure it */}
+								<div className="input-group" style={{ marginTop: "1.5rem" }}>
+									<label htmlFor="sizeChartSteps" style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20", marginBottom: "0.4rem", display: "block" }}>
+										Steps to measure it
+									</label>
+									<textarea
+										id="sizeChartSteps"
+										value={form.sizeChartSteps}
+										onChange={(e) => setForm({ ...form, sizeChartSteps: e.target.value })}
+										placeholder="e.g. 1. Take a soft measuring tape&#10;2. Wrap it around your wrist"
+										rows={4}
+										style={{
+											width: "100%",
+											padding: "0.8rem",
+											border: "1px solid #d4d4c8",
+											borderRadius: "6px",
+											fontSize: "0.9rem",
+											fontFamily: "inherit",
+											resize: "vertical",
+										}}
+									/>
+									<span style={{ display: "block", fontSize: "0.75rem", color: "#6b6b60", marginTop: "0.4rem" }}>
+										These instructions will appear below the size chart. You can use line breaks.
+									</span>
+								</div>
+
 
 								<hr style={{ border: "none", borderTop: "1px solid #eee" }} />
 

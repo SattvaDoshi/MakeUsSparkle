@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
+import { apiRequest } from '@/lib/api';
 
 const DISCOUNT_CODE  = 'STAYWITHUS';
 const DISCOUNT_AMOUNT = 20;
@@ -72,9 +73,15 @@ export default function ExitIntent() {
     window.history.go(-2);
   }, [closeModal]);
 
-  const handleSurveySubmit = useCallback(() => {
-    // Here you'd POST the survey data to your analytics
-    console.log('[ExitSurvey]', { selected, other: otherText });
+  const handleSurveySubmit = useCallback(async () => {
+    try {
+      await apiRequest('/exit-surveys', {
+        method: 'POST',
+        body: JSON.stringify({ reason: selected, otherText }),
+      });
+    } catch (err) {
+      console.error('Failed to submit exit survey:', err);
+    }
     closeModal();
     window.history.go(-2);
   }, [selected, otherText, closeModal]);

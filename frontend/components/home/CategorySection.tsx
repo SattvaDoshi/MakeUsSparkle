@@ -593,12 +593,21 @@ export default function CategorySection() {
   const sectionRef = useRef<HTMLElement>(null);
 
   const genderTabs = useMemo(() => {
-    if (genders.length > 0) return genders;
-    return [
-      { id: 'women', name: 'Women', slug: 'women', isActive: true },
-      { id: 'men', name: 'Men', slug: 'men', isActive: true },
-      { id: 'kids', name: 'Kids', slug: 'kids', isActive: true },
-    ];
+    const rawTabs = genders.length > 0 
+      ? genders 
+      : [
+          { id: 'women', name: 'Women', slug: 'women', isActive: true },
+          { id: 'men', name: 'Men', slug: 'men', isActive: true },
+          { id: 'kids', name: 'Kids', slug: 'kids', isActive: true },
+        ];
+
+    return [...rawTabs].sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      if (aName === 'women') return -1;
+      if (bName === 'women') return 1;
+      return aName.localeCompare(bName);
+    });
   }, [genders]);
 
   const tab = genderTabs.some((genderItem) => genderItem.slug === selectedGender)

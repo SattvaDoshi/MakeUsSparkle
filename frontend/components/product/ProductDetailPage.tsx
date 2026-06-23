@@ -80,9 +80,7 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 24h26M24 14l12 10-12 10" />
-        <circle cx="38" cy="24" r="6" />
-        <path d="M6 16v16" />
+        <path d="M44 4L22 26M44 4L30 44 22 26 4 18 44 4z" />
       </svg>
     ),
     title: 'Express Delivery',
@@ -268,20 +266,15 @@ function GiftBoxUpsell({
   );
 }
 // ─── Reviews Section ──────────────────────────────────────────────────────────
-function ReviewsSection({ productId }: { productId: string }) {
-  const [reviews, setReviews] = useState<ReviewData[]>([]);
+function ReviewsSection({ productId, reviews, setReviews }: { productId: string; reviews: ReviewData[]; setReviews: React.Dispatch<React.SetStateAction<ReviewData[]>> }) {
   const [visibleCount, setVisibleCount] = useState(3);
   const [filterStar, setFilterStar] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formState, setFormState] = useState({ rating: 5, title: '', body: '' });
+  const [formState, setFormState] = useState({ rating: 5, body: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const { user, token } = useAuth();
-
-  useEffect(() => {
-    fetchProductReviews(productId).then(setReviews);
-  }, [productId]);
 
   const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
   const visible = filtered.slice(0, visibleCount);
@@ -300,7 +293,7 @@ function ReviewsSection({ productId }: { productId: string }) {
     if (res.success && res.review) {
       setReviews([res.review, ...reviews]);
       setShowForm(false);
-      setFormState({ rating: 5, title: '', body: '' });
+      setFormState({ rating: 5, body: '' });
     } else {
       setErrorMsg(res.message || 'Failed to submit review.');
     }
@@ -362,7 +355,6 @@ function ReviewsSection({ productId }: { productId: string }) {
               <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
             ))}
           </div>
-          <input required placeholder="Review Title" value={formState.title} onChange={e => setFormState(s => ({ ...s, title: e.target.value }))} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 12, fontSize: 13, outline: 'none' }} />
           <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 13, outline: 'none', resize: 'vertical' }} />
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
@@ -390,7 +382,6 @@ function ReviewsSection({ productId }: { productId: string }) {
                 </div>
               </div>
             </div>
-            <p className="rev-card-title">{r.title}</p>
             <p className="rev-card-body">{r.body}</p>
           </div>
         ))}
@@ -441,28 +432,30 @@ function CompleteTheLookStrip() {
 
 // ─── Accordion item ───────────────────────────────────────────────────────────
 function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState(0);
-  useEffect(() => { if (bodyRef.current) setHeight(open ? bodyRef.current.scrollHeight : 0); }, [open]);
-
   return (
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
       <button className="acc-head" onClick={onToggle}>
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
         <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
       </button>
-      <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
-        <div ref={bodyRef} className="acc-body">
-          {item.isHtml
-            ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
-            : item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
-          }
-          {item.linkHref && item.linkLabel && (
-            <Link href={item.linkHref} className="acc-policy-link">
-              {item.linkLabel}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-            </Link>
-          )}
+      <div className="acc-body-wrap" style={{ 
+        display: 'grid', 
+        gridTemplateRows: open ? '1fr' : '0fr', 
+        transition: 'grid-template-rows 0.38s cubic-bezier(.4,0,.2,1)' 
+      }}>
+        <div style={{ overflow: 'hidden' }}>
+          <div className="acc-body">
+            {item.isHtml
+              ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
+              : item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
+            }
+            {item.linkHref && item.linkLabel && (
+              <Link href={item.linkHref} className="acc-policy-link">
+                {item.linkLabel}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -480,7 +473,7 @@ function EstimatedDeliveryBlock() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {[
           { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
-          { icon: '⚡', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
+          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
         ].map(opt => (
           <div key={opt.label} style={{
             border: '1.5px solid rgba(61,74,34,.15)', borderRadius: 14,
@@ -536,7 +529,7 @@ function Sparkles({ active }: { active: boolean }) {
 }
 
 // ─── Customisation Panel ──────────────────────────────────────────────────────
-function CustomisationPanel({ category, onChange }: { category: string, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
+function CustomisationPanel({ category, maxCustomImages = 1, onChange }: { category: string, maxCustomImages?: number, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
@@ -547,7 +540,7 @@ function CustomisationPanel({ category, onChange }: { category: string, onChange
     if (onChange) onChange({ wantCustom, uploads: uploads.map(u => u.preview), globalNote });
   }, [wantCustom, uploads, globalNote, onChange]);
 
-  const MAX_FILES = 5;
+  const MAX_FILES = maxCustomImages;
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const valid = Array.from(files).filter((f: File) => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
@@ -673,10 +666,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const [errorToast, setErrorToast] = useState('');
+  const [productReviews, setProductReviews] = useState<ReviewData[]>([]);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
   const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
 
   useEffect(() => {
     if (errorToast) {
@@ -695,6 +690,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     return () => { mounted = false; };
   }, [slug]);
 
+  useEffect(() => {
+    if (product?.sourceId) {
+      fetchProductReviews(product.sourceId).then(setProductReviews);
+    }
+  }, [product?.sourceId]);
+
   const category = product?.category ?? '';
   const gender = product?.gender ?? '';
   const price = product?.price ?? 0;
@@ -709,15 +710,23 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const normalizedColors = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c', image: c.image || undefined }));
   const sizes = product?.sizes ?? [];
   const variants = product?.variants ?? [];
-  const numberOfProducts = product?.numberOfProducts || 1;
+  
+  const quantityVariants = product?.quantityVariants ?? [];
+  const hasQuantityVariants = quantityVariants.length > 0;
+  const currentQuantityVariant = hasQuantityVariants ? quantityVariants[selectedVariantIndex] : null;
+
+  const numberOfProducts = currentQuantityVariant ? currentQuantityVariant.quantity : (product?.numberOfProducts || 1);
   const mainImage = product?.mainImage;
   const images = product?.images ?? [];
 
   const allowCustomization = product?.allowCustomization === true;
 
+  const dynamicReviewCount = productReviews.length;
+  const dynamicRating = dynamicReviewCount > 0 ? Number((productReviews.reduce((acc, r) => acc + r.rating, 0) / dynamicReviewCount).toFixed(1)) : 0;
+
   useEffect(() => {
     if (!product) return;
-    const totalItems = product.numberOfProducts || 1;
+    const totalItems = numberOfProducts;
     setSelections(prev => {
       const newSelections = [...prev];
       if (newSelections.length < totalItems) {
@@ -730,7 +739,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       return newSelections;
     });
     setActiveImg(0);
-  }, [product?.sourceId, product?.numberOfProducts]);
+  }, [product?.sourceId, numberOfProducts]);
 
   const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
     const cLabel = normalizeText(normalizedColors[colorIndex]?.label || '');
@@ -756,13 +765,18 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }
 
   let computedPrice = discountedPrice || price;
-  if (selections.length > 0) {
+  let computedOriginalPrice = originalPrice || price;
+  
+  if (currentQuantityVariant) {
+    computedPrice = currentQuantityVariant.price;
+    computedOriginalPrice = currentQuantityVariant.price; // or we can adjust logic if quantity variant has originalPrice
+  } else if (selections.length > 0) {
     computedPrice = (discountedPrice || price) * (1 - volumeDiscountPct / 100);
   }
 
   let discount = 0;
-  if (discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
-  else if (originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  if (!currentQuantityVariant && discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
+  else if (!currentQuantityVariant && originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
 
   const currentStock = selections.length > 0
     ? selections.reduce((min, sel) => {
@@ -825,9 +839,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     for (let i = 0; i < sets; i++) {
       const setSelections = selections;
 
-      let setPrice = discountedPrice || price;
+      let setPrice = computedOriginalPrice;
       // Apply volume discount to this specific set
-      const discountedSetPrice = setPrice * (1 - volumeDiscountPct / 100);
+      let discountedSetPrice = computedPrice;
 
       const cartItem: Omit<import("@/lib/cartContext").CartItem, "qty"> = {
         id: String(product.sourceId) + `-${Date.now()}-${i}`,
@@ -839,6 +853,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         color: normalizedColors[setSelections[0]?.colorIndex || 0]?.label || '',
         colorHex: normalizedColors[setSelections[0]?.colorIndex || 0]?.hex || '#c9a84c',
         size: setSelections[0]?.size || undefined,
+        variantLabel: currentQuantityVariant ? currentQuantityVariant.label : undefined,
         sku: product.sku || '',
         href: product.href || `/products/${product.sourceId}`,
         category: product.category || '',
@@ -868,7 +883,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
 
   const isSelectionComplete = selections.length > 0 && selections.every(sel =>
-    sel.colorIndex !== -1 && (sizeOptions.length === 0 || sel.size !== '')
+    (normalizedColors.length === 0 || sel.colorIndex !== -1) && 
+    (sizeOptions.length === 0 || sel.size !== '')
   );
 
   const handleBuyNow = useCallback(() => {
@@ -942,8 +958,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const description = product.description || '';
 
   const dynamicAccordionItems: AccordionData[] = [
-    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: `<div style="text-align: justify; font-weight: 600; color: var(--ink);">${about.replace(/\n/g, '<br/>')}</div>`, isHtml: true }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
+    ...(product?.sizeChartImage ? [{ id: 'sizechart', emoji: '📏', label: 'Size Chart', content: `<img src="${product.sizeChartImage}" alt="Size Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="padding: 16px 0; font-size: 14px; color: var(--ink); line-height: 1.6; text-align: left; white-space: pre-wrap;">${product.sizeChartSteps ? product.sizeChartSteps : '📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.'}</div>`, isHtml: true }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
   ];
@@ -964,8 +981,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   return (
     <>
-      {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
-      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE} />}
 
       {/* Error Toast */}
       {errorToast && (
@@ -1336,9 +1351,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             </h1>
 
             <div className="pdp-rating">
-              <span className="pdp-stars">{'★'.repeat(Math.round(product.rating || 0))}{'☆'.repeat(5 - Math.round(product.rating || 0))}</span>
-              <span className="pdp-rating-num">{product.rating > 0 ? product.rating : 'New'}</span>
-              <span className="pdp-review-cnt">({product.reviewCount || 0} reviews)</span>
+              <span className="pdp-stars">{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</span>
+              <span className="pdp-rating-num">{dynamicRating > 0 ? dynamicRating : 'New'}</span>
+              <span className="pdp-review-cnt">({dynamicReviewCount} reviews)</span>
               {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: 6 }}>{gender}</span>}
             </div>
 
@@ -1359,6 +1374,40 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </div>
               )}
             </div>
+
+            {hasQuantityVariants && (
+              <div style={{ marginBottom: 20 }}>
+                <p className="pdp-section-label" style={{ marginBottom: 10 }}>Select Option</p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {quantityVariants.map((v: any, i: number) => (
+                    <button
+                      key={v._id || i}
+                      type="button"
+                      onClick={() => setSelectedVariantIndex(i)}
+                      style={{
+                        padding: '10px 16px',
+                        border: selectedVariantIndex === i ? '1.5px solid var(--olive-600)' : '1.5px solid var(--beige-dkr)',
+                        borderRadius: '8px',
+                        background: selectedVariantIndex === i ? 'var(--olive-50)' : 'white',
+                        color: selectedVariantIndex === i ? 'var(--olive-600)' : 'var(--ink)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>{v.label}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--mist)' }}>₹{v.price}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pdp-divider" />
+              </div>
+            )}
 
             {/* ── CHANGE: Only show qty when NOT in combo context, and place it ABOVE variants ── */}
             {!isFromCombo && (
@@ -1427,17 +1476,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </div>
               );
             })}
-
-            {/* Size chart link — show only if sizeChartImage is coming from the data */}
-            {product?.sizeChartImage && (
-              <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 6H3" /><path d="M3 10h18" /><path d="M3 14h18" /><path d="M21 18H3" />
-                </svg>
-                Size Chart
-              </button>
-            )}
-
             {description && <p className="pdp-desc">{description}</p>}
 
             {tags.length > 0 && (
@@ -1457,7 +1495,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                     Make it Yours — Customise this {category}
                   </div>
                   <p className="pdp-cust-banner-sub">This {category.toLowerCase()} can be personalised with your own photos, names, or a special message.</p>
-                  <CustomisationPanel category={category} onChange={setCustomData} />
+                  <CustomisationPanel category={category} maxCustomImages={product.maxCustomImages || 1} onChange={setCustomData} />
                 </div>
                 <div className="pdp-divider" />
               </>
@@ -1561,7 +1599,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           </div>
         </div>
 
-        <ReviewsSection productId={product.sourceId} />
+        <ReviewsSection productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
       </div>
     </>
   );

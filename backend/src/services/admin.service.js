@@ -350,6 +350,7 @@ class AdminService {
 					reviewId: String(review._id),
 					rating: review.rating,
 					comment: review.body,
+					isVerifiedPurchase: review.isVerifiedPurchase || false,
 					user: {
 						name: userName,
 						email: user?.email || "",

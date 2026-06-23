@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema(
     ],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     referralCode: String,
+    rewardPoints: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

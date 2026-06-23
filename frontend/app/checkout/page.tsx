@@ -34,8 +34,8 @@ const DELIVERY_OPTIONS = [
 ];
 
 export default function CheckoutPage() {
-  const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers } = useCart();
-  const { items, isGift, discountCode, discountAmount, selectedGiftId } = state;
+  const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers, setRewardPointsRedeemed } = useCart();
+  const { items, isGift, discountCode, discountAmount, selectedGiftId, rewardPointsRedeemed } = state;
 
   const [selectedMethod, setSelectedMethod] = useState('ONLINE');
   const [loading, setLoading] = useState(false);
@@ -55,12 +55,35 @@ export default function CheckoutPage() {
   const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [billingAddressBusy, setBillingAddressBusy] = useState(false);
 
+  const [userRewardPoints, setUserRewardPoints] = useState(0);
+  const [pointsInput, setPointsInput] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      apiRequest<{ success: boolean; rewardPoints: number }>('/rewards/points')
+        .then(data => setUserRewardPoints(data.rewardPoints || 0))
+        .catch(console.error);
+    }
+  }, [user]);
+
+  // Sync initial input if there's already points redeemed in state
+  useEffect(() => {
+    if (rewardPointsRedeemed > 0 && !pointsInput) {
+      setPointsInput(rewardPointsRedeemed.toString());
+    }
+  }, [rewardPointsRedeemed, pointsInput]);
+
   const activeGift = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
   
   const deliveryCharge = deliveryType === 'express' ? 110 : shipping;
   const codCharge = (selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') ? 80 : 0;
 
-  const finalTotal = (total - shipping) + deliveryCharge + codCharge;
+  const baseTotal = (total - shipping) + deliveryCharge + codCharge;
+  const safeRewardPointsRedeemed = rewardPointsRedeemed || 0;
+  const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, userRewardPoints, baseTotal);
+  
+  const finalTotal = baseTotal - actualRedeemedPoints;
+
   let amountToPayNow = finalTotal;
   if (selectedMethod === 'PARTIAL_COD') amountToPayNow = Math.round(finalTotal * 0.20);
   else if (selectedMethod === 'COD') amountToPayNow = 0;
@@ -175,6 +198,7 @@ export default function CheckoutPage() {
         shippingAddress,
         billingAddress,
         isGift, giftMessage: state.giftMessage,
+        rewardPointsRedeemed,
       };
       if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
         const rzpOrder = await apiRequest<{ success: boolean; orderId: string; razorpayOrderId: string; amount: number; currency: string }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
@@ -894,6 +918,49 @@ export default function CheckoutPage() {
                   <div className="ck-row">
                     <div className="ck-row-label">{selectedMethod === 'COD' ? 'COD Convenience Fee' : 'Partial COD Fee'}</div>
                     <span className="ck-row-value">+₹80</span>
+                  </div>
+                )}
+                {userRewardPoints > 0 && (
+                  <div className="ck-row" style={{ background: '#f8f4ed', padding: '12px 16px', borderBottom: '1px solid rgba(45,90,39,.12)', display: 'block' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#0f1a0f', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: '#d4af37' }}>✦</span> Redeem Sparkle Points
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: '#2d5a27', background: 'rgba(45,90,39,.1)', padding: '2px 6px', borderRadius: 4 }}>
+                        Balance: {userRewardPoints}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max={Math.min(userRewardPoints, baseTotal)}
+                        value={pointsInput} 
+                        onChange={(e) => setPointsInput(e.target.value)}
+                        placeholder={`Up to ${Math.min(userRewardPoints, baseTotal)}`}
+                        style={{ flex: 1, padding: '8px 12px', border: '1.5px solid #d9cdb8', borderRadius: 8, fontSize: 12, outline: 'none' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          const parsedVal = parseInt(pointsInput, 10);
+                          const val = Math.max(0, Math.min(isNaN(parsedVal) ? 0 : parsedVal, userRewardPoints, baseTotal));
+                          setRewardPointsRedeemed(val);
+                          setPointsInput(val.toString());
+                        }}
+                        style={{ background: '#2d5a27', color: 'white', border: 'none', borderRadius: 8, padding: '0 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {actualRedeemedPoints > 0 && (
+                      <div style={{ fontSize: 11, color: '#2d5a27', marginTop: 8, fontWeight: 500 }}>
+                        −₹{actualRedeemedPoints} will be deducted from your total.
+                        <button 
+                          onClick={() => { setRewardPointsRedeemed(0); setPointsInput(''); }} 
+                          style={{ background: 'none', border: 'none', color: '#c0392b', marginLeft: 10, cursor: 'pointer', textDecoration: 'underline' }}
+                        >Remove</button>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="ck-row total">

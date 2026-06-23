@@ -18,9 +18,13 @@ const productSchema = new mongoose.Schema(
     description: String,
     about: String,
     price: Number,
+    costPrice: Number,
     discountedPrice: Number,
     discountTag: String,
+    productLabel: String,
     allowCustomization: { type: Boolean, default: false },
+    maxCustomImages: { type: Number, default: 1 },
+    displayOrder: { type: Number, default: 0 },
 
     // Admin defined limits and discounts
     maxQuantity: { type: Number, default: 10 },
@@ -33,6 +37,15 @@ const productSchema = new mongoose.Schema(
 
     // The number of individual products to be customized in this product listing
     numberOfProducts: { type: Number, default: 1 },
+    
+    // Named quantity variants (e.g., Single, Pair)
+    quantityVariants: [
+      {
+        label: { type: String },
+        quantity: { type: Number },
+        price: { type: Number },
+      }
+    ],
 
     // For "Custom Charms" and "Keychains" categories:
     // The selectable number-of-pieces options shown to the user (e.g. [3, 5, 7]).
@@ -50,9 +63,10 @@ const productSchema = new mongoose.Schema(
     images: [String],
     imagePublicIds: [String],
 
-    // Per-product size chart image (Cloudinary URL)
+    // Per-product size chart image (Cloudinary URL) and measurement steps
     sizeChartImage: { type: String, default: null },
     sizeChartImagePublicId: { type: String, default: null },
+    sizeChartSteps: { type: String, default: "" },
 
     // Per-product gift box upsell configuration
     giftBox: {
@@ -98,6 +112,12 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Style",
     },
+    styles: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Style",
+      }
+    ],
     gender: {
       type: String,
       enum: ["men", "women", "kids", "unisex"],

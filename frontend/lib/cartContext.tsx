@@ -25,6 +25,7 @@ export interface CartItem {
   size?: string;
   qty: number;
   sku: string;
+  variantLabel?: string;
   href: string;
   cartItemId?: string;
   customNote?: string;
@@ -86,6 +87,7 @@ export interface CartState {
   discountAmount: number;
   selectedGiftId: string | null;
   optedOutOffers: string[];
+  rewardPointsRedeemed: number;
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ type Action =
   | { type: 'REMOVE_DISCOUNT' }
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_OFFER_OPTOUT'; payload: string }
+  | { type: 'SET_REWARD_POINTS_REDEEMED'; payload: number }
   | { type: 'HYDRATE';      payload: CartState };
 
 // ─── Selectors (pure helpers) ─────────────────────────────────────────────────
@@ -140,6 +143,7 @@ const INITIAL: CartState = {
   discountAmount: 0,
   selectedGiftId: null,
   optedOutOffers: [],
+  rewardPointsRedeemed: 0,
 };
 
 function key(item: Partial<CartItem>) {
@@ -231,11 +235,14 @@ case 'ADD_ITEM': {
       };
     }
 
+    case 'SET_REWARD_POINTS_REDEEMED':
+      return { ...state, rewardPointsRedeemed: action.payload };
+
     case 'CLEAR_CART':
       return { ...INITIAL };
 
     case 'HYDRATE':
-      return { ...action.payload, isDrawerOpen: false };
+      return { ...action.payload, rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0, isDrawerOpen: false };
 
     default:
       return state;
@@ -265,6 +272,7 @@ interface CartContextValue {
   appliedOffers: Array<{ id: string; title: string; amount: number }>;
   applicableOffers: Array<{ id: string; title: string; amount: number; applied: boolean }>;
   toggleOfferOptOut: (id: string) => void;
+  setRewardPointsRedeemed: (points: number) => void;
   total:      number;
   itemCount:  number;
 }
@@ -505,6 +513,7 @@ const addItem = useCallback(
     clearCart,
     applyCouponCode,
     toggleOfferOptOut: (id: string) => dispatch({ type: 'TOGGLE_OFFER_OPTOUT', payload: id }),
+    setRewardPointsRedeemed: (points: number) => dispatch({ type: 'SET_REWARD_POINTS_REDEEMED', payload: points }),
     subtotal:  sub,
     savings:   cartSavings(state.items),
     shipping:  shippingVal,

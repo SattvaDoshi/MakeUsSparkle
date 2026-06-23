@@ -1,41 +1,15 @@
 import Review from "../models/review.model.js";
 import Order from "../models/order.model.js";
+import User from "../models/user.model.js";
+import { getSetting } from "../models/appSettings.model.js";
 
 export const addReview = async (req, res) => {
 	try {
-		const { productId, rating, title, body } = req.body;
+		const { productId, rating, body } = req.body;
 		const userId = req.user._id;
 
-		if (!productId || !rating || !title || !body) {
+		if (!productId || !rating || !body) {
 			return res.status(400).json({ success: false, message: "Missing required fields" });
-		}
-
-		// Verify that the user has purchased the product
-		// Order status could be placed, shipped, delivered, etc.
-		// Payment mode could be COD, ONLINE, PARTIAL_COD.
-		// A completed purchase generally means it's an order that is not cancelled.
-		const userOrders = await Order.find({
-			user: userId,
-			status: { $ne: "cancelled" },
-		});
-
-		let hasPurchased = false;
-		for (const order of userOrders) {
-			// Find if any item in the order matches the productId
-			const productExistsInOrder = order.items.some(
-				(item) => String(item.product) === String(productId)
-			);
-			if (productExistsInOrder) {
-				hasPurchased = true;
-				break;
-			}
-		}
-
-		if (!hasPurchased) {
-			return res.status(403).json({
-				success: false,
-				message: "You must purchase this product to review it",
-			});
 		}
 
 		// Check if the user already reviewed this product
@@ -47,24 +21,53 @@ export const addReview = async (req, res) => {
 			});
 		}
 
+		// Check if the user has purchased the product (determines reward points eligibility)
+		const userOrders = await Order.find({
+			user: userId,
+			status: { $ne: "cancelled" },
+		});
+
+		let hasPurchased = false;
+		for (const order of userOrders) {
+			const productExistsInOrder = order.items.some(
+				(item) => String(item.product) === String(productId)
+			);
+			if (productExistsInOrder) {
+				hasPurchased = true;
+				break;
+			}
+		}
+
 		const newReview = new Review({
 			user: userId,
 			product: productId,
 			rating: Number(rating),
-			title,
 			body,
-			isVerifiedPurchase: true,
+			isVerifiedPurchase: hasPurchased,
 		});
 
 		await newReview.save();
 
-		// Populate user for the response
-		await newReview.populate("user", "firstName lastName");
+		// Award reward points only to verified purchasers
+		let pointsAwarded = 0;
+		if (hasPurchased) {
+			const pointsPerReview = await getSetting("pointsPerReview", 50);
+			pointsAwarded = Number(pointsPerReview) || 50;
+			await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: pointsAwarded } });
+		}
 
-		res.status(201).json({ success: true, review: newReview });
+		// Populate user for the response
+		await newReview.populate("user", "name");
+
+		return res.status(201).json({
+			success: true,
+			review: newReview,
+			pointsAwarded,
+			isVerifiedPurchase: hasPurchased,
+		});
 	} catch (error) {
 		console.error("Error adding review:", error);
-		res.status(500).json({ success: false, message: "Failed to add review" });
+		return res.status(500).json({ success: false, message: "Failed to add review" });
 	}
 };
 
@@ -73,12 +76,12 @@ export const getProductReviews = async (req, res) => {
 		const { productId } = req.params;
 
 		const reviews = await Review.find({ product: productId })
-			.populate("user", "firstName lastName")
+			.populate("user", "name")
 			.sort({ createdAt: -1 });
 
-		res.status(200).json({ success: true, reviews });
+		return res.status(200).json({ success: true, reviews });
 	} catch (error) {
 		console.error("Error getting reviews:", error);
-		res.status(500).json({ success: false, message: "Failed to fetch reviews" });
+		return res.status(500).json({ success: false, message: "Failed to fetch reviews" });
 	}
 };

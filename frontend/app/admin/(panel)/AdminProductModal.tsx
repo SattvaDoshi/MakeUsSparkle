@@ -113,6 +113,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		displayOrder: initialData?.displayOrder?.toString() || "0",
 		allowCustomization: Boolean(initialData?.allowCustomization),
 		maxCustomImages: initialData?.maxCustomImages?.toString() || "1",
+		customImageLabels: initialData?.customImageLabels?.join(", ") || "",
 		maxQuantity: initialData?.maxQuantity?.toString() || "10",
 		numberOfProducts: initialData?.numberOfProducts?.toString() || "1",
 		stock: initialData?.stock?.toString() || "",
@@ -123,6 +124,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		mainImage: initialData?.mainImage || null,
 		galleryImages: initialData?.images || [],
 		totalCharms: initialData?.totalCharms?.toString() || "0",
+		perCharmPrice: initialData?.perCharmPrice?.toString() || "0",
 		sizeChartImage: initialData?.sizeChartImage || null,
 		sizeChartSteps: initialData?.sizeChartSteps || "",
 		giftBoxEnabled: initialData?.giftBox?.enabled ?? true,
@@ -348,6 +350,9 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			formData.append("allowCustomization", String(form.allowCustomization));
 			if (form.allowCustomization) {
 				formData.append("maxCustomImages", String(form.maxCustomImages));
+				if (form.customImageLabels.trim()) {
+					form.customImageLabels.split(",").map(l => l.trim()).filter(Boolean).forEach(label => formData.append("customImageLabels", label));
+				}
 			}
 			formData.append("maxQuantity", String(form.maxQuantity));
 			formData.append("volumeDiscounts", JSON.stringify(volumeDiscounts));
@@ -355,6 +360,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			formData.append("numberOfProducts", String(form.numberOfProducts));
 			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
+			formData.append("perCharmPrice", String(form.perCharmPrice || "0"));
 			formData.append("stock", String(form.stock));
 			formData.append("sizeChartSteps", form.sizeChartSteps);
 			if (form.gender) formData.append("gender", form.gender);
@@ -842,7 +848,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 								</label>
 
 								{form.allowCustomization && (
-									<div className="input-group" style={{ gridColumn: "1 / -1", marginTop: "-0.5rem", padding: "0 1rem 1rem 1rem", borderBottom: "1px solid #e1e1d8" }}>
+									<>
+										<div className="input-group" style={{ gridColumn: "1 / -1", marginTop: "-0.5rem", padding: "0 1rem 1rem 1rem", borderBottom: "1px solid #e1e1d8" }}>
 										<label htmlFor="maxCustomImages" style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20", marginBottom: "0.2rem" }}>
 											Maximum Custom Images Allowed
 										</label>
@@ -867,6 +874,31 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											How many images the user is allowed to upload.
 										</span>
 									</div>
+
+									<div className="input-group" style={{ gridColumn: "1 / -1", marginTop: "-0.5rem", padding: "0 1rem 1rem 1rem", borderBottom: "1px solid #e1e1d8" }}>
+										<label htmlFor="customImageLabels" style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20", marginBottom: "0.2rem" }}>
+											Custom Image Labels (Comma-separated)
+										</label>
+										<input
+											id="customImageLabels"
+											type="text"
+											value={form.customImageLabels}
+											onChange={(e) => setForm({ ...form, customImageLabels: e.target.value })}
+											placeholder="e.g. Image for polaroid, Image for card"
+											style={{
+												width: "100%",
+												padding: "0.6rem 0.8rem",
+												border: "1.5px solid #d4d4c8",
+												borderRadius: "6px",
+												fontSize: "0.9rem",
+												outline: "none",
+											}}
+										/>
+										<span style={{ display: "block", fontSize: "0.75rem", color: "#6b6b60", marginTop: "0.3rem" }}>
+											Optional: Specify text regarding each image. The user will be asked to upload images for these specific labels.
+										</span>
+									</div>
+									</>
 								)}
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem", padding: "1rem", border: "1px solid #d4d4c8", borderRadius: "8px", background: "#f9f9f7" }}>
@@ -1068,6 +1100,30 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												— Customers will choose their charms from Charm 1 to Charm N based on this count
 											</span>
 										</div>
+
+										<div style={{ display: "grid", gap: "0.4rem", marginTop: "0.5rem" }}>
+											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+												Price Per Charm (₹)
+											</label>
+											<input
+												type="number"
+												min={0}
+												value={form.perCharmPrice}
+												onChange={(e) => setForm(f => ({ ...f, perCharmPrice: e.target.value }))}
+												placeholder="e.g. 50"
+												style={{
+													width: "100%",
+													padding: "0.6rem 0.8rem",
+													border: "1.5px solid #d9cdb8",
+													borderRadius: "8px",
+													fontSize: "0.95rem",
+													background: "#fff",
+												}}
+											/>
+											<span style={{ fontSize: "0.75rem", color: "#6b6b60" }}>
+												— Added to the base price per charm selected
+											</span>
+										</div>
 									</div>
 								)}
 
@@ -1206,53 +1262,6 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									/>
 								</div>
 
-								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.6rem", padding: "1rem", border: "1px solid #d4d4c8", borderRadius: "8px", background: "#f9f9f7" }}>
-									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-										Volume Discounts (Tiered Pricing)
-									</label>
-									{volumeDiscounts.map((vd, idx) => (
-										<div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-											<input
-												type="number"
-												placeholder="Quantity"
-												value={vd.quantity}
-												onChange={(e) => {
-													const newVd = [...volumeDiscounts];
-													newVd[idx].quantity = Number(e.target.value);
-													setVolumeDiscounts(newVd);
-												}}
-												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
-											/>
-											<span style={{ fontSize: "0.85rem", color: "#666" }}>qty</span>
-											<input
-												type="number"
-												placeholder="Discount %"
-												value={vd.discountPercentage}
-												onChange={(e) => {
-													const newVd = [...volumeDiscounts];
-													newVd[idx].discountPercentage = Number(e.target.value);
-													setVolumeDiscounts(newVd);
-												}}
-												style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", flex: 1 }}
-											/>
-											<span style={{ fontSize: "0.85rem", color: "#666" }}>% off</span>
-											<button
-												type="button"
-												onClick={() => setVolumeDiscounts(volumeDiscounts.filter((_, i) => i !== idx))}
-												style={{ background: "#ffebee", color: "#c62828", border: "none", borderRadius: "4px", padding: "0.4rem 0.6rem", cursor: "pointer" }}
-											>
-												Remove
-											</button>
-										</div>
-									))}
-									<button
-										type="button"
-										onClick={() => setVolumeDiscounts([...volumeDiscounts, { quantity: 2, discountPercentage: 5 }])}
-										style={{ alignSelf: "flex-start", background: "#4a5c22", color: "#fff", border: "none", borderRadius: "4px", padding: "0.5rem 1rem", fontSize: "0.8rem", cursor: "pointer", marginTop: "0.5rem" }}
-									>
-										+ Add Discount Tier
-									</button>
-								</div>
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>

@@ -887,10 +887,12 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const selectedCharmCount = charmData.count;
-  const unitCharmPrice = discountedPrice || price;
-  const unitOriginalCharmPrice = originalPrice || price;
-  const totalCharmPrice = unitCharmPrice * selectedCharmCount;
-  const totalCharmOriginalPrice = unitOriginalCharmPrice * selectedCharmCount;
+  const basePrice = discountedPrice || price;
+  const baseOriginalPrice = originalPrice || price;
+  const perCharmPrice = product?.perCharmPrice ?? 0;
+  
+  const totalCharmPrice = basePrice + (perCharmPrice * selectedCharmCount);
+  const totalCharmOriginalPrice = baseOriginalPrice + (perCharmPrice * selectedCharmCount);
   const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
 
   const wished = product ? isWished(product.id) : false;
@@ -925,7 +927,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       sourceId: charm,
       name: charm,
       quantity: 1,
-      price: unitCharmPrice,
+      price: basePrice,
       images: customData.wantCustom ? customData.uploads : [],
       customText: customData.wantCustom ? customData.globalNote : undefined,
     })),
@@ -939,7 +941,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         sourceId: charm,
         name: charm,
         quantity: 1,
-        price: unitCharmPrice,
+        price: basePrice,
         images: customData.wantCustom ? customData.uploads : [],
         customText: customData.wantCustom ? customData.globalNote : undefined,
       })),
@@ -949,7 +951,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     }],
     charms: charmData.charms.filter(Boolean),
     charmCount: selectedCharmCount,
-  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, unitCharmPrice, selectedCharmCount, giftBoxAdded]);
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded]);
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
@@ -1524,7 +1526,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             </div>
             {selectedCharmCount > 0 && (
               <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
-                ₹{unitCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} pieces
+                Base ₹{basePrice.toLocaleString('en-IN')} + ₹{perCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} charms
               </p>
             )}
             {discountTag && (

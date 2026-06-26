@@ -529,7 +529,7 @@ function Sparkles({ active }: { active: boolean }) {
 }
 
 // ─── Customisation Panel ──────────────────────────────────────────────────────
-function CustomisationPanel({ category, maxCustomImages = 1, onChange }: { category: string, maxCustomImages?: number, onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
+function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels = [], onChange }: { category: string, maxCustomImages?: number, customImageLabels?: string[], onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [globalNote, setGlobalNote] = useState('');
@@ -540,7 +540,7 @@ function CustomisationPanel({ category, maxCustomImages = 1, onChange }: { categ
     if (onChange) onChange({ wantCustom, uploads: uploads.map(u => u.preview), globalNote });
   }, [wantCustom, uploads, globalNote, onChange]);
 
-  const MAX_FILES = maxCustomImages;
+  const MAX_FILES = customImageLabels.length > 0 ? customImageLabels.length : maxCustomImages;
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const valid = Array.from(files).filter((f: File) => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
@@ -586,6 +586,11 @@ function CustomisationPanel({ category, maxCustomImages = 1, onChange }: { categ
               </div>
               <p className="cust-drop-title">Upload your photos</p>
               <p className="cust-drop-sub">Drag &amp; drop here, or click to browse<br />JPG · PNG · WEBP · HEIC &nbsp;·&nbsp; Max 10 MB each</p>
+              {customImageLabels.length > 0 && (
+                <div style={{ fontSize: 12, marginTop: 8, color: 'var(--olive-600)', textAlign: 'center' }}>
+                  Required: {customImageLabels.join(', ')}
+                </div>
+              )}
               <span className="cust-drop-btn">Choose Photos</span>
             </div>
           )}
@@ -594,10 +599,15 @@ function CustomisationPanel({ category, maxCustomImages = 1, onChange }: { categ
             <div className="cust-previews">
               {uploads.map((u, i) => (
                 <div key={u.id} className="cust-preview-item" style={{ animationDelay: `${i * 0.06}s` }}>
+                  {customImageLabels[i] && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 6 }}>
+                      {customImageLabels[i]}
+                    </div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="cust-preview-img" src={u.preview} alt={`Upload ${i + 1}`} />
+                  <img className="cust-preview-img" src={u.preview} alt={customImageLabels[i] || `Upload ${i + 1}`} />
                   <button className="cust-preview-remove" onClick={() => removeUpload(u.id)} aria-label="Remove">×</button>
-                  <textarea className="cust-preview-note" rows={2} placeholder="Note for this photo…" value={u.note} onChange={e => updateNote(u.id, e.target.value)} />
+                  <textarea className="cust-preview-note" rows={2} placeholder={customImageLabels[i] ? `Note for ${customImageLabels[i]}...` : "Note for this photo…"} value={u.note} onChange={e => updateNote(u.id, e.target.value)} />
                 </div>
               ))}
             </div>
@@ -1495,7 +1505,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                     Make it Yours — Customise this {category}
                   </div>
                   <p className="pdp-cust-banner-sub">This {category.toLowerCase()} can be personalised with your own photos, names, or a special message.</p>
-                  <CustomisationPanel category={category} maxCustomImages={product.maxCustomImages || 1} onChange={setCustomData} />
+                  <CustomisationPanel category={category} maxCustomImages={product.maxCustomImages || 1} customImageLabels={product.customImageLabels} onChange={setCustomData} />
                 </div>
                 <div className="pdp-divider" />
               </>

@@ -42,6 +42,8 @@ interface ProductCardProduct {
   rating?: number;
   reviewCount?: number;
   type?: string;
+  perCharmPrice?: number;
+  charmPieceOptions?: number[];
 }
 
 export default function ProductCard({
@@ -55,7 +57,7 @@ export default function ProductCard({
   className?: string;
   productLinkBase?: string;
 } ){
-  const { name, price, originalPrice, badge, images, colors, href = '#' } = product;
+  const { name, price, originalPrice, badge, images, colors, href = '#', perCharmPrice, charmPieceOptions } = product;
 
   const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
@@ -472,7 +474,13 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
 <div className="pc-info">
   <p className="pc-name">{name}</p>
   <div className="pc-price-row">
-    <span className="pc-price">₹{price.toLocaleString('en-IN')}</span>
+    <span className="pc-price">
+      {perCharmPrice && perCharmPrice > 0 ? (
+        `From ₹${(price + (charmPieceOptions?.[0] ?? 1) * perCharmPrice).toLocaleString('en-IN')}`
+      ) : (
+        `₹${price.toLocaleString('en-IN')}`
+      )}
+    </span>
     {originalPrice && (
       <span className="pc-original">
         ₹{originalPrice.toLocaleString('en-IN')}

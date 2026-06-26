@@ -51,6 +51,7 @@ export interface CatalogProduct {
   discountTag?: string | null;
   allowCustomization?: boolean;
   maxCustomImages?: number;
+  customImageLabels?: string[];
   maxQuantity?: number;
   volumeDiscounts?: { quantity: number; discountPercentage: number }[];
   originalPrice: number | null;
@@ -92,6 +93,7 @@ export interface CatalogProduct {
   quantityVariants?: { label: string; quantity: number; price: number }[];
   charmPieceOptions?: number[];
   totalCharms?: number;
+  perCharmPrice?: number;
   /** Per-product size chart image URL (Cloudinary). Null = use default static fallback. */
   sizeChartImage?: string | null;
   /** Steps to measure for the size chart */
@@ -157,6 +159,7 @@ interface BackendProduct {
   productLabel?: string;
   allowCustomization?: boolean;
   maxCustomImages?: number;
+  customImageLabels?: string[];
   rating?: number;
   images?: string[];
   mainImage?: string;
@@ -183,6 +186,7 @@ interface BackendProduct {
   reviews?: BackendReview[];
   charmPieceOptions?: number[];
   totalCharms?: number;
+  perCharmPrice?: number;
   sizeChartImage?: string | null;
   sizeChartSteps?: string;
   giftBox?: {
@@ -385,6 +389,7 @@ function normalizeProduct(
     discountTag: item.discountTag || null,
     allowCustomization: item.allowCustomization === true,
     maxCustomImages: item.maxCustomImages,
+    customImageLabels: Array.isArray(item.customImageLabels) ? item.customImageLabels : [],
     originalPrice,
     rating,
     reviewCount,
@@ -421,6 +426,7 @@ function normalizeProduct(
     seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
     charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
     totalCharms: Number(item.totalCharms ?? 0),
+    perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,
     sizeChartSteps: item.sizeChartSteps || "",
     giftBox: item.giftBox

@@ -61,9 +61,11 @@ const orderSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "partial_paid", "failed"],
+      enum: ["pending", "paid", "partial_paid", "failed", "refunded"],
       default: "pending",
     },
+    phonePeOrderId: String,          // PhonePe merchantOrderId
+    phonePeTransactionId: String,    // PhonePe transactionId returned after payment
     deliveryCharge: Number,
     deliveryType: { type: String, enum: ["standard", "express"], default: "standard" },
     discountAmount: { type: Number, default: 0 },

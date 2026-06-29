@@ -5,6 +5,7 @@ const variantSchema = new mongoose.Schema(
     color: { type: String }, // e.g. "Red"
     size: { type: String },  // e.g. "S", "M", "L", "XL"
     price: { type: Number }, // Variant-specific price
+    salePrice: { type: Number }, // Variant-specific sale price
     image: { type: String }, // Cloudinary URL for this variant's image
     imagePublicId: { type: String },
     stock: { type: Number, default: 0 },

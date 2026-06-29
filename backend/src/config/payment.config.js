@@ -1,39 +1,22 @@
-import crypto from "crypto";
-import Razorpay from "razorpay";
+import { StandardCheckoutClient, Env } from "@phonepe-pg/pg-sdk-node";
 
-const hasRazorpayCredentials = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET;
+const clientId = process.env.PHONEPE_CLIENT_ID;
+const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+const clientVersion = Number(process.env.PHONEPE_CLIENT_VERSION || 1);
 
-// Initialize Razorpay only when credentials are available so app startup does not fail in local/dev environments.
-export const razorpay = hasRazorpayCredentials
-	? new Razorpay({
-		key_id: process.env.RAZORPAY_KEY_ID,
-		key_secret: process.env.RAZORPAY_KEY_SECRET,
-	})
-	: null;
+const hasPhonePeCredentials = clientId && clientSecret;
 
-export const createRazorpayOrder = async (amount, currency = "INR") => {
+// Initialize PhonePe client only when credentials are available so app startup
+// does not fail in local/dev environments.
+let phonePeClient = null;
+if (hasPhonePeCredentials) {
 	try {
-		if (!razorpay) {
-			throw new Error("Razorpay credentials are not configured");
-		}
-
-		const order = await razorpay.orders.create({
-			amount: Math.round(amount * 100), // Convert to paise
-			currency,
-			receipt: `receipt_${Date.now()}`,
-		});
-		return order;
-	} catch (error) {
-		throw new Error(`Razorpay order creation failed: ${error.message}`);
+		const env = process.env.NODE_ENV === "production" ? Env.PRODUCTION : Env.SANDBOX;
+		phonePeClient = StandardCheckoutClient.getInstance(clientId, clientSecret, clientVersion, env);
+	} catch (err) {
+		// Singleton may already be instantiated (hot-reload scenarios)
+		console.warn("PhonePe client init warning:", err.message);
 	}
-};
+}
 
-export const verifyRazorpaySignature = (orderId, paymentId, signature, secret = process.env.RAZORPAY_KEY_SECRET) => {
-	if (!secret) {
-		throw new Error("Razorpay credentials are not configured");
-	}
-
-	const body = orderId + "|" + paymentId;
-	const expectedSignature = crypto.createHmac("sha256", secret).update(body).digest("hex");
-	return expectedSignature === signature;
-};
+export { phonePeClient };

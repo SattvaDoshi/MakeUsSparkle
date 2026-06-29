@@ -430,12 +430,11 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
 
           <div className="pc-overlay" />
 
-          {badge && !discount && (
+          {badge && (
             <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
               {badge}
             </span>
           )}
-          {discount && <span className="pc-discount">−{discount}%</span>}
 
           <button
             className={`pc-wish${wished ? ' active' : ''}${wishAnim ? ' anim' : ''}`}

@@ -209,28 +209,28 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         setScopedProducts(products);
         const scoped = products;
-        const tagMap = new Map<string, { count: number; img: string }>();
+        const tagMap = new Map<string, { originalName: string; count: number; img: string }>();
 
         scoped.forEach((product) => {
-          const tags = product.tags.length > 0 ? product.tags : [product.name];
+          const tags = product.tags || [];
           tags.slice(0, 2).forEach((tag) => {
-            const key = tag.trim();
-            if (!key) {
-              return;
-            }
+            const rawKey = tag.trim();
+            if (!rawKey) return;
+            const key = rawKey.toLowerCase();
             const prev = tagMap.get(key);
             tagMap.set(key, {
+              originalName: prev?.originalName || rawKey,
               count: (prev?.count || 0) + 1,
               img: prev?.img || product.mainImage || product.images[0],
             });
           });
         });
 
-        const items = Array.from(tagMap.entries())
-          .sort((a, b) => b[1].count - a[1].count)
+        const items = Array.from(tagMap.values())
+          .sort((a, b) => b.count - a.count)
           .slice(0, 6)
-          .map(([name, info]) => ({
-            name: name.replace(/\b\w/g, (char) => char.toUpperCase()),
+          .map((info) => ({
+            name: info.originalName.replace(/\b\w/g, (char) => char.toUpperCase()),
             sub: `${info.count} pieces`,
             tag: 'Live',
             img: info.img,

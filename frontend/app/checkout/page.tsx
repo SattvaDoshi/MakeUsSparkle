@@ -9,7 +9,7 @@ import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
 
 const PAYMENT_METHODS = [
-  { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via Razorpay', badge: 'Recommended' },
+  { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via PhonePe', badge: 'Recommended' },
   { id: 'PARTIAL_COD', label: 'Partial COD (20% Advance)', sub: 'Pay 20% advance online, pay balance on delivery · +₹80 convenience fee', badge: null },
   { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives · +₹80 convenience fee', badge: null },
 ];
@@ -88,13 +88,7 @@ export default function CheckoutPage() {
   if (selectedMethod === 'PARTIAL_COD') amountToPayNow = Math.round(finalTotal * 0.20);
   else if (selectedMethod === 'COD') amountToPayNow = 0;
 
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
+  // PhonePe uses a redirect flow — no external script needed
 
   const handleDeliveryTypeChange = (id: 'standard' | 'express') => {
     if (id === 'express') {
@@ -201,26 +195,11 @@ export default function CheckoutPage() {
         rewardPointsRedeemed,
       };
       if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
-        const rzpOrder = await apiRequest<{ success: boolean; orderId: string; razorpayOrderId: string; amount: number; currency: string }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_RmCmc4bECn3PRU',
-          amount: rzpOrder.amount * 100, currency: rzpOrder.currency, name: 'MakeUsSparkle',
-          description: 'Order Payment', order_id: rzpOrder.razorpayOrderId,
-          handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
-            try {
-              setLoading(true);
-              await apiRequest('/payment/verify', { method: 'POST', body: JSON.stringify({ orderId: rzpOrder.orderId, razorpayOrderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature, paymentMode: selectedMethod }) });
-              clearCart(); setOrderPlaced(true);
-            } catch (err) { console.error('Verification failed:', err); alert('Payment verification failed. Please contact support.'); }
-            finally { setLoading(false); }
-          },
-          prefill: { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
-          theme: { color: '#2d5a27' },
-        };
-        const razorpayClass = (window as unknown as { Razorpay: new (opts: object) => { on: (e: string, h: (r: { error: { description: string } }) => void) => void; open: () => void } }).Razorpay;
-        const rzp = new razorpayClass(options);
-        rzp.on('payment.failed', function (response: { error: { description: string } }) { console.error(response.error); alert('Payment failed: ' + response.error.description); setLoading(false); });
-        rzp.open();
+        const ppOrder = await apiRequest<{ success: boolean; orderId: string; merchantOrderId: string; redirectUrl: string; amount: number }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
+        // Store pending payment info in sessionStorage so the status page can verify after redirect
+        sessionStorage.setItem('pendingPayment', JSON.stringify({ orderId: ppOrder.orderId, merchantOrderId: ppOrder.merchantOrderId, paymentMode: selectedMethod }));
+        // Redirect user to PhonePe checkout page
+        window.location.href = ppOrder.redirectUrl;
       } else {
         await apiRequest('/orders/create', { method: 'POST', body: JSON.stringify(orderPayload) });
         clearCart(); setOrderPlaced(true);
@@ -618,7 +597,7 @@ export default function CheckoutPage() {
               <p className="ck-popup-avail-title">Available payment methods</p>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />
-                Online Payment — Pay in full via Razorpay
+                Online Payment — Pay in full via PhonePe
               </div>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />
@@ -772,7 +751,7 @@ export default function CheckoutPage() {
                       </div>
                       {isActive && method.id === 'PARTIAL_COD' && (
                         <div className="ck-cod-note">
-                          Pay <strong>₹{Math.round(finalTotal * 0.20).toLocaleString('en-IN')} now</strong> via Razorpay (20% required upfront). Balance of <strong>₹{(finalTotal - Math.round(finalTotal * 0.20)).toLocaleString('en-IN')}</strong> collected on delivery.
+                          Pay <strong>₹{Math.round(finalTotal * 0.20).toLocaleString('en-IN')} now</strong> via PhonePe (20% required upfront). Balance of <strong>₹{(finalTotal - Math.round(finalTotal * 0.20)).toLocaleString('en-IN')}</strong> collected on delivery.
                         </div>
                       )}
                       {isActive && method.id === 'COD' && (
@@ -986,7 +965,7 @@ export default function CheckoutPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                100% Secure &amp; Encrypted Payment via Razorpay
+                100% Secure &amp; Encrypted Payment via PhonePe
               </div>
             </div>
 

@@ -84,6 +84,7 @@ export interface CatalogProduct {
     size: string;
     stock: number;
     price?: number;
+    salePrice?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -170,6 +171,7 @@ interface BackendProduct {
     size?: string;
     stock?: number;
     price?: number;
+    salePrice?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -334,6 +336,7 @@ function normalizeProduct(
           size: variant.size || "",
           stock: Number(variant.stock ?? 0),
           price: variant.price !== undefined && variant.price !== null ? Number(variant.price) : undefined,
+          salePrice: variant.salePrice !== undefined && variant.salePrice !== null ? Number(variant.salePrice) : undefined,
           image: variant.image,
           imagePublicId: variant.imagePublicId,
         }))

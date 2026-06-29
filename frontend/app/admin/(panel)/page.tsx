@@ -516,6 +516,23 @@ export default function AdminDashboardPage() {
 	const [modalKind, setModalKind] = useState<ModalKind>(null);
 	const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
 
+	const [modalProductFilterCat, setModalProductFilterCat] = useState<string>("");
+	const [modalProductFilterSubcat, setModalProductFilterSubcat] = useState<string>("");
+
+	const filteredModalProducts = useMemo(() => {
+		return products.filter((p) => {
+			if (modalProductFilterCat) {
+				const pCat = typeof p.category === 'object' ? p.category?._id : p.category;
+				if (pCat !== modalProductFilterCat) return false;
+			}
+			if (modalProductFilterSubcat) {
+				const pSubCat = typeof p.subCategory === 'object' ? p.subCategory?._id : p.subCategory;
+				if (pSubCat !== modalProductFilterSubcat) return false;
+			}
+			return true;
+		});
+	}, [products, modalProductFilterCat, modalProductFilterSubcat]);
+
 	const [editingReview, setEditingReview] = useState<{ productId: string; reviewId: string; rating: string; comment: string } | null>(null);
 
 	const totalManagedItems = useMemo(
@@ -666,8 +683,13 @@ export default function AdminDashboardPage() {
 			if (tab === "orders") await loadOrders();
 			if (tab === "payments") await loadPayments();
 			if (tab === "coupons") {
-				await loadCoupons();
-				await loadOffers();
+				await Promise.all([
+					loadCoupons(), 
+					loadOffers(),
+					loadProducts(),
+					loadCategories(),
+					loadSubCategories()
+				]);
 			}
 			if (tab === "banners") await Promise.all([loadBanners(), loadMainBanners(), loadHomeContent()]);
 			if (tab === "reviews") await loadReviews();
@@ -1560,8 +1582,36 @@ export default function AdminDashboardPage() {
 
 							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
 								<label>Applicable Products</label>
+								<div className="admin-form-row" style={{ marginBottom: "1rem" }}>
+									<select 
+										value={modalProductFilterCat} 
+										onChange={(e) => {
+											setModalProductFilterCat(e.target.value);
+											setModalProductFilterSubcat("");
+										}}
+										style={{ flex: 1 }}
+									>
+										<option value="">All Categories</option>
+										{categories.map((c) => (
+											<option key={c._id} value={c._id}>{c.name}</option>
+										))}
+									</select>
+									<select 
+										value={modalProductFilterSubcat} 
+										onChange={(e) => setModalProductFilterSubcat(e.target.value)}
+										disabled={!modalProductFilterCat}
+										style={{ flex: 1 }}
+									>
+										<option value="">All Sub-Categories</option>
+										{subcategories
+											.filter(sc => typeof sc.category === 'object' ? sc.category?._id === modalProductFilterCat : sc.category === modalProductFilterCat)
+											.map((sc) => (
+											<option key={sc._id} value={sc._id}>{sc.name}</option>
+										))}
+									</select>
+								</div>
 								<div className="admin-checkbox-list">
-									{products.map((prod) => (
+									{filteredModalProducts.map((prod) => (
 										<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
 											<input 
 												type="checkbox" 
@@ -1571,7 +1621,7 @@ export default function AdminDashboardPage() {
 											{prod.title}
 										</label>
 									))}
-									{products.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
+									{filteredModalProducts.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
 								</div>
 							</div>
 
@@ -1696,8 +1746,36 @@ export default function AdminDashboardPage() {
 
 							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
 								<label>Applicable Products</label>
+								<div className="admin-form-row" style={{ marginBottom: "1rem" }}>
+									<select 
+										value={modalProductFilterCat} 
+										onChange={(e) => {
+											setModalProductFilterCat(e.target.value);
+											setModalProductFilterSubcat("");
+										}}
+										style={{ flex: 1 }}
+									>
+										<option value="">All Categories</option>
+										{categories.map((c) => (
+											<option key={c._id} value={c._id}>{c.name}</option>
+										))}
+									</select>
+									<select 
+										value={modalProductFilterSubcat} 
+										onChange={(e) => setModalProductFilterSubcat(e.target.value)}
+										disabled={!modalProductFilterCat}
+										style={{ flex: 1 }}
+									>
+										<option value="">All Sub-Categories</option>
+										{subcategories
+											.filter(sc => typeof sc.category === 'object' ? sc.category?._id === modalProductFilterCat : sc.category === modalProductFilterCat)
+											.map((sc) => (
+											<option key={sc._id} value={sc._id}>{sc.name}</option>
+										))}
+									</select>
+								</div>
 								<div className="admin-checkbox-list">
-									{products.map((prod) => (
+									{filteredModalProducts.map((prod) => (
 										<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
 											<input 
 												type="checkbox" 
@@ -1707,7 +1785,7 @@ export default function AdminDashboardPage() {
 											{prod.title}
 										</label>
 									))}
-									{products.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
+									{filteredModalProducts.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
 								</div>
 							</div>
 

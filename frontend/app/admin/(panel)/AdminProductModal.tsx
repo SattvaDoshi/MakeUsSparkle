@@ -20,6 +20,7 @@ type Variant = {
 	color: string;
 	size: string;
 	price?: number | string;
+	salePrice?: number | string;
 	stock: number;
 	existingImage?: string;
 	existingImagePublicId?: string;
@@ -168,6 +169,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				color: v.color || "",
 				size: v.size || "",
 				price: v.price || "",
+				salePrice: v.salePrice || "",
 				stock: v.stock || 0,
 				existingImage: v.image,
 				existingImagePublicId: v.imagePublicId,
@@ -284,7 +286,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		const newIndex = Math.max(...variants.map((v) => v.variantIndex), -1) + 1;
 		setVariants((prev) => [
 			...prev,
-			{ variantIndex: newIndex, color: "", size: "", price: "", stock: 0 },
+			{ variantIndex: newIndex, color: "", size: "", price: "", salePrice: "", stock: 0 },
 		]);
 	};
 
@@ -394,6 +396,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				color: v.color,
 				size: v.size,
 				price: v.price,
+				salePrice: v.salePrice,
 				stock: v.stock,
 				existingImage: v.existingImage,
 				existingImagePublicId: v.existingImagePublicId,
@@ -1538,7 +1541,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 						{/* Step 3: Colors & Sizes */}
 						{step === 3 && (
-							<div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1.5rem", alignItems: "start" }}>
+							<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "start" }}>
 								{/* Colors Section */}
 								<div style={{ display: "grid", gap: "0.9rem", alignContent: "start", background: "#f9f9f7", border: "1px solid #e2e2d8", borderRadius: "8px", padding: "1rem" }}>
 									<h4 style={{ margin: 0, fontSize: "1rem", color: "#3d4a20", fontWeight: 600 }}>
@@ -1835,6 +1838,26 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															type="number"
 															value={variant.price}
 															onChange={(e) => updateVariant(idx, "price", e.target.value)}
+															placeholder="Optional"
+															style={{
+																padding: "0.6rem",
+																border: "1px solid #d4d4c8",
+																borderRadius: "4px",
+																fontSize: "0.9rem",
+																width: "100%",
+																boxSizing: "border-box",
+															}}
+														/>
+													</div>
+
+													<div style={{ display: "grid", gap: "0.4rem" }}>
+														<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
+															Sale Price (INR)
+														</label>
+														<input
+															type="number"
+															value={variant.salePrice || ""}
+															onChange={(e) => updateVariant(idx, "salePrice", e.target.value)}
 															placeholder="Optional"
 															style={{
 																padding: "0.6rem",

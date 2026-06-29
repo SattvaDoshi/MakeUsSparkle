@@ -752,7 +752,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }, [product?.sourceId, numberOfProducts]);
 
   const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
-    const cLabel = normalizeText(normalizedColors[colorIndex]?.label || '');
+    const safeIndex = colorIndex === -1 ? 0 : colorIndex;
+    const cLabel = normalizeText(normalizedColors[safeIndex]?.label || '');
     const sLabel = normalizeText(size);
     return variants.find((v) => normalizeText(v.color) === cLabel && normalizeText(v.size) === sLabel)
       || variants.find((v) => normalizeText(v.color) === cLabel)
@@ -762,8 +763,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const currentColor = normalizedColors[selections[0]?.colorIndex || 0] || normalizedColors[0];
   const matchingVariant = selections.length > 0 ? getVariantForSelection(selections[0].colorIndex, selections[0].size) : undefined;
 
-  const currentImages = dedupeImages([matchingVariant?.image, mainImage, ...images]).filter(Boolean) as string[];
-  const displayImg = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
+  const variantOrColorImage = matchingVariant?.image || currentColor?.image;
+  const currentImages = dedupeImages([variantOrColorImage, mainImage, ...images]).filter(Boolean) as string[];
+  const displayImg = currentImages?.[activeImg] || variantOrColorImage || mainImage || FALLBACK_PRODUCT_IMAGE;
 
   let volumeDiscountPct = 0;
   if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
@@ -775,18 +777,35 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }
 
   let computedPrice = discountedPrice || price;
-  let computedOriginalPrice = originalPrice || price;
-  
+  let computedOriginalPrice: number = (originalPrice || price) ?? price;
+
   if (currentQuantityVariant) {
     computedPrice = currentQuantityVariant.price;
-    computedOriginalPrice = currentQuantityVariant.price; // or we can adjust logic if quantity variant has originalPrice
+    computedOriginalPrice = currentQuantityVariant.price;
+  } else if (matchingVariant) {
+    if (matchingVariant.salePrice && matchingVariant.price) {
+      // Variant has both MRP (price) and sale price — use both
+      computedPrice = matchingVariant.salePrice * (1 - volumeDiscountPct / 100);
+      computedOriginalPrice = matchingVariant.price;
+    } else if (matchingVariant.salePrice) {
+      computedPrice = matchingVariant.salePrice * (1 - volumeDiscountPct / 100);
+      computedOriginalPrice = originalPrice || price;
+    } else if (matchingVariant.price) {
+      // Only MRP, no sale price — show it as the current price with no strikethrough
+      computedPrice = matchingVariant.price * (1 - volumeDiscountPct / 100);
+      computedOriginalPrice = matchingVariant.price; // same → no strikethrough shown
+    } else {
+      computedPrice = (discountedPrice || price) * (1 - volumeDiscountPct / 100);
+    }
   } else if (selections.length > 0) {
     computedPrice = (discountedPrice || price) * (1 - volumeDiscountPct / 100);
   }
 
+  // Recalculate discount % dynamically from computedPrice vs computedOriginalPrice
   let discount = 0;
-  if (!currentQuantityVariant && discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
-  else if (!currentQuantityVariant && originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  if (!currentQuantityVariant && computedOriginalPrice > computedPrice) {
+    discount = Math.round(((computedOriginalPrice - computedPrice) / computedOriginalPrice) * 100);
+  }
 
   const currentStock = selections.length > 0
     ? selections.reduce((min, sel) => {
@@ -796,8 +815,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     : stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
-  const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
-  const deliveryCharge = shipping === 'express' ? 110 : ((discountedPrice || price) >= 999 ? 0 : 60);
+  const totalWithGiftBox = computedPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
+  const deliveryCharge = shipping === 'express' ? 110 : (computedPrice >= 999 ? 0 : 60);
   const codCharge = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
   const wished = product ? isWished(product.id) : false;
@@ -813,10 +832,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const buildCartItem = useCallback(() => {
     if (!product) return null;
-    const basePrice = discountedPrice || price;
     return {
-      id: String(product.sourceId), name: product.name || '', price: basePrice + (giftBoxAdded ? 99 : 0),
-      originalPrice: price, image: displayImg, color: currentColor?.label || '',
+      id: String(product.sourceId), name: product.name || '', price: computedPrice + (giftBoxAdded ? (product.giftBox?.price ?? 99) : 0),
+      originalPrice: computedOriginalPrice, image: displayImg, color: currentColor?.label || '',
       colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
       href: product.href || `/products/${product.sourceId}`,
       sourceId: String(product.sourceId),
@@ -890,7 +908,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       itemsToCart.push(cartItem);
     }
     return itemsToCart;
-  }, [product, discountedPrice, price, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
+  }, [product, computedPrice, computedOriginalPrice, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
 
   const isSelectionComplete = selections.length > 0 && selections.every(sel =>
     (normalizedColors.length === 0 || sel.colorIndex !== -1) && 
@@ -1389,11 +1407,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             <div className="pdp-info-top">
               <div className="pdp-price-row">
-                <span className="pdp-price">₹{computedPrice.toLocaleString('en-IN')}</span>
-                {(originalPrice || price) && (discountedPrice || originalPrice) && (
+                <span className="pdp-price">₹{Math.round(computedPrice).toLocaleString('en-IN')}</span>
+                {computedOriginalPrice > computedPrice && (
                   <>
-                    <span className="pdp-original">₹{(originalPrice || price).toLocaleString('en-IN')}</span>
-                    <span className="pdp-discount">{discount}% off</span>
+                    <span className="pdp-original">₹{Math.round(computedOriginalPrice).toLocaleString('en-IN')}</span>
+                    {discount > 0 && <span className="pdp-discount">{discount}% off</span>}
                   </>
                 )}
               </div>

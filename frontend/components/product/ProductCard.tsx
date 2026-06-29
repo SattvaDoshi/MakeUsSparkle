@@ -373,8 +373,8 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
             padding: 8px 10px 10px;
             gap: 3px;
           }
-          .pc-name    { font-size: 11px; }
-          .pc-price   { font-size: 11px; }
+          .pc-name    { font-size: 13px; }
+          .pc-price   { font-size: 12px; }
           .pc-original { font-size: 8px; }
           .pc-saving  { font-size: 8px; }
           .pc-badge, .pc-discount {

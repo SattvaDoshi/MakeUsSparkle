@@ -127,7 +127,7 @@ export default function Hero() {
           top: 0;
           z-index: 100;
           border-bottom: 1px solid #e8e8e8;
-          margin-top: 50px;
+          // margin-top: 50px;
           box-sizing: border-box;
         }
 

@@ -613,7 +613,7 @@ function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels =
             </div>
           )}
           <div className="cust-info-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: '#101010', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <p>Our team reviews your photos within <strong>2 business hours</strong> and confirms the design before production. Customised items are <strong>non-returnable</strong> unless damaged or incorrect.</p>
           </div>
         </div>
@@ -1182,15 +1182,15 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         .pdp-cust-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(90,110,35,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}
         .pdp-cust-banner-head{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:6px}
         .pdp-cust-banner-head svg{width:16px;height:16px;color:var(--gold)}
-        .pdp-cust-banner-sub{font-size:11px;font-weight:300;color:var(--mist);line-height:1.7;letter-spacing:.03em;margin-bottom:14px}
+        .pdp-cust-banner-sub{font-size:12px;font-weight:400;color:#101010;line-height:1.7;letter-spacing:.03em;margin-bottom:14px}
         .cust-toggle-btn{flex:1;padding:11px 10px;border:1.5px solid var(--beige-dkr);border-radius:12px;background:white;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:7px}
         .cust-toggle-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
         .cust-toggle-btn.yes.sel{border-color:var(--gold);background:rgba(201,168,76,.08);color:#8c6b20;box-shadow:0 0 0 3px rgba(201,168,76,.12)}
         .cust-toggle-btn.no.sel{border-color:var(--beige-dkr);background:var(--beige-dk);color:var(--mist)}
         .cust-info-chip{display:flex;align-items:flex-start;gap:8px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.22);border-radius:10px;padding:10px 14px}
-        .cust-info-chip p{font-size:10.5px;font-weight:300;color:var(--mist);line-height:1.7;letter-spacing:.03em}
+        .cust-info-chip p{font-size:10.5px;font-weight:400;color:#101010;line-height:1.7;letter-spacing:.03em}
         .cust-info-chip p strong{font-weight:600;color:var(--olive-600)}
-        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:var(--ink);background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
+        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:#101010;background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
         .cust-note-global:focus{border-color:var(--olive-400)}
         .cust-note-global::placeholder{color:rgba(30,35,16,.3)}
         .cust-drop{border:2px dashed var(--beige-dkr);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .22s,background .22s;background:white;position:relative}
@@ -1335,7 +1335,27 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             <div className="pdp-main-img-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img key={displayImg} className="pdp-main-img" src={displayImg} alt={productName} />
-              <span className="pdp-badge">Best Seller</span>
+              {currentStock === 0 && (
+  <div style={{
+    position: 'absolute', inset: 0,
+    background: 'rgba(245,240,232,0.55)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    backdropFilter: 'blur(1px)',
+    zIndex: 2,
+  }}>
+    <span style={{
+      fontSize: 13, fontWeight: 700, letterSpacing: '.22em',
+      textTransform: 'uppercase', color: 'var(--beige)',
+      background: 'rgba(30,35,16,0.75)', padding: '10px 24px',
+      borderRadius: 50,
+    }}>
+      Sold Out
+    </span>
+  </div>
+)}
+              <span className="pdp-badge">
+  {currentStock === 0 ? 'Sold Out' : 'Best Seller'}
+</span>
               {!isFromCombo && (
                 <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
@@ -1429,9 +1449,13 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                     <span className="pdp-qty-val">{qty}</span>
                     <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(product?.maxQuantity || stock, q + 1))}>+</button>
                   </div>
-                  <span className="pdp-stock">
-                    {product?.maxQuantity ? `Limit: ${product.maxQuantity} per order` : `Only ${currentStock} left in stock!`}
-                  </span>
+                 <span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
+  {currentStock === 0
+    ? '❌ Out of Stock'
+    : product?.maxQuantity
+      ? `Limit: ${product.maxQuantity} per order`
+      : `Only ${currentStock} left in stock!`}
+</span>
                 </div>
                 <div className="pdp-divider" />
               </>
@@ -1487,14 +1511,22 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               );
             })}
             {description && <p className="pdp-desc">{description}</p>}
-
-            {tags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                {tags.map((tag: string) => (
-                  <span key={tag} style={{ fontSize: 10, fontWeight: 500, letterSpacing: '.08em', textTransform: 'lowercase', color: 'var(--olive-600)', background: 'var(--olive-50)', border: '1px solid rgba(61,74,34,.12)', padding: '3px 10px', borderRadius: 50 }}>#{tag}</span>
-                ))}
-              </div>
-            )}
+{tags.length > 0 && (
+  <div
+    aria-hidden="true"
+    style={{
+      position: 'absolute',
+      width: 1, height: 1,
+      overflow: 'hidden',
+      opacity: 0,
+      pointerEvents: 'none',
+    }}
+  >
+    {tags.map((tag: string) => (
+      <span key={tag}>#{tag}</span>
+    ))}
+  </div>
+)}
             <div className="pdp-divider" />
 
             {allowCustomization && (
@@ -1569,15 +1601,19 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   {wished ? 'Wished' : 'Wishlist'}
                 </button>
                 <div className="pdp-btn-cart-wrap">
-                  <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart}>
+                  <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={currentStock === 0}
+  style={{ opacity: currentStock === 0 ? 0.5 : 1, cursor: currentStock === 0 ? 'not-allowed' : 'pointer' }}
+>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-                    {cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
+  {currentStock === 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                   </button>
                   <Sparkles active={sparkleAnim} />
                 </div>
-                <button className="pdp-btn-buy" onClick={handleBuyNow}>
+                <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={currentStock === 0}
+  style={{ opacity: currentStock === 0 ? 0.5 : 1, cursor: currentStock === 0 ? 'not-allowed' : 'pointer' }}
+>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-                  Buy It Now
+  {currentStock === 0 ? 'Currently Unavailable' : 'Buy It Now'}
                 </button>
               </div>
             )}

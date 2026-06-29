@@ -30,13 +30,20 @@ export default function BannerSection() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
-
+const [marqueeItems, setMarqueeItems] = useState<string[]>([
+  '✦ Free Shipping above ₹999',
+  '✦ Custom Jewellery',
+  '✦ Free Gifts on all Orders',
+]);
   useEffect(() => {
     async function fetchBanners() {
       try {
         const data = await apiRequest<{ success: boolean; homeContent: any }>('/home-content');
         if (data.success && data.homeContent?.promoBanners) {
           const promoBanners = data.homeContent.promoBanners;
+          if (data.homeContent?.marqueeItems?.length > 0) {
+  setMarqueeItems(data.homeContent.marqueeItems);
+}
           const formattedBanners: Banner[] = promoBanners.map((b: any, index: number) => ({
               id: b._id || String(index),
               tag: b.tag || '',
@@ -431,6 +438,33 @@ export default function BannerSection() {
             height: clamp(280px, 46vw, 420px);
           }
         }
+          .bs-marquee-wrap {
+  width: 100%;
+  overflow: hidden;
+  background: #1e2710;
+  padding: 0.35rem 0;
+  margin-top: clamp(1.5rem, 3vw, 2.5rem);
+}
+.bs-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: bsMarquee 28s linear infinite;
+}
+.bs-marquee-track:hover { animation-play-state: paused; }
+@keyframes bsMarquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.bs-marquee-item {
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f5e6b8;
+  padding: 0 2.5rem;
+  white-space: nowrap;
+  opacity: 0.85;
+}
       `}</style>
 
       <section ref={sectionRef} className="bs-section">
@@ -529,7 +563,16 @@ export default function BannerSection() {
             </button>
           </div>
         </div>
-
+{/* ── Marquee ── */}
+<div className="bs-marquee-wrap">
+  <div className="bs-marquee-track">
+    {Array.from({ length: 4 }).flatMap((_, i) =>
+      marqueeItems.map((t) => (
+        <span key={`${i}-${t}`} className="bs-marquee-item">{t}</span>
+      ))
+    )}
+  </div>
+</div>
       </section>
     </>
   );

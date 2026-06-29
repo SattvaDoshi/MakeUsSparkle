@@ -220,8 +220,7 @@ export default function OffersSection() {
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [copied, setCopied] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>(FALLBACK_OFFERS);
-  const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('coupons');
-
+const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
   useEffect(() => {
     let ignore = false;
     const loadOffers = async () => {
@@ -301,20 +300,21 @@ export default function OffersSection() {
         {/* Toggle Switcher */}
         <div className="os-toggle-container">
           <div className="os-toggle-wrapper">
-            <button
-              className={`os-toggle-btn ${activeTab === 'coupons' ? 'active' : ''}`}
-              onClick={() => setActiveTab('coupons')}
-            >
-              <span className="os-toggle-icon">🎫</span>
-              <span className="os-toggle-text">Promo Coupons ({couponCount})</span>
-            </button>
-            <button
-              className={`os-toggle-btn ${activeTab === 'offers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('offers')}
-            >
-              <span className="os-toggle-icon">✨</span>
-              <span className="os-toggle-text">Store Offers ({offerCount})</span>
-            </button>
+       <button
+  className={`os-toggle-btn ${activeTab === 'offers' ? 'active' : ''}`}
+  onClick={() => setActiveTab('offers')}
+>
+  <span className="os-toggle-icon">✨</span>
+  <span className="os-toggle-text">Store Offers ({offerCount})</span>
+</button>
+
+<button
+  className={`os-toggle-btn ${activeTab === 'coupons' ? 'active' : ''}`}
+  onClick={() => setActiveTab('coupons')}
+>
+  <span className="os-toggle-icon">🎫</span>
+  <span className="os-toggle-text">Promo Coupons ({couponCount})</span>
+</button>
             <div className={`os-toggle-slider ${activeTab}`} />
           </div>
         </div>
@@ -498,7 +498,7 @@ const CSS = `
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 10px rgba(37,61,24,0.3);
 }
-.os-toggle-slider.offers {
+.os-toggle-slider.coupons {
   transform: translateX(100%);
 }
 .os-toggle-icon {

@@ -45,116 +45,6 @@ type PublicOffersResponse = {
   offers: ApiOffer[];
 };
 
-const FALLBACK_OFFERS: Offer[] = [
-  {
-    id: '1',
-    code: 'SPARK20',
-    title: '20% off on Jewellery',
-    description: 'Valid on all jewellery orders above INR 999',
-    discount: '20',
-    discountType: 'percent',
-    minOrder: 999,
-    expiry: '30 Apr 2027',
-    category: 'jewellery',
-    isNew: true,
-    imageSrc: '/images/hero.png',
-    isCoupon: true,
-  },
-  {
-    id: '2',
-    code: 'COMBO150',
-    title: 'INR 150 off on Curated Combos',
-    description: 'Mix and match your favourite pieces',
-    discount: '150',
-    discountType: 'flat',
-    minOrder: 1499,
-    expiry: '15 May 2027',
-    category: 'combo',
-    imageSrc: '/images/hero1.png',
-    isCoupon: true,
-  },
-  {
-    id: '3',
-    code: 'GIFT10',
-    title: '10% off on Gift Boxes',
-    description: 'Surprise someone special today',
-    discount: '10',
-    discountType: 'percent',
-    minOrder: 599,
-    expiry: '31 May 2027',
-    category: 'gift',
-    imageSrc: '/images/FairyCoded.jpg',
-    isCoupon: true,
-  },
-  {
-    id: '4',
-    code: 'NEWUSER50',
-    title: 'INR 50 off First Order',
-    description: 'Welcome to MakeUsSparkle!',
-    discount: '50',
-    discountType: 'flat',
-    minOrder: 399,
-    expiry: '31 Dec 2027',
-    category: 'all',
-    isNew: true,
-    imageSrc: '/images/hero.png',
-    isCoupon: true,
-  },
-  {
-    id: '5',
-    code: 'MONSOON15',
-    title: '15% off Sitewide',
-    description: 'Limited time monsoon sale',
-    discount: '15',
-    discountType: 'percent',
-    minOrder: 0,
-    expiry: '10 Jun 2027',
-    category: 'all',
-    imageSrc: '/images/hero1.png',
-    isCoupon: true,
-  },
-  {
-    id: '6',
-    code: 'CHARM30',
-    title: '30% off Custom Charms',
-    description: 'Personalise your favourite charm jewellery',
-    discount: '30',
-    discountType: 'percent',
-    minOrder: 699,
-    expiry: '20 May 2027',
-    category: 'jewellery',
-    imageSrc: '/images/FairyCoded.jpg',
-    isCoupon: true,
-  },
-  {
-    id: 'off-1',
-    code: 'AUTO',
-    title: 'Buy 3 Get 1 Free',
-    description: 'Buy 3 jewellery items and get 1 free automatically!',
-    discount: '0',
-    discountType: 'buy_x_for_y',
-    buyQuantity: 3,
-    getQuantity: 1,
-    minOrder: 0,
-    expiry: '30 Jun 2027',
-    category: 'jewellery',
-    imageSrc: '/images/hero.png',
-    isCoupon: false,
-  },
-  {
-    id: 'off-2',
-    code: 'AUTO',
-    title: 'Free Shipping Sitewide',
-    description: 'Free standard shipping on all orders over INR 499',
-    discount: '0',
-    discountType: 'free_shipping',
-    minOrder: 499,
-    expiry: '31 Dec 2027',
-    category: 'all',
-    imageSrc: '/images/hero1.png',
-    isCoupon: false,
-  },
-];
 
 const mapApiOffer = (offer: ApiOffer, isCoupon: boolean): Offer => {
   const parsedExpiry = offer.expiryDate ? new Date(offer.expiryDate) : null;
@@ -219,7 +109,7 @@ const categoryMap: Record<Filter, Offer['category'] | 'all-filter'> = {
 export default function OffersSection() {
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [copied, setCopied] = useState<string | null>(null);
-  const [offers, setOffers] = useState<Offer[]>(FALLBACK_OFFERS);
+  const [offers, setOffers] = useState<Offer[]>([]);
 const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
   useEffect(() => {
     let ignore = false;
@@ -248,12 +138,10 @@ const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
 
         if (!ignore) {
           const combined = [...mappedOffers, ...mappedCoupons];
-          if (combined.length > 0) {
-            setOffers(combined);
-          }
+          setOffers(combined);
         }
       } catch {
-        // keep fallback
+        // failed to fetch, state remains []
       }
     };
     void loadOffers();

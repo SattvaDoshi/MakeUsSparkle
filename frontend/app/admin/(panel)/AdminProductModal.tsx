@@ -133,8 +133,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		giftBoxDescription: initialData?.giftBox?.description || "Rigid magnetic-close box · satin ribbon · message card",
 		giftBoxPrice: initialData?.giftBox?.price?.toString() || "99",
 		giftBoxImage: initialData?.giftBox?.image || null,
-		partialCODEnabled: initialData?.partialCOD?.enabled ?? false,
-		partialCODPercentage: initialData?.partialCOD?.percentage?.toString() || "0",
+		paymentMode: (initialData as any)?.paymentMode || 'cod_allowed',
 	});
 
 	// Charm piece-count options (e.g. [3, 5, 7])
@@ -353,7 +352,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			if (form.allowCustomization) {
 				formData.append("maxCustomImages", String(form.maxCustomImages));
 				if (form.customImageLabels.trim()) {
-					form.customImageLabels.split(",").map(l => l.trim()).filter(Boolean).forEach(label => formData.append("customImageLabels", label));
+					form.customImageLabels.split(",").map((l: string) => l.trim()).filter(Boolean).forEach((label: string) => formData.append("customImageLabels", label));
 				}
 			}
 			formData.append("maxQuantity", String(form.maxQuantity));
@@ -433,9 +432,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			formData.append("giftBoxDescription", form.giftBoxDescription);
 			formData.append("giftBoxPrice", form.giftBoxPrice);
 			
-			// Partial COD
-			formData.append("partialCODEnabled", String(form.partialCODEnabled));
-			formData.append("partialCODPercentage", form.partialCODPercentage);
+			// Payment Mode
+			formData.append("paymentMode", form.paymentMode);
 			
 			if (giftBoxImageFile) {
 				formData.append("giftBoxImage", giftBoxImageFile);
@@ -2187,40 +2185,31 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									)}
 								</div>
 
-								{/* Partial COD Setup */}
-								<div className="input-group" style={{ gridColumn: "1 / -1", display: "flex", gap: "1rem", flexDirection: "column", padding: "1rem", background: "#f9f9f7", borderRadius: "8px", border: "1px solid #e2e2d8" }}>
-									<div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-										<label style={{ position: "relative", display: "inline-block", width: "40px", height: "22px" }}>
-											<input
-												type="checkbox"
-												checked={form.partialCODEnabled}
-												onChange={(e) => setForm({ ...form, partialCODEnabled: e.target.checked })}
-												style={{ opacity: 0, width: 0, height: 0 }}
-											/>
-											<span style={{
-												position: "absolute", cursor: "pointer", inset: 0, backgroundColor: form.partialCODEnabled ? "#4a5c22" : "#d4d4c8", transition: ".4s", borderRadius: "22px"
-											}}>
-												<span style={{
-													position: "absolute", content: '""', height: "16px", width: "16px", left: "3px", bottom: "3px", backgroundColor: "white", transition: ".4s", borderRadius: "50%",
-													transform: form.partialCODEnabled ? "translateX(18px)" : "translateX(0)"
-												}}></span>
-											</span>
-										</label>
-										<span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#3d4a20" }}>Compulsory Partial COD</span>
+								{/* Payment Mode */}
+								<div className="input-group" style={{ gridColumn: "1 / -1", padding: "1rem", background: "#f9f9f7", borderRadius: "8px", border: "1px solid #e2e2d8" }}>
+									<div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#3d4a20", marginBottom: "0.75rem" }}>Payment Mode</div>
+									<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+										{[
+											{ value: 'cod_allowed', label: '✅ COD Allowed', desc: 'Customer can pay via Cash on Delivery' },
+											{ value: 'partial_cod', label: '⚡ Partial COD Only', desc: 'Customer must pay a portion online; COD not allowed' },
+											{ value: 'prepaid_only', label: '🔒 Prepaid Only', desc: 'No COD / Partial COD — full online payment required' },
+										].map(opt => (
+											<label key={opt.value} style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer", padding: "0.6rem 0.8rem", borderRadius: "6px", border: `1.5px solid ${form.paymentMode === opt.value ? '#4a5c22' : '#d4d4c8'}`, background: form.paymentMode === opt.value ? '#f0f5e8' : '#fff', transition: "border-color .2s" }}>
+												<input
+													type="radio"
+													name="paymentMode"
+													value={opt.value}
+													checked={form.paymentMode === opt.value}
+													onChange={() => setForm({ ...form, paymentMode: opt.value })}
+													style={{ marginTop: "2px", accentColor: "#4a5c22" }}
+												/>
+												<div>
+													<div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#3d4a20" }}>{opt.label}</div>
+													<div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>{opt.desc}</div>
+												</div>
+											</label>
+										))}
 									</div>
-									{form.partialCODEnabled && (
-										<div style={{ display: "grid", gap: "0.4rem" }}>
-											<label style={{ fontSize: "0.85rem", fontWeight: 500, color: "#6b6b60" }}>Percentage to pay upfront (%)</label>
-											<input
-												type="number"
-												min="0"
-												max="100"
-												value={form.partialCODPercentage}
-												onChange={(e) => setForm({ ...form, partialCODPercentage: e.target.value })}
-												style={{ padding: "0.6rem", border: "1px solid #d4d4c8", borderRadius: "6px", width: "120px" }}
-											/>
-										</div>
-									)}
 								</div>
 
 							</div>

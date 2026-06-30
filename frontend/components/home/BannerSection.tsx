@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
+import { useGender } from '@/lib/genderContext';
 
 /*
   REPLACE these with your actual Palmonas image assets:
@@ -35,15 +36,20 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   '✦ Custom Jewellery',
   '✦ Free Gifts on all Orders',
 ]);
+  const { gender: rawCategory } = useGender();
+  const activeCategory = (["women", "men", "kids"].includes(rawCategory)
+    ? rawCategory
+    : "women") as "women" | "men" | "kids";
+
   useEffect(() => {
     async function fetchBanners() {
       try {
         const data = await apiRequest<{ success: boolean; homeContent: any }>('/home-content');
-        if (data.success && data.homeContent?.promoBanners) {
-          const promoBanners = data.homeContent.promoBanners;
+        if (data.success && (data.homeContent?.genderContent?.[activeCategory]?.promoBanners || data.homeContent?.promoBanners)) {
+          const promoBanners = data.homeContent.genderContent?.[activeCategory]?.promoBanners || data.homeContent.promoBanners;
           if (data.homeContent?.marqueeItems?.length > 0) {
-  setMarqueeItems(data.homeContent.marqueeItems);
-}
+            setMarqueeItems(data.homeContent.marqueeItems);
+          }
           const formattedBanners: Banner[] = promoBanners.map((b: any, index: number) => ({
               id: b._id || String(index),
               tag: b.tag || '',
@@ -82,7 +88,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
       }
     }
     fetchBanners();
-  }, []);
+  }, [activeCategory]);
 
   const maxIndex = Math.max(0, banners.length - DESKTOP_VISIBLE); // last valid left-card index
 
@@ -443,7 +449,6 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   overflow: hidden;
   background: #1e2710;
   padding: 0.35rem 0;
-  margin-top: clamp(1.5rem, 3vw, 2.5rem);
 }
 .bs-marquee-track {
   display: flex;
@@ -468,6 +473,16 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
       `}</style>
 
       <section ref={sectionRef} className="bs-section">
+        {/* ── Marquee ── */}
+        <div className="bs-marquee-wrap">
+          <div className="bs-marquee-track">
+            {Array.from({ length: 4 }).flatMap((_, i) =>
+              marqueeItems.map((t) => (
+                <span key={`${i}-${t}`} className="bs-marquee-item">{t}</span>
+              ))
+            )}
+          </div>
+        </div>
 
         {/* ── Slider / mobile stack ── */}
         <div className="bs-slider-shell">
@@ -563,16 +578,6 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
             </button>
           </div>
         </div>
-{/* ── Marquee ── */}
-<div className="bs-marquee-wrap">
-  <div className="bs-marquee-track">
-    {Array.from({ length: 4 }).flatMap((_, i) =>
-      marqueeItems.map((t) => (
-        <span key={`${i}-${t}`} className="bs-marquee-item">{t}</span>
-      ))
-    )}
-  </div>
-</div>
       </section>
     </>
   );

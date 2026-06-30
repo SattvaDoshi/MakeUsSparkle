@@ -48,6 +48,8 @@ type AdminProduct = {
 	description?: string;
 	price?: number;
 	stock?: number;
+	category?: any;
+	subCategory?: any;
 	gender?: "men" | "women" | "kids" | "unisex";
 	mainImage?: string;
 	images?: string[];

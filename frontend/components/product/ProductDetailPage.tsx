@@ -270,7 +270,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
   const [visibleCount, setVisibleCount] = useState(3);
   const [filterStar, setFilterStar] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formState, setFormState] = useState({ rating: 5, body: '' });
+  const [formState, setFormState] = useState<{ rating: number; body: string; images: File[] }>({ rating: 5, body: '', images: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -293,7 +293,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
     if (res.success && res.review) {
       setReviews([res.review, ...reviews]);
       setShowForm(false);
-      setFormState({ rating: 5, body: '' });
+      setFormState({ rating: 5, body: '', images: [] });
     } else {
       setErrorMsg(res.message || 'Failed to submit review.');
     }
@@ -356,6 +356,28 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
             ))}
           </div>
           <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 13, outline: 'none', resize: 'vertical' }} />
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+              <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
+                if (e.target.files) {
+                  setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
+                }
+              }} />
+              + Add Photos
+            </label>
+            {formState.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {formState.images.map((file, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
+                    <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
+                    <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
             <button type="button" onClick={() => setShowForm(false)} style={{ background: 'transparent', color: 'var(--mist)', border: 'none', padding: '10px 24px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
@@ -383,6 +405,13 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
               </div>
             </div>
             <p className="rev-card-body">{r.body}</p>
+            {r.images && r.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {r.images.map((imgUrl, idx) => (
+                  <img key={idx} src={imgUrl} alt="Review attachment" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -531,30 +560,47 @@ function Sparkles({ active }: { active: boolean }) {
 // ─── Customisation Panel ──────────────────────────────────────────────────────
 function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels = [], onChange }: { category: string, maxCustomImages?: number, customImageLabels?: string[], onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
-  const [uploads, setUploads] = useState<UploadItem[]>([]);
+  
+  const MAX_FILES = customImageLabels.length > 0 ? customImageLabels.length : maxCustomImages;
+  const [uploads, setUploads] = useState<(UploadItem | null)[]>(Array(MAX_FILES).fill(null));
+  
   const [globalNote, setGlobalNote] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (onChange) onChange({ wantCustom, uploads: uploads.map(u => u.preview), globalNote });
+    if (onChange) {
+      const validUploads = uploads.filter(Boolean).map(u => u!.preview);
+      onChange({ wantCustom, uploads: validUploads, globalNote });
+    }
   }, [wantCustom, uploads, globalNote, onChange]);
 
-  const MAX_FILES = customImageLabels.length > 0 ? customImageLabels.length : maxCustomImages;
+  const handleSlotUpload = (file: File, index: number) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploads(prev => {
+        const newArr = [...prev];
+        newArr[index] = { id: Date.now() + Math.random(), file, preview: (e.target?.result as string) || '', note: '' };
+        return newArr;
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
-  const addFiles = useCallback((files: FileList | File[]) => {
-    const valid = Array.from(files).filter((f: File) => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
-    valid.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => setUploads(prev => [...prev, { id: Date.now() + Math.random(), file, preview: (e.target?.result as string) || '', note: '' }]);
-      reader.readAsDataURL(file);
+  const removeSlotUpload = (index: number) => {
+    setUploads(prev => {
+      const newArr = [...prev];
+      newArr[index] = null;
+      return newArr;
     });
-  }, [uploads.length]);
+  };
 
-  const removeUpload = (id: number) => setUploads(prev => prev.filter(u => u.id !== id));
-  const updateNote = (id: number, note: string) => setUploads(prev => prev.map(u => u.id === id ? { ...u, note } : u));
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); };
-  const handleToggle = (val: boolean) => { setWantCustom(val); if (!val) { setUploads([]); setGlobalNote(''); } };
+  const handleToggle = (val: boolean) => { 
+    setWantCustom(val); 
+    if (!val) { 
+      setUploads(Array(MAX_FILES).fill(null)); 
+      setGlobalNote(''); 
+    } 
+  };
   const catLabel = category === 'Key Chain/Charm' ? 'key chain / charm' : category === 'Fan Box' ? 'fan box' : 'gift box';
 
   return (
@@ -578,41 +624,38 @@ function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels =
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
           <textarea className="cust-note-global" placeholder={`Add a personal message or customisation note for your ${catLabel}…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-          {uploads.length < MAX_FILES && (
-            <div className={`cust-drop${dragOver ? ' drag-over' : ''}`} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e: ChangeEvent<HTMLInputElement>) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); }} />
-              <div style={{ width: 44, height: 44, margin: '0 auto 10px', color: 'var(--olive-400)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
-              </div>
-              <p className="cust-drop-title">Upload your photos</p>
-              <p className="cust-drop-sub">Drag &amp; drop here, or click to browse<br />JPG · PNG · WEBP · HEIC &nbsp;·&nbsp; Max 10 MB each</p>
-              {customImageLabels.length > 0 && (
-                <div style={{ fontSize: 12, marginTop: 8, color: 'var(--olive-600)', textAlign: 'center' }}>
-                  Required: {customImageLabels.join(', ')}
-                </div>
-              )}
-              <span className="cust-drop-btn">Choose Photos</span>
+          
+          <div style={{ marginTop: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Required Photos</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+              {Array.from({ length: MAX_FILES }).map((_, i) => {
+                const label = customImageLabels[i] || `Photo ${i + 1}`;
+                const upload = uploads[i];
+                return (
+                  <div key={i} style={{ border: '1.5px dashed rgba(61,74,34,.15)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+                    
+                    {upload ? (
+                      <>
+                        <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
+                        <button type="button" onClick={() => removeSlotUpload(i)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 14, cursor: 'pointer', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                      </>
+                    ) : (
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', zIndex: 2, width: '100%' }}>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) handleSlotUpload(e.target.files[0], i); }} />
+                        <div style={{ width: 32, height: 32, color: 'var(--olive-400)', marginBottom: 6 }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(61,74,34,.05)', padding: '4px 8px', borderRadius: 100 }}>Choose</span>
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-          <p className={`cust-limit${uploads.length >= MAX_FILES ? ' warn' : ''}`}>{uploads.length}/{MAX_FILES} photos{uploads.length >= MAX_FILES ? ' — limit reached' : ' uploaded'}</p>
-          {uploads.length > 0 && (
-            <div className="cust-previews">
-              {uploads.map((u, i) => (
-                <div key={u.id} className="cust-preview-item" style={{ animationDelay: `${i * 0.06}s` }}>
-                  {customImageLabels[i] && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 6 }}>
-                      {customImageLabels[i]}
-                    </div>
-                  )}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="cust-preview-img" src={u.preview} alt={customImageLabels[i] || `Upload ${i + 1}`} />
-                  <button className="cust-preview-remove" onClick={() => removeUpload(u.id)} aria-label="Remove">×</button>
-                  <textarea className="cust-preview-note" rows={2} placeholder={customImageLabels[i] ? `Note for ${customImageLabels[i]}...` : "Note for this photo…"} value={u.note} onChange={e => updateNote(u.id, e.target.value)} />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="cust-info-chip">
+          </div>
+
+          <div className="cust-info-chip" style={{ marginTop: 16 }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: '#101010', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <p>Our team reviews your photos within <strong>2 business hours</strong> and confirms the design before production. Customised items are <strong>non-returnable</strong> unless damaged or incorrect.</p>
           </div>
@@ -843,6 +886,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       subCategoryId: product.subCategoryId,
       style: product.style,
       styleId: product.styleId,
+      paymentMode: product.paymentMode,
       customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
       customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
       giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
@@ -889,6 +933,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         subCategoryId: product.subCategoryId,
         style: product.style,
         styleId: product.styleId,
+        paymentMode: product.paymentMode,
         customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
         customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
         giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
@@ -920,6 +965,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       setErrorToast('Please select a color and size before proceeding.');
       return;
     }
+    if (Number(currentStock) <= 0) {
+      setErrorToast('This item is currently out of stock.');
+      return;
+    }
     const items = buildCartItems(); if (items.length === 0) return;
     items.forEach(item => addItem(item, false));
     router.push('/cart');
@@ -928,6 +977,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const handleAddToCart = useCallback(() => {
     if (!isSelectionComplete) {
       setErrorToast('Please select a color and size before adding to cart.');
+      return;
+    }
+    if (Number(currentStock) <= 0) {
+      setErrorToast('This item is currently out of stock.');
       return;
     }
     const items = buildCartItems(); if (items.length === 0) return;
@@ -1353,7 +1406,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             <div className="pdp-main-img-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img key={displayImg} className="pdp-main-img" src={displayImg} alt={productName} />
-              {currentStock === 0 && (
+              {Number(currentStock) <= 0 && (
   <div style={{
     position: 'absolute', inset: 0,
     background: 'rgba(245,240,232,0.55)',
@@ -1372,7 +1425,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   </div>
 )}
               <span className="pdp-badge">
-  {currentStock === 0 ? 'Sold Out' : 'Best Seller'}
+  {Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}
 </span>
               {!isFromCombo && (
                 <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
@@ -1467,8 +1520,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                     <span className="pdp-qty-val">{qty}</span>
                     <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(product?.maxQuantity || stock, q + 1))}>+</button>
                   </div>
-                 <span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
-  {currentStock === 0
+                 <span className="pdp-stock" style={{ color: Number(currentStock) <= 0 ? 'var(--red)' : undefined }}>
+  {Number(currentStock) <= 0
     ? '❌ Out of Stock'
     : product?.maxQuantity
       ? `Limit: ${product.maxQuantity} per order`
@@ -1619,19 +1672,19 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   {wished ? 'Wished' : 'Wishlist'}
                 </button>
                 <div className="pdp-btn-cart-wrap">
-                  <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={currentStock === 0}
-  style={{ opacity: currentStock === 0 ? 0.5 : 1, cursor: currentStock === 0 ? 'not-allowed' : 'pointer' }}
+                  <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
+  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
 >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-  {currentStock === 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
+  {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                   </button>
                   <Sparkles active={sparkleAnim} />
                 </div>
-                <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={currentStock === 0}
-  style={{ opacity: currentStock === 0 ? 0.5 : 1, cursor: currentStock === 0 ? 'not-allowed' : 'pointer' }}
+                <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
+  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-  {currentStock === 0 ? 'Currently Unavailable' : 'Buy It Now'}
+  {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
                 </button>
               </div>
             )}

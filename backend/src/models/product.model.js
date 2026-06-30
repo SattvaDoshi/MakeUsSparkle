@@ -81,10 +81,20 @@ const productSchema = new mongoose.Schema(
       imagePublicId: { type: String,  default: null },
     },
 
-    // Compulsory partial COD configuration
+    // Compulsory partial COD configuration (legacy)
     partialCOD: {
       enabled: { type: Boolean, default: false },
       percentage: { type: Number, default: 0 },
+    },
+
+    // Payment mode restriction for this product
+    // cod_allowed: COD is available (default)
+    // prepaid_only: only online/full payment allowed, no COD or partial
+    // partial_cod: partial COD is compulsory — no full COD, must pay advance online
+    paymentMode: {
+      type: String,
+      enum: ['cod_allowed', 'prepaid_only', 'partial_cod'],
+      default: 'cod_allowed',
     },
 
     // Available colors for this product

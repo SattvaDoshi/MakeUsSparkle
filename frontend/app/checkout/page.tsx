@@ -48,12 +48,14 @@ export default function CheckoutPage() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [addressBusy, setAddressBusy] = useState(false);
+  const [addressError, setAddressError] = useState('');
 
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
   const [showBillingAddressForm, setShowBillingAddressForm] = useState(false);
   const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [billingAddressBusy, setBillingAddressBusy] = useState(false);
+  const [billingAddressError, setBillingAddressError] = useState('');
 
   const [userRewardPoints, setUserRewardPoints] = useState(0);
   const [pointsInput, setPointsInput] = useState('');
@@ -78,6 +80,29 @@ export default function CheckoutPage() {
   const deliveryCharge = deliveryType === 'express' ? 110 : shipping;
   const codCharge = (selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') ? 80 : 0;
 
+  // Derive the strictest payment constraint from all cart items.
+  // Priority: prepaid_only > partial_cod > cod_allowed
+  const cartPaymentConstraint: 'cod_allowed' | 'partial_cod' | 'prepaid_only' = (() => {
+    const modes = items.map(i => (i as any).paymentMode || 'cod_allowed');
+    if (modes.includes('prepaid_only')) return 'prepaid_only';
+    if (modes.includes('partial_cod')) return 'partial_cod';
+    return 'cod_allowed';
+  })();
+
+  // Names of products driving the constraint (for the notice)
+  const constraintProducts = items
+    .filter(i => (i as any).paymentMode === cartPaymentConstraint && cartPaymentConstraint !== 'cod_allowed')
+    .map(i => i.name);
+
+  // Auto-enforce method when cart constraint changes
+  useEffect(() => {
+    if (cartPaymentConstraint === 'prepaid_only' && selectedMethod !== 'ONLINE') {
+      setSelectedMethod('ONLINE');
+    } else if (cartPaymentConstraint === 'partial_cod' && selectedMethod === 'COD') {
+      setSelectedMethod('PARTIAL_COD');
+    }
+  }, [cartPaymentConstraint]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const baseTotal = (total - shipping) + deliveryCharge + codCharge;
   const safeRewardPointsRedeemed = rewardPointsRedeemed || 0;
   const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, userRewardPoints, baseTotal);
@@ -95,21 +120,25 @@ export default function CheckoutPage() {
       setShowExpressPopup(true);
       if (selectedMethod === 'COD') setSelectedMethod('PARTIAL_COD');
     }
+    // Also enforce cart constraint when switching delivery
+    if (cartPaymentConstraint === 'prepaid_only') setSelectedMethod('ONLINE');
+    else if (cartPaymentConstraint === 'partial_cod' && selectedMethod === 'COD') setSelectedMethod('PARTIAL_COD');
     setDeliveryType(id);
   };
 
   const handleSaveAddress = async () => {
+    setAddressError('');
     if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
-      alert('Please fill all mandatory address fields.'); return;
+      setAddressError('Please fill all mandatory address fields.'); return;
     }
     if (addressForm.pincode.length !== 6 || !/^\d{6}$/.test(addressForm.pincode)) {
-      alert('Pincode must be exactly 6 digits.'); return;
+      setAddressError('Pincode must be exactly 6 digits.'); return;
     }
     if (addressForm.phone.length !== 10 || !/^\d{10}$/.test(addressForm.phone)) {
-      alert('Phone number must be exactly 10 digits.'); return;
+      setAddressError('Phone number must be exactly 10 digits.'); return;
     }
     if (addressForm.alternativePhone && (addressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(addressForm.alternativePhone))) {
-      alert('Alternative phone number must be exactly 10 digits.'); return;
+      setAddressError('Alternative phone number must be exactly 10 digits.'); return;
     }
 
     setAddressBusy(true);
@@ -126,17 +155,18 @@ export default function CheckoutPage() {
   };
 
   const handleSaveBillingAddress = async () => {
+    setBillingAddressError('');
     if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
-      alert('Please fill all mandatory billing address fields.'); return;
+      setBillingAddressError('Please fill all mandatory billing address fields.'); return;
     }
     if (billingAddressForm.pincode.length !== 6 || !/^\d{6}$/.test(billingAddressForm.pincode)) {
-      alert('Pincode must be exactly 6 digits.'); return;
+      setBillingAddressError('Pincode must be exactly 6 digits.'); return;
     }
     if (billingAddressForm.phone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.phone)) {
-      alert('Phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Phone number must be exactly 10 digits.'); return;
     }
     if (billingAddressForm.alternativePhone && (billingAddressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.alternativePhone))) {
-      alert('Alternative phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Alternative phone number must be exactly 10 digits.'); return;
     }
 
     setBillingAddressBusy(true);
@@ -653,10 +683,12 @@ export default function CheckoutPage() {
                     + Add New Address
                   </button>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="ck-addr-grid">
+                  <div style={{ marginTop: 20 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Address</p>
+                    {addressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
+                    <div className="ck-addr-form-grid">
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
-                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
@@ -664,7 +696,7 @@ export default function CheckoutPage() {
                       <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={addressForm.phone} onChange={e => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={addressForm.alternativePhone} onChange={e => setAddressForm({ ...addressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                       <button onClick={() => setShowAddressForm(false)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(45,90,39,.15)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: ink }}>Cancel</button>
                       <button onClick={handleSaveAddress} disabled={addressBusy} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: 'none', background: g700, color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
                         {addressBusy ? 'Saving…' : 'Save Address'}
@@ -707,10 +739,12 @@ export default function CheckoutPage() {
                         + Add New Address
                       </button>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div className="ck-addr-grid">
+                      <div style={{ marginTop: 20 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Billing Address</p>
+                        {billingAddressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{billingAddressError}</div>}
+                        <div className="ck-addr-form-grid">
                           <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
-                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={billingAddressForm.landmark} onChange={e => setBillingAddressForm({ ...billingAddressForm, landmark: e.target.value })} />
                           <input className="ck-addr-input" placeholder="City *" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
                           <input className="ck-addr-input" placeholder="State *" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
@@ -733,9 +767,27 @@ export default function CheckoutPage() {
               <p className="ck-col-title" style={{ marginTop: 20 }}>Payment Options</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
                 <div className="ck-panel-head">Select Payment Method</div>
+                {/* Cart-level payment constraint notice */}
+                {cartPaymentConstraint !== 'cod_allowed' && (
+                  <div style={{ margin: '0 0 4px', padding: '10px 16px', background: '#fdf6e3', borderLeft: '3px solid #c9a84c', borderRadius: '0 6px 6px 0', fontSize: 12, color: '#7a5c10', lineHeight: 1.5 }}>
+                    <strong>⚠️ Payment restriction applies:</strong>{' '}
+                    {cartPaymentConstraint === 'prepaid_only'
+                      ? <>Full online payment is required for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. COD &amp; Partial COD are disabled.</>  
+                      : <>Partial COD is mandatory for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. Full COD is disabled.</> 
+                    }
+                  </div>
+                )}
                 {PAYMENT_METHODS.map(method => {
                   const isActive = selectedMethod === method.id;
-                  const isDisabled = deliveryType === 'express' && method.id === 'COD';
+                  // Disable logic — apply strictest constraint
+                  const isDisabled =
+                    (deliveryType === 'express' && method.id === 'COD') ||
+                    (cartPaymentConstraint === 'prepaid_only' && (method.id === 'COD' || method.id === 'PARTIAL_COD')) ||
+                    (cartPaymentConstraint === 'partial_cod' && method.id === 'COD');
+                  const disabledReason =
+                    isDisabled && cartPaymentConstraint === 'prepaid_only' ? 'Not available — cart contains Prepaid Only item' :
+                    isDisabled && cartPaymentConstraint === 'partial_cod' ? 'Not available — cart requires Partial payment' :
+                    isDisabled ? 'Not for Express' : null;
                   return (
                     <div key={method.id}>
                       <div className={`ck-method${isActive ? ' active' : ''}${isDisabled ? ' ck-method-disabled' : ''}`} onClick={() => !isDisabled && setSelectedMethod(method.id)}>
@@ -744,7 +796,7 @@ export default function CheckoutPage() {
                           <div className="ck-method-label">
                             {method.label}
                             {method.badge && <span className="ck-method-badge">{method.badge}</span>}
-                            {isDisabled && <span className="ck-method-no-express">Not for Express</span>}
+                            {isDisabled && disabledReason && <span className="ck-method-no-express">{disabledReason}</span>}
                           </div>
                           <div className="ck-method-sub">{method.sub}</div>
                         </div>

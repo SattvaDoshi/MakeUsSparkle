@@ -2,6 +2,7 @@ import Review from "../models/review.model.js";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
 import { getSetting } from "../models/appSettings.model.js";
+import imageService from "../services/image.service.js";
 
 export const addReview = async (req, res) => {
 	try {
@@ -38,12 +39,28 @@ export const addReview = async (req, res) => {
 			}
 		}
 
+		// Handle image uploads if present
+		const images = [];
+		const imagePublicIds = [];
+
+		if (req.files && req.files.length > 0) {
+			const fileBuffers = req.files.map((file) => file.buffer);
+			const uploadResults = await imageService.uploadMultipleImages(fileBuffers, "makeusparkle/reviews");
+			
+			uploadResults.forEach((result) => {
+				images.push(result.url);
+				imagePublicIds.push(result.publicId);
+			});
+		}
+
 		const newReview = new Review({
 			user: userId,
 			product: productId,
 			rating: Number(rating),
 			body,
 			isVerifiedPurchase: hasPurchased,
+			images,
+			imagePublicIds,
 		});
 
 		await newReview.save();

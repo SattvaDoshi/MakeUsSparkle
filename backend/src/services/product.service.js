@@ -422,6 +422,7 @@ class ProductService {
 					enabled: productData.partialCODEnabled !== undefined ? parseBoolean(productData.partialCODEnabled) : false,
 					percentage: productData.partialCODPercentage ? Number(productData.partialCODPercentage) : 0,
 				},
+				paymentMode: productData.paymentMode || 'cod_allowed',
 			});
 
 			return { success: true, product };
@@ -683,6 +684,7 @@ class ProductService {
 						enabled: updateData.partialCODEnabled !== undefined ? parseBoolean(updateData.partialCODEnabled) : (product.partialCOD?.enabled ?? false),
 						percentage: updateData.partialCODPercentage !== undefined ? Number(updateData.partialCODPercentage) : (product.partialCOD?.percentage ?? 0),
 					},
+					paymentMode: updateData.paymentMode || product.paymentMode || 'cod_allowed',
 				},
 				{ new: true }
 			);

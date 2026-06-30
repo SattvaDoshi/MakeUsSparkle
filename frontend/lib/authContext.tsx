@@ -82,6 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		setUser(null);
 		setLoading(false);
 		localStorage.removeItem("authToken");
+		// Also clean up the local cart on logout
+		localStorage.removeItem("maison_cart_v1");
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(new Event('makeussparkle:clear-cart'));
+		}
 	};
 
 	const refreshUser = async () => {

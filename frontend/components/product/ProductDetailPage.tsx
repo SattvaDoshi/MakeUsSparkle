@@ -794,6 +794,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       return Math.min(min, v?.stock ?? stock);
     }, stock)
     : stock;
+    const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const totalWithGiftBox = (discountedPrice || price) + (giftBoxAdded ? 99 : 0);
@@ -945,7 +946,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }, []);
 
   useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
-
+useEffect(() => {
+  setQty(q => Math.min(q, maxSelectable));
+}, [maxSelectable]);
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
@@ -1444,17 +1447,26 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
                 <div className="pdp-qty-row">
-                  <div className="pdp-qty">
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-                    <span className="pdp-qty-val">{qty}</span>
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(product?.maxQuantity || stock, q + 1))}>+</button>
-                  </div>
-                 <span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
+               <div className="pdp-qty">
+  <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+  <span className="pdp-qty-val">{qty}</span>
+  <button
+    className="pdp-qty-btn"
+    onClick={() => setQty(q => Math.min(maxSelectable, q + 1))}
+    disabled={qty >= maxSelectable}
+    style={{ opacity: qty >= maxSelectable ? 0.4 : 1, cursor: qty >= maxSelectable ? 'not-allowed' : 'pointer' }}
+  >
+    +
+  </button>
+</div>
+<span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
   {currentStock === 0
     ? '❌ Out of Stock'
     : product?.maxQuantity
       ? `Limit: ${product.maxQuantity} per order`
-      : `Only ${currentStock} left in stock!`}
+      : currentStock <= 10
+        ? `Only ${currentStock} left in stock!`
+        : ''}
 </span>
                 </div>
                 <div className="pdp-divider" />

@@ -293,16 +293,18 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           border-top: 1px solid rgba(61,74,34,.06);
         }
 
-        .pc-name {
-          font-size: 13px; font-weight: 500;
-          color: var(--ink);
-          line-height: 1.3;
-          letter-spacing: -.01em;
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+.pc-name {
+  font-size: 13px; font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  margin: 0;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
         .pc-price-row {
           display: flex;

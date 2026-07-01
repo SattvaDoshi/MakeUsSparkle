@@ -75,7 +75,13 @@ export const uploadHomeContentImages = multer({
 	{ name: "men", maxCount: 1 },
 	{ name: "kids", maxCount: 1 },
 	{ name: "promoImage_0", maxCount: 1 },
-	{ name: "promoImage_1", maxCount: 1 }
+	{ name: "promoImage_1", maxCount: 1 },
+	{ name: "women_promoImage_0", maxCount: 1 },
+	{ name: "women_promoImage_1", maxCount: 1 },
+	{ name: "men_promoImage_0", maxCount: 1 },
+	{ name: "men_promoImage_1", maxCount: 1 },
+	{ name: "kids_promoImage_0", maxCount: 1 },
+	{ name: "kids_promoImage_1", maxCount: 1 }
 ]);
 
 // Cloudinary upload helper

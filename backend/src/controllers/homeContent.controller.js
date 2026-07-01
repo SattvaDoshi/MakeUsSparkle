@@ -51,11 +51,19 @@ export async function updateHomeContent(req, res) {
       }
     }
 
+    const targetGender = req.body.gender; // "women", "men", or "kids"
+
     if (req.body.promoBanners) {
       try {
         const parsedPromo = JSON.parse(req.body.promoBanners);
         if (Array.isArray(parsedPromo)) {
-          homeContent.promoBanners = parsedPromo;
+          if (targetGender && ["women", "men", "kids"].includes(targetGender)) {
+            if (!homeContent.genderContent) homeContent.genderContent = {};
+            if (!homeContent.genderContent[targetGender]) homeContent.genderContent[targetGender] = {};
+            homeContent.genderContent[targetGender].promoBanners = parsedPromo;
+          } else {
+            homeContent.promoBanners = parsedPromo;
+          }
         }
       } catch (e) {
         console.error("Failed to parse promoBanners", e);
@@ -63,20 +71,35 @@ export async function updateHomeContent(req, res) {
     }
 
     for (let i = 0; i < 2; i++) {
-      if (files[`promoImage_${i}`]) {
-        const file = files[`promoImage_${i}`][0];
+      const fileKey = targetGender ? `${targetGender}_promoImage_${i}` : `promoImage_${i}`;
+      if (files[fileKey]) {
+        const file = files[fileKey][0];
         
-        if (homeContent.promoBanners?.[i]?.imagePublicId) {
-          await imageService.deleteImage(homeContent.promoBanners[i].imagePublicId);
+        let targetBanners = targetGender && homeContent.genderContent && homeContent.genderContent[targetGender] 
+          ? homeContent.genderContent[targetGender].promoBanners 
+          : homeContent.promoBanners;
+
+        if (targetBanners?.[i]?.imagePublicId) {
+          await imageService.deleteImage(targetBanners[i].imagePublicId);
         }
 
         const uploadedImage = await imageService.uploadImage(file.buffer, "home");
         
-        if (!homeContent.promoBanners[i]) {
-          homeContent.promoBanners[i] = {};
+        if (targetGender && ["women", "men", "kids"].includes(targetGender)) {
+           if (!homeContent.genderContent) homeContent.genderContent = {};
+           if (!homeContent.genderContent[targetGender]) homeContent.genderContent[targetGender] = {};
+           if (!homeContent.genderContent[targetGender].promoBanners) homeContent.genderContent[targetGender].promoBanners = [];
+           if (!homeContent.genderContent[targetGender].promoBanners[i]) homeContent.genderContent[targetGender].promoBanners[i] = {};
+           
+           homeContent.genderContent[targetGender].promoBanners[i].image = uploadedImage.url;
+           homeContent.genderContent[targetGender].promoBanners[i].imagePublicId = uploadedImage.publicId;
+        } else {
+           if (!homeContent.promoBanners[i]) {
+             homeContent.promoBanners[i] = {};
+           }
+           homeContent.promoBanners[i].image = uploadedImage.url;
+           homeContent.promoBanners[i].imagePublicId = uploadedImage.publicId;
         }
-        homeContent.promoBanners[i].image = uploadedImage.url;
-        homeContent.promoBanners[i].imagePublicId = uploadedImage.publicId;
       }
     }
 

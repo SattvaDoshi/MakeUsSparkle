@@ -1,4 +1,6 @@
-import { createRazorpayOrder, verifyRazorpaySignature } from "../config/payment.config.js";
+import { phonePeClient } from "../config/payment.config.js";
+import { StandardCheckoutPayRequest } from "@phonepe-pg/pg-sdk-node";
+import { randomUUID } from "crypto";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
 import emailService from "./email.service.js";
@@ -9,11 +11,18 @@ class PaymentService {
 		return resolveProductId(item);
 	}
 
+	/**
+	 * Creates a PhonePe payment session and a pending order in the database.
+	 * Returns the PhonePe redirect URL so the frontend can navigate the user there.
+	 */
 	async createPaymentOrder(userId, orderData) {
 		try {
-			// Validate amount
 			if (!orderData.amount || orderData.amount <= 0) {
 				throw new Error("Invalid amount");
+			}
+
+			if (!phonePeClient) {
+				throw new Error("PhonePe credentials are not configured");
 			}
 
 			const paymentMode = orderData.paymentMode || "ONLINE";
@@ -21,11 +30,28 @@ class PaymentService {
 			const advanceAmount = Number(orderData.amount || 0);
 			const balanceAmount = Math.max(totalAmount - advanceAmount, 0);
 
-			// Create Razorpay order
-			const razorpayOrder = await createRazorpayOrder(orderData.amount);
+			// Unique per-transaction merchant order ID
+			const merchantOrderId = `MUS_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
+
+			const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+			// Build redirect URL with merchantOrderId — orderId will be appended after order creation
+			const baseRedirectUrl = `${frontendUrl}/payment/status`;
+
+			// Amount in paise (PhonePe expects paise)
+			const amountInPaise = Math.round(advanceAmount * 100);
+
+			const payRequest = StandardCheckoutPayRequest.builder()
+				.merchantOrderId(merchantOrderId)
+				.amount(amountInPaise)
+				.redirectUrl(baseRedirectUrl)
+				.build();
+
+			const phonePeResponse = await phonePeClient.pay(payRequest);
 
 			// Create order record in database
-			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
+			const orderItems = await Promise.all(
+				(orderData.items || []).map((item) => normalizeOrderItem(item))
+			);
 
 			// Handle reward points redemption
 			const rewardPointsToRedeem = Number(orderData.rewardPointsRedeemed || 0);
@@ -47,19 +73,22 @@ class PaymentService {
 				address: orderData.shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,
-				razorpayOrderId: razorpayOrder.id,
+				phonePeOrderId: merchantOrderId,
 				status: "placed",
 				paymentStatus: "pending",
 				paymentMode,
 				rewardPointsRedeemed: rewardPointsToRedeem,
 			});
 
+			// Build final redirect URL including orderId so status page can verify without sessionStorage
+			const finalRedirectUrl = phonePeResponse.redirectUrl;
+
 			return {
 				success: true,
 				orderId: order._id,
-				razorpayOrderId: razorpayOrder.id,
-				amount: orderData.amount,
-				currency: razorpayOrder.currency,
+				merchantOrderId,
+				redirectUrl: finalRedirectUrl,
+				amount: advanceAmount,
 			};
 		} catch (error) {
 			console.error("Error creating payment order:", error);
@@ -67,14 +96,26 @@ class PaymentService {
 		}
 	}
 
+	/**
+	 * Called after the user returns from PhonePe's checkout page.
+	 * Verifies payment status with PhonePe and updates the order.
+	 */
 	async verifyPayment(paymentData) {
 		try {
-			const { orderId, paymentId, signature, razorpayOrderId } = paymentData;
+			const { orderId, merchantOrderId } = paymentData;
 
-			// Verify Razorpay signature
-			const isValidSignature = verifyRazorpaySignature(razorpayOrderId, paymentId, signature);
-			if (!isValidSignature) {
-				throw new Error("Payment verification failed");
+			if (!phonePeClient) {
+				throw new Error("PhonePe credentials are not configured");
+			}
+
+			// Fetch real-time status from PhonePe (server-side, never trust client)
+			const statusResponse = await phonePeClient.getOrderStatus(merchantOrderId);
+
+			const paymentState = statusResponse?.state;  // "COMPLETED" | "FAILED" | "PENDING"
+			const transactionId = statusResponse?.paymentDetails?.[0]?.transactionId || null;
+
+			if (paymentState !== "COMPLETED") {
+				throw new Error(`Payment not completed. Current state: ${paymentState}`);
 			}
 
 			const existingOrder = await Order.findById(orderId);
@@ -89,8 +130,10 @@ class PaymentService {
 				orderId,
 				{
 					paymentStatus: isPartialCod ? "partial_paid" : "paid",
-					paidAmount: isPartialCod ? Number(existingOrder.advanceAmount || existingOrder.totalAmount || 0) : Number(existingOrder.totalAmount || 0),
-					razorpayPaymentId: paymentId,
+					paidAmount: isPartialCod
+						? Number(existingOrder.advanceAmount || existingOrder.totalAmount || 0)
+						: Number(existingOrder.totalAmount || 0),
+					phonePeTransactionId: transactionId,
 					status: "placed",
 				},
 				{ returnDocument: "after" }
@@ -101,13 +144,18 @@ class PaymentService {
 			}
 
 			// Send order confirmation email
-			const user = await order.populate([
+			const populated = await order.populate([
 				{ path: "user" },
 				{ path: "items.product", select: "title" },
 				{ path: "items.selectedCharms" },
 				{ path: "items.selectionGroups.items.item" },
 			]);
-			await emailService.sendOrderConfirmationEmail(user.user.email, order._id, order.items, order.totalAmount);
+			await emailService.sendOrderConfirmationEmail(
+				populated.user.email,
+				order._id,
+				order.items,
+				order.totalAmount
+			);
 
 			return {
 				success: true,
@@ -147,14 +195,11 @@ class PaymentService {
 				throw new Error("Order not found");
 			}
 
-			if (order.paymentStatus !== "completed") {
-				throw new Error("Cannot refund an incomplete payment");
+			if (order.paymentStatus !== "paid" && order.paymentStatus !== "partial_paid") {
+				throw new Error("Cannot refund an unpaid order");
 			}
 
-			// Razorpay refund logic (implement based on your needs)
-			// const refund = await razorpay.payments.refund(order.razorpayPaymentId, { amount: order.totalAmount * 100 });
-
-			// Update order status
+			// PhonePe refund can be triggered via their dashboard or API — mark as refunded here
 			order.paymentStatus = "refunded";
 			order.status = "cancelled";
 			order.refundReason = reason;

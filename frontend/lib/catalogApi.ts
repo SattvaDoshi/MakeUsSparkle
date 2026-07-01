@@ -84,6 +84,7 @@ export interface CatalogProduct {
     size: string;
     stock: number;
     price?: number;
+    salePrice?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -110,6 +111,7 @@ export interface CatalogProduct {
     enabled: boolean;
     percentage: number;
   };
+  paymentMode?: 'cod_allowed' | 'prepaid_only' | 'partial_cod';
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -170,6 +172,7 @@ interface BackendProduct {
     size?: string;
     stock?: number;
     price?: number;
+    salePrice?: number;
     image?: string;
     imagePublicId?: string;
   }>;
@@ -334,6 +337,7 @@ function normalizeProduct(
           size: variant.size || "",
           stock: Number(variant.stock ?? 0),
           price: variant.price !== undefined && variant.price !== null ? Number(variant.price) : undefined,
+          salePrice: variant.salePrice !== undefined && variant.salePrice !== null ? Number(variant.salePrice) : undefined,
           image: variant.image,
           imagePublicId: variant.imagePublicId,
         }))
@@ -412,6 +416,7 @@ function normalizeProduct(
       enabled: Boolean(item.partialCOD.enabled),
       percentage: Number(item.partialCOD.percentage || 0),
     } : undefined,
+    paymentMode: (item as any).paymentMode || 'cod_allowed',
     badge: item.productLabel || pickBadge(rating),
     offer: item.discountTag || null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
@@ -766,6 +771,7 @@ export interface ReviewData {
   rating: number;
   body: string;
   isVerifiedPurchase: boolean;
+  images?: string[];
   createdAt: string;
 }
 
@@ -780,17 +786,27 @@ export async function fetchProductReviews(productId: string): Promise<ReviewData
 }
 
 export async function submitProductReview(
-  payload: { productId: string; rating: number; body: string },
+  payload: { productId: string; rating: number; body: string; images?: File[] },
   token: string
 ): Promise<{ success: boolean; message?: string; review?: ReviewData }> {
   try {
+    const formData = new FormData();
+    formData.append("productId", payload.productId);
+    formData.append("rating", String(payload.rating));
+    formData.append("body", payload.body);
+    
+    if (payload.images && payload.images.length > 0) {
+      payload.images.forEach((file) => {
+        formData.append("images", file);
+      });
+    }
+
     return await apiRequest<{ success: boolean; message?: string; review?: ReviewData }>("/reviews", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: formData as any,
     });
   } catch (error: any) {
     return { success: false, message: error?.message || "Failed to submit review" };

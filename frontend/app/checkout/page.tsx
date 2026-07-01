@@ -9,7 +9,7 @@ import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
 
 const PAYMENT_METHODS = [
-  { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via Razorpay', badge: 'Recommended' },
+  { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via PhonePe', badge: 'Recommended' },
   { id: 'PARTIAL_COD', label: 'Partial COD (20% Advance)', sub: 'Pay 20% advance online, pay balance on delivery · +₹80 convenience fee', badge: null },
   { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives · +₹80 convenience fee', badge: null },
 ];
@@ -48,12 +48,14 @@ export default function CheckoutPage() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [addressBusy, setAddressBusy] = useState(false);
+  const [addressError, setAddressError] = useState('');
 
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
   const [showBillingAddressForm, setShowBillingAddressForm] = useState(false);
   const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [billingAddressBusy, setBillingAddressBusy] = useState(false);
+  const [billingAddressError, setBillingAddressError] = useState('');
 
   const [userRewardPoints, setUserRewardPoints] = useState(0);
   const [pointsInput, setPointsInput] = useState('');
@@ -78,6 +80,29 @@ export default function CheckoutPage() {
   const deliveryCharge = deliveryType === 'express' ? 110 : shipping;
   const codCharge = (selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') ? 80 : 0;
 
+  // Derive the strictest payment constraint from all cart items.
+  // Priority: prepaid_only > partial_cod > cod_allowed
+  const cartPaymentConstraint: 'cod_allowed' | 'partial_cod' | 'prepaid_only' = (() => {
+    const modes = items.map(i => (i as any).paymentMode || 'cod_allowed');
+    if (modes.includes('prepaid_only')) return 'prepaid_only';
+    if (modes.includes('partial_cod')) return 'partial_cod';
+    return 'cod_allowed';
+  })();
+
+  // Names of products driving the constraint (for the notice)
+  const constraintProducts = items
+    .filter(i => (i as any).paymentMode === cartPaymentConstraint && cartPaymentConstraint !== 'cod_allowed')
+    .map(i => i.name);
+
+  // Auto-enforce method when cart constraint changes
+  useEffect(() => {
+    if (cartPaymentConstraint === 'prepaid_only' && selectedMethod !== 'ONLINE') {
+      setSelectedMethod('ONLINE');
+    } else if (cartPaymentConstraint === 'partial_cod' && selectedMethod === 'COD') {
+      setSelectedMethod('PARTIAL_COD');
+    }
+  }, [cartPaymentConstraint]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const baseTotal = (total - shipping) + deliveryCharge + codCharge;
   const safeRewardPointsRedeemed = rewardPointsRedeemed || 0;
   const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, userRewardPoints, baseTotal);
@@ -88,34 +113,32 @@ export default function CheckoutPage() {
   if (selectedMethod === 'PARTIAL_COD') amountToPayNow = Math.round(finalTotal * 0.20);
   else if (selectedMethod === 'COD') amountToPayNow = 0;
 
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
+  // PhonePe uses a redirect flow — no external script needed
 
   const handleDeliveryTypeChange = (id: 'standard' | 'express') => {
     if (id === 'express') {
       setShowExpressPopup(true);
       if (selectedMethod === 'COD') setSelectedMethod('PARTIAL_COD');
     }
+    // Also enforce cart constraint when switching delivery
+    if (cartPaymentConstraint === 'prepaid_only') setSelectedMethod('ONLINE');
+    else if (cartPaymentConstraint === 'partial_cod' && selectedMethod === 'COD') setSelectedMethod('PARTIAL_COD');
     setDeliveryType(id);
   };
 
   const handleSaveAddress = async () => {
+    setAddressError('');
     if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
-      alert('Please fill all mandatory address fields.'); return;
+      setAddressError('Please fill all mandatory address fields.'); return;
     }
     if (addressForm.pincode.length !== 6 || !/^\d{6}$/.test(addressForm.pincode)) {
-      alert('Pincode must be exactly 6 digits.'); return;
+      setAddressError('Pincode must be exactly 6 digits.'); return;
     }
     if (addressForm.phone.length !== 10 || !/^\d{10}$/.test(addressForm.phone)) {
-      alert('Phone number must be exactly 10 digits.'); return;
+      setAddressError('Phone number must be exactly 10 digits.'); return;
     }
     if (addressForm.alternativePhone && (addressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(addressForm.alternativePhone))) {
-      alert('Alternative phone number must be exactly 10 digits.'); return;
+      setAddressError('Alternative phone number must be exactly 10 digits.'); return;
     }
 
     setAddressBusy(true);
@@ -132,17 +155,18 @@ export default function CheckoutPage() {
   };
 
   const handleSaveBillingAddress = async () => {
+    setBillingAddressError('');
     if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
-      alert('Please fill all mandatory billing address fields.'); return;
+      setBillingAddressError('Please fill all mandatory billing address fields.'); return;
     }
     if (billingAddressForm.pincode.length !== 6 || !/^\d{6}$/.test(billingAddressForm.pincode)) {
-      alert('Pincode must be exactly 6 digits.'); return;
+      setBillingAddressError('Pincode must be exactly 6 digits.'); return;
     }
     if (billingAddressForm.phone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.phone)) {
-      alert('Phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Phone number must be exactly 10 digits.'); return;
     }
     if (billingAddressForm.alternativePhone && (billingAddressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.alternativePhone))) {
-      alert('Alternative phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Alternative phone number must be exactly 10 digits.'); return;
     }
 
     setBillingAddressBusy(true);
@@ -201,26 +225,11 @@ export default function CheckoutPage() {
         rewardPointsRedeemed,
       };
       if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
-        const rzpOrder = await apiRequest<{ success: boolean; orderId: string; razorpayOrderId: string; amount: number; currency: string }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_RmCmc4bECn3PRU',
-          amount: rzpOrder.amount * 100, currency: rzpOrder.currency, name: 'MakeUsSparkle',
-          description: 'Order Payment', order_id: rzpOrder.razorpayOrderId,
-          handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
-            try {
-              setLoading(true);
-              await apiRequest('/payment/verify', { method: 'POST', body: JSON.stringify({ orderId: rzpOrder.orderId, razorpayOrderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature, paymentMode: selectedMethod }) });
-              clearCart(); setOrderPlaced(true);
-            } catch (err) { console.error('Verification failed:', err); alert('Payment verification failed. Please contact support.'); }
-            finally { setLoading(false); }
-          },
-          prefill: { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
-          theme: { color: '#2d5a27' },
-        };
-        const razorpayClass = (window as unknown as { Razorpay: new (opts: object) => { on: (e: string, h: (r: { error: { description: string } }) => void) => void; open: () => void } }).Razorpay;
-        const rzp = new razorpayClass(options);
-        rzp.on('payment.failed', function (response: { error: { description: string } }) { console.error(response.error); alert('Payment failed: ' + response.error.description); setLoading(false); });
-        rzp.open();
+        const ppOrder = await apiRequest<{ success: boolean; orderId: string; merchantOrderId: string; redirectUrl: string; amount: number }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
+        // Store pending payment info in sessionStorage so the status page can verify after redirect
+        sessionStorage.setItem('pendingPayment', JSON.stringify({ orderId: ppOrder.orderId, merchantOrderId: ppOrder.merchantOrderId, paymentMode: selectedMethod }));
+        // Redirect user to PhonePe checkout page
+        window.location.href = ppOrder.redirectUrl;
       } else {
         await apiRequest('/orders/create', { method: 'POST', body: JSON.stringify(orderPayload) });
         clearCart(); setOrderPlaced(true);
@@ -618,7 +627,7 @@ export default function CheckoutPage() {
               <p className="ck-popup-avail-title">Available payment methods</p>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />
-                Online Payment — Pay in full via Razorpay
+                Online Payment — Pay in full via PhonePe
               </div>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />
@@ -674,10 +683,12 @@ export default function CheckoutPage() {
                     + Add New Address
                   </button>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="ck-addr-grid">
+                  <div style={{ marginTop: 20 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Address</p>
+                    {addressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
+                    <div className="ck-addr-form-grid">
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
-                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
+                      <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
@@ -685,7 +696,7 @@ export default function CheckoutPage() {
                       <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={addressForm.phone} onChange={e => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={addressForm.alternativePhone} onChange={e => setAddressForm({ ...addressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                       <button onClick={() => setShowAddressForm(false)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(45,90,39,.15)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: ink }}>Cancel</button>
                       <button onClick={handleSaveAddress} disabled={addressBusy} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: 'none', background: g700, color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
                         {addressBusy ? 'Saving…' : 'Save Address'}
@@ -728,10 +739,12 @@ export default function CheckoutPage() {
                         + Add New Address
                       </button>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div className="ck-addr-grid">
+                      <div style={{ marginTop: 20 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Billing Address</p>
+                        {billingAddressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{billingAddressError}</div>}
+                        <div className="ck-addr-form-grid">
                           <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
-                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Optional - Area)" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
+                          <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={billingAddressForm.landmark} onChange={e => setBillingAddressForm({ ...billingAddressForm, landmark: e.target.value })} />
                           <input className="ck-addr-input" placeholder="City *" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
                           <input className="ck-addr-input" placeholder="State *" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
@@ -754,9 +767,27 @@ export default function CheckoutPage() {
               <p className="ck-col-title" style={{ marginTop: 20 }}>Payment Options</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
                 <div className="ck-panel-head">Select Payment Method</div>
+                {/* Cart-level payment constraint notice */}
+                {cartPaymentConstraint !== 'cod_allowed' && (
+                  <div style={{ margin: '0 0 4px', padding: '10px 16px', background: '#fdf6e3', borderLeft: '3px solid #c9a84c', borderRadius: '0 6px 6px 0', fontSize: 12, color: '#7a5c10', lineHeight: 1.5 }}>
+                    <strong>⚠️ Payment restriction applies:</strong>{' '}
+                    {cartPaymentConstraint === 'prepaid_only'
+                      ? <>Full online payment is required for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. COD &amp; Partial COD are disabled.</>  
+                      : <>Partial COD is mandatory for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. Full COD is disabled.</> 
+                    }
+                  </div>
+                )}
                 {PAYMENT_METHODS.map(method => {
                   const isActive = selectedMethod === method.id;
-                  const isDisabled = deliveryType === 'express' && method.id === 'COD';
+                  // Disable logic — apply strictest constraint
+                  const isDisabled =
+                    (deliveryType === 'express' && method.id === 'COD') ||
+                    (cartPaymentConstraint === 'prepaid_only' && (method.id === 'COD' || method.id === 'PARTIAL_COD')) ||
+                    (cartPaymentConstraint === 'partial_cod' && method.id === 'COD');
+                  const disabledReason =
+                    isDisabled && cartPaymentConstraint === 'prepaid_only' ? 'Not available — cart contains Prepaid Only item' :
+                    isDisabled && cartPaymentConstraint === 'partial_cod' ? 'Not available — cart requires Partial payment' :
+                    isDisabled ? 'Not for Express' : null;
                   return (
                     <div key={method.id}>
                       <div className={`ck-method${isActive ? ' active' : ''}${isDisabled ? ' ck-method-disabled' : ''}`} onClick={() => !isDisabled && setSelectedMethod(method.id)}>
@@ -765,14 +796,14 @@ export default function CheckoutPage() {
                           <div className="ck-method-label">
                             {method.label}
                             {method.badge && <span className="ck-method-badge">{method.badge}</span>}
-                            {isDisabled && <span className="ck-method-no-express">Not for Express</span>}
+                            {isDisabled && disabledReason && <span className="ck-method-no-express">{disabledReason}</span>}
                           </div>
                           <div className="ck-method-sub">{method.sub}</div>
                         </div>
                       </div>
                       {isActive && method.id === 'PARTIAL_COD' && (
                         <div className="ck-cod-note">
-                          Pay <strong>₹{Math.round(finalTotal * 0.20).toLocaleString('en-IN')} now</strong> via Razorpay (20% required upfront). Balance of <strong>₹{(finalTotal - Math.round(finalTotal * 0.20)).toLocaleString('en-IN')}</strong> collected on delivery.
+                          Pay <strong>₹{Math.round(finalTotal * 0.20).toLocaleString('en-IN')} now</strong> via PhonePe (20% required upfront). Balance of <strong>₹{(finalTotal - Math.round(finalTotal * 0.20)).toLocaleString('en-IN')}</strong> collected on delivery.
                         </div>
                       )}
                       {isActive && method.id === 'COD' && (
@@ -986,7 +1017,7 @@ export default function CheckoutPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                100% Secure &amp; Encrypted Payment via Razorpay
+                100% Secure &amp; Encrypted Payment via PhonePe
               </div>
             </div>
 

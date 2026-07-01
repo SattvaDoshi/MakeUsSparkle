@@ -40,7 +40,48 @@ const homeContentSchema = new mongoose.Schema(
         imagePublicId: { type: String },
         textSide: { type: String, enum: ['left', 'right'], default: 'right' }
       }
-    ]
+    ],
+    genderContent: {
+      women: {
+        promoBanners: [
+          {
+            tag: { type: String },
+            headline: { type: String },
+            cta: { type: String },
+            link: { type: String },
+            image: { type: String },
+            imagePublicId: { type: String },
+            textSide: { type: String, enum: ['left', 'right'], default: 'right' }
+          }
+        ]
+      },
+      men: {
+        promoBanners: [
+          {
+            tag: { type: String },
+            headline: { type: String },
+            cta: { type: String },
+            link: { type: String },
+            image: { type: String },
+            imagePublicId: { type: String },
+            textSide: { type: String, enum: ['left', 'right'], default: 'right' }
+          }
+        ]
+      },
+      kids: {
+        promoBanners: [
+          {
+            tag: { type: String },
+            headline: { type: String },
+            cta: { type: String },
+            link: { type: String },
+            image: { type: String },
+            imagePublicId: { type: String },
+            textSide: { type: String, enum: ['left', 'right'], default: 'right' }
+          }
+        ]
+      }
+    }
   },
   {
     timestamps: true,

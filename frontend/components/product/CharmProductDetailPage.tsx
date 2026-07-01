@@ -106,6 +106,7 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
   }, [onClose]);
 
   return (
+
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -293,7 +294,7 @@ const TRUST_BADGES = [
 
 /* ─── Reviews ─── */
 const REVIEWS_DATA = [
-  { id: 1, name: 'Priya Sharma', initials: 'PS', rating: 5, date: '12 Apr 2025', title: 'Absolutely stunning piece!', body: 'I gifted this to my sister and she was in tears. The quality is exceptional — it looks far more expensive than it actually is. The packaging was gorgeous too. Will definitely be ordering again.', verified: true, helpful: 24, colorHex: '#c9a84c' },
+  { id: 1, name: 'Priya Sharma', initials: 'PS', rating: 5, date: '12 Apr 2025', title: 'Absolutely stunning piece!', body: 'I gifted this to my sister and she was in tears. The quality is exceptional — it looks far more expensive than it actually is. The packaging was gorgeous too. Will definitely be ordering again.', verified: true, helpful: 24, colorHex: '#c9a84c', images: ['https://images.unsplash.com/photo-1599643477873-108bb9622d17?w=400&q=80'] },
   { id: 2, name: 'Anika Reddy', initials: 'AR', rating: 5, date: '3 Apr 2025', title: 'Perfect everyday necklace', body: 'Wore it every day for a month and it still looks brand new. The layered design is so elegant and gets so many compliments. Highly recommend for anyone looking for something that looks luxe but is affordable.', verified: true, helpful: 18, colorHex: '#5a6b2e' },
   { id: 3, name: 'Meera Joshi', initials: 'MJ', rating: 4, date: '28 Mar 2025', title: 'Beautiful but clasp is slightly fiddly', body: 'The necklace itself is gorgeous — love the delicate layered look. My only minor complaint is the lobster clasp is a tiny bit tricky to fasten solo. Once on though, it stays perfectly and looks stunning.', verified: true, helpful: 11, colorHex: '#3d4a22' },
   { id: 4, name: 'Divya Nair', initials: 'DN', rating: 5, date: '19 Mar 2025', title: 'Fast delivery, premium quality', body: 'Ordered on a whim and received it in 2 days. The moment I opened the box I knew it was worth every rupee. The gold plating is even and the chains lay perfectly. Zero tarnishing so far.', verified: false, helpful: 8, colorHex: '#c9a84c' },
@@ -314,7 +315,6 @@ const GOES_WELL_WITH = [
   { id: 4, name: 'Charm Anklet', price: 649, originalPrice: 849, image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=400&q=80', href: '/products/charm-anklet' },
 ];
 
-/* ─── CHARM SELECTOR COMPONENT ─── */
 /* ─── CHARM SELECTOR COMPONENT ─── */
 function CharmSelector({
   onChange,
@@ -578,6 +578,13 @@ function ReviewsSection() {
             </div>
             <p className="rev-card-title">{r.title}</p>
             <p className="rev-card-body">{r.body}</p>
+            {r.images && r.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {r.images.map((imgUrl, idx) => (
+                  <img key={idx} src={imgUrl} alt="Review attachment" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
+                ))}
+              </div>
+            )}
             <div className="rev-card-foot">
               <span className="rev-helpful-label">Helpful?</span>
               <button className="rev-helpful-btn">
@@ -693,18 +700,37 @@ function Sparkles({ active }: { active: boolean }) {
 /* ─── Customisation Panel ─── */
 function CustomisationPanel({ category, onChange }: { category: string; onChange?: (data: { wantCustom: boolean | null; uploads: string[]; globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
-  const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const [globalNote, setGlobalNote] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const MAX_FILES = 5;
+  const [uploads, setUploads] = useState<(UploadItem | null)[]>(Array(MAX_FILES).fill(null));
+  const [globalNote, setGlobalNote] = useState('');
 
-  useEffect(() => { if (onChange) onChange({ wantCustom, uploads: uploads.map(u => u.preview), globalNote }); }, [wantCustom, uploads, globalNote, onChange]);
+  useEffect(() => { 
+    if (onChange) {
+      const validUploads = uploads.filter(Boolean).map(u => u!.preview);
+      onChange({ wantCustom, uploads: validUploads, globalNote });
+    }
+  }, [wantCustom, uploads, globalNote, onChange]);
 
-  const addFiles = useCallback((files: FileList | File[]) => {
-    const valid = Array.from(files).filter((f: File) => f.type.startsWith('image/')).slice(0, MAX_FILES - uploads.length);
-    valid.forEach(file => { const r = new FileReader(); r.onload = e => setUploads(prev => [...prev, { id: Date.now() + Math.random(), file, preview: (e.target?.result as string) || '', note: '' }]); r.readAsDataURL(file); });
-  }, [uploads.length]);
+  const handleSlotUpload = (file: File, index: number) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploads(prev => {
+        const newArr = [...prev];
+        newArr[index] = { id: Date.now() + Math.random(), file, preview: (e.target?.result as string) || '', note: '' };
+        return newArr;
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSlotUpload = (index: number) => {
+    setUploads(prev => {
+      const newArr = [...prev];
+      newArr[index] = null;
+      return newArr;
+    });
+  };
 
   const catLabel = category === 'Key Chain/Charm' ? 'key chain / charm' : category === 'Fan Box' ? 'fan box' : 'gift box';
 
@@ -715,7 +741,7 @@ function CustomisationPanel({ category, onChange }: { category: string; onChange
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Yes, Customise
         </button>
-        <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => { setWantCustom(false); setUploads([]); setGlobalNote(''); }}>
+        <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => { setWantCustom(false); setUploads(Array(MAX_FILES).fill(null)); setGlobalNote(''); }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           No, Standard
         </button>
@@ -729,27 +755,38 @@ function CustomisationPanel({ category, onChange }: { category: string; onChange
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
           <textarea className="cust-note-global" placeholder={`Add a personalisation note…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-          {uploads.length < MAX_FILES && (
-            <div className={`cust-drop${dragOver ? ' drag-over' : ''}`} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }} onClick={() => fileInputRef.current?.click()}>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e: ChangeEvent<HTMLInputElement>) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); }} />
-              <p className="cust-drop-title">Upload your photos</p>
-              <p className="cust-drop-sub">Drag & drop or click · JPG · PNG · Max 10 MB</p>
-              <span className="cust-drop-btn">Choose Photos</span>
+          
+          <div style={{ marginTop: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Required Photos</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+              {Array.from({ length: MAX_FILES }).map((_, i) => {
+                const label = `Photo ${i + 1}`;
+                const upload = uploads[i];
+                return (
+                  <div key={i} style={{ border: '1.5px dashed rgba(61,74,34,.15)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+                    
+                    {upload ? (
+                      <>
+                        <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
+                        <button type="button" onClick={() => removeSlotUpload(i)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 14, cursor: 'pointer', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                      </>
+                    ) : (
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', zIndex: 2, width: '100%' }}>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) handleSlotUpload(e.target.files[0], i); }} />
+                        <div style={{ width: 32, height: 32, color: 'var(--olive-400)', marginBottom: 6 }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(61,74,34,.05)', padding: '4px 8px', borderRadius: 100 }}>Choose</span>
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-          <p className={`cust-limit${uploads.length >= MAX_FILES ? ' warn' : ''}`}>{uploads.length}/{MAX_FILES} photos</p>
-          {uploads.length > 0 && (
-            <div className="cust-previews">
-              {uploads.map((u, i) => (
-                <div key={u.id} className="cust-preview-item">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="cust-preview-img" src={u.preview} alt={`Upload ${i + 1}`} />
-                  <button className="cust-preview-remove" onClick={() => setUploads(prev => prev.filter(x => x.id !== u.id))}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="cust-info-chip">
+          </div>
+
+          <div className="cust-info-chip" style={{ marginTop: 16 }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <p>Our team reviews within <strong>2 business hours</strong>. Customised items are <strong>non-returnable</strong> unless damaged.</p>
           </div>
@@ -817,6 +854,16 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [activeColor, setActiveColor] = useState(0);
   const [activeSize, setActiveSize] = useState('');
   const [activeImg, setActiveImg] = useState(0);
+  const [errorToast, setErrorToast] = useState('');
+
+  // Automatically clear error toast after 3.5 seconds
+  useEffect(() => {
+    if (errorToast) {
+      const timer = setTimeout(() => setErrorToast(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [errorToast]);
+
   const [qty, setQty] = useState(1);
   const [cartAnim, setCartAnim] = useState(false);
   const [sparkleAnim, setSparkleAnim] = useState(false);
@@ -955,6 +1002,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
+    if (Number(currentStock) <= 0) {
+      setErrorToast('This item is currently out of stock.');
+      return;
+    }
     const item = buildCartItem();
     for (let i = 0; i < qty; i++) addItem(item);
     fireConfetti(cartBtnRef.current);
@@ -965,6 +1016,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
   const handleBuyNow = useCallback(() => {
     if (!product) return;
+    if (Number(currentStock) <= 0) {
+      setErrorToast('This item is currently out of stock.');
+      return;
+    }
     const item = buildCartItem();
     for (let i = 0; i < qty; i++) addItem(item, false);
     router.push('/cart');
@@ -1664,6 +1719,12 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
             {/* CTA */}
             <div className="pdp-cta-row">
+              {Number(currentStock) <= 0 && (
+                <div style={{ padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Out of stock
+                </div>
+              )}
               <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle}>
                 <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -1671,15 +1732,19 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 {wished ? 'Wished' : 'Wishlist'}
               </button>
               <div className="pdp-btn-cart-wrap">
-                <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart}>
+                <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
+                  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                  {cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
+                  {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                 </button>
                 <Sparkles active={sparkleAnim} />
               </div>
-              <button className="pdp-btn-buy" onClick={handleBuyNow}>
+              <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
+                style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                Buy It Now
+                {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
               </button>
             </div>
 
@@ -1712,6 +1777,19 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
         <ReviewsSection />
       </div>
+
+      {/* Error Toast */}
+      {errorToast && (
+        <div style={{
+          position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--red)', color: 'white', padding: '14px 28px',
+          borderRadius: '50px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
+          boxShadow: '0 12px 32px rgba(192, 57, 43, 0.35)', animation: 'fadeUp 0.35s ease both',
+          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em', whiteSpace: 'nowrap'
+        }}>
+          {errorToast}
+        </div>
+      )}
     </>
   );
 }

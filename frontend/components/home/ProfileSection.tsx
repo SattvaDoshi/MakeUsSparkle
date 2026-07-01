@@ -1003,6 +1003,7 @@ export default function ProfileSection() {
               <div className="pf-address-card">
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
+                  {error && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
                   <label className="pf-label">Address Line 1 *
                     <input
                       className="pf-input"

@@ -17,6 +17,38 @@ type AdminHomeContent = {
 		image?: string;
 		textSide?: "left" | "right";
 	}[];
+	genderContent?: {
+		women?: {
+			promoBanners?: {
+				tag?: string;
+				headline?: string;
+				cta?: string;
+				link?: string;
+				image?: string;
+				textSide?: "left" | "right";
+			}[];
+		};
+		men?: {
+			promoBanners?: {
+				tag?: string;
+				headline?: string;
+				cta?: string;
+				link?: string;
+				image?: string;
+				textSide?: "left" | "right";
+			}[];
+		};
+		kids?: {
+			promoBanners?: {
+				tag?: string;
+				headline?: string;
+				cta?: string;
+				link?: string;
+				image?: string;
+				textSide?: "left" | "right";
+			}[];
+		};
+	};
 };
 
 type AdminBannersTabProps = {
@@ -63,13 +95,16 @@ export default function AdminBannersTab({
 	const [promoBanners, setPromoBanners] = useState<any[]>([defaultPromo, defaultPromo]);
 	const [promoImageFiles, setPromoImageFiles] = useState<(File | null)[]>([null, null]);
 
+	const [activeGender, setActiveGender] = useState<"women" | "men" | "kids">("women");
+
 	useEffect(() => {
 		if (homeContent) {
-			setMarqueeItems(homeContent.marqueeItems.join(", "));
-			if (homeContent.promoBanners && homeContent.promoBanners.length > 0) {
+			setMarqueeItems(homeContent.marqueeItems?.join(", ") || "");
+			const genderPromoBanners = homeContent.genderContent?.[activeGender]?.promoBanners || homeContent.promoBanners;
+			if (genderPromoBanners && genderPromoBanners.length > 0) {
 				setPromoBanners([
-					homeContent.promoBanners[0] || defaultPromo,
-					homeContent.promoBanners[1] || defaultPromo,
+					genderPromoBanners[0] || defaultPromo,
+					genderPromoBanners[1] || defaultPromo,
 				]);
 			} else {
 				setPromoBanners([
@@ -78,7 +113,7 @@ export default function AdminBannersTab({
 				]);
 			}
 		}
-	}, [homeContent]);
+	}, [homeContent, activeGender]);
 
 	const filteredBanners = useMemo(() => {
 		return banners.filter((b) => {
@@ -141,12 +176,16 @@ export default function AdminBannersTab({
 			.filter(Boolean);
 		formData.append("marqueeItems", JSON.stringify(parsedMarquee));
 		formData.append("promoBanners", JSON.stringify(promoBanners));
+		formData.append("gender", activeGender);
 
 		if (womenImageFile) formData.append("women", womenImageFile);
 		if (menImageFile) formData.append("men", menImageFile);
 		if (kidsImageFile) formData.append("kids", kidsImageFile);
-		if (promoImageFiles[0]) formData.append("promoImage_0", promoImageFiles[0]);
-		if (promoImageFiles[1]) formData.append("promoImage_1", promoImageFiles[1]);
+		
+		const promo0Key = `${activeGender}_promoImage_0`;
+		const promo1Key = `${activeGender}_promoImage_1`;
+		if (promoImageFiles[0]) formData.append(promo0Key, promoImageFiles[0]);
+		if (promoImageFiles[1]) formData.append(promo1Key, promoImageFiles[1]);
 
 		await onUpdateHomeContent(formData);
 		setWomenImageFile(null);
@@ -191,7 +230,30 @@ export default function AdminBannersTab({
 					</div>
 				</div>
 
-				<h2 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Promo Banners (Under Hero)</h2>
+				<h2 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Gender Specific Content</h2>
+				
+				<div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
+					{(["women", "men", "kids"] as const).map((g) => (
+						<button
+							key={g}
+							type="button"
+							onClick={() => setActiveGender(g)}
+							style={{
+								padding: "0.5rem 1rem",
+								borderRadius: "6px",
+								border: "1px solid #d4d4c8",
+								background: activeGender === g ? "#4a5c22" : "#f9f9f7",
+								color: activeGender === g ? "#fff" : "#3d4a20",
+								cursor: "pointer",
+								fontWeight: activeGender === g ? 600 : 400,
+							}}
+						>
+							{g.charAt(0).toUpperCase() + g.slice(1)}
+						</button>
+					))}
+				</div>
+
+				<h3 style={{ marginBottom: "1rem" }}>Promo Banners (Under Hero) - {activeGender.charAt(0).toUpperCase() + activeGender.slice(1)}</h3>
 				<div style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
 					{[0, 1].map((index) => (
 						<div key={index} style={{ border: "1px solid #e8e8e8", padding: "1.5rem", borderRadius: "8px" }}>
@@ -238,7 +300,9 @@ export default function AdminBannersTab({
 											});
 										}} 
 									/>
-									{homeContent?.promoBanners?.[index]?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current image uploaded.</p>}
+									{homeContent?.genderContent?.[activeGender]?.promoBanners?.[index]?.image || homeContent?.promoBanners?.[index]?.image ? (
+										<p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current image uploaded.</p>
+									) : null}
 								</div>
 							</div>
 						</div>

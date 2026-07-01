@@ -71,6 +71,7 @@ export interface CartItem {
   subCategoryId?: string;
   style?: string;
   styleId?: string;
+  paymentMode?: 'cod_allowed' | 'prepaid_only' | 'partial_cod';
 }
 
 export const GIFT_OPTIONS = [
@@ -294,6 +295,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'HYDRATE', payload: parsed });
       }
     } catch {}
+
+    const handleClearCart = () => dispatch({ type: 'CLEAR_CART' });
+    window.addEventListener('makeussparkle:clear-cart', handleClearCart);
+    return () => window.removeEventListener('makeussparkle:clear-cart', handleClearCart);
   }, []);
 
   // Persist to localStorage on every change
@@ -348,27 +353,32 @@ const addItem = useCallback(
   const applicableOffers: Array<{ id: string; title: string; amount: number; applied: boolean }> = [];
 
   // Helper to determine if item is applicable
-  const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string }, offer: any) => {
+  const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string; categoryId?: string }, offer: any) => {
     const productId = item.sourceId || item.id;
     const hasProducts = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
     if (hasProducts && !offer.applicableProducts.includes(productId)) {
       return false;
     }
     const hasCategories = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
-    if (hasCategories && (!item.category || !offer.applicableCategories.includes(item.category))) {
-      return false;
+    if (hasCategories) {
+      // item.categoryId holds the raw MongoDB ObjectId string — compare against that
+      const catId = item.categoryId || '';
+      if (!catId || !offer.applicableCategories.includes(catId)) {
+        return false;
+      }
     }
     return true;
   };
 
   // Build the pool of item instances
-  let pool: Array<{ id: string; sourceId?: string; category?: string; price: number }> = [];
+  let pool: Array<{ id: string; sourceId?: string; category?: string; categoryId?: string; price: number }> = [];
   state.items.forEach((item) => {
     for (let q = 0; q < item.qty; q++) {
       pool.push({
         id: item.id,
         sourceId: item.sourceId,
         category: item.category,
+        categoryId: item.categoryId,
         price: item.price,
       });
     }
@@ -376,6 +386,13 @@ const addItem = useCallback(
 
   // Evaluate each active offer
   offers.forEach((offer) => {
+    // Skip inactive offers
+    if (!offer.isActive) return;
+    // Skip offers that haven't started or have expired
+    const now = Date.now();
+    if (offer.startsAt && new Date(offer.startsAt).getTime() > now) return;
+    if (offer.expiryDate && new Date(offer.expiryDate).getTime() < now) return;
+
     const matchingIndices: number[] = [];
     pool.forEach((poolItem, index) => {
       if (isPoolItemApplicable(poolItem, offer)) {
@@ -454,12 +471,15 @@ const addItem = useCallback(
   });
 
   // Calculate free shipping from offers
-  const hasFreeShippingOffer = offers.some(offer => offer.offerType === "free_shipping" && state.items.some(item => {
+  const hasFreeShippingOffer = offers.some(offer => offer.offerType === "free_shipping" && offer.isActive && state.items.some(item => {
     const productId = item.sourceId || item.id;
     const hasProducts = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
     if (hasProducts && !offer.applicableProducts.includes(productId)) return false;
     const hasCategories = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
-    if (hasCategories && (!item.category || !offer.applicableCategories.includes(item.category))) return false;
+    if (hasCategories) {
+      const catId = item.categoryId || '';
+      if (!catId || !offer.applicableCategories.includes(catId)) return false;
+    }
     return true;
   }));
 

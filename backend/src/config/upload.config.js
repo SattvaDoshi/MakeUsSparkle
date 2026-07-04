@@ -84,6 +84,19 @@ export const uploadHomeContentImages = multer({
 	{ name: "kids_promoImage_1", maxCount: 1 }
 ]);
 
+// Combo images multer
+export const uploadComboImages = multer({
+	storage: uploadStorage,
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+		if (allowedMimes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
+		}
+	},
+}).any();
+
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {
 	return new Promise((resolve, reject) => {

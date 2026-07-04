@@ -1411,9 +1411,6 @@ export default function AdminDashboardPage() {
 	/>;
 	if (activeTab === "combos") return <AdminCombosTab
 		combos={combos}
-		products={products}
-		categories={categories}
-		styles={styles}
 		onCreateCuratedCombo={handleCreateCuratedCombo}
 		onCreateCustomCombo={handleCreateCustomCombo}
 		onEditCombo={handleEditCombo}

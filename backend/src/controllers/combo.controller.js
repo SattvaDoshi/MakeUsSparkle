@@ -1,5 +1,31 @@
 import comboService from "../services/combo.service.js";
 
+function parseComboData(req) {
+	let data = { ...req.body };
+	if (typeof data.products === "string") {
+		try {
+			data.products = JSON.parse(data.products);
+		} catch (e) {
+			console.error("Failed to parse combo products JSON:", e);
+		}
+	}
+
+	const files = req.files || [];
+	const imageBuffer = files.find((f) => f.fieldname === "image")?.buffer;
+
+	if (Array.isArray(data.products)) {
+		data.products = data.products.map((p, index) => {
+			const productImgFile = files.find((f) => f.fieldname === `productImage_${index}`);
+			if (productImgFile) {
+				p.imageBuffer = productImgFile.buffer;
+			}
+			return p;
+		});
+	}
+
+	return { data, imageBuffer };
+}
+
 export async function getCombos(req, res) {
 	try {
 		const type = req.query.type || null;
@@ -23,11 +49,7 @@ export async function getComboById(req, res) {
 
 export async function createCuratedCombo(req, res) {
 	try {
-		const imageBuffer = req.file?.buffer;
-		let data = { ...req.body };
-		if (typeof data.products === "string") {
-			try { data.products = JSON.parse(data.products); } catch (e) {}
-		}
+		const { data, imageBuffer } = parseComboData(req);
 		const result = await comboService.createCuratedCombo(data, imageBuffer);
 		res.status(201).json(result);
 	} catch (error) {
@@ -38,11 +60,7 @@ export async function createCuratedCombo(req, res) {
 
 export async function createCustomCombo(req, res) {
 	try {
-		const imageBuffer = req.file?.buffer;
-		let data = { ...req.body };
-		if (typeof data.products === "string") {
-			try { data.products = JSON.parse(data.products); } catch (e) {}
-		}
+		const { data, imageBuffer } = parseComboData(req);
 		const result = await comboService.createCustomCombo(data, imageBuffer);
 		res.status(201).json(result);
 	} catch (error) {
@@ -53,11 +71,7 @@ export async function createCustomCombo(req, res) {
 
 export async function updateCombo(req, res) {
 	try {
-		const imageBuffer = req.file?.buffer;
-		let data = { ...req.body };
-		if (typeof data.products === "string") {
-			try { data.products = JSON.parse(data.products); } catch (e) {}
-		}
+		const { data, imageBuffer } = parseComboData(req);
 		const result = await comboService.updateCombo(req.params.id, data, imageBuffer);
 		res.json(result);
 	} catch (error) {

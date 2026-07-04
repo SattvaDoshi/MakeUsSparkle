@@ -1,5 +1,16 @@
 import mongoose from "mongoose";
 
+const comboProductSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  image: String,
+  imagePublicId: String,
+  variants: [{
+    name: String, // e.g. "Color", "Size"
+    options: String // e.g. "Red, Blue, Green"
+  }]
+});
+
 const comboSchema = new mongoose.Schema(
   {
     name: String,
@@ -13,7 +24,7 @@ const comboSchema = new mongoose.Schema(
     badge: String,
     tint: String,
     // Shared or Curated fields
-    products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    products: [comboProductSchema],
     price: Number,
     originalPrice: Number,
     image: String,

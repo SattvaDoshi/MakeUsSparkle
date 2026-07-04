@@ -1,35 +1,29 @@
 import Combo from "../models/combo.model.js";
 import imageService from "./image.service.js";
 
-const normalizeObjectId = (value) => {
-	if (typeof value === "string") {
-		const trimmed = value.trim();
-		return trimmed || undefined;
-	}
-
-	if (value && typeof value === "object" && typeof value._id === "string") {
-		const trimmed = value._id.trim();
-		return trimmed || undefined;
-	}
-
-	return undefined;
-};
-
-const normalizeObjectIdArray = (values) => {
-	if (!Array.isArray(values)) {
+const processProductsImages = async (products, imageService) => {
+	if (!Array.isArray(products)) {
 		return [];
 	}
 
-	return values.map(normalizeObjectId).filter(Boolean);
+	return await Promise.all(
+		products.map(async (p) => {
+			const newProduct = { ...p };
+			if (p.imageBuffer) {
+				const uploadedImage = await imageService.uploadImage(p.imageBuffer, "combo-products");
+				newProduct.image = uploadedImage.url;
+				newProduct.imagePublicId = uploadedImage.publicId;
+				delete newProduct.imageBuffer;
+			}
+			return newProduct;
+		})
+	);
 };
-
-// Removed normalizeCuratedSlots
 class ComboService {
 	async getCombos(type = null) {
 		try {
 			const query = type ? { type } : {};
 			const combos = await Combo.find(query)
-				.populate("products")
 				.sort({ createdAt: -1 });
 			return { success: true, combos };
 		} catch (error) {
@@ -40,8 +34,7 @@ class ComboService {
 
 	async getComboById(comboId) {
 		try {
-			const combo = await Combo.findById(comboId)
-				.populate("products");
+			const combo = await Combo.findById(comboId);
 			if (!combo) {
 				throw new Error("Combo not found");
 			}
@@ -54,9 +47,10 @@ class ComboService {
 
 	async createCuratedCombo(comboData, imageBuffer = null) {
 		try {
+			const processedProducts = await processProductsImages(comboData.products, imageService);
 			const curatedData = {
 				...comboData,
-				products: normalizeObjectIdArray(comboData.products),
+				products: processedProducts,
 			};
 
 			let imageUrl = null;
@@ -76,7 +70,8 @@ class ComboService {
 				imagePublicId,
 			});
 
-			await combo.populate("products");
+			// Products are now embedded, no need to populate
+			// await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -87,9 +82,10 @@ class ComboService {
 
 	async createCustomCombo(comboData, imageBuffer = null) {
 		try {
+			const processedProducts = await processProductsImages(comboData.products, imageService);
 			const customData = {
 				...comboData,
-				products: normalizeObjectIdArray(comboData.products),
+				products: processedProducts,
 			};
 
 			let imageUrl = null;
@@ -109,7 +105,8 @@ class ComboService {
 				imagePublicId,
 			});
 
-			await combo.populate("products");
+			// Products are now embedded, no need to populate
+			// await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -123,7 +120,7 @@ class ComboService {
 			const normalizedUpdateData = { ...updateData };
 
 			if (Object.prototype.hasOwnProperty.call(updateData, "products")) {
-				normalizedUpdateData.products = normalizeObjectIdArray(updateData.products);
+				normalizedUpdateData.products = await processProductsImages(updateData.products, imageService);
 			}
 
 			const combo = await Combo.findById(comboId);
@@ -142,8 +139,7 @@ class ComboService {
 				normalizedUpdateData.imagePublicId = uploadedImage.publicId;
 			}
 
-			const updatedCombo = await Combo.findByIdAndUpdate(comboId, normalizedUpdateData, { returnDocument: "after" })
-				.populate("products");
+			const updatedCombo = await Combo.findByIdAndUpdate(comboId, normalizedUpdateData, { returnDocument: "after" });
 
 			return { success: true, combo: updatedCombo };
 		} catch (error) {

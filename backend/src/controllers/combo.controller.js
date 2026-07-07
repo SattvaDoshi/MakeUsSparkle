@@ -14,10 +14,26 @@ function parseComboData(req) {
 	const imageBuffer = files.find((f) => f.fieldname === "image")?.buffer;
 
 	if (Array.isArray(data.products)) {
-		data.products = data.products.map((p, index) => {
-			const productImgFile = files.find((f) => f.fieldname === `productImage_${index}`);
+		data.products = data.products.map((p, pIndex) => {
+			const productImgFile = files.find((f) => f.fieldname === `productImage_${pIndex}`);
 			if (productImgFile) {
 				p.imageBuffer = productImgFile.buffer;
+			}
+			
+			// Extract variant images
+			if (Array.isArray(p.variants)) {
+				p.variants = p.variants.map((v, vIndex) => {
+					if (Array.isArray(v.options)) {
+						v.options = v.options.map((opt, optIndex) => {
+							const optImgFile = files.find((f) => f.fieldname === `variantImage_${pIndex}_${vIndex}_${optIndex}`);
+							if (optImgFile) {
+								opt.imageBuffer = optImgFile.buffer;
+							}
+							return opt;
+						});
+					}
+					return v;
+				});
 			}
 			return p;
 		});

@@ -21,7 +21,7 @@ interface ProductVariant {
 
 interface DynamicVariant {
   name: string;
-  options: string[];
+  options: { name: string; image?: string }[];
 }
 
 interface ComboProduct {
@@ -33,6 +33,8 @@ interface ComboProduct {
   customisable: boolean;
   variants: DynamicVariant[];
   colorImages?: Record<string, string>;
+  allowTextCustomization?: boolean;
+  allowImageCustomization?: boolean;
 }
 
 interface PresetCombo {
@@ -43,6 +45,8 @@ interface PresetCombo {
   originalPrice: number;
   image: string;
   badge: string;
+  allowComboTextCustomization?: boolean;
+  allowComboImageCustomization?: boolean;
   includedProducts: ComboProduct[];
 }
 
@@ -54,6 +58,8 @@ interface CustomComboSlot {
   fixedPrice: number;
   image: string;
   badge: string;
+  allowComboTextCustomization?: boolean;
+  allowComboImageCustomization?: boolean;
   allowedProducts: ComboProduct[];
 }
 
@@ -104,32 +110,32 @@ const IMG = {
   combo4:   'https://images.unsplash.com/photo-1627293620999-e9b5c2325842?w=800&q=80',
 };
 
-const COLOURS = ['Gold', 'Silver', 'Rose Gold', 'Antique Gold'];
-const SIZES   = ['XS', 'S', 'M', 'L', 'XL'];
+const COLOURS = [{name:'Gold'}, {name:'Silver'}, {name:'Rose Gold'}, {name:'Antique Gold'}];
+const SIZES   = [{name:'XS'}, {name:'S'}, {name:'M'}, {name:'L'}, {name:'XL'}];
 
 const ALL_PRODUCTS: ComboProduct[] = [
   {
     id: 'r1', name: 'Floral Solitaire Ring', price: 1299, image: IMG.ring1,
     description: 'A delicate floral-cut solitaire designed for everyday wear, finished with a hand-polished band that catches the light from every angle.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: ['5','6','7','8','9']}],
+    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'},{name:'9'}]}],
     colorImages: { Gold: IMG.ring1, Silver: IMG.ring2, 'Rose Gold': IMG.ring3, 'Antique Gold': IMG.ring1 },
   },
   {
     id: 'r2', name: 'Twisted Band Ring', price: 999, image: IMG.ring2,
     description: 'A sculptural twisted band that adds subtle texture and movement — pairs beautifully with stacking rings.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: ['5','6','7','8','9']}],
+    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'},{name:'9'}]}],
     colorImages: { Gold: IMG.ring2, Silver: IMG.ring1, 'Rose Gold': IMG.ring3, 'Antique Gold': IMG.ring2 },
   },
   {
     id: 'r3', name: 'Stacking Midi Ring', price: 799, image: IMG.ring3,
     description: 'A slim, understated midi ring made for layering — light enough to wear two or three at once.',
-    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: ['5','6','7','8']}],
+    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'}]}],
     colorImages: { Gold: IMG.ring3, Silver: IMG.ring2, 'Rose Gold': IMG.ring1, 'Antique Gold': IMG.ring3 },
   },
   {
     id: 'n1', name: 'Layered Gold Necklace', price: 1899, image: IMG.necklace1,
     description: 'Three fine chains of varying lengths layered into one piece, so you get the "stacked necklace" look without the tangle.',
-    customisable: true, variants: [{name: 'Colour', options: ['Gold','Rose Gold']}, {name: 'Size', options: SIZES}],
+    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Rose Gold'}]}, {name: 'Size', options: SIZES}],
     colorImages: { Gold: IMG.necklace1, 'Rose Gold': IMG.necklace3 },
   },
   {
@@ -141,7 +147,7 @@ const ALL_PRODUCTS: ComboProduct[] = [
   {
     id: 'n3', name: 'Antique Coin Necklace', price: 2199, image: IMG.necklace3,
     description: 'An heirloom-inspired coin pendant with a hand-finished antique texture, designed to feel like it has a story behind it.',
-    customisable: true, variants: [{name: 'Colour', options: ['Gold','Antique Gold']}, {name: 'Size', options: SIZES}],
+    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Antique Gold'}]}, {name: 'Size', options: SIZES}],
     colorImages: { Gold: IMG.necklace3, 'Antique Gold': IMG.necklace1 },
   },
   {
@@ -165,19 +171,19 @@ const ALL_PRODUCTS: ComboProduct[] = [
   {
     id: 'b1', name: 'Kundan Bangle Set', price: 2499, image: IMG.bangle1,
     description: 'A set of hand-set kundan bangles inspired by traditional bridal craftsmanship — sold as a stackable set of two.',
-    customisable: true, variants: [{name: 'Colour', options: ['Gold','Antique Gold']}, {name: 'Size', options: ['2.4','2.6','2.8']}],
+    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Antique Gold'}]}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
     colorImages: { Gold: IMG.bangle1, 'Antique Gold': IMG.bangle3 },
   },
   {
     id: 'b2', name: 'Slim Gold Bangle', price: 1299, image: IMG.bangle2,
     description: 'A slim, polished bangle designed to stack cleanly with other pieces or stand alone.',
-    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: ['2.4','2.6','2.8']}],
+    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
     colorImages: { Gold: IMG.bangle2, Silver: IMG.bangle1, 'Rose Gold': IMG.bangle3, 'Antique Gold': IMG.bangle2 },
   },
   {
     id: 'b3', name: 'Beaded Charm Bracelet', price: 999, image: IMG.bangle3,
     description: 'A playful beaded bracelet finished with a single signature charm — an easy everyday layering piece.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: ['2.4','2.6','2.8']}],
+    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
     colorImages: { Gold: IMG.bangle3, Silver: IMG.bangle2, 'Rose Gold': IMG.bangle1, 'Antique Gold': IMG.bangle3 },
   },
 ];
@@ -239,7 +245,7 @@ const CUSTOM_SLOTS: CustomComboSlot[] = [
   },
 ];
 
-function hasCustomisation(v: ProductVariant) {
+export function hasCustomisation(v: ProductVariant) {
   return (v.selections && Object.keys(v.selections).length > 0) || !!v.personalMessage || !!v.uploadedImageBase64;
 }
 
@@ -316,60 +322,72 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                 {variant.name}
                 {local.selections?.[variant.name] && <span className="modal-selected-badge">{local.selections[variant.name]}</span>}
               </label>
-              <div className="modal-chips">
-                {variant.options.map(opt => (
-                  <button key={opt} className={`chip${local.selections?.[variant.name] === opt ? ' chip-on' : ''}`}
-                    onClick={() => setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt } }))}>
-                    {opt}
-                  </button>
-                ))}
+              <div className="modal-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem' }}>
+                {variant.options.map(opt => {
+                  const isSelected = local.selections?.[variant.name] === opt.name;
+                  return (
+                    <button key={opt.name} 
+                      className={`chip${isSelected ? ' chip-on' : ''}`}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto' }}
+                      onClick={() => setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } }))}>
+                      {opt.image && (
+                        <img src={opt.image} alt={opt.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                      )}
+                      <span>{opt.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
 
-          <div className="modal-field">
-            <label className="modal-field-label">
-              <span className="modal-field-num">{msgNum}</span>
-              Personal Message
-              <span className="modal-field-optional">optional</span>
-            </label>
-            <textarea className="modal-textarea"
-              placeholder="E.g. 'To my dearest Priya, with love…'"
-              value={local.personalMessage || ''}
-              onChange={e => setLocal(p => ({ ...p, personalMessage: e.target.value }))}
-              maxLength={120} rows={3} />
-            <div className="modal-char-count">{(local.personalMessage || '').length}/120</div>
-          </div>
+          {product.allowTextCustomization && (
+            <div className="modal-field">
+              <label className="modal-field-label">
+                <span className="modal-field-num">{msgNum}</span>
+                Personal Message
+                <span className="modal-field-optional">optional</span>
+              </label>
+              <textarea className="modal-textarea"
+                placeholder="E.g. 'To my dearest Priya, with love…'"
+                value={local.personalMessage || ''}
+                onChange={e => setLocal(p => ({ ...p, personalMessage: e.target.value }))}
+                maxLength={120} rows={3} />
+              <div className="modal-char-count">{(local.personalMessage || '').length}/120</div>
+            </div>
+          )}
 
-          <div className="modal-field">
-            <label className="modal-field-label">
-              <span className="modal-field-num">{picNum}</span>
-              Upload Photo
-              <span className="modal-field-optional">optional</span>
-            </label>
-            <label className="modal-upload-zone">
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-              {local.uploadedImageBase64 ? (
-                <div className="modal-upload-preview">
-                  <img src={local.uploadedImageBase64} alt="Preview" />
-                  <div>
-                    <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-                    <span className="modal-upload-change">Tap to change</span>
+          {product.allowImageCustomization && (
+            <div className="modal-field">
+              <label className="modal-field-label">
+                <span className="modal-field-num">{picNum}</span>
+                Upload Photo
+                <span className="modal-field-optional">optional</span>
+              </label>
+              <label className="modal-upload-zone">
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+                {local.uploadedImageBase64 ? (
+                  <div className="modal-upload-preview">
+                    <img src={local.uploadedImageBase64} alt="Preview" />
+                    <div>
+                      <span className="modal-upload-preview-name">Photo uploaded ✓</span>
+                      <span className="modal-upload-change">Tap to change</span>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="modal-upload-empty">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="3"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  <span className="modal-upload-cta">Tap to upload a photo</span>
-                  <span className="modal-upload-sub">JPG · PNG · WEBP</span>
-                </div>
-              )}
-            </label>
-          </div>
+                ) : (
+                  <div className="modal-upload-empty">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="3"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span className="modal-upload-cta">Tap to upload a photo</span>
+                    <span className="modal-upload-sub">JPG · PNG · WEBP</span>
+                  </div>
+                )}
+              </label>
+            </div>
+          )}
 
           {hasAny && (
             <div className="modal-summary-box">
@@ -463,13 +481,15 @@ function CustomSlotGrid({ slots, onSelect }: CustomSlotGridProps) {
 interface PresetHamperSectionProps {
   combo: PresetCombo;
   variants: Record<string, ProductVariant>;
+  comboVariant: ProductVariant;
+  onComboVariantChange: (v: ProductVariant) => void;
   onVariantChange: (pid: string, v: ProductVariant) => void;
   onAddToCart: (combo: PresetCombo) => void;
   cartAdded: boolean;
   onBack: () => void;
 }
 
-function PresetHamperSection({ combo, variants, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
+function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
   const handleFileFor = (pid: string) => (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.currentTarget.files?.[0];
     if (!f) return;
@@ -477,6 +497,16 @@ function PresetHamperSection({ combo, variants, onVariantChange, onAddToCart, ca
     r.onload = ev => {
       const v = variants[pid] || {};
       onVariantChange(pid, { ...v, uploadedImageBase64: ev.target?.result as string });
+    };
+    r.readAsDataURL(f);
+  };
+
+  const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.currentTarget.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      onComboVariantChange({ ...comboVariant, uploadedImageBase64: ev.target?.result as string });
     };
     r.readAsDataURL(f);
   };
@@ -525,21 +555,17 @@ function PresetHamperSection({ combo, variants, onVariantChange, onAddToCart, ca
       <div className="hamper-piece-list">
         {products.map((p, i) => {
           const v = variants[p.id] || {};
-          const colourVariant = p.variants.find(vr => isColourVariantName(vr.name));
-          const sizeVariant = p.variants.find(vr => isSizeVariantName(vr.name) && vr.options.length > 0);
-          const selectedColour = colourVariant ? v.selections?.[colourVariant.name] : undefined;
-          const previewImg = (selectedColour && lookupColorImage(p.colorImages, selectedColour)) || p.image;
 
           return (
             <div key={p.id} className="hamper-piece">
               <span className="hamper-piece-index">{i + 1}</span>
 
               <div className="hamper-piece-head">
-                <a href={`/products/${p.id}?fromCombo=true`} className="hamper-piece-img-link">
+                <a  className="hamper-piece-img-link">
                   <img src={p.image} alt={p.name} />
                 </a>
                 <div className="hamper-piece-headinfo">
-                  <a href={`/products/${p.id}?fromCombo=true`} className="hamper-piece-name-link">
+                  <a className="hamper-piece-name-link">
                     <span className="hamper-piece-name">{p.name}</span>
                   </a>
                   {p.price != null && <span className="hamper-piece-price">₹{p.price.toLocaleString('en-IN')}</span>}
@@ -551,72 +577,120 @@ function PresetHamperSection({ combo, variants, onVariantChange, onAddToCart, ca
               </p>
 
               <div className="hamper-piece-body">
-                {/* {colourVariant && colourVariant.options.length > 0 && (
-                  <div className="hamper-piece-variant-img">
-                    <img src={previewImg} alt={`${p.name} — ${selectedColour || 'default colour'}`} />
-                  </div>
-                )} */}
-
-                {colourVariant && colourVariant.options.length > 0 && (
-                  <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">{colourVariant.name} {selectedColour && <em>· {selectedColour}</em>}</span>
-                    <div className="hamper-colour-swatch-row">
-                      {colourVariant.options.map(opt => {
-                        const swatchImg = lookupColorImage(p.colorImages, opt) || p.image;
-                        const isOn = selectedColour === opt;
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
-                            aria-pressed={isOn}
-                            onClick={() => onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [colourVariant.name]: opt } })}
-                          >
-                            <span className="hamper-colour-swatch-img-wrap">
-                              <img src={swatchImg} alt={opt} />
-                            </span>
-                            <span className="hamper-colour-swatch-label">{opt}</span>
-                          </button>
-                        );
-                      })}
+                {p.variants.map((variant) => {
+                  if (variant.options.length === 0) return null;
+                  const selectedOpt = v.selections?.[variant.name];
+                  return (
+                    <div key={variant.name} className="hamper-piece-field">
+                      <span className="hamper-piece-field-label">{variant.name} {selectedOpt && <em>· {selectedOpt}</em>}</span>
+                      <div className="hamper-colour-swatch-row" style={{ flexWrap: 'wrap', gap: '0.8rem' }}>
+                        {variant.options.map(opt => {
+                          const isOn = selectedOpt === opt.name;
+                          return (
+                            <button
+                              key={opt.name}
+                              type="button"
+                              className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
+                              aria-pressed={isOn}
+                              onClick={() => onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [variant.name]: opt.name } })}
+                              style={{ height: 'auto', padding: '0.5rem', width: 'auto', flexDirection: 'column' }}
+                            >
+                              {opt.image && (
+                                <span className="hamper-colour-swatch-img-wrap" style={{ width: 40, height: 40, borderRadius: 4 }}>
+                                  <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </span>
+                              )}
+                              <span className="hamper-colour-swatch-label" style={{ marginTop: '0.2rem' }}>{opt.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+                  );
+                })}
+
+                {p.allowTextCustomization && (
+                  <div className="hamper-piece-field">
+                    <span className="hamper-piece-field-label">Personal Message <span className="modal-field-optional">optional</span></span>
+                    <textarea
+                      className="modal-textarea"
+                      placeholder="E.g. 'To my dearest Priya, with love…'"
+                      value={v.personalMessage || ''}
+                      onChange={e => onVariantChange(p.id, { ...v, personalMessage: e.target.value })}
+                      maxLength={120}
+                      rows={2}
+                    />
                   </div>
                 )}
 
-                {sizeVariant && (
+                {p.allowImageCustomization && (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">{sizeVariant.name} {v.selections?.[sizeVariant.name] && <em>· {v.selections[sizeVariant.name]}</em>}</span>
-                    <div className="hamper-chip-row">
-                      {sizeVariant.options.map(opt => (
-                        <button key={opt}
-                          className={`hamper-chip hamper-chip-sm${v.selections?.[sizeVariant.name] === opt ? ' on' : ''}`}
-                          onClick={() => onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [sizeVariant.name]: opt } })}>
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
+                    <span className="hamper-piece-field-label">Upload Photo <span className="modal-field-optional">optional</span></span>
+                    <label className="modal-upload-zone">
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileFor(p.id)} />
+                      {v.uploadedImageBase64 ? (
+                        <div className="modal-upload-preview">
+                          <img src={v.uploadedImageBase64} alt="Preview" />
+                          <div>
+                            <span className="modal-upload-preview-name">Photo uploaded ✓</span>
+                            <span className="modal-upload-change">Tap to change</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="modal-upload-empty">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="3"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                          <span className="modal-upload-cta">Tap to upload a photo</span>
+                          <span className="modal-upload-sub">JPG · PNG · WEBP</span>
+                        </div>
+                      )}
+                    </label>
                   </div>
                 )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
+      {(combo.allowComboTextCustomization || combo.allowComboImageCustomization) && (
+        <>
+          <div className="hamper-divider" style={{ margin: "2rem 0" }} />
+          <div className="hamper-piece">
+            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span>
+            <div className="hamper-piece-head">
+              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+                <span className="hamper-piece-name">Box Customisation</span>
+              </div>
+            </div>
+            <p className="hamper-piece-desc">Add a personal touch to the entire hamper box.</p>
+            
+            <div className="hamper-piece-body">
+              {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Personal Message <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">Personal Message on Box <span className="modal-field-optional">optional</span></span>
                   <textarea
                     className="modal-textarea"
-                    placeholder="E.g. 'To my dearest Priya, with love…'"
-                    value={v.personalMessage || ''}
-                    onChange={e => onVariantChange(p.id, { ...v, personalMessage: e.target.value })}
+                    placeholder="E.g. 'Happy Anniversary!'"
+                    value={comboVariant.personalMessage || ''}
+                    onChange={e => onComboVariantChange({ ...comboVariant, personalMessage: e.target.value })}
                     maxLength={120}
                     rows={2}
                   />
                 </div>
+              )}
 
+              {combo.allowComboImageCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Upload Photo <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">Upload Photo for Box <span className="modal-field-optional">optional</span></span>
                   <label className="modal-upload-zone">
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileFor(p.id)} />
-                    {v.uploadedImageBase64 ? (
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} />
+                    {comboVariant.uploadedImageBase64 ? (
                       <div className="modal-upload-preview">
-                        <img src={v.uploadedImageBase64} alt="Preview" />
+                        <img src={comboVariant.uploadedImageBase64} alt="Preview" />
                         <div>
                           <span className="modal-upload-preview-name">Photo uploaded ✓</span>
                           <span className="modal-upload-change">Tap to change</span>
@@ -635,11 +709,11 @@ function PresetHamperSection({ combo, variants, onVariantChange, onAddToCart, ca
                     )}
                   </label>
                 </div>
-              </div>
+              )}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </>
+      )}
 
       <div className="hamper-sticky-bar">
         <div className="hamper-sticky-info">
@@ -664,6 +738,8 @@ interface CustomBuilderSectionProps {
   slot: CustomComboSlot;
   selectedIds: string[];
   variants: Record<string, ProductVariant>;
+  comboVariant: ProductVariant;
+  onComboVariantChange: (v: ProductVariant) => void;
   onToggle: (pid: string) => void;
   onVariantChange: (pid: string, v: ProductVariant) => void;
   onAddToCart: (slot: CustomComboSlot) => void;
@@ -672,8 +748,18 @@ interface CustomBuilderSectionProps {
   gender?: string;
 }
 
-function CustomBuilderSection({ slot, selectedIds, variants, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
+function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
+
+  const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.currentTarget.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      onComboVariantChange({ ...comboVariant, uploadedImageBase64: ev.target?.result as string });
+    };
+    r.readAsDataURL(f);
+  };
   const [expanded, setExpanded] = useState(false);
 
   if (!slot) return null;
@@ -778,6 +864,65 @@ function CustomBuilderSection({ slot, selectedIds, variants, onToggle, onVariant
         />
       )}
 
+      {(slot.allowComboTextCustomization || slot.allowComboImageCustomization) && (
+        <div style={{ margin: "2rem auto", padding: "0 1.5rem", maxWidth: "600px" }}>
+          <div className="hamper-divider" style={{ margin: "0 0 2rem 0" }} />
+          <div className="hamper-piece">
+            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span>
+            <div className="hamper-piece-head">
+              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+                <span className="hamper-piece-name">Box Customisation</span>
+              </div>
+            </div>
+            <p className="hamper-piece-desc">Add a personal touch to the entire hamper box.</p>
+            
+            <div className="hamper-piece-body">
+              {slot.allowComboTextCustomization && (
+                <div className="hamper-piece-field">
+                  <span className="hamper-piece-field-label">Personal Message on Box <span className="modal-field-optional">optional</span></span>
+                  <textarea
+                    className="modal-textarea"
+                    placeholder="E.g. 'Happy Anniversary!'"
+                    value={comboVariant.personalMessage || ''}
+                    onChange={e => onComboVariantChange({ ...comboVariant, personalMessage: e.target.value })}
+                    maxLength={120}
+                    rows={2}
+                  />
+                </div>
+              )}
+
+              {slot.allowComboImageCustomization && (
+                <div className="hamper-piece-field">
+                  <span className="hamper-piece-field-label">Upload Photo for Box <span className="modal-field-optional">optional</span></span>
+                  <label className="modal-upload-zone">
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} />
+                    {comboVariant.uploadedImageBase64 ? (
+                      <div className="modal-upload-preview">
+                        <img src={comboVariant.uploadedImageBase64} alt="Preview" />
+                        <div>
+                          <span className="modal-upload-preview-name">Photo uploaded ✓</span>
+                          <span className="modal-upload-change">Tap to change</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="modal-upload-empty">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="3"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span className="modal-upload-cta">Tap to upload a photo</span>
+                        <span className="modal-upload-sub">JPG · PNG · WEBP</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
           <div className="builder-drawer-head">
@@ -836,6 +981,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>({});
   const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>({});
   const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
+  const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>({});
 
   useEffect(() => {
     async function loadCombos() {
@@ -850,7 +996,10 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             if (!loadedProductsMap.has(p._id)) {
               const parsedVariants: DynamicVariant[] = (p.variants || []).map((v: any) => ({
                 name: v.name,
-                options: v.options ? v.options.split(',').map((opt: string) => opt.trim()) : [],
+                options: (v.options || []).map((opt: any) => ({
+                  name: opt.name,
+                  image: opt.image || undefined,
+                })),
               }));
 
               const rawColorImages = p.colorImages || p.colourImages || undefined;
@@ -864,6 +1013,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 customisable: p.customisable ?? true,
                 variants: parsedVariants,
                 colorImages: rawColorImages,
+                allowTextCustomization: p.allowTextCustomization || false,
+                allowImageCustomization: p.allowImageCustomization || false,
               });
             }
             return loadedProductsMap.get(p._id)!;
@@ -877,21 +1028,25 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 id: c._id,
                 name: c.name,
                 tagline: c.tagline || '',
-                price: c.price || 0,
-                originalPrice: c.originalPrice || c.price || 0,
+                price: c.price,
+                originalPrice: c.originalPrice || c.price,
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
+                allowComboTextCustomization: c.allowComboTextCustomization || false,
+                allowComboImageCustomization: c.allowComboImageCustomization || false,
                 includedProducts: products,
               });
-            } else {
+            } else if (c.type === 'custom') {
               loadedCustom.push({
                 id: c._id,
                 name: c.name,
                 tagline: c.tagline || '',
-                maxItems: c.itemsCount || 3,
+                maxItems: c.itemsCount || 1,
                 fixedPrice: c.price || 0,
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
+                allowComboTextCustomization: c.allowComboTextCustomization || false,
+                allowComboImageCustomization: c.allowComboImageCustomization || false,
                 allowedProducts: products,
               });
             }
@@ -915,12 +1070,18 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   }, []);
 
   function handlePresetAddToCart(combo: PresetCombo) {
+    const cv = comboVariants[combo.id] || {};
     addItem({
       id: combo.id, name: combo.name, price: combo.price,
       originalPrice: combo.originalPrice, image: combo.image,
       color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-PRESET-${combo.id}`,
       href: `/categories/${gender}/curated-combos`,
+      customData: {
+        comboPersonalMessage: cv.personalMessage,
+        comboUploadedImageBase64: cv.uploadedImageBase64,
+        isComboCustomised: hasCustomisation(cv)
+      },
       selectionGroups: [{
         category: 'preset', label: combo.name,
         items: combo.includedProducts.map(p => {
@@ -958,6 +1119,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   function handleCustomAddToCart(slot: CustomComboSlot) {
     const ids  = slotSelections[slot.id] || [];
     const vars = slotVariants[slot.id]   || {};
+    const cv   = comboVariants[slot.id]  || {};
     if (!ids.length) return;
     addItem({
       id: `custom-slot-${slot.id}-${Date.now()}`,
@@ -965,6 +1127,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
       image: slot.image, color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-CUSTOM-${slot.id}`,
       href: `/categories/${gender}/curated-combos`,
+      customData: {
+        comboPersonalMessage: cv.personalMessage,
+        comboUploadedImageBase64: cv.uploadedImageBase64,
+        isComboCustomised: hasCustomisation(cv)
+      },
       selectionGroups: [{
         category: slot.id, label: slot.name,
         items: ids.map(pid => {
@@ -1355,6 +1522,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
               <PresetHamperSection
                 combo={presetCombos.find(c => c.id === selectedComboId)!}
                 variants={presetVariants}
+                comboVariant={comboVariants[selectedComboId] || {}}
+                onComboVariantChange={(v) => setComboVariants(prev => ({ ...prev, [selectedComboId]: v }))}
                 onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
                 onAddToCart={handlePresetAddToCart}
                 cartAdded={!!presetCartAdded[selectedComboId]}
@@ -1372,6 +1541,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 slot={customSlots.find(s => s.id === selectedSlotId)!}
                 selectedIds={slotSelections[selectedSlotId] || []}
                 variants={slotVariants[selectedSlotId] || {}}
+                comboVariant={comboVariants[selectedSlotId] || {}}
+                onComboVariantChange={(v) => setComboVariants(prev => ({ ...prev, [selectedSlotId]: v }))}
                 onToggle={pid => handleSlotToggle(selectedSlotId, pid)}
                 onVariantChange={(pid, v) => handleSlotVariantChange(selectedSlotId, pid, v)}
                 onAddToCart={handleCustomAddToCart}

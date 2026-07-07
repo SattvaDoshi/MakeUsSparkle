@@ -6,7 +6,9 @@ export type AdminComboProduct = {
 	title: string;
 	description?: string;
 	image?: string;
-	variants?: { name: string; options: string }[];
+	variants?: { name: string; options: { name: string; image?: string }[] | string | any }[];
+	allowTextCustomization?: boolean;
+	allowImageCustomization?: boolean;
 };
 
 export type AdminCombo = {
@@ -21,6 +23,8 @@ export type AdminCombo = {
 	originalPrice?: number;
 	products?: AdminComboProduct[];
 	itemsCount?: number;
+	allowComboTextCustomization?: boolean;
+	allowComboImageCustomization?: boolean;
 };
 
 type Props = {
@@ -38,7 +42,9 @@ type ComboProductState = {
 	image?: string;
 	imageFile?: File | null;
 	imagePreview?: string | null;
-	variants: { name: string; options: string }[];
+	variants: { name: string; options: { name: string; image?: string; imageFile?: File | null; imagePreview?: string | null }[] }[];
+	allowTextCustomization: boolean;
+	allowImageCustomization: boolean;
 };
 
 type ModalState = {
@@ -52,6 +58,8 @@ type ModalState = {
 	price: string;
 	originalPrice: string;
 	itemsCount: string;
+	allowComboTextCustomization: boolean;
+	allowComboImageCustomization: boolean;
 	products: ComboProductState[];
 	imageFile: File | null;
 	existingImage?: string;
@@ -67,6 +75,8 @@ const defaultModal: ModalState = {
 	price: "",
 	originalPrice: "",
 	itemsCount: "",
+	allowComboTextCustomization: false,
+	allowComboImageCustomization: false,
 	products: [],
 	imageFile: null,
 };
@@ -104,6 +114,8 @@ export default function AdminCombosTab({
 			price: combo.price ? String(combo.price) : "",
 			originalPrice: combo.originalPrice ? String(combo.originalPrice) : "",
 			itemsCount: combo.itemsCount ? String(combo.itemsCount) : "",
+			allowComboTextCustomization: combo.allowComboTextCustomization || false,
+			allowComboImageCustomization: combo.allowComboImageCustomization || false,
 			products: (combo.products || []).map((p) => ({
 				_id: p._id,
 				title: p.title || "",
@@ -111,7 +123,30 @@ export default function AdminCombosTab({
 				image: p.image,
 				imageFile: null,
 				imagePreview: p.image || null,
-				variants: p.variants || [],
+				allowTextCustomization: p.allowTextCustomization || false,
+				allowImageCustomization: p.allowImageCustomization || false,
+				variants: (p.variants || []).map(v => {
+					let parsedOptions: any[] = [];
+					if (typeof v.options === 'string') {
+						parsedOptions = v.options.split(',').map((opt: string) => ({
+							name: opt.trim(),
+							image: undefined,
+							imagePreview: null,
+							imageFile: null
+						})).filter((opt: any) => opt.name);
+					} else if (Array.isArray(v.options)) {
+						parsedOptions = v.options.map((opt: any) => ({
+							name: opt.name,
+							image: opt.image,
+							imagePreview: opt.image || null,
+							imageFile: null
+						}));
+					}
+					return {
+						name: v.name,
+						options: parsedOptions
+					};
+				}),
 			})),
 			imageFile: null,
 			existingImage: combo.image,
@@ -143,20 +178,37 @@ export default function AdminCombosTab({
 		fd.append("status", modal.status);
 		fd.append("displayOrder", modal.displayOrder);
 		fd.append("price", modal.price);
+		fd.append("allowComboTextCustomization", String(modal.allowComboTextCustomization));
+		fd.append("allowComboImageCustomization", String(modal.allowComboImageCustomization));
 
 		const productsData = modal.products.map((p) => ({
 			_id: p._id,
 			title: p.title,
 			description: p.description,
 			image: p.image,
-			variants: p.variants,
+			allowTextCustomization: p.allowTextCustomization,
+			allowImageCustomization: p.allowImageCustomization,
+			variants: p.variants.map(v => ({
+				name: v.name,
+				options: v.options.map(opt => ({
+					name: opt.name,
+					image: opt.image
+				}))
+			}))
 		}));
 		fd.append("products", JSON.stringify(productsData));
 
-		modal.products.forEach((p, index) => {
+		modal.products.forEach((p, pIndex) => {
 			if (p.imageFile) {
-				fd.append(`productImage_${index}`, p.imageFile);
+				fd.append(`productImage_${pIndex}`, p.imageFile);
 			}
+			p.variants.forEach((v, vIndex) => {
+				v.options.forEach((opt, optIndex) => {
+					if (opt.imageFile) {
+						fd.append(`variantImage_${pIndex}_${vIndex}_${optIndex}`, opt.imageFile);
+					}
+				});
+			});
 		});
 
 		if (modal.kind === "curated") {
@@ -204,7 +256,7 @@ export default function AdminCombosTab({
 			...modal,
 			products: [
 				...modal.products,
-				{ title: "", description: "", variants: [] },
+				{ title: "", description: "", variants: [], allowTextCustomization: false, allowImageCustomization: false },
 			],
 		});
 	};
@@ -243,7 +295,7 @@ export default function AdminCombosTab({
 	const addVariant = (productIndex: number) => {
 		if (!modal) return;
 		const newProducts = [...modal.products];
-		newProducts[productIndex].variants.push({ name: "", options: "" });
+		newProducts[productIndex].variants.push({ name: "", options: [] });
 		setModal({ ...modal, products: newProducts });
 	};
 
@@ -254,11 +306,50 @@ export default function AdminCombosTab({
 		setModal({ ...modal, products: newProducts });
 	};
 
-	const updateVariant = (productIndex: number, variantIndex: number, key: "name" | "options", value: string) => {
+	const updateVariantName = (productIndex: number, variantIndex: number, value: string) => {
 		if (!modal) return;
 		const newProducts = [...modal.products];
-		newProducts[productIndex].variants[variantIndex][key] = value;
+		newProducts[productIndex].variants[variantIndex].name = value;
 		setModal({ ...modal, products: newProducts });
+	};
+
+	const addOption = (productIndex: number, variantIndex: number) => {
+		if (!modal) return;
+		const newProducts = [...modal.products];
+		newProducts[productIndex].variants[variantIndex].options.push({ name: "" });
+		setModal({ ...modal, products: newProducts });
+	};
+
+	const removeOption = (productIndex: number, variantIndex: number, optIndex: number) => {
+		if (!modal) return;
+		const newProducts = [...modal.products];
+		newProducts[productIndex].variants[variantIndex].options.splice(optIndex, 1);
+		setModal({ ...modal, products: newProducts });
+	};
+
+	const updateOption = (productIndex: number, variantIndex: number, optIndex: number, key: "name", value: string) => {
+		if (!modal) return;
+		const newProducts = [...modal.products];
+		newProducts[productIndex].variants[variantIndex].options[optIndex][key] = value;
+		setModal({ ...modal, products: newProducts });
+	};
+
+	const handleOptionImageChange = (productIndex: number, variantIndex: number, optIndex: number, file: File | null) => {
+		if (!modal) return;
+		const newProducts = [...modal.products];
+		const option = newProducts[productIndex].variants[variantIndex].options[optIndex];
+		option.imageFile = file;
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = () => {
+				option.imagePreview = reader.result as string;
+				setModal({ ...modal, products: newProducts });
+			};
+			reader.readAsDataURL(file);
+		} else {
+			option.imagePreview = option.image || null;
+			setModal({ ...modal, products: newProducts });
+		}
 	};
 
 	const renderTable = () => {
@@ -511,6 +602,16 @@ export default function AdminCombosTab({
 										)}
 										<input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} style={{ padding: "0.4rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.9rem" }} />
 									</div>
+									<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+										<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+											<input type="checkbox" id="allowComboText" checked={modal.allowComboTextCustomization} onChange={(e) => setModal((prev) => (prev ? { ...prev, allowComboTextCustomization: e.target.checked } : prev))} />
+											<label htmlFor="allowComboText" style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Allow Combo Text Msg</label>
+										</div>
+										<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+											<input type="checkbox" id="allowComboImage" checked={modal.allowComboImageCustomization} onChange={(e) => setModal((prev) => (prev ? { ...prev, allowComboImageCustomization: e.target.checked } : prev))} />
+											<label htmlFor="allowComboImage" style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Allow Combo Image</label>
+										</div>
+									</div>
 								</div>
 
 								{/* Embedded Products Section */}
@@ -573,6 +674,17 @@ export default function AdminCombosTab({
 														</div>
 													</div>
 
+													<div style={{ display: "flex", gap: "1rem" }}>
+														<label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem", color: "#666" }}>
+															<input type="checkbox" checked={p.allowTextCustomization} onChange={(e) => updateProduct(pIndex, "allowTextCustomization", e.target.checked)} />
+															Allow Product Msg
+														</label>
+														<label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem", color: "#666" }}>
+															<input type="checkbox" checked={p.allowImageCustomization} onChange={(e) => updateProduct(pIndex, "allowImageCustomization", e.target.checked)} />
+															Allow Product Image
+														</label>
+													</div>
+
 													{/* Variants Section */}
 													<div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
 														<label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#666", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -582,26 +694,26 @@ export default function AdminCombosTab({
 															</button>
 														</label>
 														{p.variants.length > 0 && (
-															<div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+															<div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 																{p.variants.map((v, vIndex) => (
-																	<div key={vIndex} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-																		<input
-																			required
-																			placeholder="e.g. Color"
-																			value={v.name}
-																			onChange={(e) => updateVariant(pIndex, vIndex, "name", e.target.value)}
-																			style={{ flex: 1, padding: "0.4rem 0.6rem", border: "1px solid #d4d4c8", borderRadius: 4, fontSize: "0.85rem" }}
-																		/>
-																		<input
-																			required
-																			placeholder="e.g. Red, Blue (comma separated)"
-																			value={v.options}
-																			onChange={(e) => updateVariant(pIndex, vIndex, "options", e.target.value)}
-																			style={{ flex: 2, padding: "0.4rem 0.6rem", border: "1px solid #d4d4c8", borderRadius: 4, fontSize: "0.85rem" }}
-																		/>
-																		<button type="button" onClick={() => removeVariant(pIndex, vIndex)} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontSize: "1rem", fontWeight: 600, padding: "0.2rem 0.4rem" }}>
-																			&times;
-																		</button>
+																	<div key={vIndex} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", padding: "0.8rem", border: "1px solid #e8ead0", borderRadius: 6, background: "#fff" }}>
+																		<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+																			<input required placeholder="Variant Name (e.g. Color)" value={v.name} onChange={(e) => updateVariantName(pIndex, vIndex, e.target.value)} style={{ flex: 1, padding: "0.4rem 0.6rem", border: "1px solid #d4d4c8", borderRadius: 4, fontSize: "0.85rem" }} />
+																			<button type="button" onClick={() => removeVariant(pIndex, vIndex)} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}>Remove Variant</button>
+																		</div>
+																		<div style={{ paddingLeft: "1rem", borderLeft: "2px solid #f0f0f0" }}>
+																			{v.options.map((opt, optIndex) => (
+																				<div key={optIndex} style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
+																					<input required placeholder="Option (e.g. Red)" value={opt.name} onChange={(e) => updateOption(pIndex, vIndex, optIndex, "name", e.target.value)} style={{ flex: 1, padding: "0.3rem 0.5rem", border: "1px solid #d4d4c8", borderRadius: 4, fontSize: "0.8rem" }} />
+																					
+																					{opt.imagePreview && <img src={opt.imagePreview} alt="" style={{ width: 30, height: 30, objectFit: "cover", borderRadius: 4 }} />}
+																					<input type="file" accept="image/*" onChange={(e) => handleOptionImageChange(pIndex, vIndex, optIndex, e.target.files?.[0] || null)} style={{ fontSize: "0.75rem", width: "160px" }} />
+
+																					<button type="button" onClick={() => removeOption(pIndex, vIndex, optIndex)} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontSize: "1rem", fontWeight: 600, padding: "0 0.4rem" }}>&times;</button>
+																				</div>
+																			))}
+																			<button type="button" onClick={() => addOption(pIndex, vIndex)} style={{ background: "none", border: "none", color: "#4a5c22", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600, marginTop: "0.3rem" }}>+ Add Option</button>
+																		</div>
 																	</div>
 																))}
 															</div>

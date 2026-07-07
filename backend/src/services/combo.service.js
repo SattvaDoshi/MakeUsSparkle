@@ -15,6 +15,31 @@ const processProductsImages = async (products, imageService) => {
 				newProduct.imagePublicId = uploadedImage.publicId;
 				delete newProduct.imageBuffer;
 			}
+			
+			// Process variant images
+			if (Array.isArray(newProduct.variants)) {
+				newProduct.variants = await Promise.all(
+					newProduct.variants.map(async (v) => {
+						const newVariant = { ...v };
+						if (Array.isArray(newVariant.options)) {
+							newVariant.options = await Promise.all(
+								newVariant.options.map(async (opt) => {
+									const newOpt = { ...opt };
+									if (opt.imageBuffer) {
+										const uploadedOptImage = await imageService.uploadImage(opt.imageBuffer, "combo-variants");
+										newOpt.image = uploadedOptImage.url;
+										newOpt.imagePublicId = uploadedOptImage.publicId;
+										delete newOpt.imageBuffer;
+									}
+									return newOpt;
+								})
+							);
+						}
+						return newVariant;
+					})
+				);
+			}
+			
 			return newProduct;
 		})
 	);

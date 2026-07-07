@@ -32,6 +32,7 @@ export interface CartItem {
   customImages?: string[];
   giftBox?: boolean;
   giftMessage?: string;
+  customData?: Record<string, any>;
   selectedCharms?: Array<string | {
     _id?: string;
     id?: string;

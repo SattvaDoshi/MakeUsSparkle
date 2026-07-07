@@ -7,8 +7,14 @@ const comboProductSchema = new mongoose.Schema({
   imagePublicId: String,
   variants: [{
     name: String, // e.g. "Color", "Size"
-    options: String // e.g. "Red, Blue, Green"
-  }]
+    options: [{
+      name: String,
+      image: String,
+      imagePublicId: String
+    }]
+  }],
+  allowTextCustomization: { type: Boolean, default: false },
+  allowImageCustomization: { type: Boolean, default: false }
 });
 
 const comboSchema = new mongoose.Schema(
@@ -43,6 +49,10 @@ const comboSchema = new mongoose.Schema(
 
     // Fields specific to Custom Combos
     itemsCount: Number, // Number of items the user must select from the products list
+
+    // Combo-level Customization Toggles
+    allowComboTextCustomization: { type: Boolean, default: false },
+    allowComboImageCustomization: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

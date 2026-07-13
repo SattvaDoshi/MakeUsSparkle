@@ -33,7 +33,7 @@ const defaultMarqueeItems = [
   '✦ Free Gifts on all Orders',
 ];
 
-export default function Hero() {
+export default function xHero() {
   const { gender: rawCategory, setGender: setActiveCategory } = useGender();
   const activeCategory = (["women", "men", "kids"].includes(rawCategory)
     ? rawCategory

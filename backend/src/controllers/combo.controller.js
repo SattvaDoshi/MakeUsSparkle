@@ -9,6 +9,25 @@ function parseComboData(req) {
 			console.error("Failed to parse combo products JSON:", e);
 		}
 	}
+	if (typeof data.pricingVariants === "string") {
+		try {
+			data.pricingVariants = JSON.parse(data.pricingVariants);
+		} catch (e) {
+			data.pricingVariants = [];
+		}
+	}
+	if (typeof data.seoTags === "string") {
+		try {
+			data.seoTags = JSON.parse(data.seoTags);
+		} catch (e) {
+			data.seoTags = [];
+		}
+	}
+	// Parse boolean string fields
+	["allowComboTextCustomization", "allowComboImageCustomization"].forEach(k => {
+		if (typeof data[k] === "string") data[k] = data[k] === "true";
+	});
+	if (data.comboMaxImageUploads !== undefined) data.comboMaxImageUploads = Number(data.comboMaxImageUploads) || 1;
 
 	const files = req.files || [];
 	const imageBuffer = files.find((f) => f.fieldname === "image")?.buffer;

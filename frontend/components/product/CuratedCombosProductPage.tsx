@@ -17,6 +17,8 @@ interface ProductVariant {
   selections?: Record<string, string>;
   personalMessage?: string;
   uploadedImageBase64?: string;
+  uploadedImagesBase64?: string[];
+  selectedPricingVariant?: { label: string; price: number };
 }
 
 interface DynamicVariant {
@@ -34,7 +36,12 @@ interface ComboProduct {
   variants: DynamicVariant[];
   colorImages?: Record<string, string>;
   allowTextCustomization?: boolean;
+  textCustomizationTitle?: string;
   allowImageCustomization?: boolean;
+  imageCustomizationTitle?: string;
+  maxImageUploads?: number;
+  tags?: string[];
+  stock?: number;
 }
 
 interface PresetCombo {
@@ -46,7 +53,11 @@ interface PresetCombo {
   image: string;
   badge: string;
   allowComboTextCustomization?: boolean;
+  comboTextCustomizationTitle?: string;
   allowComboImageCustomization?: boolean;
+  comboImageCustomizationTitle?: string;
+  comboMaxImageUploads?: number;
+  pricingVariants?: { label: string; price: number }[];
   includedProducts: ComboProduct[];
 }
 
@@ -59,7 +70,11 @@ interface CustomComboSlot {
   image: string;
   badge: string;
   allowComboTextCustomization?: boolean;
+  comboTextCustomizationTitle?: string;
   allowComboImageCustomization?: boolean;
+  comboImageCustomizationTitle?: string;
+  comboMaxImageUploads?: number;
+  pricingVariants?: { label: string; price: number }[];
   allowedProducts: ComboProduct[];
 }
 
@@ -246,7 +261,7 @@ const CUSTOM_SLOTS: CustomComboSlot[] = [
 ];
 
 export function hasCustomisation(v: ProductVariant) {
-  return (v.selections && Object.keys(v.selections).length > 0) || !!v.personalMessage || !!v.uploadedImageBase64;
+  return (v.selections && Object.keys(v.selections).length > 0) || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0);
 }
 
 function CompactCustSummary({ variant }: { variant: ProductVariant }) {
@@ -258,6 +273,9 @@ function CompactCustSummary({ variant }: { variant: ProductVariant }) {
       ))}
       {variant.personalMessage     && <span className="cust-chip">Message added</span>}
       {variant.uploadedImageBase64 && <span className="cust-chip">Photo added</span>}
+      {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
+      {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
+      {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
     </div>
   );
 }
@@ -277,11 +295,30 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   const [local, setLocal] = useState<ProductVariant>({ ...variant });
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.currentTarget.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => setLocal(prev => ({ ...prev, uploadedImageBase64: ev.target?.result as string }));
-    r.readAsDataURL(f);
+    const files = Array.from(e.currentTarget.files || []);
+    if (!files.length) return;
+    files.forEach(f => {
+      const r = new FileReader();
+      r.onload = ev => {
+        setLocal(prev => {
+          const arr = prev.uploadedImagesBase64 || (prev.uploadedImageBase64 ? [prev.uploadedImageBase64] : []);
+          if (arr.length < (product.maxImageUploads || 1)) {
+            return { ...prev, uploadedImagesBase64: [...arr, ev.target?.result as string], uploadedImageBase64: undefined };
+          }
+          return prev;
+        });
+      };
+      r.readAsDataURL(f);
+    });
+  };
+  
+  const removeImage = (index: number) => {
+    setLocal(prev => {
+      const arr = prev.uploadedImagesBase64 || (prev.uploadedImageBase64 ? [prev.uploadedImageBase64] : []);
+      const newArr = [...arr];
+      newArr.splice(index, 1);
+      return { ...prev, uploadedImagesBase64: newArr, uploadedImageBase64: undefined };
+    });
   };
 
   const variants = hideVariants ? [] : (product.variants || []);
@@ -345,7 +382,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
             <div className="modal-field">
               <label className="modal-field-label">
                 <span className="modal-field-num">{msgNum}</span>
-                Personal Message
+                {product.textCustomizationTitle || 'Personal Message'}
                 <span className="modal-field-optional">optional</span>
               </label>
               <textarea className="modal-textarea"
@@ -357,37 +394,57 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
             </div>
           )}
 
-          {product.allowImageCustomization && (
-            <div className="modal-field">
-              <label className="modal-field-label">
-                <span className="modal-field-num">{picNum}</span>
-                Upload Photo
-                <span className="modal-field-optional">optional</span>
-              </label>
-              <label className="modal-upload-zone">
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-                {local.uploadedImageBase64 ? (
-                  <div className="modal-upload-preview">
-                    <img src={local.uploadedImageBase64} alt="Preview" />
-                    <div>
-                      <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-                      <span className="modal-upload-change">Tap to change</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="modal-upload-empty">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="3"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    <span className="modal-upload-cta">Tap to upload a photo</span>
-                    <span className="modal-upload-sub">JPG · PNG · WEBP</span>
-                  </div>
-                )}
-              </label>
-            </div>
-          )}
+          {product.allowImageCustomization && (() => {
+            const maxCount = product.maxImageUploads || 1;
+            const titles = (product.imageCustomizationTitle || 'Upload Photo').split(',').map(t => t.trim());
+            const uploaded = local.uploadedImagesBase64 || (local.uploadedImageBase64 ? [local.uploadedImageBase64] : []);
+            
+            return (
+              <div className="modal-field">
+                <label className="modal-field-label">
+                  <span className="modal-field-num">{picNum}</span>
+                  {product.imageCustomizationTitle || 'Upload Photo'}
+                  <span className="modal-field-optional">optional</span>
+                </label>
+                <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+                  {Array.from({ length: maxCount }).map((_, i) => {
+                    const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
+                    const currentImg = uploaded[i];
+                    
+                    return (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
+                        {currentImg ? (
+                          <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
+                            <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button type="button" onClick={(e) => { e.preventDefault(); removeImage(i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                          </div>
+                        ) : (
+                          <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const base64String = reader.result as string;
+                                const newUploaded = [...uploaded];
+                                newUploaded[i] = base64String;
+                                setLocal(prev => ({ ...prev, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined }));
+                              };
+                              reader.readAsDataURL(file);
+                            }} />
+                            <div className="modal-upload-empty" style={{ padding: 0 }}>
+                              <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
+                            </div>
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {hasAny && (
             <div className="modal-summary-box">
@@ -397,7 +454,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                   <span key={key} className="modal-sum-tag">{key}: {val}</span>
                 ))}
                 {local.personalMessage     && <span className="modal-sum-tag">Message added</span>}
-                {local.uploadedImageBase64 && <span className="modal-sum-tag">Photo added</span>}
+                {local.uploadedImagesBase64?.map((_, i) => <span key={i} className="modal-sum-tag">Photo added</span>)}
               </div>
             </div>
           )}
@@ -490,31 +547,28 @@ interface PresetHamperSectionProps {
 }
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
-  const handleFileFor = (pid: string) => (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.currentTarget.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      const v = variants[pid] || {};
-      onVariantChange(pid, { ...v, uploadedImageBase64: ev.target?.result as string });
-    };
-    r.readAsDataURL(f);
+  const removeFileFor = (pid: string, index: number) => {
+    const v = variants[pid] || {};
+    const arr = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
+    const newArr = [...arr];
+    newArr.splice(index, 1);
+    onVariantChange(pid, { ...v, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
-
-  const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.currentTarget.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      onComboVariantChange({ ...comboVariant, uploadedImageBase64: ev.target?.result as string });
-    };
-    r.readAsDataURL(f);
+  
+  const removeComboFile = (index: number) => {
+    const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+    const newArr = [...arr];
+    newArr.splice(index, 1);
+    onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
 
   if (!combo) return null;
 
   const products = combo.includedProducts;
-  const pct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
+  const currentPrice = comboVariant.selectedPricingVariant?.price ?? combo.price;
+  const priceDiff = currentPrice - combo.price;
+  const currentOriginalPrice = combo.originalPrice + priceDiff;
+  const pct = Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100);
   const customisedCount = products.filter(p => hasCustomisation(variants[p.id] || {})).length;
 
   return (
@@ -538,8 +592,8 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           <h1 className="hamper-title">{combo.name}</h1>
           <p className="hamper-tagline">{combo.tagline}</p>
           <div className="hamper-price-row">
-            <span className="hamper-price">₹{combo.price.toLocaleString('en-IN')}</span>
-            {pct > 0 && <span className="hamper-original">₹{combo.originalPrice.toLocaleString('en-IN')}</span>}
+            <span className="hamper-price">₹{currentPrice.toLocaleString('en-IN')}</span>
+            {pct > 0 && <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
             {pct > 0 && <span className="hamper-save-tag">Save {pct}%</span>}
           </div>
         </div>
@@ -569,6 +623,11 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                     <span className="hamper-piece-name">{p.name}</span>
                   </a>
                   {p.price != null && <span className="hamper-piece-price">₹{p.price.toLocaleString('en-IN')}</span>}
+                  {p.tags && p.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -611,7 +670,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
                 {p.allowTextCustomization && (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Personal Message <span className="modal-field-optional">optional</span></span>
+                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="modal-field-optional">optional</span></span>
                     <textarea
                       className="modal-textarea"
                       placeholder="E.g. 'To my dearest Priya, with love…'"
@@ -623,38 +682,88 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                   </div>
                 )}
 
-                {p.allowImageCustomization && (
-                  <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Upload Photo <span className="modal-field-optional">optional</span></span>
-                    <label className="modal-upload-zone">
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileFor(p.id)} />
-                      {v.uploadedImageBase64 ? (
-                        <div className="modal-upload-preview">
-                          <img src={v.uploadedImageBase64} alt="Preview" />
-                          <div>
-                            <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-                            <span className="modal-upload-change">Tap to change</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="modal-upload-empty">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="3"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                          </svg>
-                          <span className="modal-upload-cta">Tap to upload a photo</span>
-                          <span className="modal-upload-sub">JPG · PNG · WEBP</span>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                )}
+                {p.allowImageCustomization && (() => {
+                  const maxCount = p.maxImageUploads || 1;
+                  const titles = (p.imageCustomizationTitle || 'Upload Photo').split(',').map(t => t.trim());
+                  const uploaded = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
+                  
+                  return (
+                    <div className="hamper-piece-field">
+                      <span className="hamper-piece-field-label">Image Customisation <span className="modal-field-optional">optional</span></span>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {Array.from({ length: maxCount }).map((_, i) => {
+                          const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
+                          const currentImg = uploaded[i];
+                          
+                          return (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
+                              {currentImg ? (
+                                <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
+                                  <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <button type="button" onClick={(e) => { e.preventDefault(); removeFileFor(p.id, i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                                </div>
+                              ) : (
+                                <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      const base64String = reader.result as string;
+                                      const newUploaded = [...uploaded];
+                                      newUploaded[i] = base64String;
+                                      onVariantChange(p.id, { ...v, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }} />
+                                  <div className="modal-upload-empty" style={{ padding: 0 }}>
+                                    <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
+                                  </div>
+                                </label>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );
         })}
       </div>
+
+      {combo.pricingVariants && combo.pricingVariants.length > 0 && (
+        <>
+          <div className="hamper-divider" style={{ margin: "2rem 0" }} />
+          <div className="hamper-piece">
+            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
+            <div className="hamper-piece-head">
+              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+                <span className="hamper-piece-name">Select Option</span>
+              </div>
+            </div>
+            <p className="hamper-piece-desc">Choose a pricing tier for this combo.</p>
+            <div className="hamper-piece-body" style={{ marginTop: '1rem' }}>
+              <select 
+                 className="modal-textarea" 
+                 value={comboVariant.selectedPricingVariant?.label || ''} 
+                 onChange={e => {
+                   const opt = combo.pricingVariants?.find(x => x.label === e.target.value);
+                   onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt });
+                 }}
+               >
+                 <option value="">Base - ₹{combo.price.toLocaleString('en-IN')}</option>
+                 {combo.pricingVariants.map(pv => (
+                   <option key={pv.label} value={pv.label}>{pv.label} - ₹{pv.price.toLocaleString('en-IN')}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+        </>
+      )}
 
       {(combo.allowComboTextCustomization || combo.allowComboImageCustomization) && (
         <>
@@ -671,7 +780,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             <div className="hamper-piece-body">
               {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Personal Message on Box <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -683,33 +792,59 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                 </div>
               )}
 
-              {combo.allowComboImageCustomization && (
-                <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Upload Photo for Box <span className="modal-field-optional">optional</span></span>
-                  <label className="modal-upload-zone">
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} />
-                    {comboVariant.uploadedImageBase64 ? (
-                      <div className="modal-upload-preview">
-                        <img src={comboVariant.uploadedImageBase64} alt="Preview" />
-                        <div>
-                          <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-                          <span className="modal-upload-change">Tap to change</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="modal-upload-empty">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="3"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                        <span className="modal-upload-cta">Tap to upload a photo</span>
-                        <span className="modal-upload-sub">JPG · PNG · WEBP</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              )}
+              {combo.allowComboImageCustomization && (() => {
+                const maxCount = combo.comboMaxImageUploads || 1;
+                const titles = (combo.comboImageCustomizationTitle || 'Upload Photo for Box').split(',').map(t => t.trim());
+                const uploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+
+                return (
+                  <div className="hamper-piece-field">
+                    <span className="hamper-piece-field-label">Combo Image Customisation <span className="modal-field-optional">optional</span></span>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      {Array.from({ length: maxCount }).map((_, i) => {
+                        const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
+                        const currentImg = uploaded[i];
+                        
+                        return (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
+                            {currentImg ? (
+                              <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
+                                <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <button type="button" onClick={(e) => {
+                                  e.preventDefault();
+                                  const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+                                  const newArr = [...arr];
+                                  newArr.splice(i, 1);
+                                  onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
+                                }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                              </div>
+                            ) : (
+                              <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    const base64String = reader.result as string;
+                                    const newUploaded = [...uploaded];
+                                    newUploaded[i] = base64String;
+                                    onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }} />
+                                <div className="modal-upload-empty" style={{ padding: 0 }}>
+                                  <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
+                                </div>
+                              </label>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>
@@ -719,8 +854,8 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
         <div className="hamper-sticky-info">
           <span className="hamper-sticky-label">Set Total</span>
           <div className="hamper-sticky-price">
-            <span className="hamper-sticky-price-val">₹{combo.price.toLocaleString('en-IN')}</span>
-            {pct > 0 && <span className="hamper-sticky-price-orig">₹{combo.originalPrice.toLocaleString('en-IN')}</span>}
+            <span className="hamper-sticky-price-val">₹{currentPrice.toLocaleString('en-IN')}</span>
+            {pct > 0 && <span className="hamper-sticky-price-orig">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
           </div>
         </div>
         <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}`} onClick={() => onAddToCart(combo)}>
@@ -752,19 +887,32 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
 
   const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.currentTarget.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      onComboVariantChange({ ...comboVariant, uploadedImageBase64: ev.target?.result as string });
-    };
-    r.readAsDataURL(f);
+    const files = Array.from(e.currentTarget.files || []);
+    if (!files.length) return;
+    files.forEach(f => {
+      const r = new FileReader();
+      r.onload = ev => {
+        const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+        if (arr.length < (slot.comboMaxImageUploads || 1)) {
+           onComboVariantChange({ ...comboVariant, uploadedImagesBase64: [...arr, ev.target?.result as string], uploadedImageBase64: undefined });
+        }
+      };
+      r.readAsDataURL(f);
+    });
+  };
+  
+  const removeComboFile = (index: number) => {
+    const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+    const newArr = [...arr];
+    newArr.splice(index, 1);
+    onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
   const [expanded, setExpanded] = useState(false);
 
   if (!slot) return null;
 
   const remaining = slot.maxItems - selectedIds.length;
+  const currentPrice = comboVariant.selectedPricingVariant?.price ?? slot.fixedPrice;
   const selectedProducts = slot.allowedProducts.filter(p => selectedIds.includes(p.id));
 
   const handleAddWithCustomise = (product: ComboProduct) => setCustomising({ product, isAddFlow: true });
@@ -830,6 +978,16 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
                   <div className="builder-card-name">{p.name}</div>
                 </a>
                 {p.price != null && <div className="builder-card-price">₹{p.price.toLocaleString('en-IN')}</div>}
+                {p.tags && p.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                    </div>
+                )}
+                {p.tags && p.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                    </div>
+                )}
 
                 {isChosen ? (
                   <>
@@ -864,6 +1022,36 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         />
       )}
 
+      {slot.pricingVariants && slot.pricingVariants.length > 0 && (
+        <div style={{ margin: "2rem auto", padding: "0 1.5rem", maxWidth: "600px" }}>
+          <div className="hamper-divider" style={{ margin: "0 0 2rem 0" }} />
+          <div className="hamper-piece">
+            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
+            <div className="hamper-piece-head">
+              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+                <span className="hamper-piece-name">Select Option</span>
+              </div>
+            </div>
+            <p className="hamper-piece-desc">Choose a pricing tier for this combo.</p>
+            <div className="hamper-piece-body" style={{ marginTop: '1rem' }}>
+              <select 
+                 className="modal-textarea" 
+                 value={comboVariant.selectedPricingVariant?.label || ''} 
+                 onChange={e => {
+                   const opt = slot.pricingVariants?.find(x => x.label === e.target.value);
+                   onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt });
+                 }}
+               >
+                 <option value="">Base - ₹{slot.fixedPrice.toLocaleString('en-IN')}</option>
+                 {slot.pricingVariants.map(pv => (
+                   <option key={pv.label} value={pv.label}>{pv.label} - ₹{pv.price.toLocaleString('en-IN')}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {(slot.allowComboTextCustomization || slot.allowComboImageCustomization) && (
         <div style={{ margin: "2rem auto", padding: "0 1.5rem", maxWidth: "600px" }}>
           <div className="hamper-divider" style={{ margin: "0 0 2rem 0" }} />
@@ -879,7 +1067,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
             <div className="hamper-piece-body">
               {slot.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Personal Message on Box <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -893,29 +1081,25 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 
               {slot.allowComboImageCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Upload Photo for Box <span className="modal-field-optional">optional</span></span>
-                  <label className="modal-upload-zone">
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} />
-                    {comboVariant.uploadedImageBase64 ? (
-                      <div className="modal-upload-preview">
-                        <img src={comboVariant.uploadedImageBase64} alt="Preview" />
-                        <div>
-                          <span className="modal-upload-preview-name">Photo uploaded ✓</span>
-                          <span className="modal-upload-change">Tap to change</span>
+                  <span className="hamper-piece-field-label">{slot.comboImageCustomizationTitle || 'Upload Photo for Box'} <span className="modal-field-optional">optional</span></span>
+                    
+                    <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+                      {(comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : [])).map((img, i) => (
+                        <div key={i} className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
+                          <img src={img} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={(e) => { e.preventDefault(); removeComboFile(i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="modal-upload-empty">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="3"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                        <span className="modal-upload-cta">Tap to upload a photo</span>
-                        <span className="modal-upload-sub">JPG · PNG · WEBP</span>
-                      </div>
-                    )}
-                  </label>
+                      ))}
+                      
+                      {((comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : [])).length < (slot.comboMaxImageUploads || 1)) && (
+                        <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} multiple />
+                          <div className="modal-upload-empty" style={{ padding: 0 }}>
+                            <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
+                          </div>
+                        </label>
+                      )}
+                    </div>
                 </div>
               )}
             </div>
@@ -951,8 +1135,8 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         </button>
         <div className="builder-sticky-info">
           {remaining > 0
-            ? <span className="builder-sticky-label">Add {remaining} more product{remaining !== 1 ? 's' : ''} to get the bundle at ₹{slot.fixedPrice.toLocaleString('en-IN')}</span>
-            : <span className="builder-sticky-label builder-sticky-label--done">{slot.maxItems} pieces selected — ₹{slot.fixedPrice.toLocaleString('en-IN')}</span>}
+            ? <span className="builder-sticky-label">Add {remaining} more product{remaining !== 1 ? 's' : ''} to get the bundle at ₹{currentPrice.toLocaleString('en-IN')}</span>
+            : <span className="builder-sticky-label builder-sticky-label--done">{slot.maxItems} pieces selected — ₹{currentPrice.toLocaleString('en-IN')}</span>}
         </div>
         <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={selectedIds.length === 0} onClick={() => onAddToCart(slot)}>
           {cartAdded ? 'Added' : 'Add to Cart'}
@@ -1014,7 +1198,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 variants: parsedVariants,
                 colorImages: rawColorImages,
                 allowTextCustomization: p.allowTextCustomization || false,
+                textCustomizationTitle: p.textCustomizationTitle || '',
                 allowImageCustomization: p.allowImageCustomization || false,
+                imageCustomizationTitle: p.imageCustomizationTitle || '',
+                maxImageUploads: p.maxImageUploads || 1,
+                tags: p.tags || [],
+                stock: p.stock ?? undefined,
               });
             }
             return loadedProductsMap.get(p._id)!;
@@ -1033,7 +1222,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
+                comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
                 allowComboImageCustomization: c.allowComboImageCustomization || false,
+                comboImageCustomizationTitle: c.comboImageCustomizationTitle || '',
+                comboMaxImageUploads: c.comboMaxImageUploads || 1,
+                pricingVariants: c.pricingVariants || [],
                 includedProducts: products,
               });
             } else if (c.type === 'custom') {
@@ -1046,7 +1239,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 image: safeImageSrc(c.image),
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
+                comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
                 allowComboImageCustomization: c.allowComboImageCustomization || false,
+                comboImageCustomizationTitle: c.comboImageCustomizationTitle || '',
+                comboMaxImageUploads: c.comboMaxImageUploads || 1,
+                pricingVariants: c.pricingVariants || [],
                 allowedProducts: products,
               });
             }
@@ -1072,14 +1269,16 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   function handlePresetAddToCart(combo: PresetCombo) {
     const cv = comboVariants[combo.id] || {};
     addItem({
-      id: combo.id, name: combo.name, price: combo.price,
-      originalPrice: combo.originalPrice, image: combo.image,
+      id: combo.id, name: combo.name, price: cv.selectedPricingVariant?.price ?? combo.price,
+      originalPrice: (cv.selectedPricingVariant?.price ?? combo.price) > combo.price ? combo.originalPrice + ((cv.selectedPricingVariant?.price ?? combo.price) - combo.price) : combo.originalPrice, image: combo.image,
       color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-PRESET-${combo.id}`,
       href: `/categories/${gender}/curated-combos`,
       customData: {
         comboPersonalMessage: cv.personalMessage,
         comboUploadedImageBase64: cv.uploadedImageBase64,
+        comboUploadedImagesBase64: cv.uploadedImagesBase64,
+        comboSelectedPricingVariant: cv.selectedPricingVariant,
         isComboCustomised: hasCustomisation(cv)
       },
       selectionGroups: [{
@@ -1092,6 +1291,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
               selections: v.selections,
               personalMessage: v.personalMessage,
               uploadedImageBase64: v.uploadedImageBase64,
+              uploadedImagesBase64: v.uploadedImagesBase64,
               isCustomised: hasCustomisation(v)
             }
           };
@@ -1123,7 +1323,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     if (!ids.length) return;
     addItem({
       id: `custom-slot-${slot.id}-${Date.now()}`,
-      name: slot.name, price: slot.fixedPrice, originalPrice: slot.fixedPrice,
+      name: slot.name, price: cv.selectedPricingVariant?.price ?? slot.fixedPrice, originalPrice: cv.selectedPricingVariant?.price ?? slot.fixedPrice,
       image: slot.image, color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-CUSTOM-${slot.id}`,
       href: `/categories/${gender}/curated-combos`,
@@ -1240,6 +1440,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-btn-save:hover { background:#2e3c0e;transform:translateY(-1px); }
 
         .cust-compact { display:flex;flex-wrap:wrap;gap:4px;margin-top:3px; }
+        .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
+        .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
         .cust-chip { font-size:9px;font-weight:500;color:var(--olive);background:var(--olivedim);border:1px solid rgba(90,110,43,.2);padding:2px 8px;border-radius:50px;white-space:nowrap; }
 
         /* ── PAGE ── */

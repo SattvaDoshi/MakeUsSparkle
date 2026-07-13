@@ -5,6 +5,9 @@ const comboProductSchema = new mongoose.Schema({
   description: String,
   image: String,
   imagePublicId: String,
+  tags: [String],          // e.g. "Best Seller", "New"
+  seoTags: [String],       // SEO meta tags
+  stock: Number,           // Optional stock quantity
   variants: [{
     name: String, // e.g. "Color", "Size"
     options: [{
@@ -14,7 +17,10 @@ const comboProductSchema = new mongoose.Schema({
     }]
   }],
   allowTextCustomization: { type: Boolean, default: false },
-  allowImageCustomization: { type: Boolean, default: false }
+  textCustomizationTitle: String,       // Title/prompt shown to user
+  allowImageCustomization: { type: Boolean, default: false },
+  imageCustomizationTitle: String,      // Title/prompt shown to user
+  maxImageUploads: { type: Number, default: 1 }  // How many photos allowed
 });
 
 const comboSchema = new mongoose.Schema(
@@ -50,9 +56,21 @@ const comboSchema = new mongoose.Schema(
     // Fields specific to Custom Combos
     itemsCount: Number, // Number of items the user must select from the products list
 
+    // Combo-level SEO
+    seoTags: [String],
+
     // Combo-level Customization Toggles
     allowComboTextCustomization: { type: Boolean, default: false },
+    comboTextCustomizationTitle: String,
     allowComboImageCustomization: { type: Boolean, default: false },
+    comboImageCustomizationTitle: String,
+    comboMaxImageUploads: { type: Number, default: 1 },
+
+    // Variable pricing tiers (e.g. "With Box": 1999, "Without Box": 1599)
+    pricingVariants: [{
+      label: String,
+      price: Number
+    }],
   },
   { timestamps: true }
 );

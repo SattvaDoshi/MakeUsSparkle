@@ -1307,7 +1307,7 @@ export default function TopNav() {
           display: none;
           position: fixed;
           top: 72px; left: 0; right: 0;
-          background: #c8dfc0;
+          background: #ffffff;
           backdrop-filter: blur(20px);
           padding: 16px 32px 24px 32px;
           flex-direction: column;

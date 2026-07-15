@@ -615,9 +615,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               <span className="hamper-piece-index">{i + 1}</span>
 
               <div className="hamper-piece-head">
-                <a  className="hamper-piece-img-link">
-                  <img src={p.image} alt={p.name} />
-                </a>
+                
                 <div className="hamper-piece-headinfo">
                   <a className="hamper-piece-name-link">
                     <span className="hamper-piece-name">{p.name}</span>
@@ -642,7 +640,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                   return (
                     <div key={variant.name} className="hamper-piece-field">
                       <span className="hamper-piece-field-label">{variant.name} {selectedOpt && <em>· {selectedOpt}</em>}</span>
-                      <div className="hamper-colour-swatch-row" style={{ flexWrap: 'wrap', gap: '0.8rem' }}>
+                      <div className="hamper-colour-swatch-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                         {variant.options.map(opt => {
                           const isOn = selectedOpt === opt.name;
                           return (
@@ -655,7 +653,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                               style={{ height: 'auto', padding: '0.5rem', width: 'auto', flexDirection: 'column' }}
                             >
                               {opt.image && (
-                                <span className="hamper-colour-swatch-img-wrap" style={{ width: 40, height: 40, borderRadius: 4 }}>
+                                <span className="hamper-colour-swatch-img-wrap" style={{ width: 90, height: 90 }}>
                                   <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </span>
                               )}
@@ -1475,7 +1473,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1280px;margin:0 auto;padding:20px clamp(16px,4vw,52px) 0; width:100%; }
         .combo-card { background:var(--surf);border:1.5px solid var(--bdr);overflow:hidden;display:flex;flex-direction:column;text-align:left;transition:all .2s;min-width:0; }
         .combo-card:hover { border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }
-        .combo-card-img-wrap { position:relative;aspect-ratio:2/3;overflow:hidden;background:var(--olivedim); }
+        .combo-card-img-wrap { position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--olivedim); }
         .combo-card-img-wrap img { width:100%;height:100%;object-fit:cover;transition:transform .35s ease; }
         .combo-card:hover .combo-card-img-wrap img { transform:scale(1.06); }
         .combo-card-pct { position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--olive);color:#fff;padding:3px 8px;border-radius:4px; }
@@ -1550,7 +1548,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
         .hamper-colour-swatch-row { display:flex;flex-wrap:wrap;gap:10px; }
         .hamper-colour-swatch { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:0;cursor:pointer; }
-        .hamper-colour-swatch-img-wrap { width:44px;height:44px;border-radius:8px;overflow:hidden;border:2px solid var(--bdr2);transition:all .18s; }
+        .hamper-colour-swatch-img-wrap { width:44px;height:44px;overflow:hidden;border:2px solid var(--bdr2);transition:all .18s; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
         .hamper-colour-swatch:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
         .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.15); }

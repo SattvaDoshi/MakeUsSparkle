@@ -13,7 +13,8 @@ const comboProductSchema = new mongoose.Schema({
     options: [{
       name: String,
       image: String,
-      imagePublicId: String
+      imagePublicId: String,
+      stock: Number
     }]
   }],
   allowTextCustomization: { type: Boolean, default: false },

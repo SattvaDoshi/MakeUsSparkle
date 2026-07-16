@@ -1057,7 +1057,7 @@ export default function TopNav() {
   const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<{ products: any[]; categories: any[]; styles: any[] } | null>(null);
+  const [searchResults, setSearchResults] = useState<{ products: any[]; categories: any[]; styles: any[]; combos: any[] } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -1103,14 +1103,15 @@ export default function TopNav() {
               products: data.products || [],
               categories: data.categories || [],
               styles: data.styles || [],
+              combos: data.combos || [],
             });
             return;
           }
         }
-        setSearchResults({ products: [], categories: [], styles: [] });
+        setSearchResults({ products: [], categories: [], styles: [], combos: [] });
       } catch (error) {
         console.error("Search error:", error);
-        setSearchResults({ products: [], categories: [], styles: [] });
+        setSearchResults({ products: [], categories: [], styles: [], combos: [] });
       } finally {
         setIsSearching(false);
       }
@@ -1546,7 +1547,24 @@ export default function TopNav() {
                         </div>
                       )}
 
-                      {searchResults.categories.length === 0 && searchResults.styles.length === 0 && searchResults.products.length === 0 && (
+                      {searchResults.combos.length > 0 && (
+                        <div>
+                          <div className="sparkle-search-section-title">Combos</div>
+                          {searchResults.combos.map((combo) => (
+                            <Link key={combo._id} href={combo.type === 'custom' ? `/combos?custom=${combo._id}` : `/combos?combo=${combo._id}`} className="sparkle-search-item" onClick={() => { setShowDropdown(false); setSearchOpen(false); setSearchTerm(""); }}>
+                              {combo.image && (
+                                <Image src={combo.image} alt={combo.name} width={32} height={32} className="sparkle-search-item-img" />
+                              )}
+                              <div className="sparkle-search-item-info">
+                                <span className="sparkle-search-item-title">{combo.name}</span>
+                                {combo.price && <span className="sparkle-search-item-price">₹{combo.price}</span>}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {searchResults.categories.length === 0 && searchResults.styles.length === 0 && searchResults.products.length === 0 && searchResults.combos.length === 0 && (
                         <div className="sparkle-search-message">No matching results found.</div>
                       )}
                     </>

@@ -9,7 +9,7 @@ export type AdminComboProduct = {
 	tags?: string[];
 	seoTags?: string[];
 	stock?: number | null;
-	variants?: { name: string; options: { name: string; image?: string }[] | string | any }[];
+	variants?: { name: string; options: { name: string; image?: string; stock?: number }[] | string | any }[];
 	allowTextCustomization?: boolean;
 	textCustomizationTitle?: string;
 	allowImageCustomization?: boolean;
@@ -55,7 +55,7 @@ type ComboProductState = {
 	tags: string;           // comma-separated input
 	seoTags: string;        // comma-separated input
 	stock: string;
-	variants: { name: string; options: { name: string; image?: string; imageFile?: File | null; imagePreview?: string | null }[] }[];
+	variants: { name: string; options: { name: string; image?: string; imageFile?: File | null; imagePreview?: string | null; stock?: number }[] }[];
 	allowTextCustomization: boolean;
 	textCustomizationTitle: string;
 	allowImageCustomization: boolean;
@@ -186,17 +186,22 @@ export default function AdminCombosTab({
 				imageCustomizationTitle: p.imageCustomizationTitle || "",
 				maxImageUploads: String(p.maxImageUploads || 1),
 				variants: (p.variants || []).map(v => {
-					let parsedOptions: any[] = [];
 					if (typeof v.options === "string") {
-						parsedOptions = v.options.split(",").map((opt: string) => ({
-							name: opt.trim(), image: undefined, imagePreview: null, imageFile: null
-						})).filter((opt: any) => opt.name);
+						return {
+							name: v.name,
+							options: v.options.split(",").map((opt: string) => ({
+								name: opt.trim(), image: undefined, imagePreview: null, imageFile: null
+							})).filter((opt: any) => opt.name)
+						};
 					} else if (Array.isArray(v.options)) {
-						parsedOptions = v.options.map((opt: any) => ({
-							name: opt.name, image: opt.image, imagePreview: opt.image || null, imageFile: null
-						}));
+						return {
+							name: v.name,
+							options: v.options.map((opt: any) => ({
+								name: opt.name, image: opt.image, stock: opt.stock, imagePreview: opt.image || null, imageFile: null
+							}))
+						};
 					}
-					return { name: v.name, options: parsedOptions };
+					return { name: v.name, options: [] };
 				}),
 			})),
 			imageFile: null,
@@ -309,6 +314,7 @@ export default function AdminCombosTab({
 				name: v.name,
 				options: v.options.map(opt => ({
 					name: opt.name,
+					stock: opt.stock,
 					image: !opt.imageFile ? opt.image : undefined,
 				})),
 			})),
@@ -400,7 +406,7 @@ export default function AdminCombosTab({
 			if (!prev) return prev;
 			const ps = [...prev.products];
 			const vs = [...ps[pIdx].variants];
-			vs[vIdx] = { ...vs[vIdx], options: [...vs[vIdx].options, { name: "" }] };
+			vs[vIdx] = { ...vs[vIdx], options: [...vs[vIdx].options, { name: "", stock: undefined }] };
 			ps[pIdx] = { ...ps[pIdx], variants: vs };
 			return { ...prev, products: ps };
 		});
@@ -417,7 +423,7 @@ export default function AdminCombosTab({
 			return { ...prev, products: ps };
 		});
 	};
-	const updateOption = (pIdx: number, vIdx: number, oIdx: number, key: "name", val: string) => {
+	const updateOption = (pIdx: number, vIdx: number, oIdx: number, key: "name" | "stock", val: string | number) => {
 		setModal(prev => {
 			if (!prev) return prev;
 			const ps = [...prev.products];
@@ -755,6 +761,7 @@ export default function AdminCombosTab({
 																		{v.options.map((opt, oIdx) => (
 																			<div key={oIdx} style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap" }}>
 																				<input required placeholder="Option (e.g. Red)" value={opt.name} onChange={e => updateOption(pIdx, vIdx, oIdx, "name", e.target.value)} style={{ ...INP, width: "auto", flex: 1, minWidth: 80 }} />
+																<input type="number" placeholder="Stock (e.g. 10)" value={opt.stock !== undefined ? opt.stock : ""} onChange={e => updateOption(pIdx, vIdx, oIdx, "stock", parseInt(e.target.value))} style={{ ...INP, width: "auto", flex: 1, minWidth: 80 }} />
 																				{opt.imagePreview && <img src={opt.imagePreview} alt="" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #d4d4c8", flexShrink: 0 }} />}
 																				<input type="file" accept="image/*" onChange={e => handleOptionImageChange(pIdx, vIdx, oIdx, e.target.files?.[0] || null)} style={{ fontSize: "0.72rem", width: 140, flexShrink: 0 }} />
 																				<button type="button" onClick={() => removeOption(pIdx, vIdx, oIdx)} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontSize: "1rem", fontWeight: 700, padding: "0 0.3rem" }}>×</button>

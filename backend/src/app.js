@@ -37,6 +37,7 @@ import homeContentRoutes from "./routes/homeContent.routes.js";
 import rewardsRoutes from "./routes/rewards.routes.js";
 import exitSurveyRoutes from "./routes/exitSurvey.routes.js";
 import adminExitSurveyRoutes from "./routes/admin/adminExitSurvey.routes.js";
+import affiliateRoutes from "./routes/affiliate.routes.js";
 
 const app = express();
 
@@ -142,5 +143,6 @@ app.use("/admin/home-content", adminHomeContentRoutes);
 app.use("/abandoned", abandonedRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/rewards", rewardsRoutes);
+app.use("/affiliate", affiliateRoutes);
 
 export default app;

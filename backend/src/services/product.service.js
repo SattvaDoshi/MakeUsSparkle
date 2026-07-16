@@ -2,6 +2,7 @@ import Product from "../models/product.model.js";
 import Gender from "../models/gender.model.js";
 import Category from "../models/category.model.js";
 import Style from "../models/style.model.js";
+import Combo from "../models/combo.model.js";
 import imageService from "./image.service.js";
 import mongoose from "mongoose";
 
@@ -135,13 +136,14 @@ class ProductService {
 			const q = searchQuery || "";
 			const regex = new RegExp(q, "i");
 			
-			const [products, categories, styles] = await Promise.all([
+			const [products, categories, styles, combos] = await Promise.all([
 				Product.find({ title: regex }).limit(10),
 				Category.find({ name: regex }).limit(5),
-				Style.find({ name: regex }).limit(5)
+				Style.find({ name: regex }).limit(5),
+				Combo.find({ name: regex }).limit(5)
 			]);
 
-			return { success: true, products, categories, styles };
+			return { success: true, products, categories, styles, combos };
 		} catch (error) {
 			console.error("Error searching products:", error);
 			throw error;

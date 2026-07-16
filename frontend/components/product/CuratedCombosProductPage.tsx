@@ -10,6 +10,18 @@ import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
 
+const PRESET_MESSAGES = [
+  { value: '', label: 'Choose a message template…' },
+  { value: 'happy_mothers_day', label: '💐 Happy Mother\'s Day' },
+  { value: 'happy_birthday', label: '🎂 Happy Birthday' },
+  { value: 'i_am_sorry', label: '🙏 I\'m Sorry' },
+  { value: 'congratulations', label: '🎉 Congratulations' },
+  { value: 'thank_you', label: '🤍 Thank You' },
+  { value: 'i_love_you', label: '❤️ I Love You' },
+  { value: 'get_well_soon', label: '🌸 Get Well Soon' },
+  { value: 'merry_christmas', label: '🎄 Merry Christmas' },
+];
+
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
@@ -23,7 +35,7 @@ interface ProductVariant {
 
 interface DynamicVariant {
   name: string;
-  options: { name: string; image?: string }[];
+  options: { name: string; image?: string; stock?: number }[];
 }
 
 interface ComboProduct {
@@ -48,6 +60,7 @@ interface PresetCombo {
   id: string;
   name: string;
   tagline: string;
+  description?: string;
   price: number;
   originalPrice: number;
   image: string;
@@ -65,6 +78,7 @@ interface CustomComboSlot {
   id: string;
   name: string;
   tagline: string;
+  description?: string;
   maxItems: number;
   fixedPrice: number;
   image: string;
@@ -365,12 +379,13 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                   return (
                     <button key={opt.name} 
                       className={`chip${isSelected ? ' chip-on' : ''}`}
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto' }}
-                      onClick={() => setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } }))}>
+                      onClick={() => setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } }))}
+                      disabled={opt.stock === 0}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto', opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}>
                       {opt.image && (
                         <img src={opt.image} alt={opt.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
                       )}
-                      <span>{opt.name}</span>
+                      <span>{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
                     </button>
                   );
                 })}
@@ -385,6 +400,16 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                 {product.textCustomizationTitle || 'Personal Message'}
                 <span className="modal-field-optional">optional</span>
               </label>
+              <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
+                value={PRESET_MESSAGES.find(m => m.label === local.personalMessage)?.value || ''}
+                onChange={e => {
+                  if (e.target.value) {
+                    const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
+                    if (msg) setLocal(p => ({ ...p, personalMessage: msg }));
+                  }
+                }}>
+                {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
               <textarea className="modal-textarea"
                 placeholder="E.g. 'To my dearest Priya, with love…'"
                 value={local.personalMessage || ''}
@@ -591,6 +616,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           <span className="hamper-eyebrow">{combo.badge || 'Curated Set'}</span>
           <h1 className="hamper-title">{combo.name}</h1>
           <p className="hamper-tagline">{combo.tagline}</p>
+          {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-line' }}>{combo.description}</p>}
           <div className="hamper-price-row">
             <span className="hamper-price">₹{currentPrice.toLocaleString('en-IN')}</span>
             {pct > 0 && <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
@@ -650,14 +676,15 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                               className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
                               aria-pressed={isOn}
                               onClick={() => onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [variant.name]: opt.name } })}
-                              style={{ height: 'auto', padding: '0.5rem', width: 'auto', flexDirection: 'column' }}
+                              disabled={opt.stock === 0}
+                              style={{ height: 'auto', padding: '0.5rem', width: 'auto', flexDirection: 'column', opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}
                             >
                               {opt.image && (
                                 <span className="hamper-colour-swatch-img-wrap" style={{ width: 90, height: 90 }}>
                                   <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </span>
                               )}
-                              <span className="hamper-colour-swatch-label" style={{ marginTop: '0.2rem' }}>{opt.name}</span>
+                              <span className="hamper-colour-swatch-label" style={{ marginTop: '0.2rem' }}>{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
                             </button>
                           );
                         })}
@@ -669,6 +696,16 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                 {p.allowTextCustomization && (
                   <div className="hamper-piece-field">
                     <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="modal-field-optional">optional</span></span>
+                    <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
+                      value={PRESET_MESSAGES.find(m => m.label === v.personalMessage)?.value || ''}
+                      onChange={e => {
+                        if (e.target.value) {
+                          const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
+                          if (msg) onVariantChange(p.id, { ...v, personalMessage: msg });
+                        }
+                      }}>
+                      {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
                     <textarea
                       className="modal-textarea"
                       placeholder="E.g. 'To my dearest Priya, with love…'"
@@ -779,6 +816,16 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
                   <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
+                  <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
+                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.personalMessage)?.value || ''}
+                    onChange={e => {
+                      if (e.target.value) {
+                        const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
+                        if (msg) onComboVariantChange({ ...comboVariant, personalMessage: msg });
+                      }
+                    }}>
+                    {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1066,6 +1113,16 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
               {slot.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
                   <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
+                  <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
+                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.personalMessage)?.value || ''}
+                    onChange={e => {
+                      if (e.target.value) {
+                        const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
+                        if (msg) onComboVariantChange({ ...comboVariant, personalMessage: msg });
+                      }
+                    }}>
+                    {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1166,6 +1223,31 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>({});
 
   useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const comboId = params.get('combo');
+      const customId = params.get('custom');
+      
+      if (comboId) {
+        setSelectedComboId(comboId);
+        setPresetView('detail');
+        setMode('preset');
+      } else if (customId) {
+        setSelectedSlotId(customId);
+        setCustomView('detail');
+        setMode('custom');
+      } else {
+        setPresetView('grid');
+        setCustomView('grid');
+      }
+    };
+    
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
     async function loadCombos() {
       try {
         const data = await apiRequest<{ success: boolean; combos: any[] }>('/combos');
@@ -1181,6 +1263,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 options: (v.options || []).map((opt: any) => ({
                   name: opt.name,
                   image: opt.image || undefined,
+                  stock: opt.stock ?? undefined,
                 })),
               }));
 
@@ -1215,6 +1298,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 id: c._id,
                 name: c.name,
                 tagline: c.tagline || '',
+                description: c.description || '',
                 price: c.price,
                 originalPrice: c.originalPrice || c.price,
                 image: safeImageSrc(c.image),
@@ -1232,6 +1316,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 id: c._id,
                 name: c.name,
                 tagline: c.tagline || '',
+                description: c.description || '',
                 maxItems: c.itemsCount || 1,
                 fixedPrice: c.price || 0,
                 image: safeImageSrc(c.image),
@@ -1716,7 +1801,14 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             presetView === 'grid' ? (
               <PresetComboGrid
                 combos={presetCombos}
-                onSelect={id => { setSelectedComboId(id); setPresetView('detail'); }}
+                onSelect={id => { 
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('combo', id);
+                  url.searchParams.delete('custom');
+                  window.history.pushState(null, '', url.toString());
+                  setSelectedComboId(id); 
+                  setPresetView('detail'); 
+                }}
               />
             ) : (
               <PresetHamperSection
@@ -1727,14 +1819,26 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
                 onAddToCart={handlePresetAddToCart}
                 cartAdded={!!presetCartAdded[selectedComboId]}
-                onBack={() => setPresetView('grid')}
+                onBack={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('combo');
+                  window.history.pushState(null, '', url.toString());
+                  setPresetView('grid');
+                }}
               />
             )
           ) : (
             customView === 'grid' ? (
               <CustomSlotGrid
                 slots={customSlots}
-                onSelect={id => { setSelectedSlotId(id); setCustomView('detail'); }}
+                onSelect={id => { 
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('custom', id);
+                  url.searchParams.delete('combo');
+                  window.history.pushState(null, '', url.toString());
+                  setSelectedSlotId(id); 
+                  setCustomView('detail'); 
+                }}
               />
             ) : (
               <CustomBuilderSection
@@ -1747,7 +1851,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onVariantChange={(pid, v) => handleSlotVariantChange(selectedSlotId, pid, v)}
                 onAddToCart={handleCustomAddToCart}
                 cartAdded={!!customCartAdded[selectedSlotId]}
-                onBack={() => setCustomView('grid')}
+                onBack={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('custom');
+                  window.history.pushState(null, '', url.toString());
+                  setCustomView('grid');
+                }}
                 gender={gender}
               />
             )

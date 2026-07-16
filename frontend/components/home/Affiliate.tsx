@@ -1,35 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/authContext';
+import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
+
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
-interface ReferredOrder {
+interface CommissionRow {
   id: string;
   referredName: string;
   orderAmount: number;
-  date: string;      // ISO string e.g. '2026-06-02'
-  status: 'paid' | 'pending';
+  date: string;      // ISO string
+  earning: number;
+  status: 'pending' | 'approved' | 'paid';
 }
 
-interface AffiliatePageProps {
-  affiliateLink?: string;
-  affiliateName?: string;
-  orders?: ReferredOrder[];
+interface DashboardStats {
+  totalReferrals: number;
+  totalOrderValue: number;
+  totalEarned: number;
+  paidEarned: number;
+  pendingEarned: number;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   DEMO DATA — replace with real API data
-───────────────────────────────────────────────────────────── */
-const DEMO_ORDERS: ReferredOrder[] = [
-  { id: '1', referredName: 'Ananya Sharma', orderAmount: 7499, date: '2026-06-02', status: 'paid' },
-  { id: '2', referredName: 'Meena Iyer',    orderAmount: 5999, date: '2026-05-28', status: 'paid' },
-  { id: '3', referredName: 'Ritu Desai',    orderAmount: 8247, date: '2026-05-20', status: 'pending' },
-  { id: '4', referredName: 'Pooja Nair',    orderAmount: 3149, date: '2026-05-10', status: 'pending' },
-];
+interface AffiliateMe {
+  success: boolean;
+  affiliateCode: string;
+  affiliateLink: string;
+}
 
-const COMMISSION_RATE = 0.10; // 10%
+interface AffiliateDashboard {
+  success: boolean;
+  commissions: CommissionRow[];
+  stats: DashboardStats;
+}
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS
@@ -44,27 +50,54 @@ function formatDate(iso: string) {
   });
 }
 
-function earning(amount: number) {
-  return Math.round(amount * COMMISSION_RATE);
-}
-
 /* ─────────────────────────────────────────────────────────────
    AFFILIATE PAGE
 ───────────────────────────────────────────────────────────── */
-export default function AffiliatePage({
-  affiliateLink = 'https://makeussparkle.com/ref/yourcode',
-  affiliateName = 'Your Account',
-  orders = DEMO_ORDERS,
-}: AffiliatePageProps) {
+export default function AffiliatePage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [copied, setCopied] = useState(false);
 
-  const totalOrderValue = orders.reduce((sum, o) => sum + o.orderAmount, 0);
-  const totalEarned     = orders.reduce((sum, o) => sum + earning(o.orderAmount), 0);
-  const paidEarned      = orders
-    .filter(o => o.status === 'paid')
-    .reduce((sum, o) => sum + earning(o.orderAmount), 0);
+  const [affiliateLink, setAffiliateLink] = useState('');
+  const [commissions, setCommissions] = useState<CommissionRow[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalReferrals: 0,
+    totalOrderValue: 0,
+    totalEarned: 0,
+    paidEarned: 0,
+    pendingEarned: 0,
+  });
+  const [pageLoading, setPageLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setPageLoading(false);
+      return;
+    }
+    fetchData();
+  }, [isAuthenticated, authLoading]);
+
+  async function fetchData() {
+    setPageLoading(true);
+    setError('');
+    try {
+      const [meRes, dashRes] = await Promise.all([
+        apiRequest<AffiliateMe>('/affiliate/me'),
+        apiRequest<AffiliateDashboard>('/affiliate/dashboard'),
+      ]);
+      setAffiliateLink(meRes.affiliateLink);
+      setCommissions(dashRes.commissions);
+      setStats(dashRes.stats);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load affiliate data.');
+    } finally {
+      setPageLoading(false);
+    }
+  }
 
   function handleCopy() {
+    if (!affiliateLink) return;
     navigator.clipboard.writeText(affiliateLink).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -248,15 +281,44 @@ export default function AffiliatePage({
           letter-spacing: .08em; text-transform: uppercase;
           padding: 3px 10px;
         }
-        .status-paid { background: var(--greendim); color: var(--green); }
-        .status-pending { background: rgba(184,152,42,.1); color: var(--gold); }
+        .status-paid     { background: var(--greendim); color: var(--green); }
+        .status-approved { background: rgba(61,80,22,.08); color: var(--olive); }
+        .status-pending  { background: rgba(184,152,42,.1); color: var(--gold); }
 
-        /* Empty state */
+        /* Skeleton shimmer */
+        @keyframes shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
+        .aff-skeleton {
+          background: linear-gradient(90deg, #ece8df 25%, #f5f2eb 50%, #ece8df 75%);
+          background-size: 800px 100%;
+          animation: shimmer 1.4s infinite linear;
+          border-radius: 4px;
+        }
+
+        /* Empty / Error state */
         .aff-empty {
           padding: 40px 20px; text-align: center; color: var(--ink4);
           font-size: 13px; font-weight: 300; line-height: 1.8;
         }
         .aff-empty strong { display: block; font-size: 1rem; font-family: var(--ffd); color: var(--ink7); margin-bottom: 6px; }
+        .aff-error {
+          padding: 40px 20px; text-align: center; color: var(--red);
+          font-size: 13px; font-weight: 300;
+        }
+
+        /* Not-logged-in banner */
+        .aff-login-notice {
+          background: var(--surf); border: 1px solid var(--bdr);
+          padding: 28px 24px; text-align: center;
+        }
+        .aff-login-notice p { font-size: 13px; color: var(--ink7); line-height: 1.7; }
+        .aff-login-btn {
+          margin-top: 14px; display: inline-block;
+          font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+          padding: 10px 24px; border: 1.5px solid var(--olive2);
+          color: var(--olive); background: var(--olivedim);
+          cursor: pointer; transition: all .18s;
+        }
+        .aff-login-btn:hover { background: var(--olive); color: #fff; }
 
         /* ── FOOTER NOTE ── */
         .aff-footer-note {
@@ -276,9 +338,10 @@ export default function AffiliatePage({
       `}</style>
 
       <div className="aff-page">
- <UpperNav /> 
+        <UpperNav />
+
         {/* HERO */}
-        <div className="aff-hero" style={{marginTop: 45}}>
+        <div className="aff-hero" style={{ marginTop: 45 }}>
           <div className="aff-eyebrow">
             <span className="aff-hero-line" />
             <span>Affiliate Programme</span>
@@ -293,98 +356,168 @@ export default function AffiliatePage({
         {/* BODY */}
         <div className="aff-body">
 
-          {/* REFERRAL LINK */}
-          <div className="aff-link-card">
-            <div className="aff-link-label">Your referral link</div>
-            <div className="aff-link-row">
-              <input
-                className="aff-link-input"
-                type="text"
-                value={affiliateLink}
-                readOnly
-                aria-label="Referral link"
-              />
+          {/* ── NOT LOGGED IN ── */}
+          {!authLoading && !isAuthenticated && (
+            <div className="aff-login-notice">
+              <p>Please log in to access your affiliate dashboard and referral link.</p>
               <button
-                className={`aff-copy-btn${copied ? ' copied' : ''}`}
-                onClick={handleCopy}
-                aria-label={copied ? 'Link copied' : 'Copy referral link'}
+                className="aff-login-btn"
+                onClick={() => window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } }))}
               >
-                <span className="aff-copy-icon">{copied ? '✓' : '⎘'}</span>
-                {copied ? 'Copied!' : 'Copy link'}
+                Sign in to continue
               </button>
             </div>
-            <p className="aff-link-hint">
-              Share this link via WhatsApp, Instagram, or email. When someone places an order using it, you automatically earn 10% of their order value.
-            </p>
-          </div>
+          )}
 
-          {/* SUMMARY STATS */}
-          <div className="aff-stats">
-            <div className="aff-stat">
-              <div className="aff-stat-lbl">Total referrals</div>
-              <div className="aff-stat-val">{orders.length}</div>
-            </div>
-            <div className="aff-stat">
-              <div className="aff-stat-lbl">Orders value</div>
-              <div className="aff-stat-val">{formatINR(totalOrderValue)}</div>
-            </div>
-            <div className="aff-stat">
-              <div className="aff-stat-lbl">Total earned (10%)</div>
-              <div className="aff-stat-val earn">{formatINR(totalEarned)}</div>
-              <div className="aff-stat-note">{formatINR(paidEarned)} paid · {formatINR(totalEarned - paidEarned)} pending</div>
-            </div>
-          </div>
-
-          {/* REFERRED ORDERS TABLE */}
-          <div className="aff-table-card">
-            <div className="aff-table-head">
-              <span className="aff-table-title">Referred orders</span>
-              <span className="aff-table-badge">{orders.length} referral{orders.length !== 1 ? 's' : ''}</span>
-            </div>
-
-            {orders.length === 0 ? (
-              <div className="aff-empty">
-                <strong>No referrals yet</strong>
-                Share your link above to start earning!
+          {/* ── LOADING SKELETON ── */}
+          {(authLoading || pageLoading) && isAuthenticated !== false && (
+            <>
+              <div className="aff-link-card">
+                <div className="aff-skeleton" style={{ height: 14, width: 120, marginBottom: 8 }} />
+                <div className="aff-skeleton" style={{ height: 40 }} />
               </div>
-            ) : (
-              <div className="aff-table-wrap">
-                <table className="aff-t">
-                  <thead>
-                    <tr>
-                      <th>Referred person</th>
-                      <th>Order amount</th>
-                      <th>Date</th>
-                      <th>Your earning (10%)</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map(order => (
-                      <tr key={order.id}>
-                        <td className="td-name">{order.referredName}</td>
-                        <td className="td-amount">{formatINR(order.orderAmount)}</td>
-                        <td className="td-date">{formatDate(order.date)}</td>
-                        <td className="td-earn">{formatINR(earning(order.orderAmount))}</td>
-                        <td className="td-status">
-                          <span className={`status-pill status-${order.status}`}>
-                            {order.status === 'paid' ? '✓ Paid' : '⏳ Pending'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="aff-stats">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="aff-stat">
+                    <div className="aff-skeleton" style={{ height: 10, width: 80, marginBottom: 10 }} />
+                    <div className="aff-skeleton" style={{ height: 28, width: 100 }} />
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+              <div className="aff-table-card">
+                <div className="aff-table-head">
+                  <div className="aff-skeleton" style={{ height: 16, width: 140 }} />
+                </div>
+                <div style={{ padding: 20 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="aff-skeleton" style={{ height: 14, marginBottom: 14 }} />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* FOOTER NOTE */}
-          <p className="aff-footer-note">
-            Earnings are calculated at 10% of the referred order's final value (after discounts, before shipping).
-            Pending earnings are processed within 7 business days of the order being delivered.
-            For queries, contact makeyousparkle5@gmail.com or WhatsApp at +91 8356939586.
-          </p>
+          {/* ── ERROR ── */}
+          {error && !pageLoading && (
+            <div className="aff-table-card">
+              <div className="aff-error">
+                <strong>Something went wrong</strong>
+                {error}
+                <br />
+                <button
+                  onClick={fetchData}
+                  style={{ marginTop: 12, textDecoration: 'underline', color: 'inherit', cursor: 'pointer', background: 'none', border: 'none', fontSize: 'inherit' }}
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── AUTHENTICATED CONTENT ── */}
+          {isAuthenticated && !pageLoading && !error && (
+            <>
+              {/* REFERRAL LINK */}
+              <div className="aff-link-card">
+                <div className="aff-link-label">Your referral link</div>
+                <div className="aff-link-row">
+                  <input
+                    className="aff-link-input"
+                    type="text"
+                    value={affiliateLink}
+                    readOnly
+                    aria-label="Referral link"
+                  />
+                  <button
+                    className={`aff-copy-btn${copied ? ' copied' : ''}`}
+                    onClick={handleCopy}
+                    aria-label={copied ? 'Link copied' : 'Copy referral link'}
+                    disabled={!affiliateLink}
+                  >
+                    <span className="aff-copy-icon">{copied ? '✓' : '⎘'}</span>
+                    {copied ? 'Copied!' : 'Copy link'}
+                  </button>
+                </div>
+                <p className="aff-link-hint">
+                  Share this link via WhatsApp, Instagram, or email. When someone places an order using it, you automatically earn 10% of their order value.
+                </p>
+              </div>
+
+              {/* SUMMARY STATS */}
+              <div className="aff-stats">
+                <div className="aff-stat">
+                  <div className="aff-stat-lbl">Total referrals</div>
+                  <div className="aff-stat-val">{stats.totalReferrals}</div>
+                </div>
+                <div className="aff-stat">
+                  <div className="aff-stat-lbl">Orders value</div>
+                  <div className="aff-stat-val">{formatINR(stats.totalOrderValue)}</div>
+                </div>
+                <div className="aff-stat">
+                  <div className="aff-stat-lbl">Total earned (10%)</div>
+                  <div className="aff-stat-val earn">{formatINR(stats.totalEarned)}</div>
+                  <div className="aff-stat-note">
+                    {formatINR(stats.paidEarned)} paid · {formatINR(stats.pendingEarned)} pending
+                  </div>
+                </div>
+              </div>
+
+              {/* REFERRED ORDERS TABLE */}
+              <div className="aff-table-card">
+                <div className="aff-table-head">
+                  <span className="aff-table-title">Referred orders</span>
+                  <span className="aff-table-badge">
+                    {commissions.length} referral{commissions.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {commissions.length === 0 ? (
+                  <div className="aff-empty">
+                    <strong>No referrals yet</strong>
+                    Share your link above to start earning!
+                  </div>
+                ) : (
+                  <div className="aff-table-wrap">
+                    <table className="aff-t">
+                      <thead>
+                        <tr>
+                          <th>Referred person</th>
+                          <th>Order amount</th>
+                          <th>Date</th>
+                          <th>Your earning (10%)</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commissions.map(row => (
+                          <tr key={row.id}>
+                            <td className="td-name">{row.referredName}</td>
+                            <td className="td-amount">{formatINR(row.orderAmount)}</td>
+                            <td className="td-date">{formatDate(row.date)}</td>
+                            <td className="td-earn">{formatINR(row.earning)}</td>
+                            <td className="td-status">
+                              <span className={`status-pill status-${row.status}`}>
+                                {row.status === 'paid' ? '✓ Paid'
+                                  : row.status === 'approved' ? '✔ Approved'
+                                  : '⏳ Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* FOOTER NOTE */}
+              <p className="aff-footer-note">
+                Earnings are calculated at 10% of the referred order&apos;s final value (after discounts, before shipping).
+                Pending earnings are processed within 7 business days of the order being delivered.
+                For queries, contact makeyousparkle5@gmail.com or WhatsApp at +91 8356939586.
+              </p>
+            </>
+          )}
 
         </div>
       </div>

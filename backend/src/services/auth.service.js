@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import couponService from "./coupon.service.js";
+import affiliateService from "./affiliate.service.js";
 
 class AuthService {
 	signToken(user) {
@@ -23,20 +25,40 @@ class AuthService {
 				throw new Error("Password is required");
 			}
 
+			// Separate the referral code (from URL) from the user data before saving
+			const { refCode, ...userFields } = userData;
+
 			// Check if user already exists
-			const existingUser = await User.findOne({ email: userData.email });
+			const existingUser = await User.findOne({ email: userFields.email });
 			if (existingUser) {
 				throw new Error("User with this email already exists");
 			}
 
 			// Hash password
-			const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : undefined;
+			const hashedPassword = userFields.password
+				? await bcrypt.hash(userFields.password, 10)
+				: undefined;
+
+			// Generate a unique referral code for the new user
+			let referralCode;
+			for (let i = 0; i < 5; i++) {
+				const candidate = crypto.randomBytes(4).toString("hex").toUpperCase();
+				const conflict = await User.findOne({ referralCode: candidate });
+				if (!conflict) { referralCode = candidate; break; }
+			}
+			if (!referralCode) referralCode = crypto.randomBytes(8).toString("hex").toUpperCase();
 
 			// Create user
 			const user = await User.create({
-				...userData,
+				...userFields,
 				password: hashedPassword,
+				referralCode,
 			});
+
+			// Record referral relationship if a refCode was supplied
+			if (refCode) {
+				await affiliateService.recordReferral(user._id, refCode);
+			}
 
 			const welcomeCouponResult = await couponService.createWelcomeCoupon(user);
 			const welcomeCoupon = welcomeCouponResult.coupon;

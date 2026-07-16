@@ -812,3 +812,84 @@ export async function submitProductReview(
     return { success: false, message: error?.message || "Failed to submit review" };
   }
 }
+
+// ─── Offer Details ────────────────────────────────────────────────────────────
+
+import type { ApiOfferDetail, OfferDetail } from '@/lib/offerTypes';
+import { normalizeOfferDetail } from '@/lib/offerTypes';
+
+/**
+ * Fetch a single offer / promotion by its MongoDB _id.
+ * Hits GET /offers/:id
+ */
+export async function fetchOfferById(offerId: string): Promise<OfferDetail | null> {
+  try {
+    const data = await apiRequest<{ success: boolean; offer?: ApiOfferDetail }>(`/offers/${offerId}`);
+    if (!data.offer) return null;
+    return normalizeOfferDetail(data.offer);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch multiple products by an array of MongoDB _ids.
+ * Falls back to fanning out individual fetchProductById calls in parallel.
+ * Deduplicates results by sourceId.
+ */
+export async function fetchProductsByIds(ids: string[]): Promise<CatalogProduct[]> {
+  if (!ids.length) return [];
+  const [categories, subCategories, styles] = await Promise.all([
+    fetchCatalogCategories(),
+    fetchCatalogSubCategories(),
+    fetchCatalogStyles(),
+  ]);
+  const catMap = new Map(categories.map((c) => [c.id, c]));
+  const subMap = new Map(subCategories.map((s) => [s.id, s]));
+  const styleMap = new Map(styles.map((st) => [st.id, st]));
+
+  const results = await Promise.allSettled(
+    ids.map((id) =>
+      apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${id}`)
+        .then((res) => (res.product ? normalizeProduct(res.product, catMap, subMap, styleMap) : null))
+        .catch(() => null)
+    )
+  );
+
+  const seen = new Set<string>();
+  const products: CatalogProduct[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value) {
+      if (!seen.has(r.value.sourceId)) {
+        seen.add(r.value.sourceId);
+        products.push(r.value);
+      }
+    }
+  }
+  return products;
+}
+
+/**
+ * Fetch all products belonging to a given category ID.
+ * Hits GET /products?category=:id
+ */
+export async function fetchProductsByCategoryId(categoryId: string): Promise<CatalogProduct[]> {
+  try {
+    const [categories, subCategories, styles, productsResponse] = await Promise.all([
+      fetchCatalogCategories(),
+      fetchCatalogSubCategories(),
+      fetchCatalogStyles(),
+      apiRequest<{ success: boolean; products?: BackendProduct[] }>(`/products?category=${encodeURIComponent(categoryId)}`),
+    ]);
+
+    const catMap = new Map(categories.map((c) => [c.id, c]));
+    const subMap = new Map(subCategories.map((s) => [s.id, s]));
+    const styleMap = new Map(styles.map((st) => [st.id, st]));
+
+    return (productsResponse.products || []).map((p) =>
+      normalizeProduct(p, catMap, subMap, styleMap)
+    );
+  } catch {
+    return [];
+  }
+}

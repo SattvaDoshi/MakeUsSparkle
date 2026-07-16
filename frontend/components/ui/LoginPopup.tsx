@@ -17,11 +17,11 @@ type AuthResponse = {
 };
 
 export default function LoginPopup() {
-  const { signIn, isAuthenticated } = useAuth();
+  const { signIn, isAuthenticated, loading } = useAuth();
   const [visible, setVisible] = useState(false);
   const [closed, setClosed] = useState(false);
   const [tab, setTab] = useState<'login' | 'register'>('register');
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [form, setForm] = useState({
     name: '', email: '', phone: '', gender: '',
@@ -29,10 +29,10 @@ export default function LoginPopup() {
   });
 
   useEffect(() => {
-    if (isAuthenticated || sessionStorage.getItem('loginPopupDismissed')) return;
+    if (loading || isAuthenticated || sessionStorage.getItem('loginPopupDismissed')) return;
     const timer = setTimeout(() => { if (!closed) setVisible(true); }, 15000);
     return () => clearTimeout(timer);
-  }, [closed, isAuthenticated]);
+  }, [closed, isAuthenticated, loading]);
 
   useEffect(() => {
     const open = (e: Event) => {
@@ -60,16 +60,20 @@ export default function LoginPopup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setAuthLoading(true);
     setFeedback('');
     try {
       if (tab === 'register') {
+        const refCode = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('ref') || undefined
+          : undefined;
         const result = await apiRequest<AuthResponse>('/auth/register', {
           method: 'POST',
           body: JSON.stringify({
             name: form.name, email: form.email,
             phone: form.phone, gender: form.gender || undefined,
             dob: buildDob(), password: form.password,
+            ...(refCode ? { refCode } : {}),
           }),
         });
         if (result.token) await signIn(result.token, result.user ?? null);
@@ -89,7 +93,7 @@ export default function LoginPopup() {
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -406,8 +410,8 @@ export default function LoginPopup() {
               </>
             )}
 
-            <button type="submit" className="mu-submit" disabled={loading}>
-              {loading ? 'Please wait…' : tab === 'register' ? '✦ Unlock My Reward' : 'Sign In'}
+            <button type="submit" className="mu-submit" disabled={authLoading}>
+              {authLoading ? 'Please wait…' : tab === 'register' ? '✦ Unlock My Reward' : 'Sign In'}
             </button>
           </form>
 

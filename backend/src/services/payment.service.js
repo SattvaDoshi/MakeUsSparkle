@@ -5,6 +5,7 @@ import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId } from "./orderItemSelection.service.js";
+import affiliateService from "./affiliate.service.js";
 
 class PaymentService {
 	async resolveProductId(item = {}) {
@@ -156,6 +157,9 @@ class PaymentService {
 				order.items,
 				order.totalAmount
 			);
+
+			// Trigger affiliate commission (fire-and-forget – won't crash the order flow)
+			void affiliateService.onOrderPaid(order);
 
 			return {
 				success: true,

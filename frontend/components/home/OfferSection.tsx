@@ -223,63 +223,82 @@ const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
         {/* Grid */}
         <div key={activeTab} className="os-grid">
           {filtered.map((offer) => (
-            <div key={offer.id} className="os-card">
+            offer.isCoupon ? (
+              // ── Coupon card: copy-code UX (no detail page navigation) ──
+              <div key={offer.id} className="os-card">
 
-              {/* ── Image section (~80% of card) ── */}
-              <div className="os-img-wrap">
-                <img src={offer.imageSrc} alt={offer.title} />
-
-                {/* New ribbon — top-right */}
-                {offer.isNew && <span className="os-ribbon">New</span>}
-
-                {/* Expiry + min order pills — bottom of image */}
-                <div className="os-img-meta">
-                  {offer.minOrder > 0 && (
-                    <span className="os-meta-pill">Min ₹{offer.minOrder}</span>
-                  )}
-                  <span className="os-meta-pill">Exp {offer.expiry}</span>
+                {/* Image section */}
+                <div className="os-img-wrap">
+                  <img src={offer.imageSrc} alt={offer.title} />
+                  {offer.isNew && <span className="os-ribbon">New</span>}
+                  <div className="os-img-meta">
+                    {offer.minOrder > 0 && (
+                      <span className="os-meta-pill">Min ₹{offer.minOrder}</span>
+                    )}
+                    <span className="os-meta-pill">Exp {offer.expiry}</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* ── Compact text strip below image ── */}
-              <div className="os-foot">
-                <h3 className="os-card-title">{offer.title}</h3>
-                {offer.description && <p className="os-card-desc">{offer.description}</p>}
-
-                <div className="os-foot-row">
-                  {offer.isCoupon ? (
-                    // Coupons: copyable coupon code
-                    <>
-                      <div className="os-code-box">
-                        <span className="os-code">{offer.code}</span>
-                        <button
-                          className={`os-copy${copied === offer.code ? ' done' : ''}`}
-                          onClick={() => copyCode(offer.code)}
-                          aria-label={`Copy coupon code ${offer.code}`}
-                        >
-                          {copied === offer.code ? '✓' : 'Copy'}
-                        </button>
-                      </div>
-                      <Link href="/categories" className="os-shop">
-                        Shop &rarr;
-                      </Link>
-                    </>
-                  ) : (
-                    // Offers: Auto-applied tag + highlighted button
-                    <>
-                      <div className="os-auto-tag">
-                        <span className="os-auto-dot"></span>
-                        Auto-Applied
-                      </div>
-                      <Link href="/categories" className="os-shop highlight">
-                        Shop Now &rarr;
-                      </Link>
-                    </>
-                  )}
+                {/* Text strip */}
+                <div className="os-foot">
+                  <h3 className="os-card-title">{offer.title}</h3>
+                  {offer.description && <p className="os-card-desc">{offer.description}</p>}
+                  <div className="os-foot-row">
+                    <div className="os-code-box">
+                      <span className="os-code">{offer.code}</span>
+                      <button
+                        className={`os-copy${copied === offer.code ? ' done' : ''}`}
+                        onClick={() => copyCode(offer.code)}
+                        aria-label={`Copy coupon code ${offer.code}`}
+                      >
+                        {copied === offer.code ? '✓' : 'Copy'}
+                      </button>
+                    </div>
+                    <Link href="/categories" className="os-shop">
+                      Shop &rarr;
+                    </Link>
+                  </div>
                 </div>
-              </div>
 
-            </div>
+              </div>
+            ) : (
+              // ── Offer card: navigates to /offers/:id ──
+              <Link
+                key={offer.id}
+                href={`/offers/${offer.id}`}
+                className="os-card os-card-link"
+                aria-label={`View offer: ${offer.title}`}
+              >
+
+                {/* Image section */}
+                <div className="os-img-wrap">
+                  <img src={offer.imageSrc} alt={offer.title} />
+                  {offer.isNew && <span className="os-ribbon">New</span>}
+                  <div className="os-img-meta">
+                    {offer.minOrder > 0 && (
+                      <span className="os-meta-pill">Min ₹{offer.minOrder}</span>
+                    )}
+                    <span className="os-meta-pill">Exp {offer.expiry}</span>
+                  </div>
+                </div>
+
+                {/* Text strip */}
+                <div className="os-foot">
+                  <h3 className="os-card-title">{offer.title}</h3>
+                  {offer.description && <p className="os-card-desc">{offer.description}</p>}
+                  <div className="os-foot-row">
+                    <div className="os-auto-tag">
+                      <span className="os-auto-dot"></span>
+                      Auto-Applied
+                    </div>
+                    <span className="os-shop highlight">
+                      View Offer &rarr;
+                    </span>
+                  </div>
+                </div>
+
+              </Link>
+            )
           ))}
         </div>
 
@@ -448,6 +467,11 @@ const CSS = `
 .os-card:hover {
   box-shadow: 0 8px 26px rgba(35,60,18,.14);
   transform: translateY(-2px);
+}
+/* Offer card that acts as a link */
+.os-card-link {
+  text-decoration: none;
+  cursor: pointer;
 }
 
 /* Image wrap — dominant portion */

@@ -76,6 +76,31 @@ export type AdminProduct = {
 	charmPieceOptions?: number[];
 };
 
+// ─── iThink Logistics shipping types ───────────────────────────────────────
+export type ShippingInfo = {
+	awbNumber?: string | null;
+	logisticName?: string | null;
+	trackingUrl?: string | null;
+	currentStatus?: string | null;
+	currentStatusCode?: string | null;
+	expectedDeliveryDate?: string | null;
+	pickupAddressId?: string | null;
+	lastSyncedAt?: string | null;
+	cancelStatus?: string | null;
+};
+
+export type Warehouse = {
+	id?: string | number;
+	warehouse_id?: string | number;
+	name?: string;
+	phone?: string;
+	address?: string;
+	city?: string;
+	state?: string;
+	pincode?: string;
+	[key: string]: unknown;
+};
+
 export type AdminOrder = {
 	_id: string;
 	totalAmount?: number;
@@ -110,6 +135,8 @@ export type AdminOrder = {
 	giftMessage?: string;
 	createdAt?: string;
 	updatedAt?: string;
+	// iThink Logistics shipping sub-document
+	shipping?: ShippingInfo;
 };
 
 export type AdminCoupon = {
@@ -220,7 +247,7 @@ export type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-export type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms";
+export type TabKey = "home" | "products" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "shipping";
 
 export type ProductFormState = {
 	id: string;

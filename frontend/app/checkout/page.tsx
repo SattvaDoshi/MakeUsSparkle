@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
+import { checkPincode as itlCheckPincode } from '@/lib/shippingApi';
 
 const PAYMENT_METHODS = [
   { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via PhonePe', badge: 'Recommended' },
@@ -49,6 +50,33 @@ export default function CheckoutPage() {
   const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [addressBusy, setAddressBusy] = useState(false);
   const [addressError, setAddressError] = useState('');
+
+  // ── Pincode serviceability check ──────────────────────────────────
+  const [pincodeStatus, setPincodeStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle');
+  const [pincodeMsg, setPincodeMsg] = useState('');
+  const pincodeTimerRef = typeof window !== 'undefined' ? { current: null as ReturnType<typeof setTimeout> | null } : { current: null };
+
+  const triggerPincodeCheck = (pincode: string) => {
+    if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current);
+    if (pincode.length !== 6) { setPincodeStatus('idle'); setPincodeMsg(''); return; }
+    setPincodeStatus('loading');
+    pincodeTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await itlCheckPincode(pincode);
+        const status = (res?.data?.status || res?.data?.['0']?.status || '').toLowerCase();
+        const serviceable = status === 'serviceable' || status === 'active' || status === '1' || status === 'available';
+        setPincodeStatus(serviceable ? 'ok' : 'fail');
+        setPincodeMsg(
+          serviceable
+            ? 'Delivery available to this pincode.'
+            : (res?.data?.message || 'Not serviceable to this pincode.')
+        );
+      } catch {
+        setPincodeStatus('fail');
+        setPincodeMsg('Could not verify pincode. Proceeding anyway.');
+      }
+    }, 600);
+  };
 
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
@@ -347,6 +375,7 @@ export default function CheckoutPage() {
         }
         @media (min-width: 480px) { .ck-panel { border-radius: 16px; margin-bottom: 14px; } }
         @keyframes ckUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes ckPinSpin { to { transform: rotate(360deg); } }
 
         .ck-panel-head {
           padding: 11px 16px 9px;
@@ -692,7 +721,31 @@ export default function CheckoutPage() {
                       <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
-                      <input className="ck-addr-input" placeholder="Pincode (6 digits) *" maxLength={6} value={addressForm.pincode} onChange={e => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '') })} />
+                      <input
+                        id="ck-pincode-input"
+                        className="ck-addr-input"
+                        placeholder="Pincode (6 digits) *"
+                        maxLength={6}
+                        value={addressForm.pincode}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setAddressForm({ ...addressForm, pincode: val });
+                          triggerPincodeCheck(val);
+                        }}
+                        style={pincodeStatus === 'ok' ? { borderColor: '#2e7d32' } : pincodeStatus === 'fail' ? { borderColor: '#c62828' } : {}}
+                      />
+                      {pincodeStatus !== 'idle' && (
+                        <div style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          {pincodeStatus === 'loading' && (
+                            <>
+                              <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid #ccc', borderTopColor: '#2d5a27', borderRadius: '50%', animation: 'ckPinSpin 0.7s linear infinite' }} />
+                              <span style={{ color: '#6b7a5e' }}>Checking…</span>
+                            </>
+                          )}
+                          {pincodeStatus === 'ok' && <span style={{ color: '#2e7d32', fontWeight: 700 }}>✓ {pincodeMsg}</span>}
+                          {pincodeStatus === 'fail' && <span style={{ color: '#c62828', fontWeight: 700 }}>✗ {pincodeMsg}</span>}
+                        </div>
+                      )}
                       <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={addressForm.phone} onChange={e => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={addressForm.alternativePhone} onChange={e => setAddressForm({ ...addressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                     </div>

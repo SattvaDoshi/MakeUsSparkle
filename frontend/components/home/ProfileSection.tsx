@@ -22,6 +22,7 @@ interface Order {
   items: OrderItem[];
   amount: string;
   status: string;
+  shipping?: ShippingInfo;
 }
 
 const INITIAL_ORDERS: Order[] = [
@@ -478,6 +479,16 @@ export function LegacyProfileSection() {
   );
 }
 
+type ShippingInfo = {
+  awbNumber?: string | null;
+  logisticName?: string | null;
+  trackingUrl?: string | null;
+  currentStatus?: string | null;
+  currentStatusCode?: string | null;
+  expectedDeliveryDate?: string | null;
+  lastSyncedAt?: string | null;
+};
+
 type BackendOrder = {
   _id: string;
   items: Array<{
@@ -488,6 +499,7 @@ type BackendOrder = {
   totalAmount?: number;
   status?: string;
   createdAt?: string;
+  shipping?: ShippingInfo;
 };
 
 export default function ProfileSection() {
@@ -548,6 +560,7 @@ export default function ProfileSection() {
           })),
           amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`,
           status: (order.status || 'placed').charAt(0).toUpperCase() + (order.status || 'placed').slice(1),
+          shipping: order.shipping,
         })));
       } catch (requestError) {
         if (active) {
@@ -936,6 +949,58 @@ export default function ProfileSection() {
                     <span className="pf-order-date">{order.date}</span>
                     <span className="pf-order-amt">{order.amount}</span>
                   </div>
+
+                  {/* ── Shipment Timeline ── */}
+                  {order.shipping?.awbNumber && (() => {
+                    const STEPS = ['Manifested', 'Picked Up', 'In Transit', 'Out For Delivery', 'Delivered'];
+                    const code = (order.shipping.currentStatusCode || '').toUpperCase();
+                    const str  = (order.shipping.currentStatus || '').toLowerCase();
+                    const activeStep =
+                      code === 'DL' || str.includes('deliver') ? 4 :
+                      code === 'UD' || str.includes('out for') ? 3 :
+                      ['IT', 'NDR', 'EX'].includes(code) || str.includes('transit') ? 2 :
+                      ['PU', 'OP'].includes(code) || str.includes('pick') ? 1 :
+                      0;
+                    return (
+                      <div style={{ marginTop: 12, marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#2d5a27', marginBottom: 8 }}>
+                          Shipment Tracking
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                          {STEPS.map((step, i) => (
+                            <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? '1 1 0' : 'none' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <div style={{
+                                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                                  background: i <= activeStep ? '#2d5a27' : '#e0e0e0',
+                                  border: i === activeStep ? '3px solid #2d5a27' : '2px solid ' + (i < activeStep ? '#2d5a27' : '#ccc'),
+                                  boxSizing: 'border-box',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  {i < activeStep && <span style={{ color: 'white', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                                </div>
+                                <span style={{ fontSize: 9, color: i <= activeStep ? '#2d5a27' : '#aaa', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                  {step}
+                                </span>
+                              </div>
+                              {i < STEPS.length - 1 && (
+                                <div style={{ flex: 1, height: 2, background: i < activeStep ? '#2d5a27' : '#e0e0e0', marginBottom: 20, minWidth: 8 }} />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#5a7a5e', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                          <span><strong>AWB:</strong> {order.shipping.awbNumber}</span>
+                          {order.shipping.logisticName && <span><strong>Courier:</strong> {order.shipping.logisticName}</span>}
+                          {order.shipping.trackingUrl && (
+                            <a href={order.shipping.trackingUrl} target="_blank" rel="noreferrer" style={{ color: '#2d5a27', textDecoration: 'underline', fontSize: 12 }}>
+                              Track Shipment ↗
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="pf-order-products">
                     {order.items.map((item, index) => (
                       <div key={index} className="pf-product-row">

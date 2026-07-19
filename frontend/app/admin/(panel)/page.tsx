@@ -21,7 +21,8 @@ import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
 import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
 import AdminCombosTab from "./_components/tabs/AdminCombosTab";
 import AdminExitSurveysTab from "./_components/tabs/AdminExitSurveysTab";
-import type { AdminExitSurvey } from "./_lib/admin.types";
+import AdminShippingTab from "./_components/tabs/AdminShippingTab";
+import type { AdminExitSurvey, ShippingInfo } from "./_lib/admin.types";
 
 type DashboardStatsResponse = {
 	success: boolean;
@@ -271,7 +272,7 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
@@ -285,6 +286,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "banners", label: "Home Page" },
 	{ key: "reviews", label: "Reviews" },
 	{ key: "surveys", label: "Exit Surveys" },
+	{ key: "shipping", label: "Shipping" },
 ];
 
 // order/payment status lists moved to dedicated tab components
@@ -1285,7 +1287,9 @@ export default function AdminDashboardPage() {
 			setModalMode("edit");
 			setModalKind("user");
 		}} onDelete={handleDeleteUser} />;
-		if (activeTab === "orders") return <AdminOrdersTab orders={orders} onStatusChange={handleOrderStatus} onDelete={handleDeleteOrder} />;
+		if (activeTab === "orders") return <AdminOrdersTab orders={orders} onStatusChange={handleOrderStatus} onDelete={handleDeleteOrder} onShippingUpdate={(orderId, shipping) => {
+			setOrders((prev) => prev.map((o) => o._id === orderId ? { ...o, shipping: shipping as ShippingInfo } : o));
+		}} />;
 		if (activeTab === "payments") return <AdminPaymentsTab payments={payments} onStatusChange={handlePaymentStatus} />;
 		if (activeTab === "coupons") return <AdminCouponsTab 
 			coupons={coupons}
@@ -1417,6 +1421,7 @@ export default function AdminDashboardPage() {
 		onDeleteCombo={handleDeleteCombo}
 	/>;
 		if (activeTab === "surveys") return <AdminExitSurveysTab surveys={surveys} />;
+		if (activeTab === "shipping") return <AdminShippingTab />;
 		return <AdminReviewsTab reviews={reviews} editingReview={editingReview} onChangeEditingReview={setEditingReview} onSubmit={handleUpdateReview} onEdit={(entry) => setEditingReview({ productId: entry.productId, reviewId: entry.reviewId, rating: String(entry.rating || 5), comment: entry.comment || "" })} onDelete={handleDeleteReview} />;
 	};
 

@@ -1,23 +1,119 @@
-import { useState, useMemo } from "react";
-import type { AdminOrder } from "../../_lib/admin.types";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import type { AdminOrder, Warehouse } from "../../_lib/admin.types";
 import { formatAddress, formatDateTime, formatMoney, formatShortId, getOrderItemLabel, normalizeOrderStatus, normalizePaymentStatus } from "../../_lib/admin.helpers";
+import { listWarehouses, createShipment, trackShipment, cancelShipment, printLabel as fetchLabel } from "@/lib/shippingApi";
 
 type AdminOrdersTabProps = {
 	orders: AdminOrder[];
 	onStatusChange: (orderId: string, status: NonNullable<AdminOrder["status"]>) => void;
 	onDelete: (id: string) => void;
+	onShippingUpdate?: (orderId: string, shipping: AdminOrder["shipping"]) => void;
 };
 
 const orderStatuses: Array<AdminOrder["status"]> = ["placed", "shipped", "delivered", "cancelled"];
 const paymentStatuses = ["all", "pending", "paid", "partial_paid", "failed", "completed"];
 
-export default function AdminOrdersTab({ orders, onStatusChange, onDelete }: AdminOrdersTabProps) {
+export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShippingUpdate }: AdminOrdersTabProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [paymentFilter, setPaymentFilter] = useState("all");
 	const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
 
+	// Warehouses — loaded once for the pickup dropdown
+	const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+	const [warehousesLoaded, setWarehousesLoaded] = useState(false);
+
+	const loadWarehouses = useCallback(async () => {
+		if (warehousesLoaded) return;
+		try {
+			const res = await listWarehouses();
+			const raw = res.data;
+			const list: Warehouse[] = Array.isArray(raw)
+				? raw
+				: Array.isArray((raw as any)?.warehouse_list)
+				? (raw as any).warehouse_list
+				: [];
+			setWarehouses(list);
+		} catch { /* silently ignore — user will see empty dropdown */ }
+		setWarehousesLoaded(true);
+	}, [warehousesLoaded]);
+
+	// Per-order shipping action state
+	const [shippingBusy, setShippingBusy] = useState<Record<string, boolean>>({});
+	const [shippingError, setShippingError] = useState<Record<string, string>>({});
+	const [selectedWarehouse, setSelectedWarehouse] = useState<Record<string, string>>({});
+	const [shippingOverride, setShippingOverride] = useState<Record<string, { weightKg: string; lengthCm: string; widthCm: string; heightCm: string }>>({});
+
+	const getOverride = (id: string) => shippingOverride[id] ?? { weightKg: "", lengthCm: "", widthCm: "", heightCm: "" };
+	const setOverride = (id: string, field: string, val: string) =>
+		setShippingOverride((p) => ({ ...p, [id]: { ...getOverride(id), [field]: val } }));
+
+	const setBusy = (id: string, b: boolean) => setShippingBusy((p) => ({ ...p, [id]: b }));
+	const setErr  = (id: string, msg: string) => setShippingError((p) => ({ ...p, [id]: msg }));
+
+	const handleCreateShipment = async (order: AdminOrder) => {
+		setErr(order._id, "");
+		const pickupId = selectedWarehouse[order._id] ||
+			(warehouses[0]
+				? String(warehouses[0].warehouse_id ?? warehouses[0].id ?? "")
+				: "");
+		const ov = getOverride(order._id);
+		setBusy(order._id, true);
+		try {
+			const res = await createShipment(order._id, {
+				pickupAddressId: pickupId || undefined,
+				weightKg: ov.weightKg ? parseFloat(ov.weightKg) : undefined,
+				lengthCm: ov.lengthCm ? parseFloat(ov.lengthCm) : undefined,
+				widthCm:  ov.widthCm  ? parseFloat(ov.widthCm)  : undefined,
+				heightCm: ov.heightCm ? parseFloat(ov.heightCm) : undefined,
+			});
+			if (res.success) onShippingUpdate?.(order._id, res.order?.shipping);
+			else setErr(order._id, res.message || "Failed to create shipment.");
+		} catch (e: unknown) {
+			setErr(order._id, e instanceof Error ? e.message : "Failed to create shipment.");
+		} finally { setBusy(order._id, false); }
+	};
+
+	const handleTrack = async (order: AdminOrder) => {
+		setErr(order._id, "");
+		setBusy(order._id, true);
+		try {
+			const res = await trackShipment(order._id);
+			if (res.success) onShippingUpdate?.(order._id, res.shipping);
+			else setErr(order._id, "Tracking failed.");
+		} catch (e: unknown) {
+			setErr(order._id, e instanceof Error ? e.message : "Tracking failed.");
+		} finally { setBusy(order._id, false); }
+	};
+
+	const handleCancel = async (order: AdminOrder) => {
+		if (!window.confirm(`Cancel shipment for order ${formatShortId(order._id)}? This cannot be undone.`)) return;
+		setErr(order._id, "");
+		setBusy(order._id, true);
+		try {
+			const res = await cancelShipment(order._id);
+			if (!res.success) setErr(order._id, res.message || "Failed to cancel.");
+			else onShippingUpdate?.(order._id, { ...(order.shipping ?? {}), cancelStatus: "Cancelled", currentStatus: "Cancelled" });
+		} catch (e: unknown) {
+			setErr(order._id, e instanceof Error ? e.message : "Failed to cancel.");
+		} finally { setBusy(order._id, false); }
+	};
+
+	const handlePrintLabel = async (order: AdminOrder) => {
+		setErr(order._id, "");
+		setBusy(order._id, true);
+		try {
+			const res = await fetchLabel(order._id);
+			if (res.labelUrl) window.open(res.labelUrl, "_blank");
+			else setErr(order._id, "Label URL not available.");
+		} catch (e: unknown) {
+			setErr(order._id, e instanceof Error ? e.message : "Label fetch failed.");
+		} finally { setBusy(order._id, false); }
+	};
+
 	const toggleExpand = (id: string) => {
+		// Load warehouses lazily on first expand
+		void loadWarehouses();
 		setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
 	};
 
@@ -100,6 +196,29 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete }: Adm
 					.ao-col-created, .ao-col-payment { display: none; }
 					.ao-body { grid-template-columns: 1fr; gap: 20px; }
 				}
+
+				/* ── Shipping Panel ─────────────────────────────────── */
+				.ao-ship-card { background: #f0f7ef; border: 1px solid #c8e6c9; border-radius: 8px; padding: 14px; margin-top: 12px; }
+				.ao-ship-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #2e7d32; margin-bottom: 10px; }
+				.ao-ship-row { display: flex; gap: 6px; font-size: 12px; margin-bottom: 5px; }
+				.ao-ship-row strong { min-width: 80px; color: var(--ink); }
+				.ao-ship-row span { color: var(--mist); }
+				.ao-ship-btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+				.ao-ship-btn {
+					padding: 7px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 700;
+					cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+				}
+				.ao-ship-btn:active { transform: scale(0.97); }
+				.ao-ship-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+				.ao-ship-btn-green  { background: #2e7d32; color: white; }
+				.ao-ship-btn-blue   { background: #1565c0; color: white; }
+				.ao-ship-btn-orange { background: #e65100; color: white; }
+				.ao-ship-btn-red    { background: #c62828; color: white; }
+				.ao-ship-select { width: 100%; padding: 7px 10px; border: 1px solid #c8e6c9; border-radius: 6px; font-size: 13px; background: white; margin-bottom: 6px; }
+				.ao-ship-override { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+				.ao-ship-override input { padding: 6px 8px; border: 1px solid #c8e6c9; border-radius: 6px; font-size: 12px; width: 100%; box-sizing: border-box; }
+				.ao-ship-err { color: #c62828; font-size: 12px; margin-top: 6px; }
+				.ao-ship-awb-link { color: #1565c0; font-size: 12px; text-decoration: underline; word-break: break-all; }
 			`}</style>
 
 			<div className="admin-panel">
@@ -211,6 +330,101 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete }: Adm
 													<div style={{ marginTop: 16 }}>
 														<button className="admin-btn admin-btn-danger" style={{ width: "100%", padding: "8px" }} onClick={() => void onDelete(order._id)}>Delete Order</button>
 													</div>
+												</div>
+
+												{/* ── Shipping Panel ── */}
+												<div className="ao-ship-card">
+													<div className="ao-ship-title">🚚 Shipping</div>
+
+													{!order.shipping?.awbNumber ? (
+														// No shipment yet — show create form
+														<>
+															<select
+																id={`ao-wh-${order._id}`}
+																className="ao-ship-select"
+																value={selectedWarehouse[order._id] || ""}
+																onChange={(e) => setSelectedWarehouse((p) => ({ ...p, [order._id]: e.target.value }))}
+															>
+																<option value="">Default Pickup ({process.env.NEXT_PUBLIC_ITL_PICKUP_ID || "ID 1293"})</option>
+																{warehouses.map((wh) => {
+																	const id = String(wh.warehouse_id ?? wh.id ?? "");
+																	const name = (wh as any).company_name || wh.name;
+																	return <option key={id} value={id}>{name} ({id})</option>;
+																})}
+															</select>
+
+															<div className="ao-ship-override">
+																{(["weightKg", "lengthCm", "widthCm", "heightCm"] as const).map((f) => (
+																	<input
+																		key={f}
+																		type="number"
+																		min="0"
+																		placeholder={`${f.replace(/([A-Z])/g, " $1").trim()} (opt)`}
+																		value={getOverride(order._id)[f]}
+																		onChange={(e) => setOverride(order._id, f, e.target.value)}
+																	/>
+																))}
+															</div>
+
+															<button
+																id={`ao-create-ship-${order._id}`}
+																className="ao-ship-btn ao-ship-btn-green"
+																disabled={!!shippingBusy[order._id]}
+																onClick={() => void handleCreateShipment(order)}
+															>
+																{shippingBusy[order._id] ? "Creating…" : "Create Shipment"}
+															</button>
+														</>
+													) : (
+														// AWB exists — show info + actions
+														<>
+															<div className="ao-ship-row"><strong>AWB</strong><span>{order.shipping.awbNumber}</span></div>
+															{order.shipping.logisticName && <div className="ao-ship-row"><strong>Courier</strong><span>{order.shipping.logisticName}</span></div>}
+															{order.shipping.currentStatus && <div className="ao-ship-row"><strong>Status</strong><span>{order.shipping.currentStatus}</span></div>}
+															{order.shipping.expectedDeliveryDate && <div className="ao-ship-row"><strong>EDD</strong><span>{order.shipping.expectedDeliveryDate}</span></div>}
+															{order.shipping.trackingUrl && (
+																<div className="ao-ship-row">
+																	<strong>Track</strong>
+																	<a href={order.shipping.trackingUrl} target="_blank" rel="noreferrer" className="ao-ship-awb-link">
+																		{order.shipping.trackingUrl}
+																	</a>
+																</div>
+															)}
+
+															<div className="ao-ship-btn-row">
+																<button
+																	id={`ao-track-${order._id}`}
+																	className="ao-ship-btn ao-ship-btn-blue"
+																	disabled={!!shippingBusy[order._id]}
+																	onClick={() => void handleTrack(order)}
+																>
+																	{shippingBusy[order._id] ? "…" : "🔄 Track"}
+																</button>
+																<button
+																	id={`ao-label-${order._id}`}
+																	className="ao-ship-btn ao-ship-btn-orange"
+																	disabled={!!shippingBusy[order._id]}
+																	onClick={() => void handlePrintLabel(order)}
+																>
+																	🖨 Print Label
+																</button>
+																{!order.shipping.cancelStatus && (
+																	<button
+																		id={`ao-cancel-ship-${order._id}`}
+																		className="ao-ship-btn ao-ship-btn-red"
+																		disabled={!!shippingBusy[order._id]}
+																		onClick={() => void handleCancel(order)}
+																	>
+																		✕ Cancel Shipment
+																	</button>
+																)}
+															</div>
+														</>
+													)}
+
+													{shippingError[order._id] && (
+														<div className="ao-ship-err">{shippingError[order._id]}</div>
+													)}
 												</div>
 											</div>
 

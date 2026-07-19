@@ -112,8 +112,24 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["placed", "shipped", "delivered", "cancelled"],
+      // "manifested" and "rto" are iThink-specific intermediate states added
+      // without removing any existing enum values.
+      enum: ["placed", "manifested", "shipped", "delivered", "cancelled", "rto"],
       default: "placed",
+    },
+
+    // iThink Logistics shipping details — added as a self-contained sub-document.
+    // No existing fields are touched.
+    shipping: {
+      awbNumber:           { type: String, default: null },
+      logisticName:        { type: String, default: null },
+      trackingUrl:         { type: String, default: null },
+      currentStatus:       { type: String, default: null },
+      currentStatusCode:   { type: String, default: null },
+      expectedDeliveryDate:{ type: String, default: null },
+      pickupAddressId:     { type: String, default: null },
+      lastSyncedAt:        { type: Date,   default: null },
+      cancelStatus:        { type: String, default: null },
     },
   },
   { timestamps: true }

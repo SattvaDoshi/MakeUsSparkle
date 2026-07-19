@@ -151,6 +151,14 @@ const productSchema = new mongoose.Schema(
         comment: String,
       },
     ],
+
+    // Shipping dimensions for iThink Logistics rate calculation and order creation.
+    // All optional — existing products without these values will fall back to
+    // ITL_DEFAULT_* environment variable defaults.
+    weightKg:  { type: Number, default: null },
+    lengthCm:  { type: Number, default: null },
+    widthCm:   { type: Number, default: null },
+    heightCm:  { type: Number, default: null },
   },
   { timestamps: true }
 );

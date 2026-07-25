@@ -853,7 +853,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const currentStock = selections.length > 0
     ? selections.reduce((min, sel) => {
       const v = getVariantForSelection(sel.colorIndex, sel.size);
-      return Math.min(min, v?.stock ?? stock);
+      return Math.min(min, v?.stock ?? stock); 
     }, stock)
     : stock;
     const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));

@@ -1129,6 +1129,14 @@ export default function CartPage() {
           background: white; outline: none; text-transform: uppercase;
           transition: border-color .2s;
         }
+          .cp-input-hint {
+  font-size: 12px;
+  font-weight: 400; 
+  color : #101010;
+  margin-top: 6px;
+  letter-spacing: .02em;
+  line-height: 1.4;
+}
         .cp-coupon-input:focus { border-color: var(--olive-400); }
         .cp-coupon-input::placeholder { text-transform: none; color: rgba(30,35,16,.3); }
         .cp-coupon-btn {
@@ -1273,12 +1281,12 @@ export default function CartPage() {
     <Link href={item.href || `/products/${item.id}`}  style={{ textDecoration: 'none' }}>
       <div className="cp-item-name">{item.name}</div>
     </Link>
-                          {!item.selectedCharms?.length && (
+                          {/* {!item.selectedCharms?.length && (
                             <div className="cp-item-color">
                               <span className="cp-item-color-dot" style={{ background: item.colorHex }} />
                               {item.color}
                             </div>
-                          )}
+                          )} */}
                           <div className="cp-item-price-row">
                             <span className="cp-item-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
                             {item.originalPrice && (
@@ -1399,6 +1407,7 @@ export default function CartPage() {
                   <div className="cp-panel" style={{ padding: '18px 20px', marginTop: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                       <p className="cp-panel-head" style={{ padding: 0, border: 'none' }}>Redeem Points</p>
+                     
                       <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--olive-500)', background: 'var(--olive-50)', padding: '2px 6px', borderRadius: 4 }}>
                         Balance: {userRewardPoints}
                       </span>
@@ -1425,6 +1434,9 @@ export default function CartPage() {
                         Apply
                       </button>
                     </div>
+                    <p className="cp-input-hint">
+  Enter the amount you want to redeem from your balance.
+</p>
                     {actualRedeemedPoints > 0 && (
                       <div className="cp-coupon-applied" style={{ marginTop: 8 }}>
                         <span>−₹{actualRedeemedPoints} points redeemed</span>

@@ -283,12 +283,12 @@ export default function CartDrawer() {
   <div className="di-name">{item.name}</div>
 </Link>
 
-                      {!item.selectedCharms?.length && (
+                      {/* {!item.selectedCharms?.length && (
                         <div className="di-color">
                           <span className="di-color-dot" style={{ background: item.colorHex }} />
                           {item.color}
                         </div>
-                      )}
+                      )} */}
                       <div className="di-price-row">
                         <span className="di-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
                         {item.originalPrice && (

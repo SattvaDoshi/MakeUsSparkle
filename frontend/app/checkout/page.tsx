@@ -650,7 +650,7 @@ export default function CheckoutPage() {
             <div className="ck-popup-icon">⚡</div>
             <h2 className="ck-popup-title">Express Delivery</h2>
             <p className="ck-popup-body">
-              Delivered in <strong>2–3 days</strong> (Metro) or <strong>3–4 days</strong> (Rest of India) at <strong>₹110</strong>.
+              Delivered in <strong>2–3 days</strong> (Metro Cities) or <strong>3–4 days</strong> (Rest of India) at <strong>₹110</strong>.
             </p>
             <div className="ck-popup-avail">
               <p className="ck-popup-avail-title">Available payment methods</p>

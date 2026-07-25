@@ -44,6 +44,7 @@ interface ProductCardProduct {
   type?: string;
   perCharmPrice?: number;
   charmPieceOptions?: number[];
+   stock?: number; 
 }
 
 export default function ProductCard({
@@ -58,7 +59,7 @@ export default function ProductCard({
   productLinkBase?: string;
 } ){
   const { name, price, originalPrice, badge, images, colors, href = '#', perCharmPrice, charmPieceOptions } = product;
-
+const isOutOfStock = (product.stock ?? Infinity) <= 0;
   const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
 const { addItem } = useCart();
@@ -128,6 +129,7 @@ const [added, setAdded] = useState(false);
 const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   e.stopPropagation();
+  if (isOutOfStock) return; 
   addItem(
     {
       id: String(product.id),
@@ -432,11 +434,13 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
 
           <div className="pc-overlay" />
 
-          {badge && (
-            <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
-              {badge}
-            </span>
-          )}
+         {isOutOfStock ? (
+  <span className="pc-badge pc-badge--sale">Sold Out</span>
+) : badge && (
+  <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
+    {badge}
+  </span>
+)}
 
           <button
             className={`pc-wish${wished ? ' active' : ''}${wishAnim ? ' anim' : ''}`}
@@ -491,13 +495,18 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
       <span className="pc-saving">{discount}% off</span>
     )}
   </div>
-  <button
-    className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
-    onClick={handleAdd}
-    aria-label={`Add ${name} to cart`}
-  >
-    {added ? 'Added ✓' : 'Add to Cart'}
-  </button>
+ <button
+  className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
+  onClick={handleAdd}
+  disabled={isOutOfStock}
+  aria-label={isOutOfStock ? `${name} is sold out` : `Add ${name} to cart`}
+  style={{
+    opacity: isOutOfStock ? 0.5 : 1,
+    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+  }}
+>
+  {isOutOfStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
+</button>
 </div>
             
       

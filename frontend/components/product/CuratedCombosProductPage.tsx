@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -9,6 +10,9 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
+import Link from 'next/link';
+import { useAuth } from '@/lib/authContext';
+import type { ReviewData } from '@/lib/catalogApi';
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
@@ -278,6 +282,25 @@ export function hasCustomisation(v: ProductVariant) {
   return (v.selections && Object.keys(v.selections).length > 0) || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0);
 }
 
+/** Returns the list of variant groups (colour/size/etc.) that require a mandatory selection for a product. */
+function getRequiredVariants(product: ComboProduct) {
+  return (product.variants || []).filter(v => v.options && v.options.length > 0);
+}
+
+/** True only if every mandatory variant (colour, size, etc.) has been selected for this product. */
+function isProductSelectionComplete(product: ComboProduct, v: ProductVariant) {
+  const required = getRequiredVariants(product);
+  if (required.length === 0) return true;
+  return required.every(variant => !!v.selections?.[variant.name]);
+}
+
+/** Returns the names of variant groups still missing a selection. */
+function getMissingVariantNames(product: ComboProduct, v: ProductVariant) {
+  return getRequiredVariants(product)
+    .filter(variant => !v.selections?.[variant.name])
+    .map(variant => variant.name);
+}
+
 function CompactCustSummary({ variant }: { variant: ProductVariant }) {
   if (!hasCustomisation(variant)) return null;
   return (
@@ -288,12 +311,308 @@ function CompactCustSummary({ variant }: { variant: ProductVariant }) {
       {variant.personalMessage     && <span className="cust-chip">Message added</span>}
       {variant.uploadedImageBase64 && <span className="cust-chip">Photo added</span>}
       {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
-      {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
-      {variant.uploadedImagesBase64?.map((_, i) => <span key={i} className="cust-chip">Photo added</span>)}
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   PRICING TIER SELECTOR — side-by-side pill buttons
+───────────────────────────────────────────────────────────── */
+interface PricingTierSelectorProps {
+  basePrice: number;
+  pricingVariants: { label: string; price: number }[];
+  selected?: { label: string; price: number };
+  onChange: (opt?: { label: string; price: number }) => void;
+}
+
+function PricingTierSelector({ basePrice, pricingVariants, selected, onChange }: PricingTierSelectorProps) {
+  if (!pricingVariants || pricingVariants.length === 0) return null;
+  return (
+    <div className="pricing-tier-block">
+      <span className="pricing-tier-label">Select Option</span>
+      <div className="pricing-tier-row">
+        <button
+          type="button"
+          className={`pricing-tier-btn${!selected ? ' on' : ''}`}
+          onClick={() => onChange(undefined)}
+        >
+          <span className="pricing-tier-btn-name">Base</span>
+          <span className="pricing-tier-btn-price">₹{basePrice.toLocaleString('en-IN')}</span>
+        </button>
+        {pricingVariants.map(pv => {
+          const isOn = selected?.label === pv.label;
+          return (
+            <button
+              key={pv.label}
+              type="button"
+              className={`pricing-tier-btn${isOn ? ' on' : ''}`}
+              onClick={() => onChange(pv)}
+            >
+              <span className="pricing-tier-btn-name">{pv.label}</span>
+              <span className="pricing-tier-btn-price">₹{pv.price.toLocaleString('en-IN')}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+/* ── TRUST BADGES ── */
+const COMBO_TRUST_BADGES = [
+  {
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="18" width="28" height="18" rx="2" /><path d="M32 22h4l6 8v6h-10V22z" />
+        <circle cx="14" cy="38" r="3" /><circle cx="36" cy="38" r="3" /><path d="M4 26h28" /><path d="M10 14h4M16 11v6" />
+      </svg>
+    ),
+    title: 'Free Shipping', sub: 'On orders above ₹999',
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z" /><path d="M20 22l3 3 6-6" />
+      </svg>
+    ),
+    title: 'COD Available', sub: 'On all orders',
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M44 4L22 26M44 4L30 44 22 26 4 18 44 4z" />
+      </svg>
+    ),
+    title: 'Express Delivery', sub: '2–3 business days',
+  },
+];
+
+function ComboTrustBadges() {
+  return (
+    <div className="combo-trust">
+      {COMBO_TRUST_BADGES.map((b, i) => (
+        <div key={i} className="combo-trust-item">
+          <div className="combo-trust-icon">{b.icon}</div>
+          <div className="combo-trust-title">{b.title}</div>
+          <div className="combo-trust-sub">{b.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── ACCORDION + POLICY LINKS ── */
+function ComboAccordionItem({ emoji, label, children, open, onToggle }: { emoji: string; label: string; children: React.ReactNode; open: boolean; onToggle: () => void }) {
+  return (
+    <div className={`combo-acc-item${open ? ' combo-acc-item--open' : ''}`}>
+      <button className="combo-acc-head" onClick={onToggle}>
+        <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
+        <span className="combo-acc-chevron">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+        </span>
+      </button>
+      <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows .38s cubic-bezier(.4,0,.2,1)' }}>
+        <div style={{ overflow: 'hidden' }}><div className="combo-acc-body">{children}</div></div>
+      </div>
+    </div>
+  );
+}
+
+function ComboNavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
+  return (
+    <Link href={href} className="combo-acc-nav-link">
+      <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+    </Link>
+  );
+}
+
+const CANCELLATION_POLICY_TEXT = 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.';
+
+function ComboPolicySection({ description }: { description?: string }) {
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <div className="combo-accordion">
+      {description && description.trim() && (
+        <ComboAccordionItem emoji="💎" label="About This Set" open={open === 'about'} onToggle={() => setOpen(o => (o === 'about' ? null : 'about'))}>
+          <p style={{ whiteSpace: 'pre-line' }}>{description}</p>
+        </ComboAccordionItem>
+      )}
+      <ComboAccordionItem emoji="↩️" label="Cancellation Policy" open={open === 'cancel'} onToggle={() => setOpen(o => (o === 'cancel' ? null : 'cancel'))}>
+        <p>{CANCELLATION_POLICY_TEXT}</p>
+      </ComboAccordionItem>
+      <ComboNavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
+      <ComboNavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" />
+    </div>
+  );
+}
+
+/* ── ESTIMATED DELIVERY ── */
+function ComboEstimatedDelivery() {
+  return (
+    <div className="combo-delivery">
+      <p className="combo-delivery-label">Estimated Delivery</p>
+      <div className="combo-delivery-grid">
+        {[
+          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
+          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
+        ].map(opt => (
+          <div key={opt.label} className="combo-delivery-card">
+            <div className="combo-delivery-icon">{opt.icon}</div>
+            <div className="combo-delivery-opt-label">{opt.label}</div>
+            <div className="combo-delivery-tier">
+              <div className="combo-delivery-tier-label">Metro Cities</div>
+              <div className="combo-delivery-tier-val">{opt.metro}</div>
+            </div>
+            <div className="combo-delivery-tier">
+              <div className="combo-delivery-tier-label">Rest of India</div>
+              <div className="combo-delivery-tier-val">{opt.rest}</div>
+            </div>
+            <div className="combo-delivery-rate">{opt.rate}</div>
+          </div>
+        ))}
+      </div>
+      <div className="combo-delivery-freebar">
+        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
+        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
+      </div>
+    </div>
+  );
+}
+
+/* ── REVIEWS ── */
+function ComboReviewsSection({ comboId }: { comboId: string }) {
+  const { token } = useAuth();
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const [filterStar, setFilterStar] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formState, setFormState] = useState<{ rating: number; body: string }>({ rating: 5, body: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    apiRequest<{ success: boolean; reviews: ReviewData[] }>(`/combos/${comboId}/reviews`)
+      .then(data => { if (mounted && data.success) setReviews(data.reviews || []); })
+      .catch(() => {})
+      .finally(() => { if (mounted) setLoaded(true); });
+    return () => { mounted = false; };
+  }, [comboId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) { setErrorMsg('You must be logged in to review.'); return; }
+    setIsSubmitting(true); setErrorMsg('');
+    try {
+      const res = await apiRequest<{ success: boolean; review?: ReviewData; message?: string }>(`/combos/${comboId}/reviews`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(formState),
+      });
+      if (res.success && res.review) {
+        setReviews(prev => [res.review!, ...prev]);
+        setShowForm(false);
+        setFormState({ rating: 5, body: '' });
+      } else {
+        setErrorMsg(res.message || 'Failed to submit review.');
+      }
+    } catch {
+      setErrorMsg('Failed to submit review.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews ? (reviews.reduce((a, r) => a + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
+  const ratingDist = [5, 4, 3, 2, 1].map(stars => {
+    const count = reviews.filter(r => r.rating === stars).length;
+    return { stars, count, pct: totalReviews ? Math.round((count / totalReviews) * 100) : 0 };
+  });
+
+  return (
+    <div className="combo-rev-section">
+      <div className="combo-rev-header">
+        <span className="combo-rev-eyebrow">Customer Stories</span>
+        <h2 className="combo-rev-title">What people are saying</h2>
+      </div>
+
+      {loaded && totalReviews > 0 && (
+        <div className="combo-rev-summary">
+          <div className="combo-rev-score">
+            <span className="combo-rev-big-num">{avgRating}</span>
+            <div className="combo-rev-big-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
+            <span className="combo-rev-total">Based on {totalReviews} reviews</span>
+          </div>
+          <div className="combo-rev-bars">
+            {ratingDist.map(d => (
+              <button key={d.stars} className={`combo-rev-bar-row${filterStar === d.stars ? ' combo-rev-bar-row--active' : ''}`} onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}>
+                <span className="combo-rev-bar-label">{d.stars}★</span>
+                <div className="combo-rev-bar-track"><div className="combo-rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
+                <span className="combo-rev-bar-count">{d.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="combo-rev-controls">
+        <div>{filterStar !== null && <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>}</div>
+        {!showForm && <button className="combo-rev-write-btn" onClick={() => setShowForm(true)}>Write a Review</button>}
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="combo-rev-card" style={{ marginBottom: 16 }}>
+          {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {[1, 2, 3, 4, 5].map(star => (
+              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 22, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
+            ))}
+          </div>
+          <textarea required placeholder="Share your experience with this set…" value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={3} className="modal-textarea" style={{ marginBottom: 14 }} />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="submit" disabled={isSubmitting} className="combo-rev-write-btn">{isSubmitting ? 'Submitting…' : 'Submit Review'}</button>
+            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--ink4)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {loaded && visible.length === 0 && !showForm && (
+        <p className="combo-rev-empty">
+          {totalReviews === 0 ? 'No reviews yet for this set — be the first to share your experience.' : (
+            <>No reviews match this filter. <button className="combo-rev-clear" style={{ display: 'inline' }} onClick={() => setFilterStar(null)}>Clear filter</button></>
+          )}
+        </p>
+      )}
+
+      <div className="combo-rev-list">
+        {visible.map(r => (
+          <div key={r._id} className="combo-rev-card">
+            <div className="combo-rev-card-top">
+              <div className="combo-rev-avatar">{r.user?.firstName?.[0] || 'A'}</div>
+              <div>
+                <div className="combo-rev-meta-row">
+                  <span className="combo-rev-name">{r.user?.firstName} {r.user?.lastName}</span>
+                  {r.isVerifiedPurchase && <span className="combo-rev-verified"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
+                </div>
+                <div className="combo-rev-meta-row" style={{ marginTop: 2 }}>
+                  <span className="combo-rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                  <span className="combo-rev-date">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                </div>
+              </div>
+            </div>
+            <p className="combo-rev-body">{r.body}</p>
+          </div>
+        ))}
+      </div>
+      {hasMore && <div className="combo-rev-load"><button className="combo-rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>Show more reviews</button></div>}
+    </div>
+  );
+}
 interface CustomiserProps {
   product: ComboProduct;
   variant: ProductVariant;
@@ -307,6 +626,7 @@ interface CustomiserProps {
 
 function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlow, hidePrice, hideVariants }: CustomiserProps) {
   const [local, setLocal] = useState<ProductVariant>({ ...variant });
+  const [showValidation, setShowValidation] = useState(false);
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.currentTarget.files || []);
@@ -338,8 +658,22 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   const variants = hideVariants ? [] : (product.variants || []);
   const hasAny  = (local.selections && Object.keys(local.selections).length > 0) || !!local.personalMessage || !!local.uploadedImageBase64;
 
+  const requiredVariants = hideVariants ? [] : getRequiredVariants(product);
+  const missing = requiredVariants.filter(variant => !local.selections?.[variant.name]);
+  const canSave = missing.length === 0;
+  const hasRequiredVariants = requiredVariants.length > 0;
+
   const msgNum = variants.length + 1;
   const picNum = variants.length + 2;
+
+  const handleSaveClick = () => {
+    if (!canSave) {
+      setShowValidation(true);
+      return;
+    }
+    onSave(local);
+    onClose();
+  };
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -366,22 +700,26 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
         </div>
 
         <div className="modal-body">
-          {variants.map((variant, idx) => (
+          {variants.map((variant, idx) => {
+            const isRequired = variant.options.length > 0;
+            const isMissing = showValidation && isRequired && !local.selections?.[variant.name];
+            return (
             <div key={variant.name} className="modal-field">
               <label className="modal-field-label">
                 <span className="modal-field-num">{idx + 1}</span>
                 {variant.name}
+                {isRequired && !local.selections?.[variant.name] && <span className="modal-field-required">required</span>}
                 {local.selections?.[variant.name] && <span className="modal-selected-badge">{local.selections[variant.name]}</span>}
               </label>
-              <div className="modal-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem' }}>
+              <div className={`modal-chips${isMissing ? ' modal-chips-error' : ''}`} style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '0.8rem', paddingBottom: '4px' }}>
                 {variant.options.map(opt => {
                   const isSelected = local.selections?.[variant.name] === opt.name;
                   return (
                     <button key={opt.name} 
                       className={`chip${isSelected ? ' chip-on' : ''}`}
-                      onClick={() => setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } }))}
+                      onClick={() => { setShowValidation(false); setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } })); }}
                       disabled={opt.stock === 0}
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto', opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}>
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto', flexShrink: 0, opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}>
                       {opt.image && (
                         <img src={opt.image} alt={opt.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
                       )}
@@ -390,8 +728,10 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                   );
                 })}
               </div>
+              {isMissing && <span className="modal-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
             </div>
-          ))}
+            );
+          })}
 
           {product.allowTextCustomization && (
             <div className="modal-field">
@@ -486,10 +826,10 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
         </div>
 
         <div className="modal-footer">
-          {onSkip && (
+          {onSkip && !hasRequiredVariants && (
             <button className="modal-btn-skip" onClick={() => { onSkip(); onClose(); }}>Skip</button>
           )}
-          <button className="modal-btn-save" onClick={() => { onSave(local); onClose(); }}>
+          <button className={`modal-btn-save${!canSave ? ' modal-btn-disabled' : ''}`} onClick={handleSaveClick}>
             {isAddFlow
               ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Add to Hamper</>
               : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes</>
@@ -572,6 +912,8 @@ interface PresetHamperSectionProps {
 }
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
+  const [showValidation, setShowValidation] = useState(false);
+
   const removeFileFor = (pid: string, index: number) => {
     const v = variants[pid] || {};
     const arr = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
@@ -595,6 +937,19 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
   const currentOriginalPrice = combo.originalPrice + priceDiff;
   const pct = Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100);
   const customisedCount = products.filter(p => hasCustomisation(variants[p.id] || {})).length;
+
+  const incompleteProducts = products.filter(p => !isProductSelectionComplete(p, variants[p.id] || {}));
+  const canAddToCart = incompleteProducts.length === 0;
+
+  const handleAddToCartClick = () => {
+    if (!canAddToCart) {
+      setShowValidation(true);
+      const el = document.getElementById(`hamper-piece-${incompleteProducts[0].id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    onAddToCart(combo);
+  };
 
   return (
     <div className="hamper-page">
@@ -622,6 +977,15 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             {pct > 0 && <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
             {pct > 0 && <span className="hamper-save-tag">Save {pct}%</span>}
           </div>
+
+          {combo.pricingVariants && combo.pricingVariants.length > 0 && (
+            <PricingTierSelector
+              basePrice={combo.price}
+              pricingVariants={combo.pricingVariants}
+              selected={comboVariant.selectedPricingVariant}
+              onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
+            />
+          )}
         </div>
       </div>
 
@@ -635,9 +999,11 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       <div className="hamper-piece-list">
         {products.map((p, i) => {
           const v = variants[p.id] || {};
+          const missingNames = getMissingVariantNames(p, v);
+          const showPieceError = showValidation && missingNames.length > 0;
 
           return (
-            <div key={p.id} className="hamper-piece">
+            <div key={p.id} id={`hamper-piece-${p.id}`} className={`hamper-piece${showPieceError ? ' hamper-piece-error' : ''}`}>
               <span className="hamper-piece-index">{i + 1}</span>
 
               <div className="hamper-piece-head">
@@ -655,18 +1021,23 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                 </div>
               </div>
 
-              <p className="hamper-piece-desc">
-                {p.description && p.description.trim() ? p.description : 'No description available for this piece yet.'}
-              </p>
+              {p.description && p.description.trim() && (
+                <p className="hamper-piece-desc">{p.description}</p>
+              )}
 
               <div className="hamper-piece-body">
                 {p.variants.map((variant) => {
                   if (variant.options.length === 0) return null;
                   const selectedOpt = v.selections?.[variant.name];
+                  const isMissing = showValidation && !selectedOpt;
                   return (
                     <div key={variant.name} className="hamper-piece-field">
-                      <span className="hamper-piece-field-label">{variant.name} {selectedOpt && <em>· {selectedOpt}</em>}</span>
-                      <div className="hamper-colour-swatch-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span className="hamper-piece-field-label">
+                        {variant.name}
+                        <span className="hamper-piece-field-required">required</span>
+                        {selectedOpt && <em>· {selectedOpt}</em>}
+                      </span>
+                      <div className={`hamper-colour-swatch-row${isMissing ? ' hamper-colour-swatch-row-error' : ''}`}>
                         {variant.options.map(opt => {
                           const isOn = selectedOpt === opt.name;
                           return (
@@ -675,20 +1046,21 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                               type="button"
                               className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
                               aria-pressed={isOn}
-                              onClick={() => onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [variant.name]: opt.name } })}
+                              onClick={() => { setShowValidation(false); onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [variant.name]: opt.name } }); }}
                               disabled={opt.stock === 0}
-                              style={{ height: 'auto', padding: '0.5rem', width: 'auto', flexDirection: 'column', opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}
+                              style={{ opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}
                             >
                               {opt.image && (
-                                <span className="hamper-colour-swatch-img-wrap" style={{ width: 90, height: 90 }}>
+                                <span className="hamper-colour-swatch-img-wrap">
                                   <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </span>
                               )}
-                              <span className="hamper-colour-swatch-label" style={{ marginTop: '0.2rem' }}>{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
+                              <span className="hamper-colour-swatch-label">{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
                             </button>
                           );
                         })}
                       </div>
+                      {isMissing && <span className="hamper-piece-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
                     </div>
                   );
                 })}
@@ -769,36 +1141,6 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           );
         })}
       </div>
-
-      {combo.pricingVariants && combo.pricingVariants.length > 0 && (
-        <>
-          <div className="hamper-divider" style={{ margin: "2rem 0" }} />
-          <div className="hamper-piece">
-            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
-            <div className="hamper-piece-head">
-              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
-                <span className="hamper-piece-name">Select Option</span>
-              </div>
-            </div>
-            <p className="hamper-piece-desc">Choose a pricing tier for this combo.</p>
-            <div className="hamper-piece-body" style={{ marginTop: '1rem' }}>
-              <select 
-                 className="modal-textarea" 
-                 value={comboVariant.selectedPricingVariant?.label || ''} 
-                 onChange={e => {
-                   const opt = combo.pricingVariants?.find(x => x.label === e.target.value);
-                   onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt });
-                 }}
-               >
-                 <option value="">Base - ₹{combo.price.toLocaleString('en-IN')}</option>
-                 {combo.pricingVariants.map(pv => (
-                   <option key={pv.label} value={pv.label}>{pv.label} - ₹{pv.price.toLocaleString('en-IN')}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-        </>
-      )}
 
       {(combo.allowComboTextCustomization || combo.allowComboImageCustomization) && (
         <>
@@ -894,6 +1236,16 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           </div>
         </>
       )}
+<div className="hamper-divider" style={{ margin: '2rem 0 1.5rem' }} />
+<ComboTrustBadges />
+<ComboPolicySection description={combo.description} />
+<ComboEstimatedDelivery />
+
+      {showValidation && !canAddToCart && (
+        <div className="hamper-global-error">
+          Please select {incompleteProducts.map(p => p.name).join(', ')} options before adding to cart.
+        </div>
+      )}
 
       <div className="hamper-sticky-bar">
         <div className="hamper-sticky-info">
@@ -903,13 +1255,14 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             {pct > 0 && <span className="hamper-sticky-price-orig">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
           </div>
         </div>
-        <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}`} onClick={() => onAddToCart(combo)}>
+        <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hamper-sticky-btn-disabled' : ''}`} onClick={handleAddToCartClick}>
           {cartAdded
             ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added</>
             : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart</>
           }
         </button>
       </div>
+      <ComboReviewsSection comboId={combo.id} />
     </div>
   );
 }
@@ -959,6 +1312,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
   const remaining = slot.maxItems - selectedIds.length;
   const currentPrice = comboVariant.selectedPricingVariant?.price ?? slot.fixedPrice;
   const selectedProducts = slot.allowedProducts.filter(p => selectedIds.includes(p.id));
+  const canAddToCart = selectedIds.length === slot.maxItems;
 
   const handleAddWithCustomise = (product: ComboProduct) => setCustomising({ product, isAddFlow: true });
 
@@ -991,6 +1345,17 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           <p className="builder-header-tagline">{slot.tagline}</p>
         </div>
       </div>
+
+      {slot.pricingVariants && slot.pricingVariants.length > 0 && (
+        <div className="builder-pricing-wrap">
+          <PricingTierSelector
+            basePrice={slot.fixedPrice}
+            pricingVariants={slot.pricingVariants}
+            selected={comboVariant.selectedPricingVariant}
+            onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
+          />
+        </div>
+      )}
 
       <div className="builder-progress-wrap">
         <div className="builder-progress-track">
@@ -1028,11 +1393,6 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
                       {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
                     </div>
                 )}
-                {p.tags && p.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
-                    </div>
-                )}
 
                 {isChosen ? (
                   <>
@@ -1065,36 +1425,6 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           isAddFlow={customising.isAddFlow}
           hidePrice
         />
-      )}
-
-      {slot.pricingVariants && slot.pricingVariants.length > 0 && (
-        <div style={{ margin: "2rem auto", padding: "0 1.5rem", maxWidth: "600px" }}>
-          <div className="hamper-divider" style={{ margin: "0 0 2rem 0" }} />
-          <div className="hamper-piece">
-            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
-            <div className="hamper-piece-head">
-              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
-                <span className="hamper-piece-name">Select Option</span>
-              </div>
-            </div>
-            <p className="hamper-piece-desc">Choose a pricing tier for this combo.</p>
-            <div className="hamper-piece-body" style={{ marginTop: '1rem' }}>
-              <select 
-                 className="modal-textarea" 
-                 value={comboVariant.selectedPricingVariant?.label || ''} 
-                 onChange={e => {
-                   const opt = slot.pricingVariants?.find(x => x.label === e.target.value);
-                   onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt });
-                 }}
-               >
-                 <option value="">Base - ₹{slot.fixedPrice.toLocaleString('en-IN')}</option>
-                 {slot.pricingVariants.map(pv => (
-                   <option key={pv.label} value={pv.label}>{pv.label} - ₹{pv.price.toLocaleString('en-IN')}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-        </div>
       )}
 
       {(slot.allowComboTextCustomization || slot.allowComboImageCustomization) && (
@@ -1161,7 +1491,12 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           </div>
         </div>
       )}
-
+<div style={{ margin: '2rem auto 0', padding: '0 1.5rem', maxWidth: '700px' }}>
+  <ComboTrustBadges />
+  <ComboPolicySection description={slot.description} />
+  <ComboEstimatedDelivery />
+  <ComboReviewsSection comboId={slot.id} />
+</div>
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
           <div className="builder-drawer-head">
@@ -1193,8 +1528,8 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
             ? <span className="builder-sticky-label">Add {remaining} more product{remaining !== 1 ? 's' : ''} to get the bundle at ₹{currentPrice.toLocaleString('en-IN')}</span>
             : <span className="builder-sticky-label builder-sticky-label--done">{slot.maxItems} pieces selected — ₹{currentPrice.toLocaleString('en-IN')}</span>}
         </div>
-        <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={selectedIds.length === 0} onClick={() => onAddToCart(slot)}>
-          {cartAdded ? 'Added' : 'Add to Cart'}
+        <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={!canAddToCart} onClick={() => onAddToCart(slot)}>
+          {cartAdded ? 'Added' : `Add to Cart`}
         </button>
       </div>
     </div>
@@ -1403,7 +1738,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     const ids  = slotSelections[slot.id] || [];
     const vars = slotVariants[slot.id]   || {};
     const cv   = comboVariants[slot.id]  || {};
-    if (!ids.length) return;
+    if (ids.length !== slot.maxItems) return;
     addItem({
       id: `custom-slot-${slot.id}-${Date.now()}`,
       name: slot.name, price: cv.selectedPricingVariant?.price ?? slot.fixedPrice, originalPrice: cv.selectedPricingVariant?.price ?? slot.fixedPrice,
@@ -1494,8 +1829,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-field-num { width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--ffb);font-variant-numeric: tabular-nums;
   line-height: 1;  }
         .modal-field-optional { font-size:8px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--ink4);padding:2px 7px;border:1px solid var(--bdr2);border-radius:50px; }
+        .modal-field-required { font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);padding:2px 7px;border:1px solid rgba(192,57,43,.35);background:rgba(192,57,43,.06);border-radius:50px; }
+        .modal-field-error-text { font-size:10.5px;font-weight:500;color:var(--red); }
         .modal-selected-badge { font-size:9px;font-weight:600;text-transform:none;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 9px;border-radius:50px;margin-left:auto; }
         .modal-chips { display:flex;flex-wrap:wrap;gap:8px; }
+        .modal-chips-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 8px; padding: 6px; }
         .chip { font-size:12px;font-weight:500;padding:8px 16px;border-radius:4px;border:1.5px solid var(--bdr2);color:var(--ink7);transition:all .18s;min-height:38px;display:flex;align-items:center;background:transparent;cursor:pointer;font-family:var(--ffb); }
         .chip:hover { border-color:var(--olive2);color:var(--olive);background:var(--olivedim); }
         .chip-on { background:var(--olivedim) !important;color:var(--olive) !important;border-color:var(--olive) !important;font-weight:600 !important;box-shadow:inset 0 0 0 1px var(--olive); }
@@ -1521,11 +1859,25 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-btn-skip:hover { border-color:var(--ink4);color:var(--ink); }
         .modal-btn-save { flex:2;display:flex;align-items:center;justify-content:center;gap:7px;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:4px;padding:12px 18px;min-height:44px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;font-family:var(--ffb); }
         .modal-btn-save:hover { background:#2e3c0e;transform:translateY(-1px); }
+        .modal-btn-save.modal-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
+        .modal-btn-save.modal-btn-disabled:hover { background:var(--bdr2);transform:none; }
 
         .cust-compact { display:flex;flex-wrap:wrap;gap:4px;margin-top:3px; }
         .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
-        .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
         .cust-chip { font-size:9px;font-weight:500;color:var(--olive);background:var(--olivedim);border:1px solid rgba(90,110,43,.2);padding:2px 8px;border-radius:50px;white-space:nowrap; }
+
+        /* ── PRICING TIER SELECTOR (side-by-side, top of page) ── */
+        .pricing-tier-block { margin-top:14px;display:flex;flex-direction:column;gap:8px; }
+        .pricing-tier-label { font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink4); }
+        .pricing-tier-row { display:flex;flex-wrap:wrap;gap:10px; }
+        .pricing-tier-btn { display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 16px;border-radius:8px;border:1.5px solid var(--bdr2);background:var(--surf);transition:all .18s;min-width:88px; }
+        .pricing-tier-btn:hover { border-color:var(--olive2); }
+        .pricing-tier-btn.on { border-color:var(--olive);background:var(--olivedim);box-shadow:inset 0 0 0 1px var(--olive); }
+        .pricing-tier-btn-name { font-size:12px;font-weight:700;color:var(--ink); }
+        .pricing-tier-btn.on .pricing-tier-btn-name { color:var(--olive); }
+        .pricing-tier-btn-price { font-size:11px;font-weight:500;color:var(--ink7); }
+        .pricing-tier-btn.on .pricing-tier-btn-price { color:var(--olive2); }
+        .builder-pricing-wrap { max-width:1280px;margin:0 auto 18px; }
 
         /* ── PAGE ── */
         .page { min-height:100dvh;background:var(--bg);overflow-x:hidden;width:100%; }
@@ -1604,7 +1956,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-cust-progress { font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);border:1px solid rgba(90,110,43,.25);padding:3px 10px;border-radius:50px; }
 
         .hamper-piece-list { display:flex;flex-direction:column;gap:16px; }
-        .hamper-piece { display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1.5px solid var(--bdr);background:var(--surf);position:relative; }
+        .hamper-piece { display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1.5px solid var(--bdr);background:var(--surf);position:relative;transition:border-color .2s,box-shadow .2s; }
+        .hamper-piece.hamper-piece-error { border-color:var(--red);box-shadow:0 0 0 1px rgba(192,57,43,.25); }
         .hamper-piece-index { position:absolute;top:-8px;left:10px;width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center; }
 
         .hamper-piece-head { display:flex;align-items:center;gap:10px; }
@@ -1623,22 +1976,30 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-piece-variant-img { width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--olivedim);border:1px solid var(--bdr); }
         .hamper-piece-variant-img img { width:100%;height:100%;object-fit:cover; }
         .hamper-piece-field { display:flex;flex-direction:column;gap:6px; }
-        .hamper-piece-field-label { font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+        .hamper-piece-field-label { font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
         .hamper-piece-field-label em { font-style:normal;color:var(--olive2);text-transform:none;letter-spacing:0;font-weight:600; }
+        .hamper-piece-field-required { font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);padding:2px 7px;border:1px solid rgba(192,57,43,.35);background:rgba(192,57,43,.06);border-radius:50px; }
+        .hamper-piece-field-error-text { font-size:10.5px;font-weight:500;color:var(--red); }
         .hamper-chip-row { display:flex;flex-wrap:wrap;gap:6px; }
         .hamper-chip { font-size:10.5px;font-weight:500;padding:6px 12px;border-radius:50px;border:1.3px solid var(--bdr2);color:var(--ink7);background:transparent;transition:all .18s; }
         .hamper-chip:hover { border-color:var(--olive2);color:var(--olive);background:var(--olivedim); }
         .hamper-chip.on { background:var(--olive);color:#fff !important;border-color:var(--olive);font-weight:600; }
         .hamper-chip-sm { min-width:34px;text-align:center; }
 
-        .hamper-colour-swatch-row { display:flex;flex-wrap:wrap;gap:10px; }
-        .hamper-colour-swatch { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:0;cursor:pointer; }
-        .hamper-colour-swatch-img-wrap { width:44px;height:44px;overflow:hidden;border:2px solid var(--bdr2);transition:all .18s; }
+        .hamper-colour-swatch-row { display:flex;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:4px;scrollbar-width:thin; }
+        .hamper-colour-swatch-row::-webkit-scrollbar { height:4px; }
+        .hamper-colour-swatch-row::-webkit-scrollbar-thumb { background:var(--bdr2);border-radius:3px; }
+        .hamper-colour-swatch-row-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 10px; padding: 6px 6px 10px; }
+        .hamper-colour-swatch { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:6px 10px;cursor:pointer;flex-shrink:0;border-radius:8px;transition:background .18s; }
+        .hamper-colour-swatch:hover { background:var(--olivedim); }
+        .hamper-colour-swatch-img-wrap { width:56px;height:56px;overflow:hidden;transition:all .18s; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
         .hamper-colour-swatch:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
         .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.15); }
-        .hamper-colour-swatch-label { font-size:9px;font-weight:600;color:var(--ink7); }
+        .hamper-colour-swatch-label { font-size:12.5px;font-weight:600;color:var(--ink7);white-space:nowrap; }
         .hamper-colour-swatch.on .hamper-colour-swatch-label { color:var(--olive);font-weight:700; }
+
+        .hamper-global-error { margin-top:16px;padding:10px 14px;border-radius:8px;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.3);color:var(--red);font-size:12px;font-weight:500;line-height:1.5; }
 
         .hamper-sticky-bar { position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:12px clamp(16px,4vw,52px);padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:16px; }
         .hamper-sticky-info { flex:1;min-width:0; }
@@ -1649,6 +2010,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-sticky-btn { flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 22px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
         .hamper-sticky-btn:hover { background:#2e3c0e;transform:translateY(-1px); }
         .hamper-sticky-btn.done { background:var(--green) !important; }
+        .hamper-sticky-btn.hamper-sticky-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
+        .hamper-sticky-btn.hamper-sticky-btn-disabled:hover { background:var(--bdr2);transform:none; }
 
         @media(max-width:768px) {
           .hamper-page { max-width:520px; }
@@ -1657,10 +2020,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           .hamper-page { padding:14px 14px 0; }
           .hamper-main-img-wrap { aspect-ratio:2/3;  }
           .hamper-piece-img-link { width:48px;height:48px; }
-          .hamper-colour-swatch-img-wrap { width:60px;height:60px; }
+          .hamper-colour-swatch-img-wrap { width:65px;height:90px; }
+          .hamper-colour-swatch-label { font-size:11.5px; }
           .hamper-sticky-bar { padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom)); gap:10px; }
           .hamper-sticky-price-val { font-size:1.05rem; }
           .hamper-sticky-btn { padding:12px 16px;font-size:9px; }
+          .pricing-tier-btn { padding:8px 12px;min-width:76px; }
         }
         @media(max-width:360px) {
           .hamper-sticky-label { font-size:7px; }
@@ -1765,6 +2130,75 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         @media(max-width:340px) {
           .hero h1 { font-size:1.5rem; }
         }
+          /* ── TRUST BADGES ── */
+.combo-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
+.combo-trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;transition:transform .2s,box-shadow .2s;}
+.combo-trust-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.combo-trust-icon{width:36px;height:36px;color:var(--olive2);margin-bottom:7px;}
+.combo-trust-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);margin-bottom:2px;}
+.combo-trust-sub{font-size:9px;color:var(--ink7);}
+
+/* ── ACCORDION / POLICY LINKS ── */
+.combo-accordion{border-top:1px solid var(--bdr);margin:20px 0;}
+.combo-acc-item{border-bottom:1px solid var(--bdr);}
+.combo-acc-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;background:none;border:none;cursor:pointer;transition:background .15s;}
+.combo-acc-head:hover{background:rgba(61,80,22,.03);}
+.combo-acc-head-left{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:500;color:var(--ink);text-align:left;}
+.combo-acc-emoji{font-size:15px;}
+.combo-acc-chevron{color:var(--ink4);flex-shrink:0;transition:transform .32s ease;}
+.combo-acc-item--open .combo-acc-chevron{transform:rotate(180deg);}
+.combo-acc-body{padding:0 2px 16px 33px;font-size:12px;font-weight:300;line-height:1.8;color:var(--ink7);}
+.combo-acc-nav-link{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--bdr);font-size:12.5px;font-weight:500;transition:background .15s;}
+.combo-acc-nav-link:hover{background:rgba(61,80,22,.03);}
+.combo-acc-nav-link svg{color:var(--ink4);flex-shrink:0;}
+
+/* ── ESTIMATED DELIVERY ── */
+.combo-delivery{margin:20px 0;}
+.combo-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px;}
+.combo-delivery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.combo-delivery-card{border:1.5px solid var(--bdr);border-radius:14px;padding:14px 12px;background:var(--surf);}
+.combo-delivery-icon{font-size:22px;margin-bottom:4px;}
+.combo-delivery-opt-label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:10px;}
+.combo-delivery-tier{margin-bottom:6px;}
+.combo-delivery-tier-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--olive2);margin-bottom:1px;}
+.combo-delivery-tier-val{font-size:12px;font-weight:600;color:var(--ink);}
+.combo-delivery-rate{font-size:13px;font-weight:800;color:var(--olive2);}
+.combo-delivery-freebar{margin-top:10px;padding:11px 14px;background:linear-gradient(135deg,#e6f4e7,#f0faf0);border:1.5px solid rgba(42,96,48,.22);border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#0a2e12;line-height:1.4;}
+
+/* ── REVIEWS ── */
+.combo-rev-section{margin:24px 0 4px;padding-top:24px;border-top:1px solid var(--bdr);}
+.combo-rev-header{text-align:center;margin-bottom:20px;}
+.combo-rev-eyebrow{display:block;font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
+.combo-rev-title{font-family:var(--ffd);font-size:1.3rem;font-weight:400;font-style:italic;color:var(--olive);}
+.combo-rev-summary{display:flex;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:18px;flex-wrap:wrap;}
+.combo-rev-score{background:linear-gradient(160deg,var(--olive),var(--olive2));padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 130px;}
+.combo-rev-big-num{font-family:var(--ffd);font-size:2.6rem;font-weight:600;color:#f5f0e8;line-height:1;}
+.combo-rev-big-stars{font-size:13px;color:var(--gold);letter-spacing:2px;}
+.combo-rev-total{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.6);}
+.combo-rev-bars{display:flex;flex-direction:column;gap:5px;padding:14px 16px;flex:1;justify-content:center;min-width:180px;}
+.combo-rev-bar-row{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;}
+.combo-rev-bar-row:hover{background:rgba(61,80,22,.05);}
+.combo-rev-bar-row--active{background:var(--golddim);}
+.combo-rev-bar-label{font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right;}
+.combo-rev-bar-track{flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden;}
+.combo-rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px;}
+.combo-rev-bar-count{font-size:9px;color:var(--ink4);min-width:20px;}
+.combo-rev-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.combo-rev-clear{font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:5px 12px;cursor:pointer;}
+.combo-rev-write-btn{font-size:10.5px;font-weight:600;color:#fff;background:var(--olive);border:none;border-radius:50px;padding:9px 18px;cursor:pointer;}
+.combo-rev-empty{font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0;}
+.combo-rev-list{display:flex;flex-direction:column;gap:12px;}
+.combo-rev-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;}
+.combo-rev-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
+.combo-rev-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--golddim);color:var(--gold);}
+.combo-rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
+.combo-rev-name{font-size:12px;font-weight:600;color:var(--ink);}
+.combo-rev-verified{display:flex;align-items:center;gap:3px;font-size:9px;font-weight:600;text-transform:uppercase;color:var(--olive2);}
+.combo-rev-stars-sm{font-size:11px;color:var(--gold);}
+.combo-rev-date{font-size:10px;color:var(--ink4);}
+.combo-rev-body{font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;}
+.combo-rev-load{display:flex;justify-content:center;margin-top:20px;}
+.combo-rev-load-btn{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--olive);background:var(--surf);border:1.5px solid var(--bdr2);border-radius:50px;padding:11px 26px;cursor:pointer;}
       `}</style>
 
       <div className="page">

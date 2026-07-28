@@ -33,7 +33,10 @@ const DELIVERY_OPTIONS = [
     rest: '3–4 business days',
   },
 ];
-
+interface PincodeResponse {
+  status?: string;
+  [key: string]: any;
+}
 export default function CheckoutPage() {
   const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers, setRewardPointsRedeemed } = useCart();
   const { items, isGift, discountCode, discountAmount, selectedGiftId, rewardPointsRedeemed } = state;
@@ -62,8 +65,14 @@ export default function CheckoutPage() {
     setPincodeStatus('loading');
     pincodeTimerRef.current = setTimeout(async () => {
       try {
-        const res = await itlCheckPincode(pincode);
-        const status = (res?.data?.status || res?.data?.['0']?.status || '').toLowerCase();
+      const res = await itlCheckPincode(pincode);
+const data = res.data as PincodeResponse;
+
+const status = (
+  data?.status ||
+  data?.['0']?.status ||
+  ''
+).toLowerCase();
         const serviceable = status === 'serviceable' || status === 'active' || status === '1' || status === 'available';
         setPincodeStatus(serviceable ? 'ok' : 'fail');
         setPincodeMsg(

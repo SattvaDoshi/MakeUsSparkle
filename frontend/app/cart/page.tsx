@@ -1343,6 +1343,13 @@ export default function CartPage() {
                           <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
                             Included Items
                           </div>
+                          {Boolean(item.customData) && (Boolean(item.customData?.comboPresetMessage) || Boolean(item.customData?.comboPersonalMessage)) && (
+                            <div style={{ padding: '6px 8px', background: 'rgba(201,168,76,0.12)', borderRadius: 6, fontSize: 11, color: 'var(--olive-700)', marginBottom: 4 }}>
+                              <div style={{ fontWeight: 600, fontSize: 10, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Box Customisation</div>
+                              {Boolean(item.customData?.comboPresetMessage) && <div>Card: <em>{String(item.customData?.comboPresetMessage)}</em></div>}
+                              {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
+                            </div>
+                          )}
                           {item.selectionGroups.flatMap((group) => 
                             group.items.map((selection, idx) => (
                               <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.08)' }}>
@@ -1351,6 +1358,12 @@ export default function CartPage() {
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
                                     <span style={{ fontSize: 12, color: 'var(--olive-900)' }}>{selection.name}</span>
+                                    {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage)) && (
+                                      <div style={{ fontSize: 10.5, color: 'var(--olive-600)', marginTop: 2 }}>
+                                        {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
+                                        {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>

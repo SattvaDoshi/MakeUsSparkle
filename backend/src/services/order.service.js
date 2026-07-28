@@ -1,5 +1,6 @@
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
+import Review from "../models/review.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
@@ -11,11 +12,51 @@ class OrderService {
 
 	async getOrders(userId) {
 		try {
-			const orders = await Order.find({ user: userId })
+			const rawOrders = await Order.find({ user: userId })
 				.populate("items.product")
 				.populate("items.selectedCharms")
 				.populate("items.selectionGroups.items.item")
-				.sort({ createdAt: -1 });
+				.sort({ createdAt: -1 })
+				.lean();
+
+			const userReviews = await Review.find({ user: userId }).lean();
+			const reviewMap = new Map();
+			for (const r of userReviews) {
+				if (r.product) reviewMap.set(String(r.product), r);
+				if (r.combo) reviewMap.set(String(r.combo), r);
+			}
+
+			const orders = rawOrders.map((order) => {
+				const items = (order.items || []).map((item) => {
+					const prodObj =
+						item.product && typeof item.product === "object" ? item.product : null;
+					const targetId =
+						(prodObj ? String(prodObj._id) : null) ||
+						(typeof item.product === "string" ? String(item.product) : null) ||
+						item.sourceId ||
+						item._id;
+
+					const name =
+						item.name ||
+						(prodObj ? prodObj.name || prodObj.title : null) ||
+						"Order item";
+					const rev = targetId ? reviewMap.get(String(targetId)) : null;
+
+					return {
+						...item,
+						name,
+						productId: targetId,
+						reviewed: Boolean(rev),
+						rating: rev ? rev.rating || 5 : 0,
+						reviewText: rev ? rev.body || "" : "",
+					};
+				});
+				return {
+					...order,
+					items,
+				};
+			});
+
 			return { success: true, orders };
 		} catch (error) {
 			console.error("Error fetching orders:", error);

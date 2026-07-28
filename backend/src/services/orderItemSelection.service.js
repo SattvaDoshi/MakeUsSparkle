@@ -253,6 +253,10 @@ export async function normalizeOrderItem(item = {}) {
 		price: asNumber(item.price, 0),
 		customNote: item.customNote,
 		customImages: normalizeImageList(item.customImages),
+		customData:
+			item.customData && typeof item.customData === "object"
+				? item.customData
+				: undefined,
 		selectedCharms,
 		selectionGroups,
 	};

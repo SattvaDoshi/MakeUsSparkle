@@ -17,6 +17,7 @@ const orderSchema = new mongoose.Schema(
         sku: String,
         customNote: String,
         customImages: [String],
+        customData: mongoose.Schema.Types.Mixed,
         selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }],
         selectionGroups: [
           {

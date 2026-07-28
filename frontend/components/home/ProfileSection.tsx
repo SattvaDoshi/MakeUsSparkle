@@ -62,19 +62,20 @@ interface ReviewModalProps {
   itemName: string;
   pointsPerReview: number;
   onClose: () => void;
-  onSubmit: (rating: number, text: string) => void;
+  onSubmit: (rating: number, text: string, files: File[]) => void;
 }
 
 function ReviewModal({ itemName, pointsPerReview, onClose, onSubmit }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = async () => {
     if (rating === 0 || busy) return;
     setBusy(true);
-    await onSubmit(rating, text);
+    await onSubmit(rating, text, files);
     setBusy(false);
   };
 
@@ -104,6 +105,57 @@ function ReviewModal({ itemName, pointsPerReview, onClose, onSubmit }: ReviewMod
           onChange={(e) => setText(e.target.value)}
           rows={3}
         />
+        <div style={{ margin: '12px 0' }}>
+          <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files) {
+                  setFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)]);
+                }
+              }}
+            />
+            + Add Photos
+          </label>
+          {files.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {files.map((file, idx) => (
+                <div key={idx} style={{ position: 'relative', width: 56, height: 56 }}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt="Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -6,
+                      background: 'var(--red)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      fontSize: 10,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="pf-reward-hint">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -493,6 +545,13 @@ type BackendOrder = {
   _id: string;
   items: Array<{
     product?: { _id?: string; name?: string } | string;
+    sourceId?: string;
+    _id?: string;
+    name?: string;
+    productId?: string;
+    reviewed?: boolean;
+    rating?: number;
+    reviewText?: string;
     quantity?: number;
     price?: number;
   }>;
@@ -552,11 +611,11 @@ export default function ProfileSection() {
             ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
             : 'Recently',
           items: (order.items || []).map((item) => ({
-            name: typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item',
-            productId: typeof item.product === 'object' && item.product ? item.product._id || '' : '',
-            reviewed: false,
-            rating: 0,
-            reviewText: '',
+            name: item.name || (typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item'),
+            productId: item.productId || (typeof item.product === 'object' && item.product ? item.product._id || '' : item.sourceId || item._id || ''),
+            reviewed: Boolean(item.reviewed),
+            rating: item.rating || 0,
+            reviewText: item.reviewText || '',
           })),
           amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`,
           status: (order.status || 'placed').charAt(0).toUpperCase() + (order.status || 'placed').slice(1),
@@ -737,7 +796,7 @@ export default function ProfileSection() {
     router.push('/');
   };
 
-  const handleSubmitReview = async (rating: number, text: string) => {
+  const handleSubmitReview = async (rating: number, text: string, files: File[] = []) => {
     if (!reviewTarget) return;
     const order = orders.find((o) => o.id === reviewTarget.orderId);
     const item = order?.items[reviewTarget.itemIndex];
@@ -747,17 +806,23 @@ export default function ProfileSection() {
       return;
     }
     try {
+      const formData = new FormData();
+      formData.append('productId', item.productId);
+      formData.append('rating', String(rating));
+      formData.append('body', text || item.name);
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          formData.append('images', file);
+        });
+      }
+
       const result = await apiRequest<{
         success: boolean;
         pointsAwarded: number;
         isVerifiedPurchase: boolean;
       }>('/reviews', {
         method: 'POST',
-        body: JSON.stringify({
-          productId: item.productId,
-          rating,
-          body: text || item.name,
-        }),
+        body: formData as any,
       });
 
       // Mark item as reviewed in local state

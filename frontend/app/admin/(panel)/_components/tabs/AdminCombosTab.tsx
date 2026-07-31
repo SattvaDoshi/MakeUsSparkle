@@ -25,6 +25,7 @@ export type AdminCombo = {
 	status: "active" | "inactive";
 	displayOrder: number;
 	image?: string;
+	images?: string[];
 	price?: number;
 	originalPrice?: number;
 	products?: AdminComboProduct[];
@@ -36,6 +37,14 @@ export type AdminCombo = {
 	comboImageCustomizationTitle?: string;
 	comboMaxImageUploads?: number;
 	pricingVariants?: { label: string; price: number }[];
+};
+
+export type ComboGalleryItem = {
+	id: string;
+	type: "existing" | "new";
+	url?: string;
+	file?: File;
+	previewUrl: string;
 };
 
 type Props = {
@@ -86,6 +95,7 @@ type ModalState = {
 	products: ComboProductState[];
 	imageFile: File | null;
 	existingImage?: string;
+	galleryItems?: ComboGalleryItem[];
 };
 
 const defaultModal: ModalState = {
@@ -107,6 +117,7 @@ const defaultModal: ModalState = {
 	pricingVariants: [],
 	products: [],
 	imageFile: null,
+	galleryItems: [],
 };
 
 const defaultProduct: ComboProductState = {
@@ -206,6 +217,12 @@ export default function AdminCombosTab({
 			})),
 			imageFile: null,
 			existingImage: combo.image,
+			galleryItems: (combo.images || []).map((img, i) => ({
+				id: `existing_${i}_${img}`,
+				type: "existing" as const,
+				url: img,
+				previewUrl: img,
+			})),
 		});
 	};
 
@@ -234,6 +251,52 @@ export default function AdminCombosTab({
 			r.onload = () => setImagePreview(r.result as string);
 			r.readAsDataURL(file);
 		}
+	};
+
+	const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files || []);
+		if (!files.length || !modal) return;
+		const newItems = files.map((file, i) => ({
+			id: `new_${Date.now()}_${i}_${Math.random()}`,
+			type: "new" as const,
+			file,
+			previewUrl: URL.createObjectURL(file),
+		}));
+		upModal({ galleryItems: [...(modal.galleryItems || []), ...newItems] });
+		e.target.value = "";
+	};
+
+	const removeGalleryItem = (idToRemove: string) => {
+		if (!modal) return;
+		upModal({
+			galleryItems: (modal.galleryItems || []).filter(it => it.id !== idToRemove),
+		});
+	};
+
+	const [dragIdx, setDragIdx] = useState<number | null>(null);
+	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+	const handleDragStart = (idx: number) => {
+		setDragIdx(idx);
+	};
+
+	const handleDragOver = (e: React.DragEvent, idx: number) => {
+		e.preventDefault();
+		if (dragOverIdx !== idx) setDragOverIdx(idx);
+	};
+
+	const handleDrop = (idx: number) => {
+		if (dragIdx === null || dragIdx === idx || !modal) {
+			setDragIdx(null);
+			setDragOverIdx(null);
+			return;
+		}
+		const items = [...(modal.galleryItems || [])];
+		const [dragged] = items.splice(dragIdx, 1);
+		items.splice(idx, 0, dragged);
+		upModal({ galleryItems: items });
+		setDragIdx(null);
+		setDragOverIdx(null);
 	};
 
 	const handleProductImageChange = (i: number, file: File | null) => {
@@ -338,6 +401,22 @@ export default function AdminCombosTab({
 		}
 
 		if (modal.imageFile) fd.append("image", modal.imageFile);
+
+		// Gallery images and drag-and-drop order
+		let newFileIdx = 0;
+		const orderSpec: Array<{ type: "existing" | "new"; url?: string; index?: number }> = [];
+		(modal.galleryItems || []).forEach(item => {
+			if (item.type === "existing" && item.url) {
+				orderSpec.push({ type: "existing", url: item.url });
+				fd.append("existingImages", item.url);
+			} else if (item.type === "new" && item.file) {
+				const idx = newFileIdx++;
+				orderSpec.push({ type: "new", index: idx });
+				fd.append("images", item.file);
+			}
+		});
+		fd.append("galleryOrder", JSON.stringify(orderSpec));
+
 		return fd;
 	};
 
@@ -601,6 +680,123 @@ export default function AdminCombosTab({
 											</div>
 										)}
 										<input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} style={{ padding: "0.4rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.85rem" }} />
+									</div>
+
+									<div style={FIELD}>
+										<label style={LABEL}>
+											Gallery Images <span style={{ fontWeight: 400, color: "#666" }}>(Drag & Drop items to arrange display order)</span>
+										</label>
+										{(modal.galleryItems || []).length > 0 && (
+											<div
+												style={{
+													display: "flex",
+													flexWrap: "wrap",
+													gap: "0.6rem",
+													marginBottom: "0.6rem",
+													padding: "0.6rem",
+													background: "#f5f4ef",
+													borderRadius: 8,
+													border: "1px solid #d4d4c8",
+												}}
+											>
+												{(modal.galleryItems || []).map((item, idx) => (
+													<div
+														key={item.id}
+														draggable
+														onDragStart={() => handleDragStart(idx)}
+														onDragOver={(e) => handleDragOver(e, idx)}
+														onDrop={() => handleDrop(idx)}
+														style={{
+															display: "flex",
+															flexDirection: "column",
+															alignItems: "center",
+															background: "#fff",
+															border: dragOverIdx === idx ? "2px dashed #943b2a" : "1px solid #d4d4c8",
+															borderRadius: 8,
+															padding: "0.4rem",
+															position: "relative",
+															cursor: "grab",
+															width: 90,
+															boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+															transition: "all 0.15s ease",
+														}}
+													>
+														<span
+															style={{
+																position: "absolute",
+																top: 4,
+																left: 4,
+																background: "#3d4a20",
+																color: "#fff",
+																fontSize: "0.65rem",
+																fontWeight: 700,
+																padding: "1px 5px",
+																borderRadius: 4,
+																zIndex: 2,
+															}}
+														>
+															#{idx + 1}
+														</span>
+														<button
+															type="button"
+															onClick={() => removeGalleryItem(item.id)}
+															style={{
+																position: "absolute",
+																top: 4,
+																right: 4,
+																background: "#d9534f",
+																color: "#fff",
+																border: "none",
+																borderRadius: "50%",
+																width: 18,
+																height: 18,
+																fontSize: "0.75rem",
+																fontWeight: 700,
+																cursor: "pointer",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																zIndex: 2,
+																padding: 0,
+															}}
+														>
+															×
+														</button>
+														<img
+															src={item.previewUrl}
+															alt={`Gallery ${idx + 1}`}
+															style={{
+																width: 80,
+																height: 64,
+																objectFit: "cover",
+																borderRadius: 6,
+																marginBottom: "0.3rem",
+															}}
+														/>
+														<span
+															style={{
+																fontSize: "0.68rem",
+																color: "#555",
+																width: "100%",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																whiteSpace: "nowrap",
+																textAlign: "center",
+															}}
+														>
+															{item.type === "new" && item.file ? item.file.name : "Saved image"}
+														</span>
+													</div>
+												))}
+											</div>
+										)}
+										<input
+											type="file"
+											multiple
+											accept="image/jpeg,image/png,image/webp,image/avif"
+											onChange={handleGalleryFilesChange}
+											style={{ padding: "0.4rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.85rem" }}
+										/>
 									</div>
 								</div>
 

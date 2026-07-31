@@ -129,19 +129,36 @@ export default function CheckoutPage() {
     setDeliveryType(id);
   };
 
+  const scrollToAddressError = (id: string = 'ck-pincode-error-banner') => {
+    setTimeout(() => {
+      const el = document.getElementById(id) || document.getElementById('ck-address-error-banner');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  };
+
   const handleSaveAddress = async () => {
     setAddressError('');
     if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
-      setAddressError('Please fill all mandatory address fields.'); return;
+      setAddressError('Please fill all mandatory address fields (including a 6-digit Pincode).');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.pincode.length !== 6 || !/^\d{6}$/.test(addressForm.pincode)) {
-      setAddressError('Pincode must be exactly 6 digits.'); return;
+      setAddressError('A 6-digit Pincode is required.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.phone.length !== 10 || !/^\d{10}$/.test(addressForm.phone)) {
-      setAddressError('Phone number must be exactly 10 digits.'); return;
+      setAddressError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.alternativePhone && (addressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(addressForm.alternativePhone))) {
-      setAddressError('Alternative phone number must be exactly 10 digits.'); return;
+      setAddressError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
 
     setAddressBusy(true);
@@ -161,16 +178,24 @@ export default function CheckoutPage() {
   const handleSaveBillingAddress = async () => {
     setBillingAddressError('');
     if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
-      setBillingAddressError('Please fill all mandatory billing address fields.'); return;
+      setBillingAddressError('Please fill all mandatory billing address fields (including a 6-digit Pincode).');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.pincode.length !== 6 || !/^\d{6}$/.test(billingAddressForm.pincode)) {
-      setBillingAddressError('Pincode must be exactly 6 digits.'); return;
+      setBillingAddressError('A 6-digit Pincode is required for billing address.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.phone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.phone)) {
-      setBillingAddressError('Phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.alternativePhone && (billingAddressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.alternativePhone))) {
-      setBillingAddressError('Alternative phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
 
     setBillingAddressBusy(true);
@@ -747,13 +772,18 @@ export default function CheckoutPage() {
                 ) : (
                   <div style={{ marginTop: 20 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Address</p>
-                    {addressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
+                    {addressError && <div id="ck-address-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
                     <div className="ck-addr-form-grid">
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
+                      {addressError && (
+                        <div id="ck-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', gridColumn: '1 / -1', fontWeight: 600 }}>
+                          {addressError}
+                        </div>
+                      )}
                       <input
                         id="ck-pincode-input"
                         className="ck-addr-input"
@@ -820,6 +850,11 @@ export default function CheckoutPage() {
                           <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={billingAddressForm.landmark} onChange={e => setBillingAddressForm({ ...billingAddressForm, landmark: e.target.value })} />
                           <input className="ck-addr-input" placeholder="City *" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
                           <input className="ck-addr-input" placeholder="State *" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
+                          {billingAddressError && (
+                            <div id="ck-billing-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', gridColumn: '1 / -1', fontWeight: 600 }}>
+                              {billingAddressError}
+                            </div>
+                          )}
                           <input className="ck-addr-input" placeholder="Pincode (6 digits) *" maxLength={6} value={billingAddressForm.pincode} onChange={e => setBillingAddressForm({ ...billingAddressForm, pincode: e.target.value.replace(/\D/g, '') })} />
                           <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={billingAddressForm.phone} onChange={e => setBillingAddressForm({ ...billingAddressForm, phone: e.target.value.replace(/\D/g, '') })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={billingAddressForm.alternativePhone} onChange={e => setBillingAddressForm({ ...billingAddressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />

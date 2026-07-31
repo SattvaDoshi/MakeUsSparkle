@@ -283,19 +283,40 @@ class ProductService {
 			let imageUrls = [];
 			let imagePublicIds = [];
 
-			const existingImages = productData.existingImages
-				? Array.isArray(productData.existingImages)
-					? productData.existingImages
-					: [productData.existingImages]
-				: [];
-			imageUrls = [...existingImages];
-
 			const galleryFiles = filesMap.images || [];
+			let uploadedNew = [];
 			if (galleryFiles.length > 0) {
 				const buffers = galleryFiles.map((f) => f.buffer);
-				const uploaded = await imageService.uploadMultipleImages(buffers, "products");
-				imageUrls.push(...uploaded.map((u) => u.url));
-				imagePublicIds.push(...uploaded.map((u) => u.publicId));
+				uploadedNew = await imageService.uploadMultipleImages(buffers, "products");
+			}
+
+			let galleryOrder = productData.galleryOrder;
+			if (typeof galleryOrder === "string") {
+				try { galleryOrder = JSON.parse(galleryOrder); } catch (e) { galleryOrder = null; }
+			}
+
+			if (Array.isArray(galleryOrder) && galleryOrder.length > 0) {
+				for (const item of galleryOrder) {
+					if (item.type === "existing" && item.url) {
+						imageUrls.push(item.url);
+						imagePublicIds.push(null);
+					} else if (item.type === "new" && typeof item.index === "number") {
+						const u = uploadedNew[item.index];
+						if (u) {
+							imageUrls.push(u.url);
+							imagePublicIds.push(u.publicId);
+						}
+					}
+				}
+			} else {
+				const existingImages = productData.existingImages
+					? Array.isArray(productData.existingImages)
+						? productData.existingImages
+						: [productData.existingImages]
+					: [];
+				imageUrls = [...existingImages];
+				imageUrls.push(...uploadedNew.map((u) => u.url));
+				imagePublicIds.push(...uploadedNew.map((u) => u.publicId));
 			}
 
 			// --- Size Chart Image ---
@@ -465,34 +486,60 @@ class ProductService {
 			}
 
 			// --- Gallery images ---
-			const existingImages = updateData.existingImages
-				? Array.isArray(updateData.existingImages)
-					? updateData.existingImages
-					: [updateData.existingImages]
-				: [];
+			const galleryFiles = filesMap.images || [];
+			let uploadedNew = [];
+			if (galleryFiles.length > 0) {
+				const buffers = galleryFiles.map((f) => f.buffer);
+				uploadedNew = await imageService.uploadMultipleImages(buffers, "products");
+			}
 
-			let imageUrls = [...existingImages];
-			let imagePublicIds = product.imagePublicIds ? [...product.imagePublicIds] : [];
+			let imageUrls = [];
+			let imagePublicIds = [];
+			const oldImages = product.images || [];
+			const oldPublicIds = product.imagePublicIds || [];
+
+			let galleryOrder = updateData.galleryOrder;
+			if (typeof galleryOrder === "string") {
+				try { galleryOrder = JSON.parse(galleryOrder); } catch (e) { galleryOrder = null; }
+			}
+
+			if (Array.isArray(galleryOrder) && galleryOrder.length > 0) {
+				for (const item of galleryOrder) {
+					if (item.type === "existing" && item.url) {
+						const idx = oldImages.indexOf(item.url);
+						imageUrls.push(item.url);
+						imagePublicIds.push(idx > -1 && oldPublicIds[idx] ? oldPublicIds[idx] : null);
+					} else if (item.type === "new" && typeof item.index === "number") {
+						const u = uploadedNew[item.index];
+						if (u) {
+							imageUrls.push(u.url);
+							imagePublicIds.push(u.publicId);
+						}
+					}
+				}
+			} else {
+				const existingImages = updateData.existingImages
+					? Array.isArray(updateData.existingImages)
+						? updateData.existingImages
+						: [updateData.existingImages]
+					: [];
+
+				imageUrls = [...existingImages];
+				imagePublicIds = [...(product.imagePublicIds || [])];
+
+				imageUrls.push(...uploadedNew.map((u) => u.url));
+				imagePublicIds.push(...uploadedNew.map((u) => u.publicId));
+			}
 
 			// Delete removed images from Cloudinary
 			if (product.images && product.images.length > 0) {
 				for (let i = 0; i < product.images.length; i++) {
-					if (!existingImages.includes(product.images[i])) {
+					if (!imageUrls.includes(product.images[i])) {
 						if (product.imagePublicIds && product.imagePublicIds[i]) {
 							await imageService.deleteImage(product.imagePublicIds[i]).catch((e) => console.error("Could not delete image", e));
-							const pIdx = imagePublicIds.indexOf(product.imagePublicIds[i]);
-							if (pIdx > -1) imagePublicIds.splice(pIdx, 1);
 						}
 					}
 				}
-			}
-
-			const galleryFiles = filesMap.images || [];
-			if (galleryFiles.length > 0) {
-				const buffers = galleryFiles.map((f) => f.buffer);
-				const uploaded = await imageService.uploadMultipleImages(buffers, "products");
-				imageUrls.push(...uploaded.map((u) => u.url));
-				imagePublicIds.push(...uploaded.map((u) => u.publicId));
 			}
 
 			// --- Size Chart Image ---

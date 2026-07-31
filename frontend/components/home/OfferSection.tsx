@@ -46,22 +46,38 @@ type PublicOffersResponse = {
 };
 
 
+const isNotExpired = (offer: ApiOffer): boolean => {
+  if (!offer.expiryDate) return true;
+  const exp = new Date(offer.expiryDate);
+  if (Number.isNaN(exp.getTime())) return true;
+  const endOfExpiryDay = new Date(
+    exp.getFullYear(),
+    exp.getMonth(),
+    exp.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+  return endOfExpiryDay.getTime() >= Date.now();
+};
+
 const mapApiOffer = (offer: ApiOffer, isCoupon: boolean): Offer => {
   const parsedExpiry = offer.expiryDate ? new Date(offer.expiryDate) : null;
   const expiryText =
     parsedExpiry && !Number.isNaN(parsedExpiry.getTime())
       ? parsedExpiry.toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
       : 'No expiry';
 
   const category =
     offer.offerCategory === 'jewellery' ||
-    offer.offerCategory === 'combo' ||
-    offer.offerCategory === 'gift' ||
-    offer.offerCategory === 'all'
+      offer.offerCategory === 'combo' ||
+      offer.offerCategory === 'gift' ||
+      offer.offerCategory === 'all'
       ? offer.offerCategory
       : 'all';
 
@@ -110,7 +126,7 @@ export default function OffersSection() {
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [copied, setCopied] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
-const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
+  const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
   useEffect(() => {
     let ignore = false;
     const loadOffers = async () => {
@@ -119,20 +135,20 @@ const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
           fetch(getApiUrl('/coupons/offers')),
           fetch(getApiUrl('/offers/public'))
         ]);
-        
+
         let mappedCoupons: Offer[] = [];
         let mappedOffers: Offer[] = [];
-        
+
         if (couponsRes.status === 'fulfilled' && couponsRes.value.ok) {
           const data = (await couponsRes.value.json()) as PublicOffersResponse;
           if (data.offers) {
-            mappedCoupons = data.offers.map((o) => mapApiOffer(o, true));
+            mappedCoupons = data.offers.filter(isNotExpired).map((o) => mapApiOffer(o, true));
           }
         }
         if (offersRes.status === 'fulfilled' && offersRes.value.ok) {
           const data = (await offersRes.value.json()) as PublicOffersResponse;
           if (data.offers) {
-            mappedOffers = data.offers.map((o) => mapApiOffer(o, false));
+            mappedOffers = data.offers.filter(isNotExpired).map((o) => mapApiOffer(o, false));
           }
         }
 
@@ -188,21 +204,21 @@ const [activeTab, setActiveTab] = useState<'coupons' | 'offers'>('offers');
         {/* Toggle Switcher */}
         <div className="os-toggle-container">
           <div className="os-toggle-wrapper">
-       <button
-  className={`os-toggle-btn ${activeTab === 'offers' ? 'active' : ''}`}
-  onClick={() => setActiveTab('offers')}
->
-  <span className="os-toggle-icon">✨</span>
-  <span className="os-toggle-text">Store Offers ({offerCount})</span>
-</button>
+            <button
+              className={`os-toggle-btn ${activeTab === 'offers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('offers')}
+            >
+              <span className="os-toggle-icon">✨</span>
+              <span className="os-toggle-text">Store Offers ({offerCount})</span>
+            </button>
 
-<button
-  className={`os-toggle-btn ${activeTab === 'coupons' ? 'active' : ''}`}
-  onClick={() => setActiveTab('coupons')}
->
-  <span className="os-toggle-icon">🎫</span>
-  <span className="os-toggle-text">Promo Coupons ({couponCount})</span>
-</button>
+            <button
+              className={`os-toggle-btn ${activeTab === 'coupons' ? 'active' : ''}`}
+              onClick={() => setActiveTab('coupons')}
+            >
+              <span className="os-toggle-icon">🎫</span>
+              <span className="os-toggle-text">Promo Coupons ({couponCount})</span>
+            </button>
             <div className={`os-toggle-slider ${activeTab}`} />
           </div>
         </div>

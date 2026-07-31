@@ -4,9 +4,10 @@
 import {
   useState,
   useEffect,
+  useMemo,
   type ChangeEvent,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
@@ -69,6 +70,7 @@ interface PresetCombo {
   price: number;
   originalPrice: number;
   image: string;
+  images?: string[];
   badge: string;
   allowComboTextCustomization?: boolean;
   comboTextCustomizationTitle?: string;
@@ -87,6 +89,7 @@ interface CustomComboSlot {
   maxItems: number;
   fixedPrice: number;
   image: string;
+  images?: string[];
   badge: string;
   allowComboTextCustomization?: boolean;
   comboTextCustomizationTitle?: string;
@@ -954,6 +957,17 @@ interface PresetHamperSectionProps {
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
   const [showValidation, setShowValidation] = useState(false);
+  const [activeComboImgIdx, setActiveComboImgIdx] = useState(0);
+  const allComboImages = useMemo(() => {
+    if (!combo) return [];
+    return [safeImageSrc(combo.image), ...(combo.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
+  }, [combo]);
+
+  useEffect(() => {
+    setActiveComboImgIdx(0);
+  }, [combo?.id]);
+
+  if (!combo) return null;
 
   const removeFileFor = (pid: string, index: number) => {
     const v = variants[pid] || {};
@@ -970,13 +984,13 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
 
-  if (!combo) return null;
-
   const products = combo.includedProducts;
   const currentPrice = comboVariant.selectedPricingVariant?.price ?? combo.price;
   const priceDiff = currentPrice - combo.price;
   const currentOriginalPrice = combo.originalPrice + priceDiff;
-  const pct = Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100);
+  const pct = currentOriginalPrice > currentPrice
+    ? Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100)
+    : 0;
   const customisedCount = products.filter(p => hasCustomisation(variants[p.id] || {})).length;
 
   const incompleteProducts = products.filter(p => !isProductSelectionComplete(p, variants[p.id] || {}));
@@ -1002,10 +1016,38 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       </button>
 
       <div className="hamper-main-block">
-        <div className="hamper-main-img-wrap">
-          <img src={safeImageSrc(combo.image)} alt={combo.name} />
-          {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
-          {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
+        <div>
+          <div className="hamper-main-img-wrap">
+            <img src={allComboImages[activeComboImgIdx] || safeImageSrc(combo.image)} alt={combo.name} />
+            {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
+            {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
+          </div>
+          {allComboImages.length > 1 && (
+            <div className="hamper-gallery-thumbs" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+              {allComboImages.map((imgUrl: string, i: number) => (
+                <button
+                  key={`${imgUrl}-${i}`}
+                  type="button"
+                  onClick={() => setActiveComboImgIdx(i)}
+                  style={{
+                    width: '58px',
+                    height: '58px',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: activeComboImgIdx === i ? '2px solid #3d4a20' : '1px solid #d4d4c8',
+                    padding: 0,
+                    cursor: 'pointer',
+                    background: '#f5f4ef',
+                    opacity: activeComboImgIdx === i ? 1 : 0.75,
+                    transition: 'all 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img src={imgUrl} alt={`${combo.name} ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="hamper-main-info">
@@ -1324,6 +1366,14 @@ interface CustomBuilderSectionProps {
 
 function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
+  const [activeSlotImgIdx, setActiveSlotImgIdx] = useState(0);
+  const allSlotImages = useMemo(() => {
+    return [safeImageSrc(slot.image), ...(slot.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
+  }, [slot.image, slot.images]);
+
+  useEffect(() => {
+    setActiveSlotImgIdx(0);
+  }, [slot.id]);
 
   const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.currentTarget.files || []);
@@ -1380,10 +1430,42 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         Back to bundle options
       </button>
 
-      <div className="builder-header-row">
-        <div>
+      <div className="builder-header-row" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem' }}>
+        {allSlotImages.length > 0 && (
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--bdr, #d4d4c8)' }}>
+              <img src={allSlotImages[activeSlotImgIdx] || safeImageSrc(slot.image)} alt={slot.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            {allSlotImages.length > 1 && (
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                {allSlotImages.map((imgUrl: string, i: number) => (
+                  <button
+                    key={`${imgUrl}-${i}`}
+                    type="button"
+                    onClick={() => setActiveSlotImgIdx(i)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: activeSlotImgIdx === i ? '2px solid var(--gold, #c9a84c)' : '1px solid var(--bdr, #d4d4c8)',
+                      padding: 0,
+                      cursor: 'pointer',
+                      background: 'var(--surf, #f5f4ef)',
+                      opacity: activeSlotImgIdx === i ? 1 : 0.75,
+                    }}
+                  >
+                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: '200px' }}>
           <h2 className="builder-header-title">{slot.name}</h2>
           <p className="builder-header-tagline">{slot.tagline}</p>
+          {slot.description && <p style={{ marginTop: '0.4rem', fontSize: '0.9rem', color: '#555', whiteSpace: 'pre-line' }}>{slot.description}</p>}
         </div>
       </div>
 
@@ -1598,30 +1680,25 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
   const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>({});
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlComboId = searchParams?.get('combo') || null;
+  const urlCustomId = searchParams?.get('custom') || null;
+
   useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const comboId = params.get('combo');
-      const customId = params.get('custom');
-      
-      if (comboId) {
-        setSelectedComboId(comboId);
-        setPresetView('detail');
-        setMode('preset');
-      } else if (customId) {
-        setSelectedSlotId(customId);
-        setCustomView('detail');
-        setMode('custom');
-      } else {
-        setPresetView('grid');
-        setCustomView('grid');
-      }
-    };
-    
-    handlePopState();
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    if (urlComboId) {
+      setSelectedComboId(urlComboId);
+      setPresetView('detail');
+      setMode('preset');
+    } else if (urlCustomId) {
+      setSelectedSlotId(urlCustomId);
+      setCustomView('detail');
+      setMode('custom');
+    } else {
+      setPresetView('grid');
+      setCustomView('grid');
+    }
+  }, [urlComboId, urlCustomId]);
 
   useEffect(() => {
     async function loadCombos() {
@@ -1678,6 +1755,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 price: c.price,
                 originalPrice: c.originalPrice || c.price,
                 image: safeImageSrc(c.image),
+                images: Array.isArray(c.images) ? c.images.map((img: string) => safeImageSrc(img)) : [],
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
                 comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
@@ -1696,6 +1774,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 maxItems: c.itemsCount || 1,
                 fixedPrice: c.price || 0,
                 image: safeImageSrc(c.image),
+                images: Array.isArray(c.images) ? c.images.map((img: string) => safeImageSrc(img)) : [],
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
                 comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
@@ -1710,8 +1789,24 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
           setPresetCombos(loadedPreset);
           setCustomSlots(loadedCustom);
-          if (loadedPreset.length > 0) setSelectedComboId(loadedPreset[0].id);
-          if (loadedCustom.length > 0) setSelectedSlotId(loadedCustom[0].id);
+          const currentComboId = new URLSearchParams(window.location.search).get('combo');
+          const currentCustomId = new URLSearchParams(window.location.search).get('custom');
+
+          if (currentComboId && loadedPreset.some(c => c.id === currentComboId)) {
+            setSelectedComboId(currentComboId);
+            setPresetView('detail');
+            setMode('preset');
+          } else if (loadedPreset.length > 0) {
+            setSelectedComboId(prev => prev || loadedPreset[0].id);
+          }
+
+          if (currentCustomId && loadedCustom.some(c => c.id === currentCustomId)) {
+            setSelectedSlotId(currentCustomId);
+            setCustomView('detail');
+            setMode('custom');
+          } else if (loadedCustom.length > 0) {
+            setSelectedSlotId(prev => prev || loadedCustom[0].id);
+          }
 
           setSlotSelections(Object.fromEntries(loadedCustom.map(s => [s.id, []])));
           setSlotVariants(Object.fromEntries(loadedCustom.map(s => [s.id, {}])));
@@ -2285,7 +2380,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   const url = new URL(window.location.href);
                   url.searchParams.set('combo', id);
                   url.searchParams.delete('custom');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setSelectedComboId(id); 
                   setPresetView('detail'); 
                 }}
@@ -2302,7 +2397,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onBack={() => {
                   const url = new URL(window.location.href);
                   url.searchParams.delete('combo');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setPresetView('grid');
                 }}
               />
@@ -2315,7 +2410,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   const url = new URL(window.location.href);
                   url.searchParams.set('custom', id);
                   url.searchParams.delete('combo');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setSelectedSlotId(id); 
                   setCustomView('detail'); 
                 }}
@@ -2334,7 +2429,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onBack={() => {
                   const url = new URL(window.location.href);
                   url.searchParams.delete('custom');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setCustomView('grid');
                 }}
                 gender={gender}

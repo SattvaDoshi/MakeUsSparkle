@@ -1006,6 +1006,10 @@ export default function CartPage() {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes cpPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: .5; transform: scale(.8); }
+        }
         .cp-item:last-child { border-bottom: none; }
         .cp-item-img {
           width: 90px; height: 90px; border-radius: 12px;
@@ -1485,23 +1489,46 @@ export default function CartPage() {
                   )}
                   {applicableOffers.length > 0 && (
                     <>
-                      <div className="cp-summary-row" style={{ marginTop: 10, marginBottom: 6, fontWeight: 600, color: 'var(--olive-900)' }}>
-                        <span>Available Store Offers</span>
+                      <div style={{ margin: '10px 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: '#828278' }}>Store Offers</span>
+                        <span style={{ height: 1, flex: 1, background: '#e5dcc8' }} />
                       </div>
                       {applicableOffers.map((o) => (
-                        <div key={o.id} className="cp-summary-row cp-summary-row--savings" style={{ alignItems: 'center' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                        <div key={o.id} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          background: o.applied ? 'rgba(74,117,53,.06)' : 'rgba(0,0,0,.02)',
+                          border: `1px solid ${o.applied ? 'rgba(74,117,53,.2)' : '#e5dcc8'}`,
+                          borderRadius: 8, padding: '8px 12px', marginBottom: 4,
+                        }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
                             <input
                               type="checkbox"
                               checked={o.applied}
                               onChange={() => toggleOfferOptOut(o.id)}
-                              style={{ cursor: 'pointer', accentColor: 'var(--olive-600)' }}
+                              style={{ cursor: 'pointer', accentColor: '#4a7535', width: 15, height: 15, flexShrink: 0 }}
                             />
-                            <span>{o.title}</span>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: o.applied ? 'var(--olive-900, #1a1f0d)' : '#828278', lineHeight: 1.35 }}>
+                              {o.title}
+                            </span>
+                            {o.applied && (
+                              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: '#4a7535', background: 'rgba(74,117,53,.12)', padding: '2px 7px', borderRadius: 100 }}>
+                                Applied ✓
+                              </span>
+                            )}
                           </label>
-                          <span>−₹{o.amount.toLocaleString('en-IN')}</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: o.applied ? '#2e7d32' : '#828278', flexShrink: 0, marginLeft: 10 }}>
+                            {o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : `₹${o.amount.toLocaleString('en-IN')} off`}
+                          </span>
                         </div>
                       ))}
+                      {autoDiscountAmount > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 2px 6px' }}>
+                          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#2e7d32', flexShrink: 0, animation: 'cpPulse 1.8s infinite' }} />
+                          <span style={{ fontSize: 12, color: '#2e7d32', fontWeight: 600 }}>
+                            You're saving ₹{autoDiscountAmount.toLocaleString('en-IN')} with store offer{appliedOffers.length !== 1 ? 's' : ''}!
+                          </span>
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="cp-summary-row">

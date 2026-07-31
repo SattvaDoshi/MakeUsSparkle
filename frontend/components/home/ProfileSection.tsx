@@ -715,6 +715,15 @@ export default function ProfileSection() {
     setIsAddressFormOpen(true);
   };
 
+  const scrollToAddressError = (id: string = 'pf-pincode-error-banner') => {
+    setTimeout(() => {
+      const el = document.getElementById(id) || document.getElementById('pf-address-error-banner');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  };
+
   const submitAddressForm = async () => {
     const payload = {
       addressLine1: addressForm.addressLine1.trim(),
@@ -729,17 +738,24 @@ export default function ProfileSection() {
     };
 
     if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
-      setError('Please fill all mandatory address fields.');
+      setError('Please fill all mandatory address fields (including a 6-digit Pincode).');
+      scrollToAddressError('pf-pincode-error-banner');
       return;
     }
     if (payload.pincode.length !== 6 || !/^\d{6}$/.test(payload.pincode)) {
-      setError('Pincode must be exactly 6 digits.'); return;
+      setError('A 6-digit Pincode is required.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
     if (payload.phone.length !== 10 || !/^\d{10}$/.test(payload.phone)) {
-      setError('Phone number must be exactly 10 digits.'); return;
+      setError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
     if (payload.alternativePhone && (payload.alternativePhone.length !== 10 || !/^\d{10}$/.test(payload.alternativePhone))) {
-      setError('Alternative phone number must be exactly 10 digits.'); return;
+      setError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
 
     try {
@@ -1133,7 +1149,7 @@ export default function ProfileSection() {
               <div className="pf-address-card">
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
-                  {error && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
+                  {error && <div id="pf-address-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
                   <label className="pf-label">Address Line 1 *
                     <input
                       className="pf-input"
@@ -1174,6 +1190,11 @@ export default function ProfileSection() {
                       placeholder="State"
                     />
                   </label>
+                  {error && (
+                    <div id="pf-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', fontWeight: 600 }}>
+                      {error}
+                    </div>
+                  )}
                   <label className="pf-label">Pincode (6 digits) *
                     <input
                       className="pf-input"

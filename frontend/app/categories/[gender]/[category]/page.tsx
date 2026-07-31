@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import ProductPage from '@/components/product/ProductPage';
 import CuratedCombosProductPage from '@/components/product/CuratedCombosProductPage';
 import CharmKeyChainProductPage from '@/components/product/CharmKeyChainProductPage';
@@ -8,7 +9,11 @@ export default async function Page({ params }: { params: Promise<{ category: str
   const { category, gender } = await params;
 
   if (category === 'curated-combos') {
-    return <CuratedCombosProductPage gender={gender} />;
+    return (
+      <Suspense fallback={null}>
+        <CuratedCombosProductPage gender={gender} />
+      </Suspense>
+    );
   }
 
   if (CHARM_CATEGORIES.has(category)) {

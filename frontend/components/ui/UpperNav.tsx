@@ -1551,7 +1551,7 @@ export default function TopNav() {
                         <div>
                           <div className="sparkle-search-section-title">Combos</div>
                           {searchResults.combos.map((combo) => (
-                            <Link key={combo._id} href={combo.type === 'custom' ? `/combos?custom=${combo._id}` : `/combos?combo=${combo._id}`} className="sparkle-search-item" onClick={() => { setShowDropdown(false); setSearchOpen(false); setSearchTerm(""); }}>
+                            <Link key={combo._id} href={combo.type === 'custom' ? `/categories/women/curated-combos?custom=${combo._id}` : `/categories/women/curated-combos?combo=${combo._id}`} className="sparkle-search-item" onClick={() => { setShowDropdown(false); setSearchOpen(false); setSearchTerm(""); }}>
                               {combo.image && (
                                 <Image src={combo.image} alt={combo.name} width={32} height={32} className="sparkle-search-item-img" />
                               )}

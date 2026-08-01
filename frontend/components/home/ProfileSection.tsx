@@ -574,6 +574,7 @@ export default function ProfileSection() {
   const [addressBusy, setAddressBusy] = useState(false);
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState({
+    name: '',
     addressLine1: '',
     addressLine2: '',
     landmark: '',
@@ -689,19 +690,20 @@ export default function ProfileSection() {
   };
 
   const resetAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+    setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(false);
   };
 
   const openAddAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+    setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(true);
   };
 
   const startEditAddress = (address: NonNullable<typeof addresses>[number]) => {
     setAddressForm({
+      name: address.name || '',
       addressLine1: address.addressLine1 || address.fullAddress || '',
       addressLine2: address.addressLine2 || '',
       landmark: address.landmark || '',
@@ -726,6 +728,7 @@ export default function ProfileSection() {
 
   const submitAddressForm = async () => {
     const payload = {
+      name: addressForm.name.trim(),
       addressLine1: addressForm.addressLine1.trim(),
       addressLine2: addressForm.addressLine2.trim(),
       landmark: addressForm.landmark.trim(),
@@ -737,8 +740,8 @@ export default function ProfileSection() {
       alternativePhone: addressForm.alternativePhone.trim(),
     };
 
-    if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
-      setError('Please fill all mandatory address fields (including a 6-digit Pincode).');
+    if (!payload.name || !payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
+      setError('Please fill all mandatory address fields (including Name and a 6-digit Pincode).');
       scrollToAddressError('pf-pincode-error-banner');
       return;
     }
@@ -1135,7 +1138,8 @@ export default function ProfileSection() {
                     </button>
                   </div>
                 </div>
-                <p className="pf-address-txt">{formatAddress(address)}</p>
+                <div style={{ marginBottom: 4, fontWeight: 700, color: '#1f381c', fontSize: 14 }}>{address.name || user?.name || 'Customer'}</div>
+                <p className="pf-address-txt" style={{ marginTop: 0 }}>{formatAddress(address)}</p>
               </div>
             )) : (
               <div className="pf-address-card"><p className="pf-address-txt">No saved addresses yet.</p></div>
@@ -1150,6 +1154,14 @@ export default function ProfileSection() {
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
                   {error && <div id="pf-address-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
+                  <label className="pf-label">Full Name *
+                    <input
+                      className="pf-input"
+                      value={addressForm.name}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, name: event.target.value }))}
+                      placeholder="Recipient's Full Name"
+                    />
+                  </label>
                   <label className="pf-label">Address Line 1 *
                     <input
                       className="pf-input"

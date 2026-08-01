@@ -103,3 +103,13 @@ export async function getProductReviews(req, res) {
 		res.status(400).json({ success: false, message: error.message });
 	}
 }
+
+export async function reorderProducts(req, res) {
+	try {
+		const result = await productService.reorderProducts(req.body.items);
+		res.json(result);
+	} catch (error) {
+		console.error("Reorder products error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}

@@ -826,6 +826,23 @@ class ProductService {
 			throw error;
 		}
 	}
+
+	async reorderProducts(items) {
+		// items: Array<{ id: string; displayOrder: number }>
+		try {
+			const ops = items.map(({ id, displayOrder }) => ({
+				updateOne: {
+					filter: { _id: id },
+					update: { $set: { displayOrder: Number(displayOrder) } },
+				},
+			}));
+			await Product.bulkWrite(ops);
+			return { success: true, message: "Products reordered successfully" };
+		} catch (error) {
+			console.error("Error reordering products:", error);
+			throw error;
+		}
+	}
 }
 
 export default new ProductService();

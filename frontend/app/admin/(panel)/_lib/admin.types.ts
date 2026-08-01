@@ -74,6 +74,7 @@ export type AdminProduct = {
 	updatedAt?: string;
 	totalCharms?: number;
 	charmPieceOptions?: number[];
+	displayOrder?: number;
 };
 
 // ─── iThink Logistics shipping types ───────────────────────────────────────
@@ -123,6 +124,7 @@ export type AdminOrder = {
 		email?: string;
 	};
 	address?: {
+		name?: string;
 		addressLine1?: string;
 		addressLine2?: string;
 		landmark?: string;
@@ -133,8 +135,8 @@ export type AdminOrder = {
 		phone?: string;
 		alternativePhone?: string;
 	};
-	shippingAddress?: { city?: string; state?: string; pincode?: string };
-	billingAddress?: { city?: string; state?: string; pincode?: string };
+	shippingAddress?: { name?: string; addressLine1?: string; addressLine2?: string; landmark?: string; fullAddress?: string; city?: string; state?: string; pincode?: string; phone?: string; alternativePhone?: string };
+	billingAddress?: { name?: string; addressLine1?: string; addressLine2?: string; landmark?: string; fullAddress?: string; city?: string; state?: string; pincode?: string; phone?: string; alternativePhone?: string };
 	items?: Array<{
 		_id?: string;
 		name?: string;

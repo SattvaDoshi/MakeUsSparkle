@@ -12,6 +12,7 @@ export type AuthUser = {
 	createdAt?: string;
 	addresses?: Array<{
 		_id?: string;
+		name?: string;
 		addressLine1?: string;
 		addressLine2?: string;
 		fullAddress?: string;

@@ -443,6 +443,7 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 														<span className="ao-detail-label">Address</span>
 														<span className="ao-detail-val">
 															{[
+																order.address?.name ? `${order.address.name} -` : "",
 																order.address?.addressLine1,
 																order.address?.addressLine2,
 																order.address?.landmark ? `(near ${order.address.landmark})` : "",

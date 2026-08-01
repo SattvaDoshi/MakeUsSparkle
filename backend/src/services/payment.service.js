@@ -73,6 +73,14 @@ class PaymentService {
 				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
 			}
 
+			const userDoc = await User.findById(userId);
+			const shippingAddress = orderData.shippingAddress
+				? { ...orderData.shippingAddress, name: orderData.shippingAddress.name || userDoc?.name || "Customer" }
+				: undefined;
+			const billingAddress = (orderData.billingAddress || orderData.shippingAddress)
+				? { ...(orderData.billingAddress || orderData.shippingAddress), name: (orderData.billingAddress || orderData.shippingAddress)?.name || userDoc?.name || "Customer" }
+				: undefined;
+
 			const order = await Order.create({
 				user: userId,
 				items: orderItems,
@@ -80,7 +88,9 @@ class PaymentService {
 				advanceAmount,
 				balanceAmount,
 				paidAmount: 0,
-				address: orderData.shippingAddress,
+				shippingAddress,
+				billingAddress,
+				address: shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,
 				phonePeOrderId: merchantOrderId,

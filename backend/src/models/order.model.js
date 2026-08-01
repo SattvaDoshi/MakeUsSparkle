@@ -81,6 +81,7 @@ const orderSchema = new mongoose.Schema(
       }
     ],
     shippingAddress: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       landmark: String,
@@ -91,6 +92,7 @@ const orderSchema = new mongoose.Schema(
       alternativePhone: String,
     },
     billingAddress: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       landmark: String,
@@ -101,6 +103,7 @@ const orderSchema = new mongoose.Schema(
       alternativePhone: String,
     },
     address: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       fullAddress: String,

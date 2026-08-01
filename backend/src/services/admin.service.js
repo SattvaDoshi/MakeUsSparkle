@@ -189,7 +189,12 @@ class AdminService {
 	async getProducts(page = 1, limit = 20) {
 		try {
 			const skip = (page - 1) * limit;
-			const products = await Product.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+			const products = await Product.find()
+				.populate("category", "name title")
+				.populate("subCategory", "name title")
+				.sort({ createdAt: -1 })
+				.skip(skip)
+				.limit(limit);
 			const total = await Product.countDocuments();
 
 			return {

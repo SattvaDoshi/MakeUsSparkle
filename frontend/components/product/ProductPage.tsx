@@ -504,7 +504,7 @@ const [sort, setSort] = useState<SortOption>('default');
           background: var(--pp-cream);
           font-family: 'Jost', sans-serif;
           color: var(--pp-t1);
-          padding-top: 40px
+          
         }
         .pp-root--embedded {
           padding-top: 0

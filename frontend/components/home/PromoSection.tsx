@@ -790,9 +790,9 @@ const fallbackBanners: BannerItem[] = [
     pattern: "circles",
     imageSrc: "/images/hero.png",
     imageAlt: "Pinteresty Necklaces Collection",
-    titleColor: "#000000",
-    subtitleColor: "rgba(0, 0, 0, 0.62)",
-    tagColor: "#000000",
+    titleColor: "#101010",
+    subtitleColor: "#101010",
+    tagColor: "#101010",
     ctaBorderColor: "rgba(37, 20, 0, 0.55)",
     ctaTextColor: "#1a0d00",
   },
@@ -1028,7 +1028,7 @@ export default function BannerSlider() {
         .bs-eyebrow-rule:last-child { background: linear-gradient(90deg, #c9a96e, transparent); }
         .bs-eyebrow-dot { width: 5px; height: 5px; background: #d4af37; border-radius: 50%; }
         .bs-label {
-          font-size: 10px; font-weight: 300; letter-spacing: 5px;
+          font-size: 10px; font-weight: 700; letter-spacing: 5px;
           text-transform: uppercase; color: #8fa870; margin-bottom: 6px; display: block;
         }
         .bs-heading {
@@ -1105,7 +1105,7 @@ export default function BannerSlider() {
         .bs-text-zone {
           position: relative;
           width: 100%;
-          min-height: 108px;
+          min-height: 108px; 
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -1126,7 +1126,7 @@ export default function BannerSlider() {
           padding-right: 24px;
         }
         .bs-bar-tag-label {
-          font-size: 8px; font-weight: 300; letter-spacing: 4px;
+          font-size: 10px; font-weight: 400; letter-spacing: 4px;
           text-transform: uppercase;
           display: flex; align-items: center; gap: 6px;
         }
@@ -1163,7 +1163,7 @@ export default function BannerSlider() {
         }
         .bs-bar-subtitle {
           font-size: clamp(11px, 1vw, 13px);
-          font-weight: 300; line-height: 1.55;
+          font-weight: 500; line-height: 1.55;
           letter-spacing: 0.3px; margin: 0;
           overflow: hidden;
           display: -webkit-box;
@@ -1285,57 +1285,108 @@ export default function BannerSlider() {
           .bs-image-zone { height: 280px; }
           .bs-text-zone { min-height: 92px; padding: 0 18px; }
           .bs-bar-tag { padding-right: 12px; }
-          .bs-bar-tag-label { font-size: 7px; letter-spacing: 3px;font-weight: 300 }
+          .bs-bar-tag-label { font-size: 12px; letter-spacing: 3px;font-weight: 300 }
           .bs-bar-title-block { padding: 0 12px; }
-          .bs-bar-title { font-size: clamp(15px, 2.4vw, 22px); }
+          .bs-bar-title { font-size: 17px; }
           .bs-bar-subtitle-block { padding: 0 12px; }
-          .bs-bar-subtitle { font-size: 11px; }
+          .bs-bar-subtitle { font-size: 13px; }
           .bs-bar-cta-block { padding-left: 12px; }
           .bs-cta { padding: 10px 16px; font-size: 8px; letter-spacing: 2.5px; }
         }
 
-        /* Hide subtitle below 640px to avoid crowding */
-        @media (max-width: 640px) {
-          .bs-bar-subtitle-block { display: none !important; }
-          /* also collapse the second divider */
-          .bs-bar-divider:last-of-type { display: none !important; }
-        }
+/* ≤640px — compact 2-row grid layout */
+@media (max-width: 640px) {
+  .bs-text-zone {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "tag   title  title"
+      "sub   sub    cta";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 6px;
+    padding: 14px 18px 16px;
+    min-height: unset;
+  }
 
-        /* Mobile ≤ 480px */
-        @media (max-width: 480px) {
-          .bs-section { padding: 32px 0 40px; }
-          .bs-wrap { padding: 0 14px; }
-          .bs-image-zone { height: 220px; }
-          .bs-text-zone { min-height: 80px; padding: 0 14px; }
-          /* Hide dividers on mobile — just tag | title | cta */
-          .bs-bar-divider { display: none !important; }
-          .bs-bar-tag { padding-right: 10px; }
-          .bs-bar-tag-label { font-size: 7px; letter-spacing: 2px; font-weight: 300}
-          .bs-bar-title-block { padding: 0 10px; flex: 1; }
-          .bs-bar-title { font-size: clamp(14px, 4vw, 18px) !important; white-space: normal; }
-          .bs-bar-cta-block { padding-left: 10px; }
-          .bs-cta { padding: 9px 12px !important; font-size: 8px !important; letter-spacing: 2px !important; }
-          .bs-cta-arrow { display: none; }
-          
-          /* Nav adjustments for mobile */
-          .bs-nav { gap: 12px; margin-top: 14px; }
-          .bs-nav-controls { gap: 8px; }
-          .bs-nav-arrow { width: 24px; height: 24px; }
-          .bs-nav-arrow svg { width: 11px; height: 11px; }
-          
-          .bs-counter { font-size: 10px; }
-          .bs-thumbs { display: none; }
-          .bs-eyebrow { margin-bottom: 18px; }
-          .bs-heading { font-size: clamp(20px, 5vw, 28px); }
-        }
+  .bs-bar-divider { display: none !important; }
 
-        /* Small phone ≤ 380px */
-        @media (max-width: 380px) {
-          .bs-image-zone { height: 200px; }
-          .bs-text-zone { min-height: 72px; padding: 0 8px; }
-          .bs-bar-title { font-size: 13px !important; }
-          .bs-nav { gap: 8px; }
-        }
+  .bs-bar-tag {
+    grid-area: tag;
+    padding-right: 0;
+  }
+.bs-bar-tag-label {
+    font-size: 10px;     /* add this line inside .bs-bar-tag block */
+  }
+  .bs-bar-title-block {
+    grid-area: title;
+    padding-right: 0;
+    justify-self: end;
+  }
+  .bs-bar-title {
+    white-space: nowrap;
+    font-size: 18px; 
+  }
+
+  .bs-bar-subtitle-block {
+    display: flex !important;
+    grid-area: sub;
+    padding: 0;
+  }
+  .bs-bar-subtitle {
+    -webkit-line-clamp: 1;
+    font-size: 13px;
+  }
+
+  .bs-bar-cta-block {
+    grid-area: cta;
+    padding-left: 0;
+    justify-self: end;
+  }
+  .bs-cta {
+    padding: 7px 14px;
+    font-size: 8px;
+    letter-spacing: 2px;
+  }
+  .bs-cta-arrow { display: none; }
+}
+
+/* ≤480px */
+@media (max-width: 480px) {
+  .bs-section { padding: 32px 0 40px; }
+  .bs-wrap { padding: 0 14px; }
+  .bs-image-zone { height: 220px; }
+
+  .bs-text-zone { padding: 12px 14px 14px; column-gap: 8px; row-gap: 5px; }
+
+  .bs-bar-tag-label { font-size: 10px; letter-spacing: 2px; font-weight: 300; }
+
+  .bs-bar-title { font-size: 16px !important; font-weight: 700; }
+
+  .bs-bar-subtitle { font-size: 11px; }
+
+  .bs-cta { padding: 6px 12px !important; font-size: 7.5px !important; letter-spacing: 1.5px !important; }
+
+  .bs-nav { gap: 12px; margin-top: 14px; }
+  .bs-nav-controls { gap: 8px; }
+  .bs-nav-arrow { width: 24px; height: 24px; }
+  .bs-nav-arrow svg { width: 11px; height: 11px; }
+
+  .bs-counter { font-size: 10px; }
+  .bs-thumbs { display: none; }
+  .bs-eyebrow { margin-bottom: 18px; }
+  .bs-heading { font-size: clamp(20px, 5vw, 28px); }
+}
+
+/* Small phone ≤380px */
+@media (max-width: 380px) {
+  .bs-image-zone { height: 200px; }
+  .bs-text-zone { padding: 10px 12px 12px; }
+  .bs-bar-title { font-size: 20px !important; }
+  .bs-bar-subtitle { font-size: 12px; }
+}
+       
       `}</style>
 
       <section

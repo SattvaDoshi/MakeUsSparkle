@@ -711,7 +711,7 @@ export default function CategorySection() {
     <>
       <style>{CSS}</style>
       <UpperNav/>
-      <section className="cs" id="categories" ref={sectionRef} style={{ marginTop: "60px"}}>
+      <section className="cs" id="categories" ref={sectionRef} >
 
         {/* DESKTOP + TABLET */}
         <div className={`cs-hd${visible ? ' in' : ''}`}>

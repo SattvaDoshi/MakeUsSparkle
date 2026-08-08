@@ -293,7 +293,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         /* ── Compact header ── */
         .scp-header {
-          padding: 55px 48px 0;
+          padding: 20px 48px 0;
           display: flex; align-items: flex-end; justify-content: space-between;
           opacity: 0; transform: translateY(10px);
           transition: opacity .5s ease, transform .5s ease;
@@ -489,7 +489,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         @media (max-width: 600px) {
           /* Header */
           .scp-header {
-            padding: 55px 16px 0;
+            padding: 20px 16px 0;
             align-items: flex-start;
             flex-direction: column;
             gap: 0;

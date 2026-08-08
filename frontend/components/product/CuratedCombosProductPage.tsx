@@ -779,7 +779,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
               <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
                 <span className="modal-field-num">{msgNum}</span>
                 Select Occasion / Template Card
-                <span className="modal-field-optional">optional</span>
+                <span className="field-required-star">*</span>
               </label>
               <select className="modal-textarea" style={{ marginBottom: '0.8rem', appearance: 'auto' }}
                 value={PRESET_MESSAGES.find(m => m.label === local.presetMessage)?.value || ''}
@@ -792,7 +792,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
               </select>
               <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
                 {product.textCustomizationTitle || 'Personal Message'}
-                <span className="modal-field-optional">optional</span>
+                <span className="field-required-star">*</span>
               </label>
               <textarea className="modal-textarea"
                 placeholder="E.g. 'To my dearest Priya, with love…'"
@@ -813,7 +813,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                 <label className="modal-field-label">
                   <span className="modal-field-num">{picNum}</span>
                   {product.imageCustomizationTitle || 'Upload Photo'}
-                  <span className="modal-field-optional">optional</span>
+                  <span className="field-required-star">*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
                   {Array.from({ length: maxCount }).map((_, i) => {
@@ -1054,7 +1054,6 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           <span className="hamper-eyebrow">{combo.badge || 'Curated Set'}</span>
           <h1 className="hamper-title">{combo.name}</h1>
           <p className="hamper-tagline">{combo.tagline}</p>
-          {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-line' }}>{combo.description}</p>}
           <div className="hamper-price-row">
             <span className="hamper-price">₹{currentPrice.toLocaleString('en-IN')}</span>
             {pct > 0 && <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
@@ -1069,6 +1068,8 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
             />
           )}
+        {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-line' }}>{combo.description}</p>}
+
         </div>
       </div>
 
@@ -1150,7 +1151,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
                 {p.allowTextCustomization && (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                    <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
                     <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
                       value={PRESET_MESSAGES.find(m => m.label === v.presetMessage)?.value || ''}
                       onChange={e => {
@@ -1160,7 +1161,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                       }}>
                       {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
-                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="modal-field-optional">optional</span></span>
+                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="field-required-star">*</span></span>
                     <textarea
                       className="modal-textarea"
                       placeholder="E.g. 'To my dearest Priya, with love…'"
@@ -1179,7 +1180,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                   
                   return (
                     <div className="hamper-piece-field">
-                      <span className="hamper-piece-field-label">Image Customisation <span className="modal-field-optional">optional</span></span>
+                      <span className="hamper-piece-field-label">Image Customisation <span className="field-required-star">*</span></span>
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         {Array.from({ length: maxCount }).map((_, i) => {
                           const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
@@ -1240,7 +1241,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             <div className="hamper-piece-body">
               {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
                   <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
                     value={PRESET_MESSAGES.find(m => m.label === comboVariant.presetMessage)?.value || ''}
                     onChange={e => {
@@ -1250,7 +1251,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                     }}>
                     {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="field-required-star">*</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1269,7 +1270,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
                 return (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Combo Image Customisation <span className="modal-field-optional">optional</span></span>
+                    <span className="hamper-piece-field-label">Combo Image Customisation <span className="field-required-star">*</span></span>
                     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                       {Array.from({ length: maxCount }).map((_, i) => {
                         const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
@@ -1565,7 +1566,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
             <div className="hamper-piece-body">
               {slot.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
                   <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
                     value={PRESET_MESSAGES.find(m => m.label === comboVariant.presetMessage)?.value || ''}
                     onChange={e => {
@@ -1575,7 +1576,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
                     }}>
                     {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="field-required-star">*</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1589,7 +1590,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 
               {slot.allowComboImageCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">{slot.comboImageCustomizationTitle || 'Upload Photo for Box'} <span className="modal-field-optional">optional</span></span>
+                  <span className="hamper-piece-field-label">{slot.comboImageCustomizationTitle || 'Upload Photo for Box'} <span className="field-required-star">*</span></span>
                     
                     <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
                       {(comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : [])).map((img, i) => (
@@ -1971,6 +1972,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   line-height: 1;  }
         .modal-field-optional { font-size:8px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--ink4);padding:2px 7px;border:1px solid var(--bdr2);border-radius:50px; }
         .modal-field-required { font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);padding:2px 7px;border:1px solid rgba(192,57,43,.35);background:rgba(192,57,43,.06);border-radius:50px; }
+        .field-required-star { color:var(--red); font-size:13px; font-weight:700; line-height:1; margin-left:2px; }
         .modal-field-error-text { font-size:10.5px;font-weight:500;color:var(--red); }
         .modal-selected-badge { font-size:9px;font-weight:600;text-transform:none;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 9px;border-radius:50px;margin-left:auto; }
         .modal-chips { display:flex;flex-wrap:wrap;gap:8px; }
@@ -2024,7 +2026,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .page { min-height:100dvh;background:var(--bg);overflow-x:hidden;width:100%; }
 
         /* ── HERO ── */
-        .hero { margin-top:56px;padding:clamp(24px,4vw,52px) clamp(16px,6vw,72px) clamp(18px,3vw,36px);background:linear-gradient(155deg,#f5f2eb 0%,#ede5d0 55%,#f5f2eb 100%);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden; }
+        .hero { padding:clamp(24px,4vw,52px) clamp(16px,6vw,72px) clamp(18px,3vw,36px);background:linear-gradient(155deg,#f5f2eb 0%,#ede5d0 55%,#f5f2eb 100%);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden; }
         .hero::before { content:'';position:absolute;right:-80px;top:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(184,152,42,.1) 0%,transparent 68%);pointer-events:none; }
         .hero-eyebrow { display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px; }
         .hero-line { width:24px;height:1px;background:var(--gold);opacity:.5; }
@@ -2087,7 +2089,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-title { font-family:var(--ffd);font-size:clamp(1.5rem,3vw,2rem);font-weight:500;color:var(--olive);line-height:1.15;margin-bottom:6px; }
         .hamper-tagline { font-size:12.5px;font-weight:300;color:var(--ink7);line-height:1.65;margin-bottom:10px; }
         .hamper-price-row { display:flex;align-items:baseline;gap:9px;flex-wrap:wrap; }
-        .hamper-price { font-family:var(--ffd);font-size:1.35rem;font-weight:600;color:var(--ink); }
+        .hamper-price { font-family:var(--ffb);font-size:1.75rem;font-weight:700;color:var(--ink); }
         .hamper-original { font-size:12px;color:var(--ink4);text-decoration:line-through; }
         .hamper-save-tag { font-size:9px;font-weight:700;color:var(--green);background:rgba(42,96,48,.08);padding:3px 8px;border-radius:4px; }
 
@@ -2251,21 +2253,21 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         }
 
         /* ── RESPONSIVE (hero/modebar/general page) ── */
-        @media(max-width:1024px) {
-          .hero { margin-top:52px; }
-        }
+        // @media(max-width:1024px) {
+        //   .hero { margin-top:20px; }
+        // }
         @media(max-width:900px) {
           .hero { padding-left:24px;padding-right:24px; }
           .modebar { padding-left:24px;padding-right:24px; }
         }
         @media(max-width:760px) {
           .hero,.modebar { padding-left:14px;padding-right:14px; }
-          .hero { margin-top:48px;padding-top:22px;padding-bottom:16px; }
+          .hero {padding-top:22px;padding-bottom:16px; }
           .modebar { gap:12px; }
           .modehint { padding-top:6px;max-width:100%; }
         }
         @media(max-width:420px) {
-          .hero { margin-top:44px; }
+          
           .hero-desc { max-width:100%; }
         }
         @media(max-width:340px) {

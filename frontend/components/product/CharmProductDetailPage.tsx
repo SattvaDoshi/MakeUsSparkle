@@ -698,11 +698,19 @@ function Sparkles({ active }: { active: boolean }) {
 }
 
 /* ─── Customisation Panel ─── */
-function CustomisationPanel({ category, onChange }: { category: string; onChange?: (data: { wantCustom: boolean | null; uploads: string[]; globalNote: string }) => void }) {
+function CustomisationPanel({ category, onChange, validationAttempt }: { category: string; onChange?: (data: { wantCustom: boolean | null; uploads: string[]; globalNote: string }) => void; validationAttempt?: number }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
   const MAX_FILES = 5;
   const [uploads, setUploads] = useState<(UploadItem | null)[]>(Array(MAX_FILES).fill(null));
   const [globalNote, setGlobalNote] = useState('');
+  const [showMissing, setShowMissing] = useState(false);
+
+  useEffect(() => {
+    if (validationAttempt) setShowMissing(true);
+  }, [validationAttempt]);
+
+  const filledCount = uploads.filter(Boolean).length;
+  const allPhotosUploaded = filledCount === MAX_FILES;
 
   useEffect(() => { 
     if (onChange) {
@@ -757,14 +765,21 @@ function CustomisationPanel({ category, onChange }: { category: string; onChange
           <textarea className="cust-note-global" placeholder={`Add a personalisation note…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
           
           <div style={{ marginTop: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Required Photos</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 4 }}>
+              Required Photos <span style={{ color: 'var(--red)' }}>*</span>
+              <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--mist)', marginLeft: 8 }}>{filledCount}/{MAX_FILES} uploaded</span>
+            </p>
+            {showMissing && !allPhotosUploaded && (
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginBottom: 10 }}>
+                Please upload all {MAX_FILES} required photos before adding to cart.
+              </p>
+            )}
+            <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
               {Array.from({ length: MAX_FILES }).map((_, i) => {
                 const label = `Photo ${i + 1}`;
                 const upload = uploads[i];
                 return (
-                  <div key={i} style={{ border: '1.5px dashed rgba(61,74,34,.15)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+<div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
                     
                     {upload ? (
                       <>
@@ -874,7 +889,9 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
   const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null; uploads: string[]; globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
-  const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+const [custValidationAttempt, setCustValidationAttempt] = useState(0);
+const MAX_CUST_PHOTOS = 5;
+const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
 
   const handleCharmChange = useCallback((data: { count: number; charms: string[] }) => {
     setCharmData(data);
@@ -906,8 +923,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const mainImage = product?.mainImage;
   const images = product?.images ?? [];
 
-  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
-
+const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
+const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
   useEffect(() => {
     if (!product) return;
     setActiveColor(0);
@@ -1000,10 +1017,15 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     charmCount: selectedCharmCount,
   }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded]);
 
-  const handleAddToCart = useCallback(() => {
+ const handleAddToCart = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
+      return;
+    }
+    if (custPhotosIncomplete) {
+      setErrorToast('Please upload all required customisation photos.');
+      setCustValidationAttempt(t => t + 1);
       return;
     }
     const item = buildCartItem();
@@ -1012,18 +1034,23 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, qty, buildCartItem]);
+  }, [addItem, product, qty, buildCartItem, custPhotosIncomplete]);
 
-  const handleBuyNow = useCallback(() => {
+const handleBuyNow = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
       return;
     }
+    if (custPhotosIncomplete) {
+      setErrorToast('Please upload all required customisation photos.');
+      setCustValidationAttempt(t => t + 1);
+      return;
+    }
     const item = buildCartItem();
     for (let i = 0; i < qty; i++) addItem(item, false);
     router.push('/cart');
-  }, [addItem, product, qty, router, buildCartItem]);
+  }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete]);
 
   const handleColorChange = useCallback((i: number) => {
     setActiveColor(i); setActiveImg(0);
@@ -1677,7 +1704,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                   <p className="pdp-cust-banner-sub">
                     This {category.toLowerCase()} can be personalised with your own photos, names, or a special message.
                   </p>
-                  <CustomisationPanel category={category} onChange={setCustomData} />
+                  <CustomisationPanel category={category} onChange={setCustomData} validationAttempt={custValidationAttempt} />
                 </div>
                 <div className="pdp-divider" />
               </>

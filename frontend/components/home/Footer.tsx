@@ -2,52 +2,29 @@ import Link from 'next/link';
 import styles from './Footer.module.css';
 
 const footerLinks = {
-  Shop: [
-    { label: 'New Arrivals', href: '/new-arrivals' },
-    { label: 'Women\'s Jewellery', href: '/categories/women/jewellery' },
-    { label: 'Men\'s Jewellery', href: '/categories/men/jewellery' },
-    { label: 'Gift Boxes', href: '/categories/women/gift-boxes' },
-    { label: 'Curated Combos', href: '/categories/women/curated-combos' },
-    { label: 'Custom Charm', href: '/categories/women/custom-charm' },
-  ],
   Help: [
     { label: 'Track Order', href: '/track' },
     { label: 'Shipping Policy', href: '/shipping' },
     { label: 'Returns & Exchange', href: '/returns' },
     { label: 'Size Guide', href: '/size-guide' },
-    { label: 'FAQs', href: '/faq' },
     { label: 'Contact Us', href: '/contact' },
   ],
   Company: [
-    { label: 'About Us', href: '/about' },
     { label: 'Affiliate Program', href: 'https://saltyfam.bixgrow.com' },
     { label: 'Offers & Coupons', href: '/offers' },
     { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
   ],
 };
 
 export default function Footer() {
   return (
     <footer id="footer" className={styles.footer}>
-     
-      
+
       {/* Main footer */}
       <div className={styles.main}>
         <div className={styles.brand}>
-          <h2 className={styles.brandName}>MakeUs<em>Sparkle</em></h2>
+          <h2 className={styles.brandName}>MakeYou<em>Sparkle</em></h2>
           <p className={styles.brandTagline}>Where every piece tells a story</p>
-          <div className={styles.social}>
-            {['Instagram', 'WhatsApp', 'Pinterest', 'YouTube'].map(s => (
-              <a key={s} href="#" className={styles.socialLink} aria-label={s}>
-                {s[0]}
-              </a>
-            ))}
-          </div>
-          <div className={styles.certBadges}>
-            <span className={styles.cert}>✦ Authentic Jewellery</span>
-            <span className={styles.cert}>✦ Secure Payments</span>
-          </div>
         </div>
 
         {Object.entries(footerLinks).map(([group, links]) => (

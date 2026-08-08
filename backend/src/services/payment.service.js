@@ -1,5 +1,5 @@
 import { phonePeClient } from "../config/payment.config.js";
-import { StandardCheckoutPayRequest } from "@phonepe-pg/pg-sdk-node";
+import { StandardCheckoutPayRequest, PrefillUserLoginDetails } from "@phonepe-pg/pg-sdk-node";
 import { randomUUID } from "crypto";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
@@ -41,11 +41,20 @@ class PaymentService {
 			// Amount in paise (PhonePe expects paise)
 			const amountInPaise = Math.round(advanceAmount * 100);
 
-			const payRequest = StandardCheckoutPayRequest.builder()
+			const payRequestBuilder = StandardCheckoutPayRequest.builder()
 				.merchantOrderId(merchantOrderId)
 				.amount(amountInPaise)
 				.redirectUrl(baseRedirectUrl)
-				.build();
+				.message("Make Us Sparkle Order Payment");
+
+			if (orderData.shippingAddress?.phone) {
+				const rawPhone = String(orderData.shippingAddress.phone).replace(/\D/g, "");
+				if (rawPhone.length === 10) {
+					payRequestBuilder.prefillUserLoginDetails(new PrefillUserLoginDetails(rawPhone));
+				}
+			}
+
+			const payRequest = payRequestBuilder.build();
 
 			const phonePeResponse = await phonePeClient.pay(payRequest);
 
@@ -64,6 +73,14 @@ class PaymentService {
 				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
 			}
 
+			const userDoc = await User.findById(userId);
+			const shippingAddress = orderData.shippingAddress
+				? { ...orderData.shippingAddress, name: orderData.shippingAddress.name || userDoc?.name || "Customer" }
+				: undefined;
+			const billingAddress = (orderData.billingAddress || orderData.shippingAddress)
+				? { ...(orderData.billingAddress || orderData.shippingAddress), name: (orderData.billingAddress || orderData.shippingAddress)?.name || userDoc?.name || "Customer" }
+				: undefined;
+
 			const order = await Order.create({
 				user: userId,
 				items: orderItems,
@@ -71,7 +88,9 @@ class PaymentService {
 				advanceAmount,
 				balanceAmount,
 				paidAmount: 0,
-				address: orderData.shippingAddress,
+				shippingAddress,
+				billingAddress,
+				address: shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,
 				phonePeOrderId: merchantOrderId,
@@ -116,7 +135,13 @@ class PaymentService {
 			const transactionId = statusResponse?.paymentDetails?.[0]?.transactionId || null;
 
 			if (paymentState !== "COMPLETED") {
-				throw new Error(`Payment not completed. Current state: ${paymentState}`);
+				if (orderId && (paymentState === "FAILED" || paymentState === "CANCELLED")) {
+					await Order.findByIdAndUpdate(orderId, {
+						paymentStatus: "failed",
+						status: "cancelled",
+					}).catch(() => null);
+				}
+				throw new Error(`Payment not completed. Current state: ${paymentState || "UNKNOWN"}`);
 			}
 
 			const existingOrder = await Order.findById(orderId);

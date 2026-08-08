@@ -217,6 +217,11 @@ export default function CartDrawer() {
         }
         .drawer-btn-shop:hover { border-color: var(--olive-400); background: var(--olive-50); }
 
+        @keyframes drawerPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: .5; transform: scale(.8); }
+        }
+
         /* ── Mobile ── */
         @media (max-width: 480px) {
           .drawer-panel { width: 100vw; }
@@ -337,6 +342,13 @@ export default function CartDrawer() {
                       <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
                         Included Items
                       </div>
+                      {Boolean(item.customData) && (Boolean(item.customData?.comboPresetMessage) || Boolean(item.customData?.comboPersonalMessage)) && (
+                        <div style={{ padding: '4px 6px', background: 'rgba(201,168,76,0.1)', borderRadius: 6, fontSize: 10, color: 'var(--olive-700)', marginBottom: 4 }}>
+                          <div style={{ fontWeight: 600, fontSize: 9, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Box Customisation</div>
+                          {Boolean(item.customData?.comboPresetMessage) && <div>Card: <em>{String(item.customData?.comboPresetMessage)}</em></div>}
+                          {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
+                        </div>
+                      )}
                       {item.selectionGroups.flatMap((group) => 
                         group.items.map((selection, idx) => (
                           <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(61,74,34,.05)' }}>
@@ -345,6 +357,12 @@ export default function CartDrawer() {
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontSize: 9, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
                                 <span style={{ fontSize: 11, color: 'var(--olive-900)' }}>{selection.name}</span>
+                                {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage)) && (
+                                  <div style={{ fontSize: 9.5, color: 'var(--olive-600)', marginTop: 2 }}>
+                                    {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
+                                    {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -364,28 +382,49 @@ export default function CartDrawer() {
                 <span>Subtotal ({itemCount} item{itemCount !== 1 ? 's' : ''})</span>
                 <strong>₹{subtotal.toLocaleString('en-IN')}</strong>
               </div>
+
+              {/* Auto-applied store offers */}
               {applicableOffers.length > 0 && (
-                <div className="drawer-subtotal-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--olive-900)' }}>Available Store Offers</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 0', borderTop: '1px solid rgba(61,74,34,.08)' }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--mist)' }}>Store Offers</span>
                   {applicableOffers.map((o) => (
-                    <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                    <div key={o.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: o.applied ? 'rgba(46,125,50,.07)' : 'rgba(0,0,0,.03)',
+                      border: `1px solid ${o.applied ? 'rgba(46,125,50,.2)' : 'rgba(0,0,0,.07)'}`,
+                      borderRadius: 8, padding: '7px 10px',
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: 1 }}>
                         <input
                           type="checkbox"
                           checked={o.applied}
                           onChange={() => toggleOfferOptOut(o.id)}
-                          style={{ cursor: 'pointer', accentColor: 'var(--olive-600)' }}
+                          style={{ cursor: 'pointer', accentColor: 'var(--olive-600)', width: 14, height: 14, flexShrink: 0 }}
                         />
-                        <span>{o.title}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: o.applied ? 'var(--olive-700)' : 'var(--mist)', lineHeight: 1.3 }}>{o.title}</span>
                       </label>
-                      <strong style={{ color: 'var(--green)', fontSize: 13 }}>-₹{o.amount.toLocaleString('en-IN')}</strong>
+                      <span style={{
+                        fontSize: 12, fontWeight: 800, color: o.applied ? 'var(--green)' : 'var(--mist)',
+                        flexShrink: 0, marginLeft: 8,
+                      }}>
+                        {o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}
+                      </span>
                     </div>
                   ))}
+                  {autoDiscountAmount > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 2px' }}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', flexShrink: 0, animation: 'drawerPulse 1.8s infinite' }} />
+                      <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>
+                        Saving ₹{autoDiscountAmount.toLocaleString('en-IN')} with store offer{appliedOffers.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
-              <div className="drawer-subtotal-row">
-                <span>Total</span>
-                <strong>Rs {total.toLocaleString('en-IN')}</strong>
+
+              <div className="drawer-subtotal-row" style={{ borderTop: '1px solid rgba(61,74,34,.1)', paddingTop: 10, marginTop: 4 }}>
+                <span style={{ fontWeight: 700 }}>Total</span>
+                <strong style={{ fontSize: 16 }}>₹{total.toLocaleString('en-IN')}</strong>
               </div>
               <div className="drawer-cta">
                 <Link href="/cart" className="drawer-btn-cart" onClick={closeDrawer}>
@@ -400,6 +439,7 @@ export default function CartDrawer() {
               </div>
             </div>
           )}
+
 
         </div>
       </div>

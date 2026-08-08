@@ -44,6 +44,68 @@ const processProductsImages = async (products, imageService) => {
 		})
 	);
 };
+const processGalleryImages = async (galleryFiles, data, oldImages = [], oldPublicIds = [], imageService) => {
+	let uploadedNew = [];
+	if (galleryFiles && galleryFiles.length > 0) {
+		const buffers = galleryFiles.map((f) => f.buffer);
+		uploadedNew = await imageService.uploadMultipleImages(buffers, "combos");
+	}
+
+	let finalImages = [];
+	let finalPublicIds = [];
+
+	if (Array.isArray(data.galleryOrder) && data.galleryOrder.length > 0) {
+		for (const item of data.galleryOrder) {
+			if (item.type === "existing" && item.url) {
+				const idx = oldImages.indexOf(item.url);
+				finalImages.push(item.url);
+				if (idx > -1 && oldPublicIds[idx]) {
+					finalPublicIds.push(oldPublicIds[idx]);
+				} else {
+					finalPublicIds.push(null);
+				}
+			} else if (item.type === "new" && typeof item.index === "number") {
+				const u = uploadedNew[item.index];
+				if (u) {
+					finalImages.push(u.url);
+					finalPublicIds.push(u.publicId);
+				}
+			}
+		}
+	} else {
+		const existing = data.existingImages
+			? Array.isArray(data.existingImages)
+				? data.existingImages
+				: [data.existingImages]
+			: [];
+		for (const url of existing) {
+			const idx = oldImages.indexOf(url);
+			finalImages.push(url);
+			if (idx > -1 && oldPublicIds[idx]) {
+				finalPublicIds.push(oldPublicIds[idx]);
+			} else {
+				finalPublicIds.push(null);
+			}
+		}
+		for (const u of uploadedNew) {
+			finalImages.push(u.url);
+			finalPublicIds.push(u.publicId);
+		}
+	}
+
+	for (let i = 0; i < oldImages.length; i++) {
+		if (!finalImages.includes(oldImages[i])) {
+			if (oldPublicIds[i]) {
+				await imageService.deleteImage(oldPublicIds[i]).catch((e) =>
+					console.error("Could not delete old combo gallery image:", e)
+				);
+			}
+		}
+	}
+
+	return { images: finalImages, imagePublicIds: finalPublicIds };
+};
+
 class ComboService {
 	async getCombos(type = null) {
 		try {
@@ -70,9 +132,10 @@ class ComboService {
 		}
 	}
 
-	async createCuratedCombo(comboData, imageBuffer = null) {
+	async createCuratedCombo(comboData, imageBuffer = null, galleryFiles = []) {
 		try {
 			const processedProducts = await processProductsImages(comboData.products, imageService);
+			const { images, imagePublicIds } = await processGalleryImages(galleryFiles, comboData, [], [], imageService);
 			const curatedData = {
 				...comboData,
 				products: processedProducts,
@@ -93,10 +156,9 @@ class ComboService {
 				type: "curated",
 				image: imageUrl,
 				imagePublicId,
+				images,
+				imagePublicIds,
 			});
-
-			// Products are now embedded, no need to populate
-			// await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -105,9 +167,10 @@ class ComboService {
 		}
 	}
 
-	async createCustomCombo(comboData, imageBuffer = null) {
+	async createCustomCombo(comboData, imageBuffer = null, galleryFiles = []) {
 		try {
 			const processedProducts = await processProductsImages(comboData.products, imageService);
+			const { images, imagePublicIds } = await processGalleryImages(galleryFiles, comboData, [], [], imageService);
 			const customData = {
 				...comboData,
 				products: processedProducts,
@@ -128,10 +191,9 @@ class ComboService {
 				type: "custom",
 				image: imageUrl,
 				imagePublicId,
+				images,
+				imagePublicIds,
 			});
-
-			// Products are now embedded, no need to populate
-			// await combo.populate("products");
 
 			return { success: true, combo };
 		} catch (error) {
@@ -140,7 +202,7 @@ class ComboService {
 		}
 	}
 
-	async updateCombo(comboId, updateData, newImageBuffer = null) {
+	async updateCombo(comboId, updateData, newImageBuffer = null, galleryFiles = []) {
 		try {
 			const normalizedUpdateData = { ...updateData };
 
@@ -152,6 +214,16 @@ class ComboService {
 			if (!combo) {
 				throw new Error("Combo not found");
 			}
+
+			const { images, imagePublicIds } = await processGalleryImages(
+				galleryFiles,
+				updateData,
+				combo.images || [],
+				combo.imagePublicIds || [],
+				imageService
+			);
+			normalizedUpdateData.images = images;
+			normalizedUpdateData.imagePublicIds = imagePublicIds;
 
 			// Handle image update for curated combos
 			if (newImageBuffer) {
@@ -183,6 +255,12 @@ class ComboService {
 			// Delete image from Cloudinary if it exists
 			if (combo.imagePublicId) {
 				await imageService.deleteImage(combo.imagePublicId);
+			}
+			if (combo.imagePublicIds && combo.imagePublicIds.length > 0) {
+				const validIds = combo.imagePublicIds.filter(Boolean);
+				if (validIds.length > 0) {
+					await imageService.deleteMultipleImages(validIds).catch((e) => console.error("Could not delete combo gallery images:", e));
+				}
 			}
 
 			await Combo.findByIdAndDelete(comboId);

@@ -17,6 +17,7 @@ const orderSchema = new mongoose.Schema(
         sku: String,
         customNote: String,
         customImages: [String],
+        customData: mongoose.Schema.Types.Mixed,
         selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }],
         selectionGroups: [
           {
@@ -80,6 +81,7 @@ const orderSchema = new mongoose.Schema(
       }
     ],
     shippingAddress: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       landmark: String,
@@ -90,6 +92,7 @@ const orderSchema = new mongoose.Schema(
       alternativePhone: String,
     },
     billingAddress: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       landmark: String,
@@ -100,6 +103,7 @@ const orderSchema = new mongoose.Schema(
       alternativePhone: String,
     },
     address: {
+      name: String,
       addressLine1: String,
       addressLine2: String,
       fullAddress: String,

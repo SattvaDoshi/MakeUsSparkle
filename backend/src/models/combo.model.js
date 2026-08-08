@@ -42,6 +42,8 @@ const comboSchema = new mongoose.Schema(
     originalPrice: Number,
     image: String,
     imagePublicId: String,
+    images: [String],
+    imagePublicIds: [String],
     
     // Management Fields
     status: {

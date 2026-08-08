@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
-import { checkPincode as itlCheckPincode } from '@/lib/shippingApi';
 
 const PAYMENT_METHODS = [
   { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via PhonePe', badge: 'Recommended' },
@@ -50,47 +49,14 @@ export default function CheckoutPage() {
   const { user, refreshUser } = useAuth();
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressForm, setAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+  const [addressForm, setAddressForm] = useState({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [addressBusy, setAddressBusy] = useState(false);
   const [addressError, setAddressError] = useState('');
-
-  // ── Pincode serviceability check ──────────────────────────────────
-  const [pincodeStatus, setPincodeStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle');
-  const [pincodeMsg, setPincodeMsg] = useState('');
-  const pincodeTimerRef = typeof window !== 'undefined' ? { current: null as ReturnType<typeof setTimeout> | null } : { current: null };
-
-  const triggerPincodeCheck = (pincode: string) => {
-    if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current);
-    if (pincode.length !== 6) { setPincodeStatus('idle'); setPincodeMsg(''); return; }
-    setPincodeStatus('loading');
-    pincodeTimerRef.current = setTimeout(async () => {
-      try {
-      const res = await itlCheckPincode(pincode);
-const data = res.data as PincodeResponse;
-
-const status = (
-  data?.status ||
-  data?.['0']?.status ||
-  ''
-).toLowerCase();
-        const serviceable = status === 'serviceable' || status === 'active' || status === '1' || status === 'available';
-        setPincodeStatus(serviceable ? 'ok' : 'fail');
-        setPincodeMsg(
-          serviceable
-            ? 'Delivery available to this pincode.'
-            : (res?.data?.message || 'Not serviceable to this pincode.')
-        );
-      } catch {
-        setPincodeStatus('fail');
-        setPincodeMsg('Could not verify pincode. Proceeding anyway.');
-      }
-    }, 600);
-  };
 
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [selectedBillingAddressIndex, setSelectedBillingAddressIndex] = useState(0);
   const [showBillingAddressForm, setShowBillingAddressForm] = useState(false);
-  const [billingAddressForm, setBillingAddressForm] = useState({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+  const [billingAddressForm, setBillingAddressForm] = useState({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
   const [billingAddressBusy, setBillingAddressBusy] = useState(false);
   const [billingAddressError, setBillingAddressError] = useState('');
 
@@ -163,58 +129,85 @@ const status = (
     setDeliveryType(id);
   };
 
+  const scrollToAddressError = (id: string = 'ck-pincode-error-banner') => {
+    setTimeout(() => {
+      const el = document.getElementById(id) || document.getElementById('ck-address-error-banner');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  };
+
   const handleSaveAddress = async () => {
     setAddressError('');
-    if (!addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
-      setAddressError('Please fill all mandatory address fields.'); return;
+    if (!addressForm.name || !addressForm.addressLine1 || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
+      setAddressError('Please fill all mandatory address fields (including Name and a 6-digit Pincode).');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.pincode.length !== 6 || !/^\d{6}$/.test(addressForm.pincode)) {
-      setAddressError('Pincode must be exactly 6 digits.'); return;
+      setAddressError('A 6-digit Pincode is required.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.phone.length !== 10 || !/^\d{10}$/.test(addressForm.phone)) {
-      setAddressError('Phone number must be exactly 10 digits.'); return;
+      setAddressError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
     if (addressForm.alternativePhone && (addressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(addressForm.alternativePhone))) {
-      setAddressError('Alternative phone number must be exactly 10 digits.'); return;
+      setAddressError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-pincode-error-banner');
+      return;
     }
 
     setAddressBusy(true);
     try {
       const fullAddress = `${addressForm.addressLine1}${addressForm.addressLine2 ? ', ' + addressForm.addressLine2 : ''}`;
-      const addresses = [...(user?.addresses || []), { ...addressForm, fullAddress }];
-      await apiRequest('/users/profile', { method: 'PUT', body: JSON.stringify({ addresses }) });
+      const payload = { ...addressForm, fullAddress };
+      const res = await apiRequest<{ success: boolean; addresses: any[] }>('/users/address', { method: 'POST', body: JSON.stringify(payload) });
       await refreshUser();
       setShowAddressForm(false);
-      setSelectedAddressIndex(addresses.length - 1);
-      setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+      const newAddresses = res?.addresses || [...(user?.addresses || []), payload];
+      setSelectedAddressIndex(Math.max(0, newAddresses.length - 1));
+      setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     } catch (err) { console.error(err); alert('Failed to save address.'); }
     finally { setAddressBusy(false); }
   };
 
   const handleSaveBillingAddress = async () => {
     setBillingAddressError('');
-    if (!billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
-      setBillingAddressError('Please fill all mandatory billing address fields.'); return;
+    if (!billingAddressForm.name || !billingAddressForm.addressLine1 || !billingAddressForm.city || !billingAddressForm.state || !billingAddressForm.pincode || !billingAddressForm.phone) {
+      setBillingAddressError('Please fill all mandatory billing address fields (including Name and a 6-digit Pincode).');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.pincode.length !== 6 || !/^\d{6}$/.test(billingAddressForm.pincode)) {
-      setBillingAddressError('Pincode must be exactly 6 digits.'); return;
+      setBillingAddressError('A 6-digit Pincode is required for billing address.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.phone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.phone)) {
-      setBillingAddressError('Phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
     if (billingAddressForm.alternativePhone && (billingAddressForm.alternativePhone.length !== 10 || !/^\d{10}$/.test(billingAddressForm.alternativePhone))) {
-      setBillingAddressError('Alternative phone number must be exactly 10 digits.'); return;
+      setBillingAddressError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('ck-billing-pincode-error-banner');
+      return;
     }
 
     setBillingAddressBusy(true);
     try {
       const fullAddress = `${billingAddressForm.addressLine1}${billingAddressForm.addressLine2 ? ', ' + billingAddressForm.addressLine2 : ''}`;
-      const addresses = [...(user?.addresses || []), { ...billingAddressForm, fullAddress }];
-      await apiRequest('/users/profile', { method: 'PUT', body: JSON.stringify({ addresses }) });
+      const payload = { ...billingAddressForm, fullAddress };
+      const res = await apiRequest<{ success: boolean; addresses: any[] }>('/users/address', { method: 'POST', body: JSON.stringify(payload) });
       await refreshUser();
       setShowBillingAddressForm(false);
-      setSelectedBillingAddressIndex(addresses.length - 1);
-      setBillingAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+      const newAddresses = res?.addresses || [...(user?.addresses || []), payload];
+      setSelectedBillingAddressIndex(Math.max(0, newAddresses.length - 1));
+      setBillingAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     } catch (err) { console.error(err); alert('Failed to save address.'); }
     finally { setBillingAddressBusy(false); }
   };
@@ -241,20 +234,76 @@ const status = (
             if (typeof c === 'string') return c;
             return c.id || c._id || '';
           }).filter(Boolean);
-          const selectionGroups = item.selectionGroups || (item.selectedCharms?.length ? [{
-            type: 'multi_item_selection', category: item.category || item.sourceId, label: item.name,
-            selectionKey: 'selectedCharms', itemRefModel: 'CharmItem',
-            items: item.selectedCharms.map((c) => {
-              const fallbackCharmPrice = item.selectedCharms?.length ? item.price / item.selectedCharms.length : 0;
-              if (typeof c === 'string') return { id: c, quantity: 1, price: fallbackCharmPrice };
-              return { id: c.id, sourceId: c.sourceId, name: c.name, quantity: c.quantity || 1,
-                price: typeof c.price === 'number' && Number.isFinite(c.price) ? c.price : fallbackCharmPrice,
-                image: c.image, images: c.images, emoji: c.emoji, customText: c.customText, customData: c.customData };
-            }),
-          }] : undefined);
-          return { product: mappedProduct, sourceId: item.sourceId, name: item.name, category: item.category,
-            quantity: item.qty, price: item.price, color: item.color, colorHex: item.colorHex, size: item.size, sku: item.sku, customNote: item.customNote, customImages: item.customImages,
-            selectedCharms, selectionGroups };
+          const comboNoteParts = [];
+          if (item.customData?.comboPresetMessage) comboNoteParts.push(`Card: ${item.customData.comboPresetMessage}`);
+          if (item.customData?.comboPersonalMessage) comboNoteParts.push(`Message: ${item.customData.comboPersonalMessage}`);
+          const combinedNote = [item.customNote, ...comboNoteParts].filter(Boolean).join(' | ');
+          const combinedImages = [
+            ...(item.customImages || []),
+            ...(item.customData?.comboUploadedImagesBase64 || []),
+            ...(item.customData?.comboUploadedImageBase64 ? [item.customData.comboUploadedImageBase64] : [])
+          ].filter(Boolean);
+
+          const selectionGroups = (
+            item.selectionGroups ||
+            (item.selectedCharms?.length
+              ? [
+                  {
+                    type: 'multi_item_selection',
+                    category: item.category || item.sourceId,
+                    label: item.name,
+                    selectionKey: 'selectedCharms',
+                    itemRefModel: 'CharmItem',
+                    items: item.selectedCharms.map((c) => {
+                      const fallbackCharmPrice = item.selectedCharms?.length
+                        ? item.price / item.selectedCharms.length
+                        : 0;
+                      if (typeof c === 'string')
+                        return { id: c, quantity: 1, price: fallbackCharmPrice };
+                      return {
+                        id: c.id,
+                        sourceId: c.sourceId,
+                        name: c.name,
+                        quantity: c.quantity || 1,
+                        price:
+                          typeof c.price === 'number' && Number.isFinite(c.price)
+                            ? c.price
+                            : fallbackCharmPrice,
+                        image: c.image,
+                        images: c.images,
+                        emoji: c.emoji,
+                        customText: c.customText,
+                        customData: c.customData,
+                      };
+                    }),
+                  },
+                ]
+              : undefined)
+          )?.map((sg: any) => ({
+            ...sg,
+            items: sg.items?.map((sgi: any) => ({
+              ...sgi,
+              customData: sgi.customData || undefined,
+            })),
+          }));
+
+          return {
+            product: mappedProduct,
+            sourceId: item.sourceId,
+            name: item.name,
+            category: item.category,
+            quantity: item.qty,
+            price: item.price,
+            color: item.color,
+            colorHex: item.colorHex,
+            size: item.size,
+            sku: item.sku,
+            customNote: combinedNote || undefined,
+            customImages: combinedImages.length ? combinedImages : undefined,
+            customData: item.customData || undefined,
+            selectedCharms,
+            selectionGroups,
+          };
         }),
         shippingAddress,
         billingAddress,
@@ -703,7 +752,7 @@ const status = (
                       <label key={idx} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: '11px 12px', borderRadius: 10, border: selectedAddressIndex === idx ? '2px solid #3a7a32' : '1.5px solid rgba(45,90,39,.15)', background: selectedAddressIndex === idx ? '#eaf5ea' : 'transparent', transition: 'background .15s, border-color .2s' }}>
                         <input type="radio" name="address" checked={selectedAddressIndex === idx} onChange={() => { setSelectedAddressIndex(idx); setShowAddressForm(false); }} style={{ marginTop: 3, flexShrink: 0 }} />
                         <div>
-                          <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{user.name}</div>
+                          <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{addr.name || user.name || 'Customer'}</div>
                           <div style={{ color: ink2, fontSize: 12, lineHeight: 1.5, fontWeight: 500 }}>
                             {addr.addressLine1 || addr.fullAddress}
                             {addr.addressLine2 && <><br />{addr.addressLine2}</>}
@@ -723,13 +772,19 @@ const status = (
                 ) : (
                   <div style={{ marginTop: 20 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Address</p>
-                    {addressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
+                    {addressError && <div id="ck-address-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{addressError}</div>}
                     <div className="ck-addr-form-grid">
+                      <input className="ck-addr-input ck-addr-full" placeholder="Full Name (Recipient Name) *" value={addressForm.name} onChange={e => setAddressForm({ ...addressForm, name: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={addressForm.addressLine1} onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={addressForm.addressLine2} onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={e => setAddressForm({ ...addressForm, landmark: e.target.value })} />
                       <input className="ck-addr-input" placeholder="City *" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
                       <input className="ck-addr-input" placeholder="State *" value={addressForm.state} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
+                      {addressError && (
+                        <div id="ck-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', gridColumn: '1 / -1', fontWeight: 600 }}>
+                          {addressError}
+                        </div>
+                      )}
                       <input
                         id="ck-pincode-input"
                         className="ck-addr-input"
@@ -739,22 +794,8 @@ const status = (
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
                           setAddressForm({ ...addressForm, pincode: val });
-                          triggerPincodeCheck(val);
                         }}
-                        style={pincodeStatus === 'ok' ? { borderColor: '#2e7d32' } : pincodeStatus === 'fail' ? { borderColor: '#c62828' } : {}}
                       />
-                      {pincodeStatus !== 'idle' && (
-                        <div style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          {pincodeStatus === 'loading' && (
-                            <>
-                              <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid #ccc', borderTopColor: '#2d5a27', borderRadius: '50%', animation: 'ckPinSpin 0.7s linear infinite' }} />
-                              <span style={{ color: '#6b7a5e' }}>Checking…</span>
-                            </>
-                          )}
-                          {pincodeStatus === 'ok' && <span style={{ color: '#2e7d32', fontWeight: 700 }}>✓ {pincodeMsg}</span>}
-                          {pincodeStatus === 'fail' && <span style={{ color: '#c62828', fontWeight: 700 }}>✗ {pincodeMsg}</span>}
-                        </div>
-                      )}
                       <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={addressForm.phone} onChange={e => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })} />
                       <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={addressForm.alternativePhone} onChange={e => setAddressForm({ ...addressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />
                     </div>
@@ -783,7 +824,7 @@ const status = (
                           <label key={idx} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: '11px 12px', borderRadius: 10, border: selectedBillingAddressIndex === idx ? '2px solid #3a7a32' : '1.5px solid rgba(45,90,39,.15)', background: selectedBillingAddressIndex === idx ? '#eaf5ea' : 'transparent', transition: 'background .15s, border-color .2s' }}>
                             <input type="radio" name="billingAddress" checked={selectedBillingAddressIndex === idx} onChange={() => { setSelectedBillingAddressIndex(idx); setShowBillingAddressForm(false); }} style={{ marginTop: 3, flexShrink: 0 }} />
                             <div>
-                              <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{user.name}</div>
+                              <div style={{ fontWeight: 700, marginBottom: 3, color: ink, fontSize: 13 }}>{addr.name || user.name || 'Customer'}</div>
                               <div style={{ color: ink2, fontSize: 12, lineHeight: 1.5, fontWeight: 500 }}>
                                 {addr.addressLine1 || addr.fullAddress}
                                 {addr.addressLine2 && <><br />{addr.addressLine2}</>}
@@ -805,11 +846,17 @@ const status = (
                         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Add New Billing Address</p>
                         {billingAddressError && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{billingAddressError}</div>}
                         <div className="ck-addr-form-grid">
+                          <input className="ck-addr-input ck-addr-full" placeholder="Full Name (Billing Name) *" value={billingAddressForm.name} onChange={e => setBillingAddressForm({ ...billingAddressForm, name: e.target.value })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Address Line 1 (House No, Street, Apartment) *" value={billingAddressForm.addressLine1} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine1: e.target.value })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Address Line 2 (Area) - Optional" value={billingAddressForm.addressLine2} onChange={e => setBillingAddressForm({ ...billingAddressForm, addressLine2: e.target.value })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Landmark (Optional)" value={billingAddressForm.landmark} onChange={e => setBillingAddressForm({ ...billingAddressForm, landmark: e.target.value })} />
                           <input className="ck-addr-input" placeholder="City *" value={billingAddressForm.city} onChange={e => setBillingAddressForm({ ...billingAddressForm, city: e.target.value })} />
                           <input className="ck-addr-input" placeholder="State *" value={billingAddressForm.state} onChange={e => setBillingAddressForm({ ...billingAddressForm, state: e.target.value })} />
+                          {billingAddressError && (
+                            <div id="ck-billing-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', gridColumn: '1 / -1', fontWeight: 600 }}>
+                              {billingAddressError}
+                            </div>
+                          )}
                           <input className="ck-addr-input" placeholder="Pincode (6 digits) *" maxLength={6} value={billingAddressForm.pincode} onChange={e => setBillingAddressForm({ ...billingAddressForm, pincode: e.target.value.replace(/\D/g, '') })} />
                           <input className="ck-addr-input" placeholder="Phone Number (10 digits) *" maxLength={10} value={billingAddressForm.phone} onChange={e => setBillingAddressForm({ ...billingAddressForm, phone: e.target.value.replace(/\D/g, '') })} />
                           <input className="ck-addr-input ck-addr-full" placeholder="Alternative Phone (Optional)" maxLength={10} value={billingAddressForm.alternativePhone} onChange={e => setBillingAddressForm({ ...billingAddressForm, alternativePhone: e.target.value.replace(/\D/g, '') })} />

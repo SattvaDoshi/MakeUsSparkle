@@ -702,20 +702,28 @@ export interface OrderPayload {
   paidAmount?: number;
   paymentMode?: "COD" | "ONLINE" | "PARTIAL_COD";
   shippingAddress: {
+    name?: string;
     addressLine1?: string;
     addressLine2?: string;
     fullAddress?: string;
+    landmark?: string;
     city: string;
     state: string;
     pincode: string;
+    phone?: string;
+    alternativePhone?: string;
   };
   billingAddress?: {
+    name?: string;
     addressLine1?: string;
     addressLine2?: string;
     fullAddress?: string;
+    landmark?: string;
     city: string;
     state: string;
     pincode: string;
+    phone?: string;
+    alternativePhone?: string;
   };
   isGift?: boolean;
   giftMessage?: string;

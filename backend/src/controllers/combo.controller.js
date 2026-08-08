@@ -31,6 +31,22 @@ function parseComboData(req) {
 
 	const files = req.files || [];
 	const imageBuffer = files.find((f) => f.fieldname === "image")?.buffer;
+	const galleryFiles = files.filter((f) => f.fieldname === "images");
+
+	if (typeof data.galleryOrder === "string") {
+		try {
+			data.galleryOrder = JSON.parse(data.galleryOrder);
+		} catch (e) {
+			data.galleryOrder = [];
+		}
+	}
+	if (typeof data.existingImages === "string") {
+		try {
+			data.existingImages = JSON.parse(data.existingImages);
+		} catch (e) {
+			data.existingImages = [];
+		}
+	}
 
 	if (Array.isArray(data.products)) {
 		data.products = data.products.map((p, pIndex) => {
@@ -58,7 +74,7 @@ function parseComboData(req) {
 		});
 	}
 
-	return { data, imageBuffer };
+	return { data, imageBuffer, galleryFiles };
 }
 
 export async function getCombos(req, res) {
@@ -84,8 +100,8 @@ export async function getComboById(req, res) {
 
 export async function createCuratedCombo(req, res) {
 	try {
-		const { data, imageBuffer } = parseComboData(req);
-		const result = await comboService.createCuratedCombo(data, imageBuffer);
+		const { data, imageBuffer, galleryFiles } = parseComboData(req);
+		const result = await comboService.createCuratedCombo(data, imageBuffer, galleryFiles);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create curated combo error:", error);
@@ -95,8 +111,8 @@ export async function createCuratedCombo(req, res) {
 
 export async function createCustomCombo(req, res) {
 	try {
-		const { data, imageBuffer } = parseComboData(req);
-		const result = await comboService.createCustomCombo(data, imageBuffer);
+		const { data, imageBuffer, galleryFiles } = parseComboData(req);
+		const result = await comboService.createCustomCombo(data, imageBuffer, galleryFiles);
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create custom combo error:", error);
@@ -106,8 +122,8 @@ export async function createCustomCombo(req, res) {
 
 export async function updateCombo(req, res) {
 	try {
-		const { data, imageBuffer } = parseComboData(req);
-		const result = await comboService.updateCombo(req.params.id, data, imageBuffer);
+		const { data, imageBuffer, galleryFiles } = parseComboData(req);
+		const result = await comboService.updateCombo(req.params.id, data, imageBuffer, galleryFiles);
 		res.json(result);
 	} catch (error) {
 		console.error("Update combo error:", error);

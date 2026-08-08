@@ -10,7 +10,12 @@ const reviewSchema = new mongoose.Schema(
 		product: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Product",
-			required: true,
+			required: false,
+		},
+		combo: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Combo",
+			required: false,
 		},
 		rating: {
 			type: Number,

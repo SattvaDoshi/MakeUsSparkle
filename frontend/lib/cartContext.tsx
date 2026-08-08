@@ -353,26 +353,39 @@ const addItem = useCallback(
   const appliedOffers: Array<{ id: string; title: string; amount: number }> = [];
   const applicableOffers: Array<{ id: string; title: string; amount: number; applied: boolean }> = [];
 
-  // Helper to determine if item is applicable
-  const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string; categoryId?: string }, offer: any) => {
+  // Helper to determine if item is applicable to an offer.
+  // Matching rule (OR logic):
+  //   – If neither products nor categories are set → applies to everything
+  //   – If products are set AND the item's sourceId/id is in the list → match
+  //   – If categories are set AND the item's categoryId is in the list → match
+  //   – Item must satisfy at least one of the above populated lists
+  const isPoolItemApplicable = (item: { id: string; sourceId?: string; category?: string; categoryId?: string; subCategoryId?: string }, offer: any) => {
     const productId = item.sourceId || item.id;
-    const hasProducts = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
-    if (hasProducts && !offer.applicableProducts.includes(productId)) {
-      return false;
-    }
+    const hasProducts   = Array.isArray(offer.applicableProducts)   && offer.applicableProducts.length   > 0;
     const hasCategories = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
-    if (hasCategories) {
-      // item.categoryId holds the raw MongoDB ObjectId string — compare against that
-      const catId = item.categoryId || '';
-      if (!catId || !offer.applicableCategories.includes(catId)) {
-        return false;
-      }
-    }
+
+    // No restrictions at all → applies to every item
+    if (!hasProducts && !hasCategories) return true;
+
+    // Check product match
+    const inProducts = hasProducts && offer.applicableProducts.includes(productId);
+    // Check category match (categoryId or subCategoryId)
+    const catId    = item.categoryId    || '';
+    const subCatId = item.subCategoryId || '';
+    const inCategories = hasCategories && (
+      (catId    && offer.applicableCategories.includes(catId))    ||
+      (subCatId && offer.applicableCategories.includes(subCatId))
+    );
+
+    // OR: item must be in at least one of the applicable lists
+    if (hasProducts && hasCategories) return inProducts || inCategories;
+    if (hasProducts)   return inProducts;
+    if (hasCategories) return inCategories;
     return true;
   };
 
   // Build the pool of item instances
-  let pool: Array<{ id: string; sourceId?: string; category?: string; categoryId?: string; price: number }> = [];
+  let pool: Array<{ id: string; sourceId?: string; category?: string; categoryId?: string; subCategoryId?: string; price: number }> = [];
   state.items.forEach((item) => {
     for (let q = 0; q < item.qty; q++) {
       pool.push({
@@ -380,6 +393,7 @@ const addItem = useCallback(
         sourceId: item.sourceId,
         category: item.category,
         categoryId: item.categoryId,
+        subCategoryId: item.subCategoryId,
         price: item.price,
       });
     }

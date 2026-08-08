@@ -180,7 +180,52 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 	// Image file states
 	const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-	const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
+
+	type ProductGalleryItem = {
+		id: string;
+		type: "existing" | "new";
+		url?: string;
+		file?: File;
+		preview: string;
+	};
+
+	const [galleryItems, setGalleryItems] = useState<ProductGalleryItem[]>(() => {
+		return (initialData?.images || []).map((url: string, i: number) => ({
+			id: `existing-${i}-${Math.random().toString(36).substring(2, 7)}`,
+			type: "existing" as const,
+			url,
+			preview: url,
+		}));
+	});
+
+	const [dragIdx, setDragIdx] = useState<number | null>(null);
+	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+	const handleDragStart = (idx: number) => {
+		setDragIdx(idx);
+	};
+
+	const handleDragOver = (e: React.DragEvent, idx: number) => {
+		e.preventDefault();
+		if (dragOverIdx !== idx) setDragOverIdx(idx);
+	};
+
+	const handleDrop = (idx: number) => {
+		if (dragIdx === null || dragIdx === idx) {
+			setDragIdx(null);
+			setDragOverIdx(null);
+			return;
+		}
+		setGalleryItems((prev) => {
+			const items = [...prev];
+			const [dragged] = items.splice(dragIdx, 1);
+			items.splice(idx, 0, dragged);
+			return items;
+		});
+		setDragIdx(null);
+		setDragOverIdx(null);
+	};
+
 	const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
 	const [giftBoxImageFile, setGiftBoxImageFile] = useState<File | null>(null);
 
@@ -412,8 +457,19 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				// Explicitly cleared
 				formData.append("mainImage", "");
 			}
-			form.galleryImages.forEach((img: string) => formData.append("existingImages", img));
-			galleryImageFiles.forEach((file) => formData.append("images", file));
+			let newFileIdx = 0;
+			const orderSpec: Array<{ type: "existing" | "new"; url?: string; index?: number }> = [];
+			(galleryItems || []).forEach(item => {
+				if (item.type === "existing" && item.url) {
+					orderSpec.push({ type: "existing", url: item.url });
+					formData.append("existingImages", item.url);
+				} else if (item.type === "new" && item.file) {
+					const idx = newFileIdx++;
+					orderSpec.push({ type: "new", index: idx });
+					formData.append("images", item.file);
+				}
+			});
+			formData.append("galleryOrder", JSON.stringify(orderSpec));
 
 			if (sizeChartImageFile) {
 				formData.append("sizeChartImage", sizeChartImageFile);
@@ -1296,76 +1352,157 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.4rem" }}>
 									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-										Gallery Images
+										Gallery Images (Drag and drop to reorder display sequence)
 									</label>
-									<div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-										{form.galleryImages.map((img: string) => (
-											<div key={img} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f4ef', padding: 6, borderRadius: 6, border: '1px solid #d4d4c8' }}>
-												{typeof img === 'string' ? (
-													<img src={img} alt="gallery" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #ddd' }} />
-												) : (
-													<span style={{ width: 80, height: 60, display: 'inline-block', background: '#e8ead0', borderRadius: 6 }} />
-												)}
-												<span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{typeof img === 'string' ? img : 'Image'}</span>
-												<button
-													type="button"
-													onClick={() =>
-														setForm((prev) => ({
-															...prev,
-															galleryImages: prev.galleryImages.filter((i: string) => i !== img),
-														}))
-													}
+									<span style={{ fontSize: "0.75rem", color: "#666", marginBottom: "0.25rem" }}>
+										The order shown below (#1, #2, ...) is the exact sequence images will appear in the product detail page gallery.
+									</span>
+									{galleryItems.length > 0 && (
+										<div
+											style={{
+												display: "flex",
+												gap: "0.75rem",
+												flexWrap: "wrap",
+												marginBottom: "0.6rem",
+												padding: "0.6rem",
+												background: "#f5f4ef",
+												borderRadius: 8,
+												border: "1px solid #d4d4c8",
+											}}
+										>
+											{galleryItems.map((item, idx) => (
+												<div
+													key={item.id}
+													draggable
+													onDragStart={() => handleDragStart(idx)}
+													onDragOver={(e) => handleDragOver(e, idx)}
+													onDrop={() => handleDrop(idx)}
 													style={{
-														background: 'none',
-														border: 'none',
-														cursor: 'pointer',
-														color: '#943b2a',
-														padding: 0,
+														display: "flex",
+														flexDirection: "column",
+														alignItems: "center",
+														background: "#fff",
+														border: dragOverIdx === idx ? "2px dashed #943b2a" : "1px solid #d4d4c8",
+														borderRadius: 8,
+														padding: "0.4rem",
+														position: "relative",
+														cursor: "grab",
+														width: 90,
+														boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+														transition: "all 0.15s ease",
 													}}
 												>
-													×
-												</button>
-											</div>
-										))}
-										{galleryImageFiles.map((file, i) => (
-											<span
-												key={i}
-												style={{
-													background: "#e8ead0",
-													border: "1px solid #b5c27a",
-													padding: "0.3rem 0.6rem",
-													borderRadius: "4px",
-													fontSize: "0.75rem",
-													display: "flex",
-													alignItems: "center",
-													gap: "0.4rem",
-													color: "#1c1c1a",
-												}}
-											>
-												{file.name.substring(0, 20)}
-												<button
-													type="button"
-													onClick={() => setGalleryImageFiles((prev) => prev.filter((_, idx) => idx !== i))}
-													style={{
-														background: "none",
-														border: "none",
-														cursor: "pointer",
-														color: "#943b2a",
-														padding: 0,
-													}}
-												>
-													×
-												</button>
-											</span>
-										))}
-									</div>
+													<span
+														style={{
+															position: "absolute",
+															top: 4,
+															left: 4,
+															background: "#3d4a20",
+															color: "#fff",
+															fontSize: "0.65rem",
+															fontWeight: 700,
+															padding: "1px 5px",
+															borderRadius: 4,
+															zIndex: 2,
+														}}
+													>
+														#{idx + 1}
+													</span>
+													<button
+														type="button"
+														onClick={() => setGalleryItems((prev) => prev.filter((it) => it.id !== item.id))}
+														style={{
+															position: "absolute",
+															top: 4,
+															right: 4,
+															background: "rgba(148,59,42,0.85)",
+															color: "#fff",
+															border: "none",
+															borderRadius: "50%",
+															width: 18,
+															height: 18,
+															fontSize: "0.7rem",
+															display: "flex",
+															alignItems: "center",
+															justifyContent: "center",
+															cursor: "pointer",
+															zIndex: 2,
+														}}
+														title="Remove image"
+													>
+														×
+													</button>
+													{item.preview ? (
+														<img
+															src={item.preview}
+															alt={`Gallery #${idx + 1}`}
+															style={{
+																width: 76,
+																height: 76,
+																objectFit: "cover",
+																borderRadius: 6,
+																marginTop: 6,
+																marginBottom: 4,
+															}}
+														/>
+													) : (
+														<div
+															style={{
+																width: 76,
+																height: 76,
+																background: "#e8ead0",
+																borderRadius: 6,
+																marginTop: 6,
+																marginBottom: 4,
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																fontSize: "0.7rem",
+																color: "#555",
+															}}
+														>
+															No Preview
+														</div>
+													)}
+													<span
+														style={{
+															fontSize: "0.65rem",
+															color: "#666",
+															whiteSpace: "nowrap",
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															maxWidth: 80,
+														}}
+													>
+														{item.type === "new" && item.file ? item.file.name : "Saved image"}
+													</span>
+												</div>
+											))}
+										</div>
+									)}
 									<input
 										type="file"
 										multiple
 										accept="image/*"
 										onChange={(e) => {
 											if (e.target.files) {
-												setGalleryImageFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+												const files = Array.from(e.target.files);
+												files.forEach((file) => {
+													const reader = new FileReader();
+													reader.onload = () => {
+														setGalleryItems((prev) => [
+															...prev,
+															{
+																id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+																type: "new",
+																file,
+																preview: reader.result as string,
+															},
+														]);
+													};
+													reader.readAsDataURL(file);
+												});
+												e.target.value = "";
 											}
 										}}
 										style={{

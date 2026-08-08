@@ -807,7 +807,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const matchingVariant = selections.length > 0 ? getVariantForSelection(selections[0].colorIndex, selections[0].size) : undefined;
 
   const variantOrColorImage = matchingVariant?.image || currentColor?.image;
-  const currentImages = dedupeImages([variantOrColorImage, mainImage, ...images]).filter(Boolean) as string[];
+  const galleryList = images && images.length > 0 ? images : [mainImage];
+  const currentImages = dedupeImages([
+    variantOrColorImage,
+    ...galleryList,
+    mainImage,
+  ]).filter(Boolean) as string[];
   const displayImg = currentImages?.[activeImg] || variantOrColorImage || mainImage || FALLBACK_PRODUCT_IMAGE;
 
   let volumeDiscountPct = 0;

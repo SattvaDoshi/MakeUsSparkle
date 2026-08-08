@@ -74,6 +74,7 @@ export type AdminProduct = {
 	updatedAt?: string;
 	totalCharms?: number;
 	charmPieceOptions?: number[];
+	displayOrder?: number;
 };
 
 // ─── iThink Logistics shipping types ───────────────────────────────────────
@@ -110,26 +111,68 @@ export type AdminOrder = {
 	status?: "placed" | "shipped" | "delivered" | "cancelled" | "confirmed";
 	paymentStatus?: "pending" | "paid" | "failed" | "completed" | "partial_paid";
 	paymentMode?: string;
+	phonePeOrderId?: string;
+	phonePeTransactionId?: string;
+	discountAmount?: number;
+	discountCode?: string;
+	autoDiscountAmount?: number;
+	rewardPointsRedeemed?: number;
+	deliveryType?: string;
 	user?: {
 		_id?: string;
 		name?: string;
 		email?: string;
 	};
 	address?: {
+		name?: string;
+		addressLine1?: string;
+		addressLine2?: string;
+		landmark?: string;
 		fullAddress?: string;
 		city?: string;
 		state?: string;
 		pincode?: string;
+		phone?: string;
+		alternativePhone?: string;
 	};
+	shippingAddress?: { name?: string; addressLine1?: string; addressLine2?: string; landmark?: string; fullAddress?: string; city?: string; state?: string; pincode?: string; phone?: string; alternativePhone?: string };
+	billingAddress?: { name?: string; addressLine1?: string; addressLine2?: string; landmark?: string; fullAddress?: string; city?: string; state?: string; pincode?: string; phone?: string; alternativePhone?: string };
 	items?: Array<{
 		_id?: string;
-		product?: { _id: string; title?: string } | string;
+		name?: string;
+		category?: string;
+		product?: { _id: string; title?: string; images?: string[] } | string | null;
+		sourceId?: string;
 		quantity?: number;
 		price?: number;
 		customNote?: string;
 		customImages?: string[];
-		selectedCharms?: Array<{ _id: string; name?: string } | string>;
-		selectionGroups?: Array<any>;
+		selectedCharms?: Array<{ _id: string; name?: string; emoji?: string } | string>;
+		selectionGroups?: Array<{
+			_id?: string;
+			type?: string;
+			category?: string;
+			label?: string;
+			itemRefModel?: string;
+			items?: Array<{
+				_id?: string;
+				item?: any;
+				name?: string;
+				quantity?: number;
+				price?: number;
+				image?: string;
+				images?: string[];
+				customData?: {
+					selections?: Record<string, string>;
+					color?: string;
+					colorHex?: string;
+					size?: string;
+					isCustomised?: boolean;
+					[key: string]: any;
+				};
+			}>;
+		}>;
+		customData?: Record<string, any>;
 	}>;
 	isGift?: boolean;
 	giftMessage?: string;

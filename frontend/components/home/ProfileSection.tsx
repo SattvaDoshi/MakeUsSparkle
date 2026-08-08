@@ -62,19 +62,20 @@ interface ReviewModalProps {
   itemName: string;
   pointsPerReview: number;
   onClose: () => void;
-  onSubmit: (rating: number, text: string) => void;
+  onSubmit: (rating: number, text: string, files: File[]) => void;
 }
 
 function ReviewModal({ itemName, pointsPerReview, onClose, onSubmit }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = async () => {
     if (rating === 0 || busy) return;
     setBusy(true);
-    await onSubmit(rating, text);
+    await onSubmit(rating, text, files);
     setBusy(false);
   };
 
@@ -104,6 +105,57 @@ function ReviewModal({ itemName, pointsPerReview, onClose, onSubmit }: ReviewMod
           onChange={(e) => setText(e.target.value)}
           rows={3}
         />
+        <div style={{ margin: '12px 0' }}>
+          <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files) {
+                  setFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)]);
+                }
+              }}
+            />
+            + Add Photos
+          </label>
+          {files.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {files.map((file, idx) => (
+                <div key={idx} style={{ position: 'relative', width: 56, height: 56 }}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt="Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -6,
+                      background: 'var(--red)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      fontSize: 10,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="pf-reward-hint">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -493,6 +545,13 @@ type BackendOrder = {
   _id: string;
   items: Array<{
     product?: { _id?: string; name?: string } | string;
+    sourceId?: string;
+    _id?: string;
+    name?: string;
+    productId?: string;
+    reviewed?: boolean;
+    rating?: number;
+    reviewText?: string;
     quantity?: number;
     price?: number;
   }>;
@@ -515,6 +574,7 @@ export default function ProfileSection() {
   const [addressBusy, setAddressBusy] = useState(false);
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState({
+    name: '',
     addressLine1: '',
     addressLine2: '',
     landmark: '',
@@ -552,11 +612,11 @@ export default function ProfileSection() {
             ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
             : 'Recently',
           items: (order.items || []).map((item) => ({
-            name: typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item',
-            productId: typeof item.product === 'object' && item.product ? item.product._id || '' : '',
-            reviewed: false,
-            rating: 0,
-            reviewText: '',
+            name: item.name || (typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item'),
+            productId: item.productId || (typeof item.product === 'object' && item.product ? item.product._id || '' : item.sourceId || item._id || ''),
+            reviewed: Boolean(item.reviewed),
+            rating: item.rating || 0,
+            reviewText: item.reviewText || '',
           })),
           amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`,
           status: (order.status || 'placed').charAt(0).toUpperCase() + (order.status || 'placed').slice(1),
@@ -630,19 +690,20 @@ export default function ProfileSection() {
   };
 
   const resetAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+    setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(false);
   };
 
   const openAddAddressForm = () => {
-    setAddressForm({ addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
+    setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
     setEditingAddressId(null);
     setIsAddressFormOpen(true);
   };
 
   const startEditAddress = (address: NonNullable<typeof addresses>[number]) => {
     setAddressForm({
+      name: address.name || '',
       addressLine1: address.addressLine1 || address.fullAddress || '',
       addressLine2: address.addressLine2 || '',
       landmark: address.landmark || '',
@@ -656,8 +717,18 @@ export default function ProfileSection() {
     setIsAddressFormOpen(true);
   };
 
+  const scrollToAddressError = (id: string = 'pf-pincode-error-banner') => {
+    setTimeout(() => {
+      const el = document.getElementById(id) || document.getElementById('pf-address-error-banner');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  };
+
   const submitAddressForm = async () => {
     const payload = {
+      name: addressForm.name.trim(),
       addressLine1: addressForm.addressLine1.trim(),
       addressLine2: addressForm.addressLine2.trim(),
       landmark: addressForm.landmark.trim(),
@@ -669,18 +740,25 @@ export default function ProfileSection() {
       alternativePhone: addressForm.alternativePhone.trim(),
     };
 
-    if (!payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
-      setError('Please fill all mandatory address fields.');
+    if (!payload.name || !payload.addressLine1 || !payload.city || !payload.state || !payload.pincode || !payload.phone) {
+      setError('Please fill all mandatory address fields (including Name and a 6-digit Pincode).');
+      scrollToAddressError('pf-pincode-error-banner');
       return;
     }
     if (payload.pincode.length !== 6 || !/^\d{6}$/.test(payload.pincode)) {
-      setError('Pincode must be exactly 6 digits.'); return;
+      setError('A 6-digit Pincode is required.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
     if (payload.phone.length !== 10 || !/^\d{10}$/.test(payload.phone)) {
-      setError('Phone number must be exactly 10 digits.'); return;
+      setError('Phone number must be exactly 10 digits.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
     if (payload.alternativePhone && (payload.alternativePhone.length !== 10 || !/^\d{10}$/.test(payload.alternativePhone))) {
-      setError('Alternative phone number must be exactly 10 digits.'); return;
+      setError('Alternative phone number must be exactly 10 digits.');
+      scrollToAddressError('pf-pincode-error-banner');
+      return;
     }
 
     try {
@@ -737,7 +815,7 @@ export default function ProfileSection() {
     router.push('/');
   };
 
-  const handleSubmitReview = async (rating: number, text: string) => {
+  const handleSubmitReview = async (rating: number, text: string, files: File[] = []) => {
     if (!reviewTarget) return;
     const order = orders.find((o) => o.id === reviewTarget.orderId);
     const item = order?.items[reviewTarget.itemIndex];
@@ -747,17 +825,23 @@ export default function ProfileSection() {
       return;
     }
     try {
+      const formData = new FormData();
+      formData.append('productId', item.productId);
+      formData.append('rating', String(rating));
+      formData.append('body', text || item.name);
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          formData.append('images', file);
+        });
+      }
+
       const result = await apiRequest<{
         success: boolean;
         pointsAwarded: number;
         isVerifiedPurchase: boolean;
       }>('/reviews', {
         method: 'POST',
-        body: JSON.stringify({
-          productId: item.productId,
-          rating,
-          body: text || item.name,
-        }),
+        body: formData as any,
       });
 
       // Mark item as reviewed in local state
@@ -1054,7 +1138,8 @@ export default function ProfileSection() {
                     </button>
                   </div>
                 </div>
-                <p className="pf-address-txt">{formatAddress(address)}</p>
+                <div style={{ marginBottom: 4, fontWeight: 700, color: '#1f381c', fontSize: 14 }}>{address.name || user?.name || 'Customer'}</div>
+                <p className="pf-address-txt" style={{ marginTop: 0 }}>{formatAddress(address)}</p>
               </div>
             )) : (
               <div className="pf-address-card"><p className="pf-address-txt">No saved addresses yet.</p></div>
@@ -1068,7 +1153,15 @@ export default function ProfileSection() {
               <div className="pf-address-card">
                 <div className="pf-section-label">{editingAddressId ? 'Edit Address' : 'Add Address'}</div>
                 <div className="pf-form">
-                  {error && <div style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
+                  {error && <div id="pf-address-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 10, textAlign: 'center' }}>{error}</div>}
+                  <label className="pf-label">Full Name *
+                    <input
+                      className="pf-input"
+                      value={addressForm.name}
+                      onChange={(event) => setAddressForm((prev) => ({ ...prev, name: event.target.value }))}
+                      placeholder="Recipient's Full Name"
+                    />
+                  </label>
                   <label className="pf-label">Address Line 1 *
                     <input
                       className="pf-input"
@@ -1109,6 +1202,11 @@ export default function ProfileSection() {
                       placeholder="State"
                     />
                   </label>
+                  {error && (
+                    <div id="pf-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', fontWeight: 600 }}>
+                      {error}
+                    </div>
+                  )}
                   <label className="pf-label">Pincode (6 digits) *
                     <input
                       className="pf-input"

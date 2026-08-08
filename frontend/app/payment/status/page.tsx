@@ -49,7 +49,7 @@ function PaymentStatusContent() {
       setStatus('success');
     } catch (err: unknown) {
       const error = err as Error;
-      console.error('Payment verification failed:', error);
+      console.warn('Payment verification failed:', error.message);
       setStatus('failed');
       setMessage(error.message || 'Payment could not be verified. Please contact support.');
     }

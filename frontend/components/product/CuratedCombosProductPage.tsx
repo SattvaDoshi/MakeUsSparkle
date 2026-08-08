@@ -4,9 +4,10 @@
 import {
   useState,
   useEffect,
+  useMemo,
   type ChangeEvent,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
 import UpperNav from '@/components/ui/UpperNav';
@@ -31,6 +32,7 @@ const PRESET_MESSAGES = [
 ───────────────────────────────────────────────────────────── */
 interface ProductVariant {
   selections?: Record<string, string>;
+  presetMessage?: string;
   personalMessage?: string;
   uploadedImageBase64?: string;
   uploadedImagesBase64?: string[];
@@ -68,6 +70,7 @@ interface PresetCombo {
   price: number;
   originalPrice: number;
   image: string;
+  images?: string[];
   badge: string;
   allowComboTextCustomization?: boolean;
   comboTextCustomizationTitle?: string;
@@ -86,6 +89,7 @@ interface CustomComboSlot {
   maxItems: number;
   fixedPrice: number;
   image: string;
+  images?: string[];
   badge: string;
   allowComboTextCustomization?: boolean;
   comboTextCustomizationTitle?: string;
@@ -279,7 +283,7 @@ const CUSTOM_SLOTS: CustomComboSlot[] = [
 ];
 
 export function hasCustomisation(v: ProductVariant) {
-  return (v.selections && Object.keys(v.selections).length > 0) || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0);
+  return (v.selections && Object.keys(v.selections).length > 0) || !!v.presetMessage || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0);
 }
 
 /** Returns the list of variant groups (colour/size/etc.) that require a mandatory selection for a product. */
@@ -487,7 +491,7 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
   const [visibleCount, setVisibleCount] = useState(3);
   const [filterStar, setFilterStar] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formState, setFormState] = useState<{ rating: number; body: string }>({ rating: 5, body: '' });
+  const [formState, setFormState] = useState<{ rating: number; body: string; images: File[] }>({ rating: 5, body: '', images: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -505,15 +509,24 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
     if (!token) { setErrorMsg('You must be logged in to review.'); return; }
     setIsSubmitting(true); setErrorMsg('');
     try {
+      const formData = new FormData();
+      formData.append('rating', String(formState.rating));
+      formData.append('body', formState.body);
+      if (formState.images && formState.images.length > 0) {
+        formState.images.forEach((file) => {
+          formData.append('images', file);
+        });
+      }
+
       const res = await apiRequest<{ success: boolean; review?: ReviewData; message?: string }>(`/combos/${comboId}/reviews`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify(formState),
+        body: formData as any,
       });
       if (res.success && res.review) {
         setReviews(prev => [res.review!, ...prev]);
         setShowForm(false);
-        setFormState({ rating: 5, body: '' });
+        setFormState({ rating: 5, body: '', images: [] });
       } else {
         setErrorMsg(res.message || 'Failed to submit review.');
       }
@@ -529,13 +542,14 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
   const hasMore = visibleCount < filtered.length;
   const totalReviews = reviews.length;
   const avgRating = totalReviews ? (reviews.reduce((a, r) => a + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
-  const ratingDist = [5, 4, 3, 2, 1].map(stars => {
+  const getBar = (stars: number) => {
     const count = reviews.filter(r => r.rating === stars).length;
     return { stars, count, pct: totalReviews ? Math.round((count / totalReviews) * 100) : 0 };
-  });
+  };
+  const bars = [5, 4, 3, 2, 1].map(getBar);
 
   return (
-    <div className="combo-rev-section">
+    <div className="combo-rev-wrapper">
       <div className="combo-rev-header">
         <span className="combo-rev-eyebrow">Customer Stories</span>
         <h2 className="combo-rev-title">What people are saying</h2>
@@ -543,14 +557,14 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
 
       {loaded && totalReviews > 0 && (
         <div className="combo-rev-summary">
-          <div className="combo-rev-score">
-            <span className="combo-rev-big-num">{avgRating}</span>
-            <div className="combo-rev-big-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
+          <div className="combo-rev-avg-box">
+            <span className="combo-rev-avg-num">{avgRating}</span>
+            <div className="combo-rev-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
             <span className="combo-rev-total">Based on {totalReviews} reviews</span>
           </div>
           <div className="combo-rev-bars">
-            {ratingDist.map(d => (
-              <button key={d.stars} className={`combo-rev-bar-row${filterStar === d.stars ? ' combo-rev-bar-row--active' : ''}`} onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}>
+            {bars.map(d => (
+              <button key={d.stars} className={`combo-rev-bar-row ${filterStar === d.stars ? 'active' : ''}`} onClick={() => setFilterStar(f => f === d.stars ? null : d.stars)}>
                 <span className="combo-rev-bar-label">{d.stars}★</span>
                 <div className="combo-rev-bar-track"><div className="combo-rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
                 <span className="combo-rev-bar-count">{d.count}</span>
@@ -574,6 +588,26 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
             ))}
           </div>
           <textarea required placeholder="Share your experience with this set…" value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={3} className="modal-textarea" style={{ marginBottom: 14 }} />
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+              <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
+                if (e.target.files) {
+                  setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
+                }
+              }} />
+              + Add Photos
+            </label>
+            {formState.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {formState.images.map((file, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
+                    <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
+                    <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={isSubmitting} className="combo-rev-write-btn">{isSubmitting ? 'Submitting…' : 'Submit Review'}</button>
             <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--ink4)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
@@ -606,6 +640,13 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
               </div>
             </div>
             <p className="combo-rev-body">{r.body}</p>
+            {r.images && r.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                {r.images.map((imgUrl, idx) => (
+                  <img key={idx} src={imgUrl} alt="Review photo" style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid #eaeaea' }} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -735,21 +776,24 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
 
           {product.allowTextCustomization && (
             <div className="modal-field">
-              <label className="modal-field-label">
+              <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
                 <span className="modal-field-num">{msgNum}</span>
-                {product.textCustomizationTitle || 'Personal Message'}
+                Select Occasion / Template Card
                 <span className="modal-field-optional">optional</span>
               </label>
-              <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
-                value={PRESET_MESSAGES.find(m => m.label === local.personalMessage)?.value || ''}
+              <select className="modal-textarea" style={{ marginBottom: '0.8rem', appearance: 'auto' }}
+                value={PRESET_MESSAGES.find(m => m.label === local.presetMessage)?.value || ''}
                 onChange={e => {
-                  if (e.target.value) {
-                    const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
-                    if (msg) setLocal(p => ({ ...p, personalMessage: msg }));
-                  }
+                  const val = e.target.value;
+                  const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
+                  setLocal(p => ({ ...p, presetMessage: msg || undefined }));
                 }}>
                 {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
+              <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
+                {product.textCustomizationTitle || 'Personal Message'}
+                <span className="modal-field-optional">optional</span>
+              </label>
               <textarea className="modal-textarea"
                 placeholder="E.g. 'To my dearest Priya, with love…'"
                 value={local.personalMessage || ''}
@@ -913,6 +957,17 @@ interface PresetHamperSectionProps {
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
   const [showValidation, setShowValidation] = useState(false);
+  const [activeComboImgIdx, setActiveComboImgIdx] = useState(0);
+  const allComboImages = useMemo(() => {
+    if (!combo) return [];
+    return [safeImageSrc(combo.image), ...(combo.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
+  }, [combo]);
+
+  useEffect(() => {
+    setActiveComboImgIdx(0);
+  }, [combo?.id]);
+
+  if (!combo) return null;
 
   const removeFileFor = (pid: string, index: number) => {
     const v = variants[pid] || {};
@@ -929,13 +984,13 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
 
-  if (!combo) return null;
-
   const products = combo.includedProducts;
   const currentPrice = comboVariant.selectedPricingVariant?.price ?? combo.price;
   const priceDiff = currentPrice - combo.price;
   const currentOriginalPrice = combo.originalPrice + priceDiff;
-  const pct = Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100);
+  const pct = currentOriginalPrice > currentPrice
+    ? Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100)
+    : 0;
   const customisedCount = products.filter(p => hasCustomisation(variants[p.id] || {})).length;
 
   const incompleteProducts = products.filter(p => !isProductSelectionComplete(p, variants[p.id] || {}));
@@ -961,10 +1016,38 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       </button>
 
       <div className="hamper-main-block">
-        <div className="hamper-main-img-wrap">
-          <img src={safeImageSrc(combo.image)} alt={combo.name} />
-          {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
-          {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
+        <div>
+          <div className="hamper-main-img-wrap">
+            <img src={allComboImages[activeComboImgIdx] || safeImageSrc(combo.image)} alt={combo.name} />
+            {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
+            {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
+          </div>
+          {allComboImages.length > 1 && (
+            <div className="hamper-gallery-thumbs" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+              {allComboImages.map((imgUrl: string, i: number) => (
+                <button
+                  key={`${imgUrl}-${i}`}
+                  type="button"
+                  onClick={() => setActiveComboImgIdx(i)}
+                  style={{
+                    width: '58px',
+                    height: '58px',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: activeComboImgIdx === i ? '2px solid #3d4a20' : '1px solid #d4d4c8',
+                    padding: 0,
+                    cursor: 'pointer',
+                    background: '#f5f4ef',
+                    opacity: activeComboImgIdx === i ? 1 : 0.75,
+                    transition: 'all 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img src={imgUrl} alt={`${combo.name} ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="hamper-main-info">
@@ -1067,17 +1150,17 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
                 {p.allowTextCustomization && (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="modal-field-optional">optional</span></span>
-                    <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
-                      value={PRESET_MESSAGES.find(m => m.label === v.personalMessage)?.value || ''}
+                    <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                    <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
+                      value={PRESET_MESSAGES.find(m => m.label === v.presetMessage)?.value || ''}
                       onChange={e => {
-                        if (e.target.value) {
-                          const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
-                          if (msg) onVariantChange(p.id, { ...v, personalMessage: msg });
-                        }
+                        const val = e.target.value;
+                        const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
+                        onVariantChange(p.id, { ...v, presetMessage: msg || undefined });
                       }}>
                       {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
+                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="modal-field-optional">optional</span></span>
                     <textarea
                       className="modal-textarea"
                       placeholder="E.g. 'To my dearest Priya, with love…'"
@@ -1157,17 +1240,17 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             <div className="hamper-piece-body">
               {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
-                  <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
-                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.personalMessage)?.value || ''}
+                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                  <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
+                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.presetMessage)?.value || ''}
                     onChange={e => {
-                      if (e.target.value) {
-                        const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
-                        if (msg) onComboVariantChange({ ...comboVariant, personalMessage: msg });
-                      }
+                      const val = e.target.value;
+                      const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
+                      onComboVariantChange({ ...comboVariant, presetMessage: msg || undefined });
                     }}>
                     {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
+                  <span className="hamper-piece-field-label">{combo.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1283,6 +1366,14 @@ interface CustomBuilderSectionProps {
 
 function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
+  const [activeSlotImgIdx, setActiveSlotImgIdx] = useState(0);
+  const allSlotImages = useMemo(() => {
+    return [safeImageSrc(slot.image), ...(slot.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
+  }, [slot.image, slot.images]);
+
+  useEffect(() => {
+    setActiveSlotImgIdx(0);
+  }, [slot.id]);
 
   const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.currentTarget.files || []);
@@ -1339,10 +1430,42 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         Back to bundle options
       </button>
 
-      <div className="builder-header-row">
-        <div>
+      <div className="builder-header-row" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem' }}>
+        {allSlotImages.length > 0 && (
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--bdr, #d4d4c8)' }}>
+              <img src={allSlotImages[activeSlotImgIdx] || safeImageSrc(slot.image)} alt={slot.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            {allSlotImages.length > 1 && (
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                {allSlotImages.map((imgUrl: string, i: number) => (
+                  <button
+                    key={`${imgUrl}-${i}`}
+                    type="button"
+                    onClick={() => setActiveSlotImgIdx(i)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: activeSlotImgIdx === i ? '2px solid var(--gold, #c9a84c)' : '1px solid var(--bdr, #d4d4c8)',
+                      padding: 0,
+                      cursor: 'pointer',
+                      background: 'var(--surf, #f5f4ef)',
+                      opacity: activeSlotImgIdx === i ? 1 : 0.75,
+                    }}
+                  >
+                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: '200px' }}>
           <h2 className="builder-header-title">{slot.name}</h2>
           <p className="builder-header-tagline">{slot.tagline}</p>
+          {slot.description && <p style={{ marginTop: '0.4rem', fontSize: '0.9rem', color: '#555', whiteSpace: 'pre-line' }}>{slot.description}</p>}
         </div>
       </div>
 
@@ -1442,17 +1565,17 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
             <div className="hamper-piece-body">
               {slot.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
-                  <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
-                  <select className="modal-textarea" style={{ marginBottom: '0.5rem', appearance: 'auto' }}
-                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.personalMessage)?.value || ''}
+                  <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="modal-field-optional">optional</span></span>
+                  <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
+                    value={PRESET_MESSAGES.find(m => m.label === comboVariant.presetMessage)?.value || ''}
                     onChange={e => {
-                      if (e.target.value) {
-                        const msg = PRESET_MESSAGES.find(m => m.value === e.target.value)?.label;
-                        if (msg) onComboVariantChange({ ...comboVariant, personalMessage: msg });
-                      }
+                      const val = e.target.value;
+                      const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
+                      onComboVariantChange({ ...comboVariant, presetMessage: msg || undefined });
                     }}>
                     {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
+                  <span className="hamper-piece-field-label">{slot.comboTextCustomizationTitle || 'Personal Message on Box'} <span className="modal-field-optional">optional</span></span>
                   <textarea
                     className="modal-textarea"
                     placeholder="E.g. 'Happy Anniversary!'"
@@ -1557,30 +1680,25 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
   const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>({});
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlComboId = searchParams?.get('combo') || null;
+  const urlCustomId = searchParams?.get('custom') || null;
+
   useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const comboId = params.get('combo');
-      const customId = params.get('custom');
-      
-      if (comboId) {
-        setSelectedComboId(comboId);
-        setPresetView('detail');
-        setMode('preset');
-      } else if (customId) {
-        setSelectedSlotId(customId);
-        setCustomView('detail');
-        setMode('custom');
-      } else {
-        setPresetView('grid');
-        setCustomView('grid');
-      }
-    };
-    
-    handlePopState();
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    if (urlComboId) {
+      setSelectedComboId(urlComboId);
+      setPresetView('detail');
+      setMode('preset');
+    } else if (urlCustomId) {
+      setSelectedSlotId(urlCustomId);
+      setCustomView('detail');
+      setMode('custom');
+    } else {
+      setPresetView('grid');
+      setCustomView('grid');
+    }
+  }, [urlComboId, urlCustomId]);
 
   useEffect(() => {
     async function loadCombos() {
@@ -1637,6 +1755,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 price: c.price,
                 originalPrice: c.originalPrice || c.price,
                 image: safeImageSrc(c.image),
+                images: Array.isArray(c.images) ? c.images.map((img: string) => safeImageSrc(img)) : [],
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
                 comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
@@ -1655,6 +1774,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 maxItems: c.itemsCount || 1,
                 fixedPrice: c.price || 0,
                 image: safeImageSrc(c.image),
+                images: Array.isArray(c.images) ? c.images.map((img: string) => safeImageSrc(img)) : [],
                 badge: c.badge || '',
                 allowComboTextCustomization: c.allowComboTextCustomization || false,
                 comboTextCustomizationTitle: c.comboTextCustomizationTitle || '',
@@ -1669,8 +1789,24 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
           setPresetCombos(loadedPreset);
           setCustomSlots(loadedCustom);
-          if (loadedPreset.length > 0) setSelectedComboId(loadedPreset[0].id);
-          if (loadedCustom.length > 0) setSelectedSlotId(loadedCustom[0].id);
+          const currentComboId = new URLSearchParams(window.location.search).get('combo');
+          const currentCustomId = new URLSearchParams(window.location.search).get('custom');
+
+          if (currentComboId && loadedPreset.some(c => c.id === currentComboId)) {
+            setSelectedComboId(currentComboId);
+            setPresetView('detail');
+            setMode('preset');
+          } else if (loadedPreset.length > 0) {
+            setSelectedComboId(prev => prev || loadedPreset[0].id);
+          }
+
+          if (currentCustomId && loadedCustom.some(c => c.id === currentCustomId)) {
+            setSelectedSlotId(currentCustomId);
+            setCustomView('detail');
+            setMode('custom');
+          } else if (loadedCustom.length > 0) {
+            setSelectedSlotId(prev => prev || loadedCustom[0].id);
+          }
 
           setSlotSelections(Object.fromEntries(loadedCustom.map(s => [s.id, []])));
           setSlotVariants(Object.fromEntries(loadedCustom.map(s => [s.id, {}])));
@@ -1693,6 +1829,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
       sku: `COMBO-PRESET-${combo.id}`,
       href: `/categories/${gender}/curated-combos`,
       customData: {
+        comboPresetMessage: cv.presetMessage,
         comboPersonalMessage: cv.personalMessage,
         comboUploadedImageBase64: cv.uploadedImageBase64,
         comboUploadedImagesBase64: cv.uploadedImagesBase64,
@@ -1707,6 +1844,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             id: p.id, name: p.name, price: p.price, image: p.image, quantity: 1,
             customData: {
               selections: v.selections,
+              presetMessage: v.presetMessage,
               personalMessage: v.personalMessage,
               uploadedImageBase64: v.uploadedImageBase64,
               uploadedImagesBase64: v.uploadedImagesBase64,
@@ -1741,11 +1879,13 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     if (ids.length !== slot.maxItems) return;
     addItem({
       id: `custom-slot-${slot.id}-${Date.now()}`,
+      sourceId: slot.id,
       name: slot.name, price: cv.selectedPricingVariant?.price ?? slot.fixedPrice, originalPrice: cv.selectedPricingVariant?.price ?? slot.fixedPrice,
       image: slot.image, color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-CUSTOM-${slot.id}`,
       href: `/categories/${gender}/curated-combos`,
       customData: {
+        comboPresetMessage: cv.presetMessage,
         comboPersonalMessage: cv.personalMessage,
         comboUploadedImageBase64: cv.uploadedImageBase64,
         isComboCustomised: hasCustomisation(cv)
@@ -1759,6 +1899,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             id: pid, name: p.name, price: p.price, image: p.image, quantity: 1,
             customData: {
               selections: v.selections,
+              presetMessage: v.presetMessage,
               personalMessage: v.personalMessage,
               uploadedImageBase64: v.uploadedImageBase64,
               isCustomised: hasCustomisation(v)
@@ -2239,7 +2380,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   const url = new URL(window.location.href);
                   url.searchParams.set('combo', id);
                   url.searchParams.delete('custom');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setSelectedComboId(id); 
                   setPresetView('detail'); 
                 }}
@@ -2256,7 +2397,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onBack={() => {
                   const url = new URL(window.location.href);
                   url.searchParams.delete('combo');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setPresetView('grid');
                 }}
               />
@@ -2269,7 +2410,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   const url = new URL(window.location.href);
                   url.searchParams.set('custom', id);
                   url.searchParams.delete('combo');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setSelectedSlotId(id); 
                   setCustomView('detail'); 
                 }}
@@ -2288,7 +2429,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 onBack={() => {
                   const url = new URL(window.location.href);
                   url.searchParams.delete('custom');
-                  window.history.pushState(null, '', url.toString());
+                  router.push(url.pathname + (url.search || ''), { scroll: false });
                   setCustomView('grid');
                 }}
                 gender={gender}

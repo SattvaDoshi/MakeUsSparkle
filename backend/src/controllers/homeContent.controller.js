@@ -5,7 +5,15 @@ export async function getHomeContent(req, res) {
   try {
     let homeContent = await HomeContent.findOne({ key: "home-page" });
     if (!homeContent) {
-      homeContent = await HomeContent.create({ key: "home-page" });
+      try {
+        homeContent = await HomeContent.create({ key: "home-page" });
+      } catch (err) {
+        if (err.code === 11000) {
+          homeContent = await HomeContent.findOne({ key: "home-page" });
+        } else {
+          throw err;
+        }
+      }
     }
     res.json({ success: true, homeContent });
   } catch (error) {

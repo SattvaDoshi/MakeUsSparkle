@@ -56,6 +56,7 @@ type AdminProduct = {
 	images?: string[];
 	seoTags?: string[];
 	createdAt?: string;
+	displayOrder?: number;
 };
 
 type AdminHomeSection = {

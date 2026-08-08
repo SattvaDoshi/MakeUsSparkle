@@ -665,7 +665,7 @@ const status = (
               <p className="ck-popup-avail-title">Available payment methods</p>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />
-                Online Payment — Pay in full via PhonePe
+                Online Payment — Pay in full via Online Payment
               </div>
               <div className="ck-popup-avail-row">
                 <span className="ck-popup-avail-dot" />

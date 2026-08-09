@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { apiRequest } from "@/lib/api";
 import type { AdminOrder, Warehouse } from "../../_lib/admin.types";
 import { formatAddress, formatDateTime, formatMoney, formatShortId, normalizeOrderStatus, normalizePaymentStatus } from "../../_lib/admin.helpers";
 import { listWarehouses, createShipment, trackShipment, cancelShipment, printLabel as fetchLabel } from "@/lib/shippingApi";
@@ -58,6 +59,33 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 	// Warehouses — loaded once for the pickup dropdown
 	const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 	const [warehousesLoaded, setWarehousesLoaded] = useState(false);
+
+	const [cartBannerText, setCartBannerText] = useState("");
+	const [isSavingBanner, setIsSavingBanner] = useState(false);
+
+	useEffect(() => {
+		apiRequest<{ success: boolean; cartBannerText: string }>("/admin/cart-banner")
+			.then(res => {
+				if (res.success && res.cartBannerText) setCartBannerText(res.cartBannerText);
+			})
+			.catch(console.error);
+	}, []);
+
+	const handleSaveBanner = async () => {
+		setIsSavingBanner(true);
+		try {
+			await apiRequest("/admin/cart-banner", {
+				method: "PUT",
+				body: JSON.stringify({ cartBannerText })
+			});
+			alert("Cart banner text saved successfully!");
+		} catch (error) {
+			console.error("Failed to save cart banner text", error);
+			alert("Failed to save cart banner text");
+		} finally {
+			setIsSavingBanner(false);
+		}
+	};
 
 	const loadWarehouses = useCallback(async () => {
 		if (warehousesLoaded) return;
@@ -314,6 +342,30 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 
 			<div className="admin-panel">
 				<h2>Orders <span style={{ fontSize: 16, color: "var(--mist)", fontWeight: 400 }}>({filteredOrders.length})</span></h2>
+
+				<div style={{ background: "white", padding: "16px 20px", borderRadius: 12, border: "1px solid #eaeaea", marginBottom: 20 }}>
+					<h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--olive-900)" }}>Cart Banner Settings</h3>
+					<p style={{ fontSize: 12, color: "var(--mist)", marginBottom: 12 }}>
+						Configure the text that replaces the progress bar on the cart page and cart drawer.
+					</p>
+					<div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+						<input 
+							type="text" 
+							placeholder="e.g. Free Gift on ₹1700!" 
+							value={cartBannerText} 
+							onChange={(e) => setCartBannerText(e.target.value)} 
+							style={{ flex: 1, minWidth: "200px", padding: "10px 14px", border: "1px solid #d4d4c8", borderRadius: 8, fontSize: 13, outline: "none" }} 
+						/>
+						<button 
+							type="button"
+							onClick={handleSaveBanner} 
+							disabled={isSavingBanner}
+							style={{ flexShrink: 0, padding: "10px 20px", background: "#1a1f0d", color: "#ffffff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isSavingBanner ? "not-allowed" : "pointer", opacity: isSavingBanner ? 0.7 : 1 }}
+						>
+							{isSavingBanner ? "Saving..." : "Save Banner"}
+						</button>
+					</div>
+				</div>
 
 				<div className="admin-controls">
 					<input

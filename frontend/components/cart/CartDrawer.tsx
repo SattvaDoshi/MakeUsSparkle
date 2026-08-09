@@ -4,7 +4,7 @@
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
-import CartGoalMeter from '@/components/ui/ProgressBar';
+import CartBanner from '@/components/cart/CartBanner';
 
 // ─── Main CartDrawer ──────────────────────────────────────────────────────────
 export default function CartDrawer() {
@@ -254,10 +254,10 @@ export default function CartDrawer() {
             </button>
           </div>
 
-          {/* ── Progress Bar (CartGoalMeter) ── */}
+          {/* ── CartBanner ── */}
           {items.length > 0 && (
             <div className="dp-section">
-              <CartGoalMeter cartValue={subtotal} />
+              <CartBanner />
             </div>
           )}
 

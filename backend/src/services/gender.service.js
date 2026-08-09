@@ -4,7 +4,6 @@ import Gender from "../models/gender.model.js";
 const DEFAULT_GENDERS = [
   { name: "Women", slug: "women" },
   { name: "Men", slug: "men" },
-  { name: "Kids", slug: "kids" },
 ];
 
 const toSlug = (value = "") =>

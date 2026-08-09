@@ -860,7 +860,7 @@ import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
 import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
-import CartGoalMeter from '@/components/ui/ProgressBar'; // ← new import
+import CartBanner from '@/components/cart/CartBanner';
 
 // ─── Gift Box Options ─────────────────────────────────────────────────────────
 export const GIFT_OPTIONS = [
@@ -1256,10 +1256,10 @@ export default function CartPage() {
               {/* ── LEFT ── */}
               <div className="cp-left">
 
-                {/* ── CartGoalMeter replaces old progress section ── */}
+                {/* ── CartBanner replaces old progress section ── */}
                 <div className="cp-panel">
                   <div className="cp-goal-meter">
-                    <CartGoalMeter cartValue={subtotal} />
+                    <CartBanner />
                   </div>
                 </div>
 

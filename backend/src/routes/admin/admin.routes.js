@@ -20,6 +20,8 @@ import {
 	updatePaymentStatus,
 	getRewardsSettings,
 	updateRewardsSettings,
+	getCartBannerSettings,
+	updateCartBannerSettings,
 } from "../../controllers/admin.controller.js";
 import { requireAdmin, requireAuth } from "../../middleware/auth.middleware.js";
 
@@ -47,5 +49,7 @@ router.get("/analytics/products", getAnalyticsProducts);
 router.get("/analytics/orders", getAnalyticsOrders);
 router.get("/rewards-settings", getRewardsSettings);
 router.put("/rewards-settings", updateRewardsSettings);
+router.get("/cart-banner", getCartBannerSettings);
+router.put("/cart-banner", updateCartBannerSettings);
 
 export default router;

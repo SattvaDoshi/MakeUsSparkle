@@ -15,6 +15,8 @@ export function getStoredAuthToken() {
 	return localStorage.getItem("authToken");
 }
 
+
+
 type ApiRequestOptions = RequestInit & {
 	authToken?: string | null;
 };
@@ -45,6 +47,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 	const data = await response.json().catch(() => ({}));
 
 	if (!response.ok) {
+		if (response.status === 401 && typeof window !== "undefined") {
+			window.dispatchEvent(new Event("makeussparkle:logout"));
+		}
 		throw new Error(data.message || "Request failed");
 	}
 

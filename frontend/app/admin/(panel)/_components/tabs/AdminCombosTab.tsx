@@ -630,7 +630,7 @@ export default function AdminCombosTab({
 
 									<div style={FIELD}>
 										<label style={LABEL}>Description</label>
-										<textarea placeholder="Describe this combo..." value={modal.description} onChange={e => upModal({ description: e.target.value })} rows={3} style={{ ...INP, resize: "vertical" }} />
+										<textarea placeholder="Describe this combo..." value={modal.description} onChange={e => upModal({ description: e.target.value })} rows={4} style={{ ...INP, resize: "vertical" }} autoComplete="off" autoCorrect="off" spellCheck="false" />
 									</div>
 
 									<div style={S.grid2}>
@@ -887,7 +887,7 @@ export default function AdminCombosTab({
 
 														<div style={FIELD}>
 															<label style={LABEL}>Description</label>
-															<input placeholder="Short description..." value={p.description} onChange={e => upProduct(pIdx, { description: e.target.value })} style={INP} />
+															<textarea placeholder="Short description..." value={p.description} onChange={e => upProduct(pIdx, { description: e.target.value })} style={{ ...INP, resize: "vertical" }} autoComplete="off" autoCorrect="off" spellCheck="false" rows={2} />
 														</div>
 
 														<div style={S.grid2}>

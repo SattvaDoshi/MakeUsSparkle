@@ -6,10 +6,14 @@ import {
 	removeFromCart,
 	updateCartItem,
 	addToCart,
+	getCartBannerText,
 } from "../controllers/cart.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
+
+// Public routes
+router.get("/banner", getCartBannerText);
 
 router.use(requireAuth);
 

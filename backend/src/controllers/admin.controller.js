@@ -226,3 +226,27 @@ export async function updateRewardsSettings(req, res) {
 		res.status(400).json({ success: false, message: error.message });
 	}
 }
+
+export async function getCartBannerSettings(req, res) {
+	try {
+		const cartBannerText = await getSetting("cartBannerText", "");
+		res.json({ success: true, cartBannerText });
+	} catch (error) {
+		console.error("Get cart banner settings error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateCartBannerSettings(req, res) {
+	try {
+		const { cartBannerText } = req.body;
+		if (cartBannerText === undefined || cartBannerText === null) {
+			return res.status(400).json({ success: false, message: "cartBannerText is required" });
+		}
+		await setSetting("cartBannerText", String(cartBannerText));
+		res.json({ success: true, cartBannerText: String(cartBannerText) });
+	} catch (error) {
+		console.error("Update cart banner settings error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}

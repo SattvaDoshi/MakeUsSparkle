@@ -438,7 +438,7 @@ function ComboPolicySection({ description }: { description?: string }) {
     <div className="combo-accordion">
       {description && description.trim() && (
         <ComboAccordionItem emoji="💎" label="About This Set" open={open === 'about'} onToggle={() => setOpen(o => (o === 'about' ? null : 'about'))}>
-          <p style={{ whiteSpace: 'pre-line' }}>{description}</p>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{description}</p>
         </ComboAccordionItem>
       )}
       <ComboAccordionItem emoji="↩️" label="Cancellation Policy" open={open === 'cancel'} onToggle={() => setOpen(o => (o === 'cancel' ? null : 'cancel'))}>
@@ -1068,7 +1068,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
             />
           )}
-        {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-line' }}>{combo.description}</p>}
+        {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-wrap' }}>{combo.description}</p>}
 
         </div>
       </div>
@@ -1466,7 +1466,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         <div style={{ flex: 1, minWidth: '200px' }}>
           <h2 className="builder-header-title">{slot.name}</h2>
           <p className="builder-header-tagline">{slot.tagline}</p>
-          {slot.description && <p style={{ marginTop: '0.4rem', fontSize: '0.9rem', color: '#555', whiteSpace: 'pre-line' }}>{slot.description}</p>}
+          {slot.description && <p style={{ marginTop: '0.4rem', fontSize: '0.9rem', color: '#555', whiteSpace: 'pre-wrap' }}>{slot.description}</p>}
         </div>
       </div>
 

@@ -15,7 +15,6 @@ interface GenderContextType {
 const DEFAULT_GENDERS: CatalogGender[] = [
   { id: "women", name: "Women", slug: "women", isActive: true },
   { id: "men", name: "Men", slug: "men", isActive: true },
-  { id: "kids", name: "Kids", slug: "kids", isActive: true },
 ];
 
 const GenderContext = createContext<GenderContextType>({

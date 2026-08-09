@@ -226,6 +226,34 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		setDragOverIdx(null);
 	};
 
+	const handleTouchMove = (e: React.TouchEvent) => {
+		if (dragIdx === null) return;
+		const touch = e.touches[0];
+		const element = document.elementFromPoint(touch.clientX, touch.clientY);
+		if (element) {
+			const parent = element.closest("[data-index]");
+			if (parent) {
+				const overIdx = parseInt(parent.getAttribute("data-index") || "", 10);
+				if (!isNaN(overIdx) && dragOverIdx !== overIdx) {
+					setDragOverIdx(overIdx);
+				}
+			}
+		}
+	};
+
+	const handleTouchEnd = () => {
+		if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+			setGalleryItems((prev) => {
+				const items = [...prev];
+				const [dragged] = items.splice(dragIdx, 1);
+				items.splice(dragOverIdx, 0, dragged);
+				return items;
+			});
+		}
+		setDragIdx(null);
+		setDragOverIdx(null);
+	};
+
 	const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
 	const [giftBoxImageFile, setGiftBoxImageFile] = useState<File | null>(null);
 
@@ -1374,9 +1402,13 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												<div
 													key={item.id}
 													draggable
+													data-index={idx}
 													onDragStart={() => handleDragStart(idx)}
 													onDragOver={(e) => handleDragOver(e, idx)}
 													onDrop={() => handleDrop(idx)}
+													onTouchStart={() => handleDragStart(idx)}
+													onTouchMove={handleTouchMove}
+													onTouchEnd={handleTouchEnd}
 													style={{
 														display: "flex",
 														flexDirection: "column",
@@ -1390,6 +1422,9 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														width: 90,
 														boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
 														transition: "all 0.15s ease",
+														touchAction: "none",
+														WebkitTouchCallout: "none",
+														userSelect: "none",
 													}}
 												>
 													<span
@@ -1436,6 +1471,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														<img
 															src={item.preview}
 															alt={`Gallery #${idx + 1}`}
+															draggable={false}
 															style={{
 																width: 76,
 																height: 76,
@@ -1443,6 +1479,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 																borderRadius: 6,
 																marginTop: 6,
 																marginBottom: 4,
+																pointerEvents: "none",
 															}}
 														/>
 													) : (

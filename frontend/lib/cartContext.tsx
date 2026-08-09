@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { applyCouponToCart } from '@/lib/catalogApi';
 import { getApiUrl } from '@/lib/api';
+import { usePathname } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface CartItem {
@@ -243,8 +244,14 @@ case 'ADD_ITEM': {
     case 'CLEAR_CART':
       return { ...INITIAL };
 
-    case 'HYDRATE':
-      return { ...action.payload, rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0, isDrawerOpen: false };
+    case 'HYDRATE': {
+      const hydState = { ...action.payload, rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0, isDrawerOpen: false };
+      if (hydState.discountCode === 'STAYWITHUS') {
+        hydState.discountCode = '';
+        hydState.discountAmount = 0;
+      }
+      return hydState;
+    }
 
     default:
       return state;
@@ -286,6 +293,7 @@ const STORAGE_KEY = 'maison_cart_v1';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
+  const pathname = usePathname();
 
   // Hydrate from localStorage once on mount
   useEffect(() => {
@@ -324,6 +332,14 @@ const addItem = useCallback(
   const applyDiscount  = useCallback((code: string, amount: number) => dispatch({ type: 'APPLY_DISCOUNT', payload: { code, amount } }), []);
   const removeDiscount = useCallback(() => dispatch({ type: 'REMOVE_DISCOUNT' }), []);
   const clearCart      = useCallback(() => dispatch({ type: 'CLEAR_CART' }), []);
+
+  useEffect(() => {
+    if (state.discountCode === 'STAYWITHUS') {
+      if (pathname && !pathname.startsWith('/cart') && !pathname.startsWith('/checkout')) {
+        removeDiscount();
+      }
+    }
+  }, [pathname, state.discountCode, removeDiscount]);
 
   const [offers, setOffers] = useState<any[]>([]);
 

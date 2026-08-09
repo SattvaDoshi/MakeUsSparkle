@@ -68,6 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		void loadUser(storedToken);
 	}, []);
 
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const handleLogout = () => {
+			signOut();
+		};
+		window.addEventListener("makeussparkle:logout", handleLogout);
+		return () => window.removeEventListener("makeussparkle:logout", handleLogout);
+	}, []);
+
 	const signIn = async (nextToken: string, nextUser?: AuthUser | null) => {
 		setToken(nextToken);
 		localStorage.setItem("authToken", nextToken);

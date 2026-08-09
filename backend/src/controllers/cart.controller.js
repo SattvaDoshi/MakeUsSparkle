@@ -1,4 +1,5 @@
 import cartService from "../services/cart.service.js";
+import { getSetting } from "../models/appSettings.model.js";
 
 export async function getCart(req, res) {
 	try {
@@ -61,4 +62,14 @@ export async function giftWrap(req, res) {
 	cart.giftWrap = { ...cart.giftWrap, ...req.body, isSelected: true };
 	await cart.save();
 	res.json({ success: true, cart });
+}
+
+export async function getCartBannerText(req, res) {
+	try {
+		const cartBannerText = await getSetting("cartBannerText", "");
+		res.json({ success: true, cartBannerText });
+	} catch (error) {
+		console.error("Get cart banner error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
 }

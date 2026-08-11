@@ -1319,23 +1319,35 @@ export default function CartPage() {
 
                       {item.selectedCharms && item.selectedCharms.length > 0 && (
                         <div style={{ background: 'var(--olive-50)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <div style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
-                            Selected Pieces ({item.selectedCharms.length})
+                          {/* Charm count + band header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{ fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase' as const, color: 'var(--mist)', fontWeight: 600 }}>
+                              {item.selectedCharms.length} Charms Selected
+                            </span>
+                            {/* Band badge */}
+                            {(item as any).band?.name && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 20 }}>
+                                {(item as any).band?.image ? (
+                                  <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                ) : <span>🪡</span>}
+                                {(item as any).band.name}
+                              </span>
+                            )}
+                            {/* Pack add-on badge */}
+                            {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
+                              <span style={{ fontSize: 9, color: 'var(--mist)', fontStyle: 'italic' }}>
+                                +₹{(item as any).selectionGroups[0].metadata.packAddOn} pack add-on
+                              </span>
+                            )}
                           </div>
                           {item.selectedCharms.map((selection, idx: number) => {
                             const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
-                            const charmPrice = typeof charm.price === 'number' && Number.isFinite(charm.price)
-                              ? charm.price
-                              : item.selectedCharms?.length
-                                ? item.price / item.selectedCharms.length
-                                : 0;
                             return (
-                            <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: idx < (item.selectedCharms?.length || 0) - 1 ? '1px solid rgba(61,74,34,.08)' : 'none' }}>
+                            <div key={(charm as any).id || (charm as any)._id || idx} style={{ display: 'flex', alignItems: 'center', padding: '4px 0', borderBottom: idx < (item.selectedCharms?.length || 0) - 1 ? '1px solid rgba(61,74,34,.08)' : 'none' }}>
                               <span style={{ fontSize: 12, color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 14 }}>{charm.emoji || '◈'}</span>
-                                {charm.name || 'Charm'}
+                                <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--olive-600)', color: 'var(--beige)', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                                {(charm as any).name || 'Charm'}
                               </span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--olive-600)' }}>₹{charmPrice.toLocaleString('en-IN')}</span>
                             </div>
                             );
                           })}

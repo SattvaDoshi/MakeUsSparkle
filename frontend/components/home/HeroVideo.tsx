@@ -33,17 +33,15 @@ const defaultMarqueeItems = [
   '✦ Free Gifts on all Orders',
 ];
 
-export default function xHero() {
-  const { gender: rawCategory, setGender: setActiveCategory } = useGender();
-  const activeCategory = (["women", "men", "kids"].includes(rawCategory)
-    ? rawCategory
-    : "women") as Category;
+export default function HeroVideoComponent() {
+  const { gender: rawCategory, setGender: setActiveCategory, genders } = useGender();
+  const activeCategory = rawCategory || "women";
     
   const { isAuthenticated, signOut } = useAuth();
   const router = useRouter();
 
   const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
-  const [heroContent, setHeroContent] = useState(defaultHeroContent);
+  const [heroContent, setHeroContent] = useState<Record<string, { image: string }>>(defaultHeroContent);
 
   useEffect(() => {
     async function loadHomeContent() {
@@ -54,11 +52,10 @@ export default function xHero() {
             setMarqueeItems(data.homeContent.marqueeItems);
           }
           if (data.homeContent.heroContent) {
-            setHeroContent({
-              women: { image: data.homeContent.heroContent.women?.image || defaultHeroContent.women.image },
-              men: { image: data.homeContent.heroContent.men?.image || defaultHeroContent.men.image },
-              kids: { image: data.homeContent.heroContent.kids?.image || defaultHeroContent.kids.image },
-            });
+            setHeroContent((prev) => ({
+              ...prev,
+              ...data.homeContent.heroContent
+            }));
           }
         }
       } catch (err) {
@@ -68,7 +65,7 @@ export default function xHero() {
     loadHomeContent();
   }, []);
 
-  const content = heroContent[activeCategory];
+  const content = heroContent[activeCategory] || defaultHeroContent.women;
 
   const handleAuthClick = () => {
     if (isAuthenticated) {
@@ -237,24 +234,15 @@ export default function xHero() {
 
       {/* ── STICKY GENDER TOGGLE BAR ── */}
       <div className="gender-toggle-bar">
-        <button
-          className={`gender-btn ${activeCategory === "women" ? "active-btn" : "inactive"}`}
-          onClick={() => setActiveCategory("women")}
-        >
-          Women
-        </button>
-        <button
-          className={`gender-btn ${activeCategory === "men" ? "active-btn" : "inactive"}`}
-          onClick={() => setActiveCategory("men")}
-        >
-          Men
-        </button>
-        <button
-          className={`gender-btn ${activeCategory === "kids" ? "active-btn" : "inactive"}`}
-          onClick={() => setActiveCategory("kids")}
-        >
-          Kids
-        </button>
+        {genders.map((g) => (
+          <button
+            key={g.slug}
+            className={`gender-btn ${activeCategory === g.slug ? "active-btn" : "inactive"}`}
+            onClick={() => setActiveCategory(g.slug)}
+          >
+            {g.name}
+          </button>
+        ))}
       </div>
 
       {/* ── Marquee ── */}

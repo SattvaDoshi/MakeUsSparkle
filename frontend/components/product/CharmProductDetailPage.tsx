@@ -144,7 +144,7 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -245,12 +245,12 @@ function GiftBoxUpsell({
         >
           {added ? (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
               Added
             </>
           ) : (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
               Add to order
             </>
           )}
@@ -265,9 +265,9 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="18" width="28" height="18" rx="2"/><path d="M32 22h4l6 8v6h-10V22z"/>
-        <circle cx="14" cy="38" r="3"/><circle cx="36" cy="38" r="3"/>
-        <path d="M4 26h28"/><path d="M10 14h4M16 11v6"/>
+        <rect x="4" y="18" width="28" height="18" rx="2" /><path d="M32 22h4l6 8v6h-10V22z" />
+        <circle cx="14" cy="38" r="3" /><circle cx="36" cy="38" r="3" />
+        <path d="M4 26h28" /><path d="M10 14h4M16 11v6" />
       </svg>
     ),
     title: 'Free Shipping', sub: 'On orders above ₹999',
@@ -275,8 +275,8 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/>
-        <path d="M20 22l3 3 6-6"/>
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z" />
+        <path d="M20 22l3 3 6-6" />
       </svg>
     ),
     title: 'COD Available', sub: 'On all orders',
@@ -284,8 +284,8 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 24h26M24 14l12 10-12 10"/>
-        <circle cx="38" cy="24" r="6"/><path d="M6 16v16"/>
+        <path d="M6 24h26M24 14l12 10-12 10" />
+        <circle cx="38" cy="24" r="6" /><path d="M6 16v16" />
       </svg>
     ),
     title: 'Express Delivery', sub: '2–3 business days',
@@ -302,7 +302,7 @@ const REVIEWS_DATA = [
 ];
 const RATING_DISTRIBUTION = [
   { stars: 5, count: 148, pct: 74 }, { stars: 4, count: 32, pct: 16 },
-  { stars: 3, count: 12, pct: 6 },  { stars: 2, count: 4, pct: 2 }, { stars: 1, count: 4, pct: 2 },
+  { stars: 3, count: 12, pct: 6 }, { stars: 2, count: 4, pct: 2 }, { stars: 1, count: 4, pct: 2 },
 ];
 const OVERALL_RATING = 4.8;
 const TOTAL_REVIEWS = 200;
@@ -319,14 +319,30 @@ const GOES_WELL_WITH = [
 function CharmSelector({
   onChange,
   charmPieceOptions = [],
+  charmPiecePricing = [],
+  totalCharms = 10,
+  perCharmPrice = 0,
 }: {
-  onChange: (data: { count: number; charms: string[] }) => void;
+  onChange: (data: { count: number; charms: string[]; piecePrice: number }) => void;
   charmPieceOptions?: number[];
+  charmPiecePricing?: { count: number; price: number }[];
   totalCharms?: number;
+  perCharmPrice?: number;
 }) {
-  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  // Use pricing matrix counts if available, else fallback to charmPieceOptions
+  const optionsList = charmPiecePricing.length > 0
+    ? charmPiecePricing.map(x => x.count).sort((a, b) => a - b)
+    : (charmPieceOptions.length > 0 ? charmPieceOptions : [1]);
   const [charmCount, setCharmCount] = useState(() => optionsList[0] || 1);
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
+
+  const getPiecePrice = (count: number) => {
+    if (charmPiecePricing.length > 0) {
+      const match = charmPiecePricing.find(x => x.count === count);
+      return match ? match.price : (perCharmPrice * count);
+    }
+    return perCharmPrice * count;
+  };
 
   // Sync count options change
   useEffect(() => {
@@ -346,8 +362,9 @@ function CharmSelector({
   }, [charmCount]);
 
   useEffect(() => {
-    onChange({ count: charmCount, charms: selectedCharms });
-  }, [charmCount, selectedCharms, onChange]);
+    onChange({ count: charmCount, charms: selectedCharms, piecePrice: getPiecePrice(charmCount) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [charmCount, selectedCharms]);
 
   const setCharm = (index: number, value: string) => {
     setSelectedCharms(prev => {
@@ -358,34 +375,44 @@ function CharmSelector({
   };
 
   const filledCount = selectedCharms.filter(Boolean).length;
-  const availableCharms = CHARM_OPTIONS; // includes the placeholder at index 0
+  const availableCharms = [
+    { value: '', label: 'Select a charm…' },
+    ...Array.from({ length: totalCharms || 10 }, (_, i) => ({
+      value: String(i + 1),
+      label: String(i + 1),
+    }))
+  ];
 
   return (
     <div className="charm-selector">
       {/* Count picker */}
       <p className="charm-section-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         Number of Charms
       </p>
       <div className="charm-count-grid" style={{ marginBottom: 20 }}>
-        {optionsList.map(n => (
-          <button
-            key={n}
-            type="button"
-            className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
-            onClick={() => setCharmCount(n)}
-          >
-            {n}
-          </button>
-        ))}
+        {optionsList.map(n => {
+          const pp = getPiecePrice(n);
+          return (
+            <button
+              key={n}
+              type="button"
+              className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
+              onClick={() => setCharmCount(n)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 10px' }}
+            >
+              <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1 }}>{n}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* One native <select> per slot */}
       <p className="charm-section-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
         </svg>
         Select Your Charms
         <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
@@ -451,7 +478,7 @@ function CharmSelector({
                     color: 'var(--mist)', pointerEvents: 'none',
                   }}
                 >
-                  <polyline points="6 9 12 15 18 9"/>
+                  <polyline points="6 9 12 15 18 9" />
                 </svg>
               </div>
 
@@ -491,7 +518,7 @@ function CharmSelector({
         <div className="charm-summary-strip" style={{ animation: 'charmFadeUp .35s ease both', marginTop: 16 }}>
           <div className="charm-summary-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--olive-500)', flexShrink: 0, marginTop: 1 }}>
-              <polyline points="20 6 9 17 4 12"/>
+              <polyline points="20 6 9 17 4 12" />
             </svg>
             <span>
               <strong>{filledCount}</strong> of <strong>{charmCount}</strong> selected
@@ -568,7 +595,7 @@ function ReviewsSection() {
               <div className="rev-meta">
                 <div className="rev-meta-row">
                   <span className="rev-name">{r.name}</span>
-                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
+                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
                 </div>
                 <div className="rev-meta-row" style={{ marginTop: 3 }}>
                   <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
@@ -588,7 +615,7 @@ function ReviewsSection() {
             <div className="rev-card-foot">
               <span className="rev-helpful-label">Helpful?</span>
               <button className="rev-helpful-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" /><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" /></svg>
                 {r.helpful}
               </button>
             </div>
@@ -646,7 +673,7 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
       <button className="acc-head" onClick={onToggle}>
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
       </button>
       <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
         <div ref={bodyRef} className="acc-body">
@@ -667,7 +694,7 @@ function EstimatedDeliveryBlock() {
   return (
     <div className="acc-delivery-estimate">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--olive-500)', marginTop: 1 }}>
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
       </svg>
       <div>
         <p className="acc-delivery-label">Estimated Delivery</p>
@@ -712,7 +739,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
   const filledCount = uploads.filter(Boolean).length;
   const allPhotosUploaded = filledCount === MAX_FILES;
 
-  useEffect(() => { 
+  useEffect(() => {
     if (onChange) {
       const validUploads = uploads.filter(Boolean).map(u => u!.preview);
       onChange({ wantCustom, uploads: validUploads, globalNote });
@@ -746,24 +773,24 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
     <>
       <div style={{ display: 'flex', gap: 10 }}>
         <button className={`cust-toggle-btn yes${wantCustom === true ? ' sel' : ''}`} onClick={() => { setWantCustom(true); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Yes, Customise
         </button>
         <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => { setWantCustom(false); setUploads(Array(MAX_FILES).fill(null)); setGlobalNote(''); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
           No, Standard
         </button>
       </div>
       {wantCustom === false && (
         <div className="cust-info-chip" style={{ marginTop: 12 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
           <p>You'll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours.</p>
         </div>
       )}
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
           <textarea className="cust-note-global" placeholder={`Add a personalisation note…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-          
+
           <div style={{ marginTop: 16 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 4 }}>
               Required Photos <span style={{ color: 'var(--red)' }}>*</span>
@@ -779,8 +806,8 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
                 const label = `Photo ${i + 1}`;
                 const upload = uploads[i];
                 return (
-<div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
-                    
+                  <div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+
                     {upload ? (
                       <>
                         <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
@@ -802,7 +829,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
           </div>
 
           <div className="cust-info-chip" style={{ marginTop: 16 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <p>Our team reviews within <strong>2 business hours</strong>. Customised items are <strong>non-returnable</strong> unless damaged.</p>
           </div>
         </div>
@@ -830,7 +857,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
     <div className="gift-msg-panel">
       <div className="gift-msg-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--gold)' }}>
-          <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+          <path d="M20 12v10H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
         </svg>
         <span className="gift-msg-title">Add a Gift Message</span>
         <span className="gift-msg-optional">Optional</span>
@@ -841,12 +868,12 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
           <select className="gift-msg-select" value={value.preset} onChange={e => onChange({ ...value, preset: e.target.value })}>
             {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
         </div>
       </div>
       <div className="gift-msg-free-wrap">
         <label className="gift-msg-label gift-msg-label--free">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Type your message
         </label>
         <textarea className="gift-msg-free-textarea" rows={3} maxLength={200} placeholder="Write a heartfelt note…" value={value.customMessage} onChange={e => onChange({ ...value, customMessage: e.target.value })} />
@@ -887,13 +914,14 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
+  const [charmData, setCharmData] = useState<{ count: number; charms: string[]; piecePrice: number }>({ count: 1, charms: [''], piecePrice: 0 });
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null; uploads: string[]; globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
-const [custValidationAttempt, setCustValidationAttempt] = useState(0);
-const MAX_CUST_PHOTOS = 5;
-const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+  const [selectedBand, setSelectedBand] = useState<{ name: string; image?: string; price?: number; salePrice?: number } | null>(null);
+  const [custValidationAttempt, setCustValidationAttempt] = useState(0);
+  const MAX_CUST_PHOTOS = 5;
+  const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
 
-  const handleCharmChange = useCallback((data: { count: number; charms: string[] }) => {
+  const handleCharmChange = useCallback((data: { count: number; charms: string[]; piecePrice: number }) => {
     setCharmData(data);
   }, []);
 
@@ -923,8 +951,8 @@ const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: 
   const mainImage = product?.mainImage;
   const images = product?.images ?? [];
 
-const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
-const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
+  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
+  const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
   useEffect(() => {
     if (!product) return;
     setActiveColor(0);
@@ -951,13 +979,24 @@ const custPhotosIncomplete = isCustomisable && customData.wantCustom === true &&
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const selectedCharmCount = charmData.count;
-  const basePrice = discountedPrice || price;
-  const baseOriginalPrice = originalPrice || price;
+  const basePrice = selectedBand?.salePrice || selectedBand?.price || discountedPrice || price;
+  const baseOriginalPrice = selectedBand?.price || originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
-  
-  const totalCharmPrice = basePrice + (perCharmPrice * selectedCharmCount);
-  const totalCharmOriginalPrice = baseOriginalPrice + (perCharmPrice * selectedCharmCount);
+  // New pricing: use charmPiecePricing flat add-on per selected count if available
+  const charmPiecePricing: { count: number; price: number }[] = product?.charmPiecePricing ?? [];
+  const packAddOn: number = charmPiecePricing.length > 0
+    ? (charmPiecePricing.find(x => x.count === selectedCharmCount)?.price ?? (perCharmPrice * selectedCharmCount))
+    : (perCharmPrice * selectedCharmCount);
+  const totalCharmPrice = basePrice + packAddOn;
+  const totalCharmOriginalPrice = baseOriginalPrice + packAddOn;
   const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
+
+  // Band options from variants (unique bands that have a name)
+  const bandOptions: { name: string; image?: string; price?: number; salePrice?: number }[] = Array.from(
+    new Map(
+      (variants as any[]).filter(v => v.bandName).map(v => [v.bandName, { name: v.bandName, image: v.bandExistingImage || v.image, price: v.price, salePrice: v.salePrice }])
+    ).values()
+  );
 
   const wished = product ? isWished(product.id) : false;
 
@@ -1011,13 +1050,17 @@ const custPhotosIncomplete = isCustomisable && customData.wantCustom === true &&
       })),
       metadata: {
         requestedCount: selectedCharmCount,
+        packAddOn,
+        band: selectedBand || undefined,
       },
     }],
     charms: charmData.charms.filter(Boolean),
     charmCount: selectedCharmCount,
-  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded]);
+    band: selectedBand || undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, selectedBand, packAddOn, selectedCharmCount, giftBoxAdded]);
 
- const handleAddToCart = useCallback(() => {
+  const handleAddToCart = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
@@ -1036,7 +1079,7 @@ const custPhotosIncomplete = isCustomisable && customData.wantCustom === true &&
     setTimeout(() => setSparkleAnim(false), 800);
   }, [addItem, product, qty, buildCartItem, custPhotosIncomplete]);
 
-const handleBuyNow = useCallback(() => {
+  const handleBuyNow = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
@@ -1570,7 +1613,7 @@ const handleBuyNow = useCallback(() => {
               <span className="pdp-badge">Best Seller</span>
               <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
               </button>
             </div>
@@ -1606,17 +1649,7 @@ const handleBuyNow = useCallback(() => {
                 </>
               )}
             </div>
-            {selectedCharmCount > 0 && (
-              <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
-                Base ₹{basePrice.toLocaleString('en-IN')} + ₹{perCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} charms
-              </p>
-            )}
-            {discountTag && (
-              <div className="pdp-offer">
-                <span className="pdp-offer-icon">🏷️</span>
-                <span className="pdp-offer-text">{discountTag}</span>
-              </div>
-            )}
+
 
             <div className="pdp-divider" />
 
@@ -1655,7 +1688,7 @@ const handleBuyNow = useCallback(() => {
             {product?.sizeChartImage && (
               <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+                  <path d="M21 6H3" /><path d="M3 10h18" /><path d="M3 14h18" /><path d="M21 18H3" />
                 </svg>
                 Size Chart
               </button>
@@ -1671,7 +1704,6 @@ const handleBuyNow = useCallback(() => {
               </div>
             )}
 
-            <div className="pdp-divider" />
 
             {/* ══════════════════════════════════════
                 CHARM SELECTOR — key new feature
@@ -1679,15 +1711,97 @@ const handleBuyNow = useCallback(() => {
             <div className="charm-selector">
               <div className="charm-selector-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>  
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
                 Build Your Charm Combination
               </div>
-              <p className="charm-selector-sub">
-                Pick how many charms you'd like, then choose each one individually. You can mix initials, symbols, birthstones, and more.
-              </p>
-              <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} />
+
+              <CharmSelector
+                onChange={handleCharmChange}
+                charmPieceOptions={product.charmPieceOptions}
+                charmPiecePricing={charmPiecePricing}
+                totalCharms={product.totalCharms}
+                perCharmPrice={perCharmPrice}
+              />
+
+              {/* Price breakdown strip */}
+              {packAddOn > 0 && (
+                <div style={{ marginTop: 12, padding: '10px 14px', background: 'linear-gradient(135deg,rgba(74,92,34,.06),rgba(201,168,76,.06))', borderRadius: 10, border: '1px solid rgba(74,92,34,.12)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--olive-900)', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: 'var(--mist)' }}>Base</span>
+                    <strong>₹{basePrice.toLocaleString('en-IN')}</strong>
+                  </span>
+                  <span style={{ color: 'var(--mist)' }}>+</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: 'var(--mist)' }}>{selectedCharmCount} pcs add-on</span>
+                    <strong style={{ color: 'var(--olive-600)' }}>₹{packAddOn.toLocaleString('en-IN')}</strong>
+                  </span>
+                  <span style={{ color: 'var(--mist)' }}>=</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--olive-900)' }}>₹{totalCharmPrice.toLocaleString('en-IN')}</span>
+                </div>
+              )}
             </div>
+
+            {/* Band / Chain Type selector — shown if product has band variants */}
+            {bandOptions.length > 0 && (
+              <>
+                <div className="pdp-divider" />
+                <div style={{ marginBottom: 4 }}>
+                  <p className="charm-section-label" style={{ marginBottom: 12 }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+                      <path d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                    Band / Chain Type
+                    {selectedBand && (
+                      <span className="charm-filled-badge" style={{ marginLeft: 6 }}>{selectedBand.name} selected</span>
+                    )}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {bandOptions.map(band => {
+                      const isSelected = selectedBand?.name === band.name;
+                      return (
+                        <button
+                          key={band.name}
+                          type="button"
+                          onClick={() => setSelectedBand(isSelected ? null : band)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 14px',
+                            border: `1.5px solid ${isSelected ? 'var(--olive-600)' : 'var(--beige-dkr)'}`,
+                            borderRadius: 50,
+                            background: isSelected ? 'var(--olive-50)' : 'white',
+                            cursor: 'pointer',
+                            fontFamily: "'Jost', sans-serif",
+                            fontSize: 12.5,
+                            fontWeight: isSelected ? 600 : 400,
+                            color: isSelected ? 'var(--olive-900)' : 'var(--ink)',
+                            transition: 'all .2s',
+                            boxShadow: isSelected ? '0 2px 8px rgba(74,92,34,.15)' : 'none',
+                          }}
+                        >
+                          {band.image ? (
+                            <img src={band.image} alt={band.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0 }} />
+                          ) : (
+                            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--beige-dkr)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🪡</span>
+                          )}
+                          {band.name}
+                          {(band.salePrice || band.price) ? (
+                            <span style={{ fontSize: 10.5, fontWeight: isSelected ? 600 : 500, color: isSelected ? 'var(--olive-600)' : 'var(--mist)', marginLeft: 2 }}>
+                              (₹{band.salePrice || band.price})
+                            </span>
+                          ) : null}
+                          {isSelected && (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="pdp-divider" />
 
@@ -1697,7 +1811,7 @@ const handleBuyNow = useCallback(() => {
                 <div className="pdp-cust-banner">
                   <div className="pdp-cust-banner-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                     Make it Yours — Customise this {category}
                   </div>
@@ -1748,13 +1862,13 @@ const handleBuyNow = useCallback(() => {
             <div className="pdp-cta-row">
               {Number(currentStock) <= 0 && (
                 <div style={{ padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                   Out of stock
                 </div>
               )}
               <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle}>
                 <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
                 {wished ? 'Wished' : 'Wishlist'}
               </button>
@@ -1762,7 +1876,7 @@ const handleBuyNow = useCallback(() => {
                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
                   style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
                   {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                 </button>
                 <Sparkles active={sparkleAnim} />
@@ -1770,7 +1884,7 @@ const handleBuyNow = useCallback(() => {
               <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
                 style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
               </button>
             </div>

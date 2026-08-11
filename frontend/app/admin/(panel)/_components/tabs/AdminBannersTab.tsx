@@ -19,6 +19,7 @@ type AdminHomeContent = {
 	}[];
 	genderContent?: {
 		women?: {
+			styleHeading?: string;
 			promoBanners?: {
 				tag?: string;
 				headline?: string;
@@ -29,6 +30,7 @@ type AdminHomeContent = {
 			}[];
 		};
 		men?: {
+			styleHeading?: string;
 			promoBanners?: {
 				tag?: string;
 				headline?: string;
@@ -39,6 +41,7 @@ type AdminHomeContent = {
 			}[];
 		};
 		kids?: {
+			styleHeading?: string;
 			promoBanners?: {
 				tag?: string;
 				headline?: string;
@@ -95,11 +98,14 @@ export default function AdminBannersTab({
 	const [promoBanners, setPromoBanners] = useState<any[]>([defaultPromo, defaultPromo]);
 	const [promoImageFiles, setPromoImageFiles] = useState<(File | null)[]>([null, null]);
 
+	const [styleHeading, setStyleHeading] = useState<string>("");
+
 	const [activeGender, setActiveGender] = useState<"women" | "men" | "kids">("women");
 
 	useEffect(() => {
 		if (homeContent) {
 			setMarqueeItems(homeContent.marqueeItems?.join(", ") || "");
+			setStyleHeading(homeContent.genderContent?.[activeGender]?.styleHeading || "");
 			const genderPromoBanners = homeContent.genderContent?.[activeGender]?.promoBanners || homeContent.promoBanners;
 			if (genderPromoBanners && genderPromoBanners.length > 0) {
 				setPromoBanners([
@@ -177,6 +183,7 @@ export default function AdminBannersTab({
 		formData.append("marqueeItems", JSON.stringify(parsedMarquee));
 		formData.append("promoBanners", JSON.stringify(promoBanners));
 		formData.append("gender", activeGender);
+		formData.append("styleHeading", styleHeading);
 
 		if (womenImageFile) formData.append("women", womenImageFile);
 		if (menImageFile) formData.append("men", menImageFile);
@@ -251,6 +258,17 @@ export default function AdminBannersTab({
 							{g.charAt(0).toUpperCase() + g.slice(1)}
 						</button>
 					))}
+				</div>
+
+				<div className="admin-form-grid" style={{ marginBottom: "2rem", background: "#f9f9f7", padding: "1.5rem", borderRadius: "8px", border: "1px solid #e8e8e8" }}>
+					<div className="admin-form-group">
+						<label>Style Section Heading ({activeGender})</label>
+						<input 
+							placeholder="E.g. Shop by Your Style" 
+							value={styleHeading} 
+							onChange={(e) => setStyleHeading(e.target.value)} 
+						/>
+					</div>
 				</div>
 
 				<h3 style={{ marginBottom: "1rem" }}>Promo Banners (Under Hero) - {activeGender.charAt(0).toUpperCase() + activeGender.slice(1)}</h3>

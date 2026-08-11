@@ -87,12 +87,15 @@ export interface CatalogProduct {
     salePrice?: number;
     image?: string;
     imagePublicId?: string;
+    bandName?: string;
+    bandExistingImage?: string;
   }>;
   faqs?: Array<{ question: string; answer: string }>;
   tags: string[];
   seoTags: string[];
   quantityVariants?: { label: string; quantity: number; price: number }[];
   charmPieceOptions?: number[];
+  charmPiecePricing?: { count: number; price: number }[];
   totalCharms?: number;
   perCharmPrice?: number;
   /** Per-product size chart image URL (Cloudinary). Null = use default static fallback. */
@@ -340,8 +343,10 @@ function normalizeProduct(
           salePrice: variant.salePrice !== undefined && variant.salePrice !== null ? Number(variant.salePrice) : undefined,
           image: variant.image,
           imagePublicId: variant.imagePublicId,
+          bandName: variant.bandName,
+          bandExistingImage: variant.bandImage,
         }))
-        .filter((variant) => variant.color || variant.size || variant.image)
+        .filter((variant) => variant.color || variant.size || variant.image || variant.bandName)
     : [];
 
   const colorsFromBackend = rawColors
@@ -430,6 +435,7 @@ function normalizeProduct(
     tags: Array.isArray(item.tags) ? item.tags : [],
     seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
     charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
+    charmPiecePricing: Array.isArray(item.charmPiecePricing) ? item.charmPiecePricing : [],
     totalCharms: Number(item.totalCharms ?? 0),
     perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,

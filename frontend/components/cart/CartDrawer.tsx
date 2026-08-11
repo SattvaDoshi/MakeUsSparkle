@@ -319,8 +319,25 @@ export default function CartDrawer() {
 
                   {item.selectedCharms && item.selectedCharms.length > 0 && (
                     <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
-                        {item.selectedCharms.length} Pieces
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                        <span style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600 }}>
+                          {item.selectedCharms.length} Pieces
+                        </span>
+                        {/* Band badge */}
+                        {(item as any).band?.name && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 6px', borderRadius: 12 }}>
+                            {(item as any).band?.image ? (
+                              <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 12, height: 12, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            ) : <span>🪡</span>}
+                            {(item as any).band.name}
+                          </span>
+                        )}
+                        {/* Pack add-on badge */}
+                        {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
+                          <span style={{ fontSize: 8, color: 'var(--mist)', fontStyle: 'italic' }}>
+                            +₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
+                          </span>
+                        )}
                       </div>
                       {item.selectedCharms.map((selection, idx: number) => {
                         const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;

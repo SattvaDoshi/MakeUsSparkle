@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { fetchCatalogStyles, slugifyCatalog } from "@/lib/catalogApi";
+import { apiRequest } from "@/lib/api";
 
 // Swiper imports
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -28,6 +29,7 @@ export default function ShopByStyle() {
   const router = useRouter();
   const { gender } = useGender();
   const [dynamicStyles, setDynamicStyles] = useState<StyleItem[]>([]);
+  const [styleHeading, setStyleHeading] = useState<string>("");
   const [loading, setLoading] = useState(true);
   // show only backend-provided styles; do not fall back to local templates
   const styles: StyleItem[] = dynamicStyles;
@@ -37,9 +39,26 @@ export default function ShopByStyle() {
     let alive = true;
     // eslint-disable-next-line no-console
     console.log("StyleSection effect running, selected gender:", gender);
-    fetchCatalogStyles()
-      .then((api) => {
+    
+    Promise.all([
+      fetchCatalogStyles(),
+      apiRequest<{ success: boolean; homeContent: any }>("/home-content").catch(() => null)
+    ])
+      .then(([api, homeContentResult]) => {
         if (!alive) return;
+        
+        if (homeContentResult?.success && homeContentResult.homeContent) {
+          const hc = homeContentResult.homeContent;
+          const heading = hc.genderContent?.[gender]?.styleHeading;
+          if (heading) {
+            setStyleHeading(heading);
+          } else {
+            setStyleHeading(gender === "men" ? "Shop by His Style" : gender === "kids" ? "Shop by Kids Style" : "Shop by Your Style");
+          }
+        } else {
+          setStyleHeading(gender === "men" ? "Shop by His Style" : gender === "kids" ? "Shop by Kids Style" : "Shop by Your Style");
+        }
+
         if (!Array.isArray(api) || api.length === 0) {
           setDynamicStyles([] as StyleItem[]);
           setLoading(false);
@@ -244,7 +263,7 @@ export default function ShopByStyle() {
       <section className="sbs" aria-label="Shop by Style">
         <div className="sbs__hdr">
           <h2 className="sbs__title">
-            {gender === "men" ? "Shop by His Style" : "Shop by Your Style"}
+            {styleHeading || (gender === "men" ? "Shop by His Style" : "Shop by Your Style")}
           </h2>
         </div>
 

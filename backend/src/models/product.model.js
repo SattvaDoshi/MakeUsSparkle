@@ -9,6 +9,9 @@ const variantSchema = new mongoose.Schema(
     image: { type: String }, // Cloudinary URL for this variant's image
     imagePublicId: { type: String },
     stock: { type: Number, default: 0 },
+    bandName: { type: String }, // Name of the band (for charms)
+    bandImage: { type: String }, // Band image URL
+    bandImagePublicId: { type: String }, // Cloudinary ID
   },
   { _id: true }
 );
@@ -53,6 +56,12 @@ const productSchema = new mongoose.Schema(
     // The selectable number-of-pieces options shown to the user (e.g. [3, 5, 7]).
     // An empty array means no piece-count selection is required.
     charmPieceOptions: { type: [Number], default: [] },
+    charmPiecePricing: [
+      {
+        count: { type: Number },
+        price: { type: Number },
+      }
+    ],
     totalCharms: { type: Number, default: 0 },
     perCharmPrice: { type: Number, default: 0 },
 

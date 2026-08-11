@@ -1000,6 +1000,21 @@ export default function CheckoutPage() {
                     </div>
                     {item.selectedCharms && item.selectedCharms.length > 0 && (
                       <div className="ck-charms">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                          <span style={{ fontSize: 9, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600 }}>
+                            {item.selectedCharms.length} Charms Selected
+                          </span>
+                          {(item as any).band?.name && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 6px', borderRadius: 12 }}>
+                              🪡 {(item as any).band.name}
+                            </span>
+                          )}
+                          {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
+                            <span style={{ fontSize: 9, color: 'var(--mist)', fontStyle: 'italic' }}>
+                              +₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
+                            </span>
+                          )}
+                        </div>
                         {item.selectedCharms.map((selection, idx: number) => {
                           const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
                           const charmPrice = typeof charm.price === 'number' && Number.isFinite(charm.price) ? charm.price : item.selectedCharms?.length ? item.price / item.selectedCharms.length : 0;

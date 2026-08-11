@@ -221,6 +221,21 @@ class ProductService {
 	}
 
 	/**
+	 * Parse charmPiecePricing JSON string
+	 */
+	_parseCharmPiecePricing(productData) {
+		try {
+			if (typeof productData.charmPiecePricing === "string") {
+				return JSON.parse(productData.charmPiecePricing);
+			}
+			if (Array.isArray(productData.charmPiecePricing)) {
+				return productData.charmPiecePricing;
+			}
+		} catch (_) {}
+		return [];
+	}
+
+	/**
 	 * Parse styles JSON string
 	 */
 	_parseStyles(productData) {
@@ -345,13 +360,22 @@ class ProductService {
 
 			for (const v of rawVariants) {
 				const variantFile = filesMap[`variantImage_${v.variantIndex}`];
+				const bandFile = filesMap[`variantBandImage_${v.variantIndex}`];
 				let variantImage = v.existingImage || null;
 				let variantImagePublicId = v.existingImagePublicId || null;
+				let bandImage = v.bandExistingImage || null;
+				let bandImagePublicId = v.bandExistingImagePublicId || null;
 
 				if (variantFile && variantFile[0]) {
 					const uploaded = await imageService.uploadImage(variantFile[0].buffer, "products/variants");
 					variantImage = uploaded.url;
 					variantImagePublicId = uploaded.publicId;
+				}
+
+				if (bandFile && bandFile[0]) {
+					const uploaded = await imageService.uploadImage(bandFile[0].buffer, "products/variants/bands");
+					bandImage = uploaded.url;
+					bandImagePublicId = uploaded.publicId;
 				}
 
 				variants.push({
@@ -362,6 +386,9 @@ class ProductService {
 					image: variantImage,
 					imagePublicId: variantImagePublicId,
 					stock: v.stock ? Number(v.stock) : 0,
+					bandName: v.bandName || undefined,
+					bandImage,
+					bandImagePublicId,
 				});
 			}
 
@@ -391,6 +418,7 @@ class ProductService {
 
 			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
+			const charmPiecePricing = this._parseCharmPiecePricing(productData);
 			const volumeDiscounts = this._parseVolumeDiscounts(productData);
 			const styles = this._parseStyles(productData);
 			const quantityVariants = this._parseQuantityVariants(productData);
@@ -413,6 +441,7 @@ class ProductService {
 				numberOfProducts: productData.numberOfProducts ? Number(productData.numberOfProducts) : 1,
 				quantityVariants,
 				charmPieceOptions,
+				charmPiecePricing,
 				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
 				perCharmPrice: productData.perCharmPrice ? Number(productData.perCharmPrice) : 0,
 				stock: productData.stock ? Number(productData.stock) : undefined,
@@ -598,8 +627,11 @@ class ProductService {
 
 			for (const v of rawVariants) {
 				const variantFile = filesMap[`variantImage_${v.variantIndex}`];
+				const bandFile = filesMap[`variantBandImage_${v.variantIndex}`];
 				let variantImage = v.existingImage || null;
 				let variantImagePublicId = v.existingImagePublicId || null;
+				let bandImage = v.bandExistingImage || null;
+				let bandImagePublicId = v.bandExistingImagePublicId || null;
 
 				if (variantFile && variantFile[0]) {
 					// Delete old variant image if replaced
@@ -611,7 +643,17 @@ class ProductService {
 					variantImagePublicId = uploaded.publicId;
 				}
 
+				if (bandFile && bandFile[0]) {
+					if (bandImagePublicId) {
+						await imageService.deleteImage(bandImagePublicId).catch((e) => console.error("Could not delete old band image", e));
+					}
+					const uploaded = await imageService.uploadImage(bandFile[0].buffer, "products/variants/bands");
+					bandImage = uploaded.url;
+					bandImagePublicId = uploaded.publicId;
+				}
+
 				if (variantImage) keptVariantImages.add(variantImage);
+				if (bandImage) keptVariantImages.add(bandImage);
 
 				variants.push({
 					color: v.color || null,
@@ -621,6 +663,9 @@ class ProductService {
 					image: variantImage,
 					imagePublicId: variantImagePublicId,
 					stock: v.stock ? Number(v.stock) : 0,
+					bandName: v.bandName || undefined,
+					bandImage,
+					bandImagePublicId,
 				});
 			}
 
@@ -679,6 +724,7 @@ class ProductService {
 
 			const sizes = this._parseSizes(updateData);
 			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
+			const charmPiecePricing = this._parseCharmPiecePricing(updateData);
 			const volumeDiscounts = this._parseVolumeDiscounts(updateData);
 
 			const updatedProduct = await Product.findByIdAndUpdate(
@@ -697,6 +743,7 @@ class ProductService {
 					volumeDiscounts,
 					numberOfProducts: updateData.numberOfProducts !== undefined ? Number(updateData.numberOfProducts) : product.numberOfProducts,
 					charmPieceOptions,
+					charmPiecePricing,
 					totalCharms: updateData.totalCharms !== undefined ? Number(updateData.totalCharms) : product.totalCharms,
 					perCharmPrice: updateData.perCharmPrice !== undefined ? Number(updateData.perCharmPrice) : product.perCharmPrice,
 					stock: updateData.stock ? Number(updateData.stock) : undefined,

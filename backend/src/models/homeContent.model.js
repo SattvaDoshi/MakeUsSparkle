@@ -43,6 +43,7 @@ const homeContentSchema = new mongoose.Schema(
     ],
     genderContent: {
       women: {
+        styleHeading: { type: String, default: "Shop by Your Style" },
         promoBanners: [
           {
             tag: { type: String },
@@ -56,6 +57,7 @@ const homeContentSchema = new mongoose.Schema(
         ]
       },
       men: {
+        styleHeading: { type: String, default: "Shop by His Style" },
         promoBanners: [
           {
             tag: { type: String },
@@ -69,6 +71,7 @@ const homeContentSchema = new mongoose.Schema(
         ]
       },
       kids: {
+        styleHeading: { type: String, default: "Shop by Kids Style" },
         promoBanners: [
           {
             tag: { type: String },

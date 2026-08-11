@@ -731,10 +731,24 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 																				{/* Selected Charms */}
 																				{!item.selectionGroups?.length && item.selectedCharms && item.selectedCharms.length > 0 && (
 																					<div className="ao-nested">
-																						<div className="ao-nested-title">Selected Charms ({item.selectedCharms.length})</div>
+																						<div className="ao-nested-title">
+																							Charms — {item.selectedCharms.length} pcs
+																							{/* Band info */}
+																							{(item as any).band?.name && (
+																								<span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 12 }}>
+																									🪡 Band: {(item as any).band.name}
+																								</span>
+																							)}
+																							{/* Pack add-on from selectionGroups metadata */}
+																							{(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
+																								<span style={{ marginLeft: 8, fontSize: 10, color: 'var(--mist)', fontStyle: 'italic' }}>
+																									+₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
+																								</span>
+																							)}
+																						</div>
 																						{item.selectedCharms.map((c: any, i) => (
 																							<div key={i} className="ao-nested-item">
-																								<span style={{ fontSize: 16 }}>{c.emoji || "✨"}</span>
+																								<span style={{ fontSize: 11, fontWeight: 700, color: 'var(--mist)' }}>#{i + 1}</span>
 																								<span className="ao-nested-content">
 																									<span className="ao-nested-name">{typeof c === "string" ? c : c.name || "Charm"}</span>
 																									{c.price > 0 && <span className="ao-nested-price"> · ₹{c.price}</span>}

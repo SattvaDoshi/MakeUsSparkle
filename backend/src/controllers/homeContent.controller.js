@@ -61,6 +61,12 @@ export async function updateHomeContent(req, res) {
 
     const targetGender = req.body.gender; // "women", "men", or "kids"
 
+    if (targetGender && req.body.styleHeading !== undefined) {
+      if (!homeContent.genderContent) homeContent.genderContent = {};
+      if (!homeContent.genderContent[targetGender]) homeContent.genderContent[targetGender] = {};
+      homeContent.genderContent[targetGender].styleHeading = req.body.styleHeading;
+    }
+
     if (req.body.promoBanners) {
       try {
         const parsedPromo = JSON.parse(req.body.promoBanners);

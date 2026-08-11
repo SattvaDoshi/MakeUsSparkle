@@ -25,6 +25,9 @@ type Variant = {
 	existingImage?: string;
 	existingImagePublicId?: string;
 	imageFile?: File;
+	bandName?: string;
+	bandExistingImage?: string;
+	bandImageFile?: File | null;
 };
 
 type AdminProductModalProps = {
@@ -136,11 +139,20 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		paymentMode: (initialData as any)?.paymentMode || 'cod_allowed',
 	});
 
-	// Charm piece-count options (e.g. [3, 5, 7])
-	const [charmPieceOptions, setCharmPieceOptions] = useState<number[]>(
-		Array.isArray(initialData?.charmPieceOptions) ? initialData.charmPieceOptions : []
-	);
-	const [newPieceInput, setNewPieceInput] = useState("");
+	// Charm piece-count pricing (e.g. [{count:3,price:50},{count:5,price:80}])
+	const [charmPiecePricing, setCharmPiecePricing] = useState<{ count: number; price: number }[]>(() => {
+		// Migrate from old charmPieceOptions + perCharmPrice if needed
+		if (Array.isArray(initialData?.charmPiecePricing) && initialData.charmPiecePricing.length > 0) {
+			return initialData.charmPiecePricing;
+		}
+		// Legacy migration: if old charmPieceOptions exist, seed with 0 price
+		if (Array.isArray(initialData?.charmPieceOptions) && initialData.charmPieceOptions.length > 0) {
+			return initialData.charmPieceOptions.map((n: number) => ({ count: n, price: 0 }));
+		}
+		return [];
+	});
+	const [newPieceCount, setNewPieceCount] = useState("");
+	const [newPiecePrice, setNewPiecePrice] = useState("");
 
 	// Volume discounts
 	const [volumeDiscounts, setVolumeDiscounts] = useState<{ quantity: number; discountPercentage: number }[]>(
@@ -172,6 +184,8 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				stock: v.stock || 0,
 				existingImage: v.image,
 				existingImagePublicId: v.imagePublicId,
+				bandName: v.bandName || "",
+				bandExistingImage: v.bandExistingImage || (v.band?.image) || undefined,
 			}));
 		}
 		return [];
@@ -307,14 +321,17 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	}, [form.category, categories, CHARM_KEYCHAIN_CATEGORY_NAMES]);
 
 	const addPieceOption = () => {
-		const n = parseInt(newPieceInput, 10);
-		if (!Number.isFinite(n) || n <= 0 || charmPieceOptions.includes(n)) return;
-		setCharmPieceOptions(prev => [...prev, n].sort((a, b) => a - b));
-		setNewPieceInput("");
+		const n = parseInt(newPieceCount, 10);
+		const p = parseFloat(newPiecePrice);
+		if (!Number.isFinite(n) || n <= 0) return;
+		if (charmPiecePricing.some(x => x.count === n)) return;
+		setCharmPiecePricing(prev => [...prev, { count: n, price: Number.isFinite(p) ? p : 0 }].sort((a, b) => a.count - b.count));
+		setNewPieceCount("");
+		setNewPiecePrice("");
 	};
 
-	const removePieceOption = (value: number) => {
-		setCharmPieceOptions(prev => prev.filter(v => v !== value));
+	const removePieceOption = (count: number) => {
+		setCharmPiecePricing(prev => prev.filter(x => x.count !== count));
 	};
 
 	const filteredCategories = categories.filter((category) =>
@@ -358,7 +375,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		const newIndex = Math.max(...variants.map((v) => v.variantIndex), -1) + 1;
 		setVariants((prev) => [
 			...prev,
-			{ variantIndex: newIndex, color: "", size: "", price: "", salePrice: "", stock: 0 },
+			{ variantIndex: newIndex, color: "", size: "", price: "", salePrice: "", stock: 0, bandName: "", bandImageFile: null },
 		]);
 	};
 
@@ -432,9 +449,12 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			formData.append("volumeDiscounts", JSON.stringify(volumeDiscounts));
 			formData.append("quantityVariants", JSON.stringify(quantityVariants));
 			formData.append("numberOfProducts", String(form.numberOfProducts));
-			formData.append("charmPieceOptions", JSON.stringify(charmPieceOptions));
+			// New charm piece pricing (count + flat price per option)
+			formData.append("charmPiecePricing", JSON.stringify(charmPiecePricing));
+			// Keep legacy fields for backward compat
+			formData.append("charmPieceOptions", JSON.stringify(charmPiecePricing.map(x => x.count)));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
-			formData.append("perCharmPrice", String(form.perCharmPrice || "0"));
+			formData.append("perCharmPrice", String(charmPiecePricing[0]?.price || "0"));
 			formData.append("stock", String(form.stock));
 			formData.append("sizeChartSteps", form.sizeChartSteps);
 			if (form.gender) formData.append("gender", form.gender);
@@ -473,10 +493,18 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				existingImage: v.existingImage,
 				existingImagePublicId: v.existingImagePublicId,
 				variantIndex: v.variantIndex,
+				bandName: v.bandName || undefined,
+				bandExistingImage: v.bandExistingImage || undefined,
 			}));
 			if (processedVariants.length > 0) {
 				formData.append("variants", JSON.stringify(processedVariants));
 			}
+			// Band images per variant
+			variants.forEach((v) => {
+				if (v.bandImageFile) {
+					formData.append(`variantBandImage_${v.variantIndex}`, v.bandImageFile);
+				}
+			});
 
 			// Images
 			if (mainImageFile) {
@@ -1046,7 +1074,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									</button>
 								</div>
 
-								{/* Number of Pieces — only for Custom Charms / Keychains */}
+								{/* Number of Pieces with Per-Option Pricing — only for Custom Charms / Keychains */}
 								{isCharmOrKeychain && (
 									<div
 										style={{
@@ -1062,19 +1090,19 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 										<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
 											<span style={{ fontSize: "1rem" }}>💎</span>
 											<span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#3d4a20" }}>
-												Number of Pieces Options
+												Piece Options with Pricing
 											</span>
 											<span style={{ fontSize: "0.75rem", color: "#6b6b60", marginLeft: 4 }}>
-												— customers pick one (e.g. 3, 5, 7)
+												— e.g. 3 pcs → ₹50, 5 pcs → ₹80 (flat add-on to base price)
 											</span>
 										</div>
 
 										{/* Current options as chips */}
-										{charmPieceOptions.length > 0 ? (
+										{charmPiecePricing.length > 0 ? (
 											<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-												{charmPieceOptions.map((val) => (
+												{charmPiecePricing.map((opt) => (
 													<span
-														key={val}
+														key={opt.count}
 														style={{
 															display: "inline-flex",
 															alignItems: "center",
@@ -1088,10 +1116,10 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 															letterSpacing: "0.04em",
 														}}
 													>
-														{val} pcs
+														{opt.count} pcs — ₹{opt.price}
 														<button
 															type="button"
-															onClick={() => removePieceOption(val)}
+															onClick={() => removePieceOption(opt.count)}
 															style={{
 																background: "rgba(255,255,255,0.25)",
 																border: "none",
@@ -1107,7 +1135,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 																padding: 0,
 																lineHeight: 1,
 															}}
-															aria-label={`Remove ${val}`}
+															aria-label={`Remove ${opt.count} pcs`}
 														>
 															×
 														</button>
@@ -1116,29 +1144,51 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											</div>
 										) : (
 											<p style={{ fontSize: "0.8rem", color: "#9b9b8c", margin: 0 }}>
-												No options added yet. Add at least one (e.g. 3, 5, 7).
+												No options added yet. Add piece counts with their add-on price (e.g. 3 pcs → ₹50).
 											</p>
 										)}
 
-										{/* Add new option */}
-										<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-											<input
-												type="number"
-												min={1}
-												max={99}
-												placeholder="e.g. 3"
-												value={newPieceInput}
-												onChange={(e) => setNewPieceInput(e.target.value)}
-												onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPieceOption(); } }}
-												style={{
-													width: 90,
-													padding: "0.5rem 0.7rem",
-													border: "1px solid #b5c27a",
-													borderRadius: "6px",
-													fontSize: "0.95rem",
-													background: "#fff",
-												}}
-											/>
+										{/* Add new piece-count + price option */}
+										<div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+											<div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+												<label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#6b6b60", textTransform: "uppercase", letterSpacing: "0.05em" }}>No. of Pieces</label>
+												<input
+													type="number"
+													min={1}
+													max={99}
+													placeholder="e.g. 3"
+													value={newPieceCount}
+													onChange={(e) => setNewPieceCount(e.target.value)}
+													onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPieceOption(); } }}
+													style={{
+														width: 90,
+														padding: "0.5rem 0.7rem",
+														border: "1px solid #b5c27a",
+														borderRadius: "6px",
+														fontSize: "0.95rem",
+														background: "#fff",
+													}}
+												/>
+											</div>
+											<div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+												<label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#6b6b60", textTransform: "uppercase", letterSpacing: "0.05em" }}>Add-on Price (₹)</label>
+												<input
+													type="number"
+													min={0}
+													placeholder="e.g. 50"
+													value={newPiecePrice}
+													onChange={(e) => setNewPiecePrice(e.target.value)}
+													onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPieceOption(); } }}
+													style={{
+														width: 110,
+														padding: "0.5rem 0.7rem",
+														border: "1px solid #b5c27a",
+														borderRadius: "6px",
+														fontSize: "0.95rem",
+														background: "#fff",
+													}}
+												/>
+											</div>
 											<button
 												type="button"
 												onClick={addPieceOption}
@@ -1152,13 +1202,12 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 													fontSize: "0.85rem",
 													cursor: "pointer",
 													whiteSpace: "nowrap",
+													alignSelf: "flex-end",
+													height: 38,
 												}}
 											>
 												+ Add Option
 											</button>
-											<span style={{ fontSize: "0.78rem", color: "#9b9b8c" }}>
-												Press Enter or click Add
-											</span>
 										</div>
 
 										{/* Total number of charms available */}
@@ -1183,30 +1232,6 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											/>
 											<span style={{ fontSize: "0.75rem", color: "#6b6b60" }}>
 												— Customers will choose their charms from Charm 1 to Charm N based on this count
-											</span>
-										</div>
-
-										<div style={{ display: "grid", gap: "0.4rem", marginTop: "0.5rem" }}>
-											<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>
-												Price Per Charm (₹)
-											</label>
-											<input
-												type="number"
-												min={0}
-												value={form.perCharmPrice}
-												onChange={(e) => setForm(f => ({ ...f, perCharmPrice: e.target.value }))}
-												placeholder="e.g. 50"
-												style={{
-													width: "100%",
-													padding: "0.6rem 0.8rem",
-													border: "1.5px solid #d9cdb8",
-													borderRadius: "8px",
-													fontSize: "0.95rem",
-													background: "#fff",
-												}}
-											/>
-											<span style={{ fontSize: "0.75rem", color: "#6b6b60" }}>
-												— Added to the base price per charm selected
 											</span>
 										</div>
 									</div>
@@ -2062,6 +2087,62 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 														/>
 													</div>
 												</div>
+
+												{/* Band Option — only for Charm/Keychain category */}
+												{isCharmOrKeychain && (
+													<div style={{ borderTop: "1px dashed #d4d4c8", paddingTop: "0.9rem", display: "grid", gap: "0.6rem" }}>
+														<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+															<span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#3d4a20" }}>🪡 Band / Chain Type</span>
+															<span style={{ fontSize: "0.72rem", color: "#9b9b8c" }}>— e.g. Silver Plain, Gold Chain, Leather</span>
+														</div>
+														<div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+															<div style={{ display: "grid", gap: "0.2rem", flex: 1, minWidth: 140 }}>
+																<label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#6b6b60", textTransform: "uppercase", letterSpacing: "0.05em" }}>Band Name</label>
+																<input
+																	type="text"
+																	placeholder="e.g. Silver Plain"
+																	value={variant.bandName || ""}
+																	onChange={(e) => updateVariant(idx, "bandName", e.target.value)}
+																	style={{ padding: "0.5rem 0.7rem", border: "1px solid #d4d4c8", borderRadius: "6px", fontSize: "0.9rem", width: "100%", boxSizing: "border-box" as const }}
+																/>
+															</div>
+															<div style={{ display: "grid", gap: "0.2rem", flex: "0 0 auto" }}>
+																<label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#6b6b60", textTransform: "uppercase", letterSpacing: "0.05em" }}>Band Photo (opt)</label>
+																<div style={{ position: "relative", display: "inline-block" }}>
+																	<input
+																		type="file"
+																		accept="image/*"
+																		id={`band-img-${variant.variantIndex}`}
+																		style={{ display: "none" }}
+																		onChange={(e) => {
+																			if (e.target.files?.[0]) {
+																				updateVariant(idx, "bandImageFile", e.target.files[0]);
+																			}
+																		}}
+																	/>
+																	{(variant.bandImageFile || variant.bandExistingImage) ? (
+																		<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+																			<img
+																				src={variant.bandImageFile ? URL.createObjectURL(variant.bandImageFile) : variant.bandExistingImage}
+																				alt="Band"
+																				style={{ width: 42, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid #d4d4c8" }}
+																			/>
+																			<button type="button" onClick={() => { updateVariant(idx, "bandImageFile", null); updateVariant(idx, "bandExistingImage", undefined); }}
+																				style={{ background: "#ffebee", color: "#c62828", border: "none", borderRadius: 4, padding: "2px 6px", cursor: "pointer", fontSize: 11 }}>
+																				Remove
+																			</button>
+																		</div>
+																	) : (
+																		<label htmlFor={`band-img-${variant.variantIndex}`} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.45rem 0.8rem", border: "1px dashed #b5c27a", borderRadius: 6, fontSize: "0.8rem", color: "#4a5c22", background: "#fff" }}>
+																			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+																			Upload Photo
+																		</label>
+																	)}
+																</div>
+															</div>
+														</div>
+													</div>
+												)}
 
 												<div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", borderTop: "1px solid #e8ead0", paddingTop: "1rem" }}>
 													<div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", flex: 1 }}>

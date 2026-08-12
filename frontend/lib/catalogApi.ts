@@ -178,6 +178,8 @@ interface BackendProduct {
     salePrice?: number;
     image?: string;
     imagePublicId?: string;
+    bandName?: string;
+    bandImage?: string;
   }>;
   category?: BackendMaybeRef;
   subCategory?: BackendMaybeRef;
@@ -191,6 +193,7 @@ interface BackendProduct {
   faqs?: Array<{ question: string; answer: string }>;
   reviews?: BackendReview[];
   charmPieceOptions?: number[];
+  charmPiecePricing?: Array<{ count: number; price: number }>;
   totalCharms?: number;
   perCharmPrice?: number;
   sizeChartImage?: string | null;

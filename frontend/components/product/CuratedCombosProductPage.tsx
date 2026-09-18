@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -320,6 +319,22 @@ function CompactCustSummary({ variant }: { variant: ProductVariant }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   LIGHTBOX — full-screen enlarged image preview
+───────────────────────────────────────────────────────────── */
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="lightbox-backdrop" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose} aria-label="Close preview">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <img src={src} alt="Enlarged preview" className="lightbox-img" onClick={e => e.stopPropagation()} />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
    PRICING TIER SELECTOR — side-by-side pill buttons
 ───────────────────────────────────────────────────────────── */
 interface PricingTierSelectorProps {
@@ -575,7 +590,11 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
       )}
 
       <div className="combo-rev-controls">
-        <div>{filterStar !== null && <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>}</div>
+        {filterStar !== null && (
+          <div className="combo-rev-controls-filter">
+            <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>
+          </div>
+        )}
         {!showForm && <button className="combo-rev-write-btn" onClick={() => setShowForm(true)}>Write a Review</button>}
       </div>
 
@@ -668,6 +687,7 @@ interface CustomiserProps {
 function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlow, hidePrice, hideVariants }: CustomiserProps) {
   const [local, setLocal] = useState<ProductVariant>({ ...variant });
   const [showValidation, setShowValidation] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.currentTarget.files || []);
@@ -762,7 +782,12 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                       disabled={opt.stock === 0}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto', flexShrink: 0, opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}>
                       {opt.image && (
-                        <img src={opt.image} alt={opt.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                        <span
+                          className="chip-img-wrap"
+                          onClick={(e) => { e.stopPropagation(); setLightboxImg(opt.image!); }}
+                        >
+                          <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </span>
                       )}
                       <span>{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
                     </button>
@@ -881,6 +906,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
           </button>
         </div>
       </div>
+      {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
@@ -958,6 +984,7 @@ interface PresetHamperSectionProps {
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
   const [showValidation, setShowValidation] = useState(false);
   const [activeComboImgIdx, setActiveComboImgIdx] = useState(0);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const allComboImages = useMemo(() => {
     if (!combo) return [];
     return [safeImageSrc(combo.image), ...(combo.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
@@ -982,6 +1009,17 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     const newArr = [...arr];
     newArr.splice(index, 1);
     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
+  };
+
+  /** Select an option for a given product's variant group, always merging into that
+   *  product's own existing selections — never touches any other product's entry, so
+   *  every piece keeps its highlighted (selected) swatch independently of the others. */
+  const selectVariantOption = (pid: string, variantName: string, optionName: string) => {
+    const current = variants[pid] || {};
+    onVariantChange(pid, {
+      ...current,
+      selections: { ...(current.selections || {}), [variantName]: optionName },
+    });
   };
 
   const products = combo.includedProducts;
@@ -1017,7 +1055,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
       <div className="hamper-main-block">
         <div>
-          <div className="hamper-main-img-wrap">
+          <div className="hamper-main-img-wrap" onClick={() => setLightboxImg(allComboImages[activeComboImgIdx] || safeImageSrc(combo.image))} style={{ cursor: 'zoom-in' }}>
             <img src={allComboImages[activeComboImgIdx] || safeImageSrc(combo.image)} alt={combo.name} />
             {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
             {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
@@ -1130,12 +1168,15 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                               type="button"
                               className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
                               aria-pressed={isOn}
-                              onClick={() => { setShowValidation(false); onVariantChange(p.id, { ...v, selections: { ...(v.selections || {}), [variant.name]: opt.name } }); }}
+                              onClick={() => { setShowValidation(false); selectVariantOption(p.id, variant.name, opt.name); }}
                               disabled={opt.stock === 0}
                               style={{ opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}
                             >
                               {opt.image && (
-                                <span className="hamper-colour-swatch-img-wrap">
+                                <span
+                                  className="hamper-colour-swatch-img-wrap"
+                                  onClick={(e) => { e.stopPropagation(); setLightboxImg(opt.image!); }}
+                                >
                                   <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </span>
                               )}
@@ -1347,6 +1388,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
         </button>
       </div>
       <ComboReviewsSection comboId={combo.id} />
+      {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
@@ -1368,6 +1410,7 @@ interface CustomBuilderSectionProps {
 function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
   const [activeSlotImgIdx, setActiveSlotImgIdx] = useState(0);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const allSlotImages = useMemo(() => {
     return [safeImageSrc(slot.image), ...(slot.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
   }, [slot.image, slot.images]);
@@ -1502,7 +1545,11 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           return (
             <div key={p.id} className={`builder-card${isChosen ? ' chosen' : ''}${!canAdd && !isChosen ? ' disabled' : ''}`}>
               <div className="builder-card-img-wrap">
-                <a href={`/products/${p.id}?fromCombo=true`} className="builder-card-img-link">
+                <a
+                  href={`/products/${p.id}?fromCombo=true`}
+                  className="builder-card-img-link"
+                  onClick={(e) => { e.preventDefault(); setLightboxImg(p.image); }}
+                >
                   <img src={p.image} alt={p.name} />
                 </a>
                 {isChosen && <div className="builder-card-check">✓</div>}
@@ -1656,6 +1703,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           {cartAdded ? 'Added' : `Add to Cart`}
         </button>
       </div>
+      {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
@@ -1980,6 +2028,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .chip { font-size:12px;font-weight:500;padding:8px 16px;border-radius:4px;border:1.5px solid var(--bdr2);color:var(--ink7);transition:all .18s;min-height:38px;display:flex;align-items:center;background:transparent;cursor:pointer;font-family:var(--ffb); }
         .chip:hover { border-color:var(--olive2);color:var(--olive);background:var(--olivedim); }
         .chip-on { background:var(--olivedim) !important;color:var(--olive) !important;border-color:var(--olive) !important;font-weight:600 !important;box-shadow:inset 0 0 0 1px var(--olive); }
+        .chip-img-wrap { display:block;width:40px;aspect-ratio:4/5;overflow:hidden;border-radius:4px;cursor:zoom-in; }
         .modal-textarea { width:100%;border:1.5px solid var(--bdr);border-radius:4px;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--bg);outline:none;resize:none;line-height:1.65;transition:border-color .2s;font-family:var(--ffb); }
         .modal-textarea:focus { border-color:var(--olive2);background:#fff; }
         .modal-textarea::placeholder { color:var(--ink4); }
@@ -2004,6 +2053,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-btn-save:hover { background:#2e3c0e;transform:translateY(-1px); }
         .modal-btn-save.modal-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
         .modal-btn-save.modal-btn-disabled:hover { background:var(--bdr2);transform:none; }
+
+        /* ── LIGHTBOX (enlarged image preview) ── */
+        .lightbox-backdrop { position:fixed;inset:0;z-index:1100;background:rgba(8,10,4,.86);display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .18s ease;cursor:zoom-out; }
+        .lightbox-img { max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.45);cursor:default;object-fit:contain; }
+        .lightbox-close { position:fixed;top:16px;right:16px;z-index:1101;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);transition:background .15s; }
+        .lightbox-close:hover { background:rgba(255,255,255,.24); }
 
         .cust-compact { display:flex;flex-wrap:wrap;gap:4px;margin-top:3px; }
         .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
@@ -2104,7 +2159,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-piece-index { position:absolute;top:-8px;left:10px;width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center; }
 
         .hamper-piece-head { display:flex;align-items:center;gap:10px; }
-        .hamper-piece-img-link { flex-shrink:0;display:block;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--bdr); }
+        .hamper-piece-img-link { flex-shrink:0;display:block;width:56px;aspect-ratio:4/5;border-radius:8px;overflow:hidden;border:1px solid var(--bdr); }
         .hamper-piece-img-link img { width:100%;height:100%;object-fit:cover;transition:transform .3s; }
         .hamper-piece-img-link:hover img { transform:scale(1.06); }
         .hamper-piece-headinfo { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
@@ -2116,7 +2171,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-piece-desc { font-size:11.5px;font-weight:300;color:var(--ink7);line-height:1.6; }
 
         .hamper-piece-body { display:flex;flex-direction:column;gap:9px; }
-        .hamper-piece-variant-img { width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--olivedim);border:1px solid var(--bdr); }
+        .hamper-piece-variant-img { width:100%;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--olivedim);border:1px solid var(--bdr); }
         .hamper-piece-variant-img img { width:100%;height:100%;object-fit:cover; }
         .hamper-piece-field { display:flex;flex-direction:column;gap:6px; }
         .hamper-piece-field-label { font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
@@ -2135,7 +2190,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-colour-swatch-row-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 10px; padding: 6px 6px 10px; }
         .hamper-colour-swatch { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:6px 10px;cursor:pointer;flex-shrink:0;border-radius:8px;transition:background .18s; }
         .hamper-colour-swatch:hover { background:var(--olivedim); }
-        .hamper-colour-swatch-img-wrap { width:56px;height:56px;overflow:hidden;transition:all .18s; }
+        .hamper-colour-swatch-img-wrap { width:56px;aspect-ratio:4/5;overflow:hidden;transition:all .18s;border-radius:6px;border:1.5px solid transparent;cursor:zoom-in; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
         .hamper-colour-swatch:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
         .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.15); }
@@ -2162,8 +2217,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         @media(max-width:520px) {
           .hamper-page { padding:14px 14px 0; }
           .hamper-main-img-wrap { aspect-ratio:2/3;  }
-          .hamper-piece-img-link { width:48px;height:48px; }
-          .hamper-colour-swatch-img-wrap { width:65px;height:90px; }
+          .hamper-piece-img-link { width:48px; }
+          .hamper-colour-swatch-img-wrap { width:65px; }
           .hamper-colour-swatch-label { font-size:11.5px; }
           .hamper-sticky-bar { padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom)); gap:10px; }
           .hamper-sticky-price-val { font-size:1.05rem; }
@@ -2192,7 +2247,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-card.chosen { border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,152,42,.15); }
         .builder-card.disabled { opacity:.5; }
         .builder-card-img-wrap { position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--olivedim); }
-        .builder-card-img-link { display:block;width:100%;height:100%; }
+        .builder-card-img-link { display:block;width:100%;height:100%;cursor:zoom-in; }
         .builder-card-img-link img { width:100%;height:100%;object-fit:cover;transition:transform .35s ease; }
         .builder-card:hover:not(.disabled) .builder-card-img-link img { transform:scale(1.06); }
         .builder-card-check { position:absolute;top:8px;right:8px;width:24px;height:24px;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700; }
@@ -2326,7 +2381,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 .combo-rev-bar-track{flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden;}
 .combo-rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px;}
 .combo-rev-bar-count{font-size:9px;color:var(--ink4);min-width:20px;}
-.combo-rev-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.combo-rev-controls{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:36px;}
+.combo-rev-controls-filter{position:absolute;left:0;top:50%;transform:translateY(-50%);}
 .combo-rev-clear{font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:5px 12px;cursor:pointer;}
 .combo-rev-write-btn{font-size:10.5px;font-weight:600;color:#fff;background:var(--olive);border:none;border-radius:50px;padding:9px 18px;cursor:pointer;}
 .combo-rev-empty{font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0;}

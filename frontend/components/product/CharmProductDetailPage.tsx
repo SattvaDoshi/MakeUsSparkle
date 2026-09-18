@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,6 +6,7 @@ import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
 import UpperNav from '@/components/ui/UpperNav';
+import Link from 'next/link';
 
 /* ─── Types ─── */
 interface AccordionData {
@@ -27,6 +27,14 @@ interface UploadItem {
   file: File;
   preview: string;
   note: string;
+}
+
+interface ChainOption {
+  value: string;
+  label: string;
+  image: string;
+  sub?: string;
+  price?: number;
 }
 
 /* ─── Charm option list (extend as needed) ─── */
@@ -81,6 +89,17 @@ const CHARM_OPTIONS = [
   { value: 'birthstone_dec', label: '💎 Birthstone — December (Turquoise)' },
 ];
 
+/* ─── Chain option list — each chain has a photo shown large in the picker ─── */
+// ── NOTE: `price` here is a placeholder — wire this up to the real
+// per-chain price from your product/catalog data when available. ──
+const CHAIN_OPTIONS: ChainOption[] = [
+  { value: 'box_chain', label: 'Box Chain', sub: 'Classic square-link, sits flat', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80', price: 199 },
+  { value: 'cable_chain', label: 'Cable Chain', sub: 'Timeless round links', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80', price: 249 },
+  { value: 'rope_chain', label: 'Rope Chain', sub: 'Twisted, high-shine finish', image: 'https://images.unsplash.com/photo-1599643477873-108bb9622d17?w=600&q=80', price: 349 },
+  { value: 'figaro_chain', label: 'Figaro Chain', sub: 'Alternating link pattern', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80', price: 299 },
+  { value: 'curb_chain', label: 'Curb Chain', sub: 'Flattened, interlocking links', image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=600&q=80', price: 279 },
+];
+
 const MAX_CHARM_COUNT = 10;
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
 // ── Replace with actual size chart image path ──
@@ -96,8 +115,8 @@ function uniqueValues(vals: Array<string | undefined | null>) {
 }
 function dedupeImages(vals: Array<string | undefined | null>) { return uniqueValues(vals); }
 
-/* ─── Size Chart Lightbox ─── */
-function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUrl: string }) {
+/* ─── Generic Image Lightbox (used for Size Chart & Chain photos) ─── */
+function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClose: () => void; imageUrl: string; eyebrow: string; title: string; footerTip?: string }) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
@@ -106,7 +125,6 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
   }, [onClose]);
 
   return (
-
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -132,8 +150,8 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
           flexShrink: 0,
         }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 2 }}>Reference Guide</p>
-            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--olive-900)', fontFamily: 'Cormorant Garamond, serif' }}>Size Chart</p>
+            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 2 }}>{eyebrow}</p>
+            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--olive-900)', fontFamily: 'Cormorant Garamond, serif' }}>{title}</p>
           </div>
           <button
             onClick={onClose}
@@ -144,27 +162,29 @@ function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUr
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
         {/* Image */}
-        <div style={{ overflow: 'auto', flexShrink: 1 }}>
+        <div style={{ overflow: 'auto', flexShrink: 1, background: 'white' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
-            alt="Size Chart"
-            style={{ width: '100%', height: 'auto', display: 'block' }}
+            alt={title}
+            style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
           />
         </div>
         {/* Footer tip */}
-        <div style={{
-          padding: '12px 20px', borderTop: '1px solid rgba(61,74,34,.08)',
-          fontSize: 10, color: 'var(--mist)', letterSpacing: '.06em',
-          background: 'var(--beige-dk)', flexShrink: 0,
-        }}>
-          📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.
-        </div>
+        {footerTip && (
+          <div style={{
+            padding: '12px 20px', borderTop: '1px solid rgba(61,74,34,.08)',
+            fontSize: 10, color: 'var(--mist)', letterSpacing: '.06em',
+            background: 'var(--beige-dk)', flexShrink: 0,
+          }}>
+            {footerTip}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -245,12 +265,12 @@ function GiftBoxUpsell({
         >
           {added ? (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
               Added
             </>
           ) : (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add to order
             </>
           )}
@@ -265,9 +285,9 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="18" width="28" height="18" rx="2" /><path d="M32 22h4l6 8v6h-10V22z" />
-        <circle cx="14" cy="38" r="3" /><circle cx="36" cy="38" r="3" />
-        <path d="M4 26h28" /><path d="M10 14h4M16 11v6" />
+        <rect x="4" y="18" width="28" height="18" rx="2"/><path d="M32 22h4l6 8v6h-10V22z"/>
+        <circle cx="14" cy="38" r="3"/><circle cx="36" cy="38" r="3"/>
+        <path d="M4 26h28"/><path d="M10 14h4M16 11v6"/>
       </svg>
     ),
     title: 'Free Shipping', sub: 'On orders above ₹999',
@@ -275,8 +295,8 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z" />
-        <path d="M20 22l3 3 6-6" />
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/>
+        <path d="M20 22l3 3 6-6"/>
       </svg>
     ),
     title: 'COD Available', sub: 'On all orders',
@@ -284,8 +304,7 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 24h26M24 14l12 10-12 10" />
-        <circle cx="38" cy="24" r="6" /><path d="M6 16v16" />
+        <path d="M44 4L22 26M44 4L30 44 22 26 4 18 44 4z"/>
       </svg>
     ),
     title: 'Express Delivery', sub: '2–3 business days',
@@ -302,7 +321,7 @@ const REVIEWS_DATA = [
 ];
 const RATING_DISTRIBUTION = [
   { stars: 5, count: 148, pct: 74 }, { stars: 4, count: 32, pct: 16 },
-  { stars: 3, count: 12, pct: 6 }, { stars: 2, count: 4, pct: 2 }, { stars: 1, count: 4, pct: 2 },
+  { stars: 3, count: 12, pct: 6 },  { stars: 2, count: 4, pct: 2 }, { stars: 1, count: 4, pct: 2 },
 ];
 const OVERALL_RATING = 4.8;
 const TOTAL_REVIEWS = 200;
@@ -315,34 +334,131 @@ const GOES_WELL_WITH = [
   { id: 4, name: 'Charm Anklet', price: 649, originalPrice: 849, image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=400&q=80', href: '/products/charm-anklet' },
 ];
 
+/* ─── CHAIN SELECTOR — compact dropdown with a large, fully-visible preview photo ─── */
+function ChainSelector({
+  value,
+  onChange,
+  onViewImage,
+  showMissing,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onViewImage: (chain: ChainOption) => void;
+  showMissing?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const selected = CHAIN_OPTIONS.find(c => c.value === value) || null;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="chain-selector-wrap" ref={wrapRef}>
+      <p className="charm-section-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+          <circle cx="12" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M12 9v6"/>
+        </svg>
+        Chain Type
+      </p>
+
+      <button type="button" className={`chain-trigger${open ? ' chain-trigger--open' : ''}${showMissing && !selected ? ' chain-trigger--missing' : ''}`} onClick={() => setOpen(o => !o)}>
+        <div
+          className="chain-trigger-thumb"
+          onClick={e => { if (selected) { e.stopPropagation(); onViewImage(selected); } }}
+        >
+          {selected ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selected.image} alt={selected.label} />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--olive-400)' }}>
+              <circle cx="12" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M12 9v6"/>
+            </svg>
+          )}
+          {selected && (
+            <span className="chain-trigger-zoom">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </span>
+          )}
+        </div>
+        <div className="chain-trigger-text">
+          <span className="chain-trigger-label">{selected ? selected.label : 'Select a chain type…'}</span>
+          {selected && typeof selected.price === 'number' && (
+            <span className="chain-trigger-price">+₹{selected.price.toLocaleString('en-IN')}</span>
+          )}
+        </div>
+        <svg className="chain-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {showMissing && !selected && (
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginTop: 8 }}>
+          Please choose a chain type before adding to cart.
+        </p>
+      )}
+
+      {open && (
+        <div className="chain-options-panel">
+          {CHAIN_OPTIONS.map(opt => (
+            <button
+              type="button"
+              key={opt.value}
+              className={`chain-option-row${value === opt.value ? ' chain-option-row--active' : ''}`}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+            >
+              <div
+                className="chain-option-thumb"
+                onClick={e => { e.stopPropagation(); onViewImage(opt); }}
+                title="View larger photo"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={opt.image} alt={opt.label} />
+                <span className="chain-option-zoom">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </span>
+              </div>
+              <div className="chain-option-text">
+                <span className="chain-option-label">{opt.label}</span>
+                {typeof opt.price === 'number' && (
+                  <span className="chain-option-price">+₹{opt.price.toLocaleString('en-IN')}</span>
+                )}
+              </div>
+              {value === opt.value && (
+                <svg className="chain-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── CHARM SELECTOR COMPONENT ─── */
 function CharmSelector({
   onChange,
   charmPieceOptions = [],
-  charmPiecePricing = [],
-  totalCharms = 10,
-  perCharmPrice = 0,
+  validationAttempt,
 }: {
-  onChange: (data: { count: number; charms: string[]; piecePrice: number }) => void;
+  onChange: (data: { count: number; charms: string[] }) => void;
   charmPieceOptions?: number[];
-  charmPiecePricing?: { count: number; price: number }[];
   totalCharms?: number;
-  perCharmPrice?: number;
+  validationAttempt?: number;
 }) {
-  // Use pricing matrix counts if available, else fallback to charmPieceOptions
-  const optionsList = charmPiecePricing.length > 0
-    ? charmPiecePricing.map(x => x.count).sort((a, b) => a - b)
-    : (charmPieceOptions.length > 0 ? charmPieceOptions : [1]);
+  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  // When the product only offers a single charm count (e.g. always 3 charms),
+  // that count is fixed — there's nothing to "choose", so we don't show a picker
+  // for it and the user can never end up with fewer than that many charms.
+  const isFixedCount = optionsList.length === 1;
   const [charmCount, setCharmCount] = useState(() => optionsList[0] || 1);
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
-
-  const getPiecePrice = (count: number) => {
-    if (charmPiecePricing.length > 0) {
-      const match = charmPiecePricing.find(x => x.count === count);
-      return match ? match.price : (perCharmPrice * count);
-    }
-    return perCharmPrice * count;
-  };
+  const [showMissing, setShowMissing] = useState(false);
 
   // Sync count options change
   useEffect(() => {
@@ -359,12 +475,19 @@ function CharmSelector({
       while (next.length < charmCount) next.push('');
       return next.slice(0, charmCount);
     });
+    // Changing the charm count is a fresh selection round — clear any stale warning.
+    setShowMissing(false);
   }, [charmCount]);
 
   useEffect(() => {
-    onChange({ count: charmCount, charms: selectedCharms, piecePrice: getPiecePrice(charmCount) });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [charmCount, selectedCharms]);
+    onChange({ count: charmCount, charms: selectedCharms });
+  }, [charmCount, selectedCharms, onChange]);
+
+  // Parent bumps this counter every time the user tries to add-to-cart/buy-now
+  // with an incomplete charm selection — trigger the inline warning state.
+  useEffect(() => {
+    if (validationAttempt) setShowMissing(true);
+  }, [validationAttempt]);
 
   const setCharm = (index: number, value: string) => {
     setSelectedCharms(prev => {
@@ -375,60 +498,71 @@ function CharmSelector({
   };
 
   const filledCount = selectedCharms.filter(Boolean).length;
-  const availableCharms = [
-    { value: '', label: 'Select a charm…' },
-    ...Array.from({ length: totalCharms || 10 }, (_, i) => ({
-      value: String(i + 1),
-      label: String(i + 1),
-    }))
-  ];
+  const availableCharms = CHARM_OPTIONS; // includes the placeholder at index 0
+  const allCharmsSelected = filledCount === charmCount;
 
   return (
     <div className="charm-selector">
-      {/* Count picker */}
-      <p className="charm-section-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        Number of Charms
-      </p>
-      <div className="charm-count-grid" style={{ marginBottom: 20 }}>
-        {optionsList.map(n => {
-          const pp = getPiecePrice(n);
-          return (
-            <button
-              key={n}
-              type="button"
-              className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
-              onClick={() => setCharmCount(n)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 10px' }}
-            >
-              <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1 }}>{n}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Count picker — only rendered when the product actually offers a choice.
+          If it only supports one fixed count, that count is shown as a plain
+          requirement, not a selectable option, so it can never be reduced. */}
+      {isFixedCount ? (
+        <div className="charm-fixed-count-note" style={{ marginBottom: 20 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)', flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>This piece takes exactly <strong>{charmCount}</strong> charm{charmCount > 1 ? 's' : ''} — all {charmCount > 1 ? `${charmCount} are` : 'is'} required below.</span>
+        </div>
+      ) : (
+        <>
+          <p className="charm-section-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Number of Charms
+          </p>
+          <div className="charm-count-grid" style={{ marginBottom: 20 }}>
+            {optionsList.map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`charm-count-btn${charmCount === n ? ' active' : ''}`}
+                onClick={() => setCharmCount(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* One native <select> per slot */}
       <p className="charm-section-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
         </svg>
-        Select Your Charms
+        Select Your Charms <span style={{ color: 'var(--red)' }}>*</span>
         <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
       </p>
+
+      {showMissing && !allCharmsSelected && (
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginBottom: 10 }}>
+          Please select all {charmCount} charm{charmCount > 1 ? 's' : ''} before adding to cart.
+        </p>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {Array.from({ length: charmCount }, (_, i) => {
           const chosen = selectedCharms[i] || '';
           const usedValues = new Set(selectedCharms.filter((c, idx) => c && idx !== i));
+          const isMissing = showMissing && !chosen;
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {/* Slot number badge */}
               <span style={{
                 width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                background: chosen ? 'var(--olive-600)' : 'var(--beige-dkr)',
-                color: chosen ? 'var(--beige)' : 'var(--mist)',
+                background: chosen ? 'var(--olive-600)' : isMissing ? 'var(--red)' : 'var(--beige-dkr)',
+                color: chosen || isMissing ? 'var(--beige)' : 'var(--mist)',
                 fontSize: 10, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background .2s, color .2s',
@@ -445,8 +579,8 @@ function CharmSelector({
                     width: '100%',
                     appearance: 'none',
                     WebkitAppearance: 'none',
-                    background: chosen ? 'var(--olive-50)' : 'white',
-                    border: `1.5px solid ${chosen ? 'rgba(90,110,35,.35)' : 'var(--beige-dkr)'}`,
+                    background: chosen ? 'var(--olive-50)' : isMissing ? 'rgba(192,57,43,.05)' : 'white',
+                    border: `1.5px solid ${isMissing ? 'var(--red)' : chosen ? 'rgba(90,110,35,.35)' : 'var(--beige-dkr)'}`,
                     borderRadius: 10,
                     padding: '10px 36px 10px 14px',
                     fontFamily: "'Jost', sans-serif",
@@ -478,7 +612,7 @@ function CharmSelector({
                     color: 'var(--mist)', pointerEvents: 'none',
                   }}
                 >
-                  <polyline points="6 9 12 15 18 9" />
+                  <polyline points="6 9 12 15 18 9"/>
                 </svg>
               </div>
 
@@ -518,7 +652,7 @@ function CharmSelector({
         <div className="charm-summary-strip" style={{ animation: 'charmFadeUp .35s ease both', marginTop: 16 }}>
           <div className="charm-summary-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--olive-500)', flexShrink: 0, marginTop: 1 }}>
-              <polyline points="20 6 9 17 4 12" />
+              <polyline points="20 6 9 17 4 12"/>
             </svg>
             <span>
               <strong>{filledCount}</strong> of <strong>{charmCount}</strong> selected
@@ -595,7 +729,7 @@ function ReviewsSection() {
               <div className="rev-meta">
                 <div className="rev-meta-row">
                   <span className="rev-name">{r.name}</span>
-                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
+                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
                 </div>
                 <div className="rev-meta-row" style={{ marginTop: 3 }}>
                   <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
@@ -615,7 +749,7 @@ function ReviewsSection() {
             <div className="rev-card-foot">
               <span className="rev-helpful-label">Helpful?</span>
               <button className="rev-helpful-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" /><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" /></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
                 {r.helpful}
               </button>
             </div>
@@ -673,7 +807,7 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
       <button className="acc-head" onClick={onToggle}>
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
+        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
       <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
         <div ref={bodyRef} className="acc-body">
@@ -689,19 +823,48 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
 
 /* ─── Estimated Delivery ─── */
 function EstimatedDeliveryBlock() {
-  const standardDate = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' }); })();
-  const expressDate = (() => { const d = new Date(); d.setDate(d.getDate() + 4); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' }); })();
   return (
-    <div className="acc-delivery-estimate">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--olive-500)', marginTop: 1 }}>
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-      <div>
-        <p className="acc-delivery-label">Estimated Delivery</p>
-        <div className="acc-delivery-row">
-          <span className="acc-delivery-chip acc-delivery-chip--std"><strong>Standard</strong> {standardDate}</span>
-          <span className="acc-delivery-chip acc-delivery-chip--exp"><strong>Express</strong> {expressDate}</span>
-        </div>
+    <div style={{ marginTop: 16 }}>
+      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--olive-600)', marginBottom: 10 }}>
+        Estimated Delivery
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {[
+          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
+          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
+        ].map(opt => (
+          <div key={opt.label} style={{
+            border: '1.5px solid rgba(61,74,34,.15)', borderRadius: 14,
+            padding: '14px 12px', background: 'white',
+          }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--ink)', marginBottom: 10 }}>{opt.label}</div>
+
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Metro Cities</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.metro}</div>
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Rest of India</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.rest}</div>
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)' }}>{opt.rate}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{
+        marginTop: 10, padding: '11px 14px',
+        background: 'linear-gradient(135deg, #e6f4e7, #f0faf0)',
+        border: '1.5px solid rgba(45,90,39,.22)', borderRadius: 10,
+        display: 'flex', alignItems: 'center', gap: 9,
+        fontSize: 12, fontWeight: 700, color: '#0a2e12', lineHeight: 1.4,
+      }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
+        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
       </div>
     </div>
   );
@@ -739,7 +902,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
   const filledCount = uploads.filter(Boolean).length;
   const allPhotosUploaded = filledCount === MAX_FILES;
 
-  useEffect(() => {
+  useEffect(() => { 
     if (onChange) {
       const validUploads = uploads.filter(Boolean).map(u => u!.preview);
       onChange({ wantCustom, uploads: validUploads, globalNote });
@@ -773,24 +936,24 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
     <>
       <div style={{ display: 'flex', gap: 10 }}>
         <button className={`cust-toggle-btn yes${wantCustom === true ? ' sel' : ''}`} onClick={() => { setWantCustom(true); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Yes, Customise
         </button>
         <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => { setWantCustom(false); setUploads(Array(MAX_FILES).fill(null)); setGlobalNote(''); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           No, Standard
         </button>
       </div>
       {wantCustom === false && (
         <div className="cust-info-chip" style={{ marginTop: 12 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <p>You'll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours.</p>
         </div>
       )}
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
           <textarea className="cust-note-global" placeholder={`Add a personalisation note…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-
+          
           <div style={{ marginTop: 16 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 4 }}>
               Required Photos <span style={{ color: 'var(--red)' }}>*</span>
@@ -806,8 +969,8 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
                 const label = `Photo ${i + 1}`;
                 const upload = uploads[i];
                 return (
-                  <div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
-
+<div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+                    
                     {upload ? (
                       <>
                         <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
@@ -829,7 +992,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
           </div>
 
           <div className="cust-info-chip" style={{ marginTop: 16 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <p>Our team reviews within <strong>2 business hours</strong>. Customised items are <strong>non-returnable</strong> unless damaged.</p>
           </div>
         </div>
@@ -857,7 +1020,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
     <div className="gift-msg-panel">
       <div className="gift-msg-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--gold)' }}>
-          <path d="M20 12v10H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+          <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
         </svg>
         <span className="gift-msg-title">Add a Gift Message</span>
         <span className="gift-msg-optional">Optional</span>
@@ -868,12 +1031,12 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
           <select className="gift-msg-select" value={value.preset} onChange={e => onChange({ ...value, preset: e.target.value })}>
             {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
       <div className="gift-msg-free-wrap">
         <label className="gift-msg-label gift-msg-label--free">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Type your message
         </label>
         <textarea className="gift-msg-free-textarea" rows={3} maxLength={200} placeholder="Write a heartfelt note…" value={value.customMessage} onChange={e => onChange({ ...value, customMessage: e.target.value })} />
@@ -914,14 +1077,17 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  const [charmData, setCharmData] = useState<{ count: number; charms: string[]; piecePrice: number }>({ count: 1, charms: [''], piecePrice: 0 });
+  const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null; uploads: string[]; globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
-  const [selectedBand, setSelectedBand] = useState<{ name: string; image?: string; price?: number; salePrice?: number } | null>(null);
-  const [custValidationAttempt, setCustValidationAttempt] = useState(0);
-  const MAX_CUST_PHOTOS = 5;
-  const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+const [custValidationAttempt, setCustValidationAttempt] = useState(0);
+const [charmValidationAttempt, setCharmValidationAttempt] = useState(0);
+const [chainValidationAttempt, setChainValidationAttempt] = useState(0);
+const MAX_CUST_PHOTOS = 5;
+const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+const [selectedChain, setSelectedChain] = useState('');
+const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
 
-  const handleCharmChange = useCallback((data: { count: number; charms: string[]; piecePrice: number }) => {
+  const handleCharmChange = useCallback((data: { count: number; charms: string[] }) => {
     setCharmData(data);
   }, []);
 
@@ -951,8 +1117,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const mainImage = product?.mainImage;
   const images = product?.images ?? [];
 
-  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
-  const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
+const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
+const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
+// A charm selection round is only "complete" once every slot for the chosen count has a charm.
+const charmSelectionIncomplete = charmData.charms.filter(Boolean).length < charmData.count;
   useEffect(() => {
     if (!product) return;
     setActiveColor(0);
@@ -979,24 +1147,13 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const selectedCharmCount = charmData.count;
-  const basePrice = selectedBand?.salePrice || selectedBand?.price || discountedPrice || price;
-  const baseOriginalPrice = selectedBand?.price || originalPrice || price;
+  const basePrice = discountedPrice || price;
+  const baseOriginalPrice = originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
-  // New pricing: use charmPiecePricing flat add-on per selected count if available
-  const charmPiecePricing: { count: number; price: number }[] = product?.charmPiecePricing ?? [];
-  const packAddOn: number = charmPiecePricing.length > 0
-    ? (charmPiecePricing.find(x => x.count === selectedCharmCount)?.price ?? (perCharmPrice * selectedCharmCount))
-    : (perCharmPrice * selectedCharmCount);
-  const totalCharmPrice = basePrice + packAddOn;
-  const totalCharmOriginalPrice = baseOriginalPrice + packAddOn;
+  
+  const totalCharmPrice = basePrice + (perCharmPrice * selectedCharmCount);
+  const totalCharmOriginalPrice = baseOriginalPrice + (perCharmPrice * selectedCharmCount);
   const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
-
-  // Band options from variants (unique bands that have a name)
-  const bandOptions: { name: string; image?: string; price?: number; salePrice?: number }[] = Array.from(
-    new Map(
-      (variants as any[]).filter(v => v.bandName).map(v => [v.bandName, { name: v.bandName, image: v.bandExistingImage || v.image, price: v.price, salePrice: v.salePrice }])
-    ).values()
-  );
 
   const wished = product ? isWished(product.id) : false;
 
@@ -1026,6 +1183,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     customImages: customData.wantCustom ? customData.uploads : undefined,
     giftMessage: giftMessage.customMessage || undefined,
     giftBox: giftBoxAdded || undefined,
+    chain: selectedChain || undefined,
+    chainLabel: CHAIN_OPTIONS.find(c => c.value === selectedChain)?.label || undefined,
     selectedCharms: charmData.charms.filter(Boolean).map(charm => ({
       sourceId: charm,
       name: charm,
@@ -1050,20 +1209,26 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       })),
       metadata: {
         requestedCount: selectedCharmCount,
-        packAddOn,
-        band: selectedBand || undefined,
       },
     }],
     charms: charmData.charms.filter(Boolean),
     charmCount: selectedCharmCount,
-    band: selectedBand || undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, selectedBand, packAddOn, selectedCharmCount, giftBoxAdded]);
+  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded, selectedChain]);
 
-  const handleAddToCart = useCallback(() => {
+ const handleAddToCart = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
+      return;
+    }
+    if (charmSelectionIncomplete) {
+      setErrorToast(`Please select all ${charmData.count} charms before adding to cart.`);
+      setCharmValidationAttempt(t => t + 1);
+      return;
+    }
+    if (!selectedChain) {
+      setErrorToast('Please choose a chain type before adding to cart.');
+      setChainValidationAttempt(t => t + 1);
       return;
     }
     if (custPhotosIncomplete) {
@@ -1077,12 +1242,22 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, qty, buildCartItem, custPhotosIncomplete]);
+  }, [addItem, product, qty, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain]);
 
-  const handleBuyNow = useCallback(() => {
+const handleBuyNow = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
+      return;
+    }
+    if (charmSelectionIncomplete) {
+      setErrorToast(`Please select all ${charmData.count} charms before proceeding.`);
+      setCharmValidationAttempt(t => t + 1);
+      return;
+    }
+    if (!selectedChain) {
+      setErrorToast('Please choose a chain type before proceeding.');
+      setChainValidationAttempt(t => t + 1);
       return;
     }
     if (custPhotosIncomplete) {
@@ -1093,7 +1268,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     const item = buildCartItem();
     for (let i = 0; i < qty; i++) addItem(item, false);
     router.push('/cart');
-  }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete]);
+  }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain]);
 
   const handleColorChange = useCallback((i: number) => {
     setActiveColor(i); setActiveImg(0);
@@ -1128,13 +1303,45 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
-    { id: 'shipping', emoji: '🚚', label: 'Shipping & Returns', content: 'STANDARD DELIVERY (3–5 business days) — ₹60 delivery charge. Free on orders above ₹999.\nEXPRESS DELIVERY (2–3 business days) — ₹120 delivery charge.\n\nReturns accepted within 7 days of delivery.' },
   ];
+
+  function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
+    return (
+      <Link href={href} className="acc-nav-link-row">
+        <span className="acc-head-left">
+          <span className="acc-emoji">{emoji}</span>
+          {label}
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </Link>
+    );
+  }
 
   return (
     <>
       {/* Size Chart Lightbox — rendered at root level so it overlays everything */}
-      {showSizeChart && <SizeChartLightbox onClose={() => setShowSizeChart(false)} imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE} />}
+      {showSizeChart && (
+        <ImageLightbox
+          onClose={() => setShowSizeChart(false)}
+          imageUrl={product.sizeChartImage || SIZE_CHART_IMAGE}
+          eyebrow="Reference Guide"
+          title="Size Chart"
+          footerTip="📏  Tip: Measure your wrist/finger with a soft tape for the best fit."
+        />
+      )}
+
+      {/* Chain photo Lightbox — rendered at root level so it overlays everything */}
+      {chainLightbox && (
+        <ImageLightbox
+          onClose={() => setChainLightbox(null)}
+          imageUrl={chainLightbox.image}
+          eyebrow="Chain Preview"
+          title={chainLightbox.label}
+          footerTip={chainLightbox.sub}
+        />
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
@@ -1156,6 +1363,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         @keyframes imgIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
         @keyframes stockPulse{0%,100%{opacity:1}50%{opacity:.55}}
         @keyframes charmPop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+        @keyframes chainPanelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
         .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink)}
         .pdp-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1280px;margin:0 auto}
@@ -1264,9 +1472,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
         /* Count label */
         .charm-section-label{
-          display: flex; align-items: center; gap: 7px;
+          display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
           font-size: 9.5px; font-weight: 700; letter-spacing: .3em;
           text-transform: uppercase; color: var(--mist); margin-bottom: 12px;
+          row-gap: 6px;
         }
 
         /* Number grid */
@@ -1293,6 +1502,18 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           box-shadow: 0 0 0 3px rgba(201,168,76,.15);
           transform: translateY(-2px);
         }
+
+        /* Fixed-count notice — replaces the picker when there's only one valid count */
+        .charm-fixed-count-note{
+          display: flex; align-items: flex-start; gap: 8px;
+          background: rgba(201,168,76,.1);
+          border: 1px solid rgba(201,168,76,.28);
+          border-radius: 10px;
+          padding: 9px 12px;
+          font-size: 12px; font-weight: 400; color: #6b5518;
+          line-height: 1.55;
+        }
+        .charm-fixed-count-note strong{ font-weight: 700; color: var(--olive-600); }
 
         /* Dropdown list */
         .charm-dropdowns{ margin-top: 4px; }
@@ -1402,6 +1623,106 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           letter-spacing: .03em;
         }
 
+        /* ════════════════════════════════════════════
+           CHAIN SELECTOR — compact dropdown, big fully-visible photo
+        ════════════════════════════════════════════ */
+        .chain-selector-wrap{
+          background: linear-gradient(135deg, rgba(90,110,35,.07), rgba(201,168,76,.06));
+          border: 1.5px solid rgba(90,110,35,.2);
+          border-radius: 18px;
+          padding: 18px 18px 20px;
+          margin-bottom: 20px;
+          position: relative;
+        }
+
+        /* "Medium" sized trigger — a proper compact select-like control rather than
+           a bulky card. Height stays consistent across breakpoints via clamp(). */
+        .chain-trigger{
+          width: 100%;
+          display: flex; align-items: center; gap: 12px;
+          background: white;
+          border: 1.5px solid var(--beige-dkr);
+          border-radius: 14px;
+          padding: 8px 12px;
+          cursor: pointer;
+          font-family: 'Jost', sans-serif;
+          text-align: left;
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .chain-trigger:hover{ border-color: var(--olive-400); }
+        .chain-trigger--open{ border-color: var(--olive-500); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
+        .chain-trigger--missing{ border-color: var(--red); background: rgba(192,57,43,.04); }
+
+        /* Medium-sized preview, fully visible (object-fit: contain) instead of cropped */
+        .chain-trigger-thumb{
+          width: clamp(48px, 8vw, 60px); height: clamp(48px, 8vw, 60px); border-radius: 10px;
+          overflow: hidden; flex-shrink: 0; background: white;
+          border: 1px solid rgba(61,74,34,.1);
+          display: flex; align-items: center; justify-content: center;
+          cursor: zoom-in; position: relative;
+        }
+        .chain-trigger-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+        .chain-trigger-zoom{
+          position: absolute; bottom: 3px; right: 3px;
+          width: 16px; height: 16px; border-radius: 50%;
+          background: rgba(26,31,13,.65); color: white;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .chain-trigger-zoom svg{ width: 9px; height: 9px; }
+
+        /* Text occupies remaining space — chain name plus its price */
+        .chain-trigger-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .chain-trigger-label{ font-size: 13px; font-weight: 600; color: var(--olive-900); letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chain-trigger-price{ font-size: 11px; font-weight: 600; color: var(--olive-600); letter-spacing: .02em; }
+
+        .chain-trigger-chevron{
+          width: 16px; height: 16px; color: var(--mist); flex-shrink: 0;
+          transition: transform .25s ease;
+        }
+        .chain-trigger--open .chain-trigger-chevron{ transform: rotate(180deg); }
+
+        .chain-options-panel{
+          margin-top: 10px;
+          background: white;
+          border: 1.5px solid var(--beige-dkr);
+          border-radius: 16px;
+          overflow: hidden;
+          animation: chainPanelIn .2s ease both;
+        }
+        .chain-option-row{
+          width: 100%;
+          display: flex; align-items: center; gap: 12px;
+          padding: 8px 10px;
+          background: white; border: none; border-bottom: 1px solid rgba(61,74,34,.07);
+          cursor: pointer; text-align: left;
+          transition: background .15s;
+        }
+        .chain-option-row:last-child{ border-bottom: none; }
+        .chain-option-row:hover{ background: var(--olive-50); }
+        .chain-option-row--active{ background: rgba(201,168,76,.09); }
+
+        /* Big fully-visible photo per option — dominates the row, text kept minimal */
+        .chain-option-thumb{
+          width: 96px; height: 96px; border-radius: 12px;
+          overflow: hidden; flex-shrink: 0; position: relative;
+          background: white; border: 1px solid rgba(61,74,34,.1); cursor: zoom-in;
+        }
+        .chain-option-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .3s ease; }
+        .chain-option-row:hover .chain-option-thumb img{ transform: scale(1.05); }
+        .chain-option-zoom{
+          position: absolute; bottom: 4px; right: 4px;
+          width: 20px; height: 20px; border-radius: 50%;
+          background: rgba(26,31,13,.65); color: white;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .chain-option-zoom svg{ width: 11px; height: 11px; }
+
+        /* Text column takes the remaining space — chain name plus its price */
+        .chain-option-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .chain-option-label{ font-size: 12.5px; font-weight: 600; color: var(--olive-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chain-option-price{ font-size: 11px; font-weight: 700; color: var(--olive-600); letter-spacing: .01em; }
+        .chain-option-check{ width: 18px; height: 18px; color: var(--olive-500); flex-shrink: 0; }
+
         /* ── Complete the Look ── */
         .ctl-strip{margin-bottom:0;padding-bottom:4px}
         .ctl-strip-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
@@ -1453,6 +1774,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         .acc-item--open .acc-chevron{transform:rotate(180deg)}
         .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em}
         .acc-body p{margin-bottom:4px}
+        .acc-nav-link-row{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;text-decoration:none;color:var(--ink);border-bottom:1px solid rgba(61,74,34,.08);font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;transition:background .15s}
+        .acc-nav-link-row:hover{background:rgba(61,74,34,.03)}
+        .acc-nav-link-row svg{color:var(--mist);flex-shrink:0;transition:transform .2s}
+        .acc-nav-link-row:hover svg{transform:translateX(3px)}
         .acc-delivery-estimate{display:flex;align-items:flex-start;gap:9px;margin-top:16px;background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.07));border:1px solid rgba(90,110,35,.15);border-radius:0;padding:12px 14px}
         .acc-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive-600);margin-bottom:8px}
         .acc-delivery-row{display:flex;gap:8px;flex-wrap:wrap}
@@ -1559,6 +1884,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           .rev-summary{grid-template-columns:180px 1fr}
           .rev-big-num{font-size:3.6rem}
           .charm-count-btn{width:38px;height:38px}
+          .chain-trigger-thumb{width:52px;height:52px}
+          .chain-option-thumb{width:88px;height:88px}
         }
 
         /* ════ MOBILE ════ */
@@ -1587,6 +1914,14 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           .charm-count-btn{width:34px;height:34px;font-size:12px;border-radius:8px}
           .charm-selector::before{display:none}
           .charm-selected-tag{max-width:100px}
+          .chain-selector-wrap{padding:14px 14px 16px}
+          .chain-trigger{padding:7px 10px;gap:10px;border-radius:12px}
+          .chain-trigger-thumb{width:44px;height:44px;border-radius:8px}
+          .chain-trigger-label{font-size:12px}
+          .chain-trigger-price{font-size:10px}
+          .chain-option-thumb{width:72px;height:72px}
+          .chain-option-label{font-size:12px}
+          .chain-option-price{font-size:10px}
         }
 
         /* ════ VERY SMALL ════ */
@@ -1613,7 +1948,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <span className="pdp-badge">Best Seller</span>
               <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
             </div>
@@ -1649,7 +1984,17 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 </>
               )}
             </div>
-
+            {selectedCharmCount > 0 && (
+              <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
+                Base ₹{basePrice.toLocaleString('en-IN')} + ₹{perCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} charms
+              </p>
+            )}
+            {discountTag && (
+              <div className="pdp-offer">
+                <span className="pdp-offer-icon">🏷️</span>
+                <span className="pdp-offer-text">{discountTag}</span>
+              </div>
+            )}
 
             <div className="pdp-divider" />
 
@@ -1688,7 +2033,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             {product?.sizeChartImage && (
               <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 6H3" /><path d="M3 10h18" /><path d="M3 14h18" /><path d="M21 18H3" />
+                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
                 </svg>
                 Size Chart
               </button>
@@ -1704,6 +2049,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </div>
             )}
 
+            <div className="pdp-divider" />
 
             {/* ══════════════════════════════════════
                 CHARM SELECTOR — key new feature
@@ -1711,97 +2057,27 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             <div className="charm-selector">
               <div className="charm-selector-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>  
                 Build Your Charm Combination
               </div>
-
-              <CharmSelector
-                onChange={handleCharmChange}
-                charmPieceOptions={product.charmPieceOptions}
-                charmPiecePricing={charmPiecePricing}
-                totalCharms={product.totalCharms}
-                perCharmPrice={perCharmPrice}
-              />
-
-              {/* Price breakdown strip */}
-              {packAddOn > 0 && (
-                <div style={{ marginTop: 12, padding: '10px 14px', background: 'linear-gradient(135deg,rgba(74,92,34,.06),rgba(201,168,76,.06))', borderRadius: 10, border: '1px solid rgba(74,92,34,.12)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--olive-900)', flexWrap: 'wrap' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ color: 'var(--mist)' }}>Base</span>
-                    <strong>₹{basePrice.toLocaleString('en-IN')}</strong>
-                  </span>
-                  <span style={{ color: 'var(--mist)' }}>+</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ color: 'var(--mist)' }}>{selectedCharmCount} pcs add-on</span>
-                    <strong style={{ color: 'var(--olive-600)' }}>₹{packAddOn.toLocaleString('en-IN')}</strong>
-                  </span>
-                  <span style={{ color: 'var(--mist)' }}>=</span>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--olive-900)' }}>₹{totalCharmPrice.toLocaleString('en-IN')}</span>
-                </div>
-              )}
+              <p className="charm-selector-sub">
+                Pick how many charms you'd like, then choose each one individually. You can mix initials, symbols, birthstones, and more. All charms in your chosen count must be selected before you can add this to your cart.
+              </p>
+              <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} validationAttempt={charmValidationAttempt} />
             </div>
 
-            {/* Band / Chain Type selector — shown if product has band variants */}
-            {bandOptions.length > 0 && (
-              <>
-                <div className="pdp-divider" />
-                <div style={{ marginBottom: 4 }}>
-                  <p className="charm-section-label" style={{ marginBottom: 12 }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-                      <path d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
-                    Band / Chain Type
-                    {selectedBand && (
-                      <span className="charm-filled-badge" style={{ marginLeft: 6 }}>{selectedBand.name} selected</span>
-                    )}
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {bandOptions.map(band => {
-                      const isSelected = selectedBand?.name === band.name;
-                      return (
-                        <button
-                          key={band.name}
-                          type="button"
-                          onClick={() => setSelectedBand(isSelected ? null : band)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '8px 14px',
-                            border: `1.5px solid ${isSelected ? 'var(--olive-600)' : 'var(--beige-dkr)'}`,
-                            borderRadius: 50,
-                            background: isSelected ? 'var(--olive-50)' : 'white',
-                            cursor: 'pointer',
-                            fontFamily: "'Jost', sans-serif",
-                            fontSize: 12.5,
-                            fontWeight: isSelected ? 600 : 400,
-                            color: isSelected ? 'var(--olive-900)' : 'var(--ink)',
-                            transition: 'all .2s',
-                            boxShadow: isSelected ? '0 2px 8px rgba(74,92,34,.15)' : 'none',
-                          }}
-                        >
-                          {band.image ? (
-                            <img src={band.image} alt={band.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0 }} />
-                          ) : (
-                            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--beige-dkr)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🪡</span>
-                          )}
-                          {band.name}
-                          {(band.salePrice || band.price) ? (
-                            <span style={{ fontSize: 10.5, fontWeight: isSelected ? 600 : 500, color: isSelected ? 'var(--olive-600)' : 'var(--mist)', marginLeft: 2 }}>
-                              (₹{band.salePrice || band.price})
-                            </span>
-                          ) : null}
-                          {isSelected && (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="pdp-divider" />
+
+            {/* ══════════════════════════════════════
+                CHAIN SELECTOR — dropdown with big photos + lightbox
+            ══════════════════════════════════════ */}
+            <ChainSelector
+              value={selectedChain}
+              onChange={setSelectedChain}
+              onViewImage={c => setChainLightbox(c)}
+              showMissing={chainValidationAttempt > 0}
+            />
 
             <div className="pdp-divider" />
 
@@ -1811,7 +2087,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 <div className="pdp-cust-banner">
                   <div className="pdp-cust-banner-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
                     Make it Yours — Customise this {category}
                   </div>
@@ -1862,13 +2138,13 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             <div className="pdp-cta-row">
               {Number(currentStock) <= 0 && (
                 <div style={{ padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   Out of stock
                 </div>
               )}
               <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle}>
                 <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
                 {wished ? 'Wished' : 'Wishlist'}
               </button>
@@ -1876,7 +2152,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
                   style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                   {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                 </button>
                 <Sparkles active={sparkleAnim} />
@@ -1884,7 +2160,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
                 style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
               </button>
             </div>
@@ -1911,6 +2187,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                   onToggle={() => setOpenAccordion(o => o === item.id ? null : item.id)}
                 />
               ))}
+              <NavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
+              <NavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" />
             </div>
             <EstimatedDeliveryBlock />
           </div>
@@ -1923,10 +2201,12 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       {errorToast && (
         <div style={{
           position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--red)', color: 'white', padding: '14px 28px',
-          borderRadius: '50px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
+          background: 'var(--red)', color: 'white', padding: '14px 22px',
+          borderRadius: '18px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
           boxShadow: '0 12px 32px rgba(192, 57, 43, 0.35)', animation: 'fadeUp 0.35s ease both',
-          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em', whiteSpace: 'nowrap'
+          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em',
+          whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.45,
+          width: 'max-content', maxWidth: 'calc(100vw - 32px)',
         }}>
           {errorToast}
         </div>

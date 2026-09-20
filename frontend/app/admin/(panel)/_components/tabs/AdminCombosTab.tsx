@@ -15,6 +15,11 @@ export type AdminComboProduct = {
 	allowImageCustomization?: boolean;
 	imageCustomizationTitle?: string;
 	maxImageUploads?: number;
+	totalCharms?: number;
+	perCharmPrice?: number;
+	charmPieceOptions?: number[];
+	charmPiecePricing?: { count: number; price: number }[];
+	chainOptions?: { value: string; label: string; sub: string; price: number; image?: string }[];
 };
 
 export type AdminCombo = {
@@ -70,6 +75,10 @@ type ComboProductState = {
 	allowImageCustomization: boolean;
 	imageCustomizationTitle: string;
 	maxImageUploads: string;
+	totalCharms: string;
+	perCharmPrice: string;
+	charmPiecePricing: { count: number; price: number }[];
+	chainOptions: { value: string; label: string; sub: string; price: number; image?: string; imagePreview?: string | null; imageFile?: File | null }[];
 };
 
 type PricingVariant = { label: string; price: string };
@@ -134,6 +143,10 @@ const defaultProduct: ComboProductState = {
 	allowImageCustomization: false,
 	imageCustomizationTitle: "",
 	maxImageUploads: "1",
+	totalCharms: "0",
+	perCharmPrice: "0",
+	charmPiecePricing: [],
+	chainOptions: [],
 };
 
 type TabKey = "curated" | "custom";
@@ -196,6 +209,18 @@ export default function AdminCombosTab({
 				allowImageCustomization: p.allowImageCustomization || false,
 				imageCustomizationTitle: p.imageCustomizationTitle || "",
 				maxImageUploads: String(p.maxImageUploads || 1),
+				totalCharms: String(p.totalCharms || 0),
+				perCharmPrice: String(p.perCharmPrice || 0),
+				charmPiecePricing: (p.charmPiecePricing || []).map((cp: any) => ({ count: cp.count, price: cp.price })),
+				chainOptions: (p.chainOptions || []).map((co: any) => ({
+					value: co.value || "",
+					label: co.label || "",
+					sub: co.sub || "",
+					price: co.price || 0,
+					image: co.image || "",
+					imagePreview: co.image || null,
+					imageFile: null
+				})),
 				variants: (p.variants || []).map(v => {
 					if (typeof v.options === "string") {
 						return {
@@ -373,6 +398,16 @@ export default function AdminCombosTab({
 			allowImageCustomization: p.allowImageCustomization,
 			imageCustomizationTitle: p.imageCustomizationTitle,
 			maxImageUploads: Number(p.maxImageUploads) || 1,
+			totalCharms: Number(p.totalCharms) || 0,
+			perCharmPrice: Number(p.perCharmPrice) || 0,
+			charmPiecePricing: p.charmPiecePricing,
+			chainOptions: p.chainOptions.map(co => ({
+				value: co.value,
+				label: co.label,
+				sub: co.sub,
+				price: co.price,
+				image: !co.imageFile ? co.image : undefined,
+			})),
 			variants: p.variants.map(v => ({
 				name: v.name,
 				options: v.options.map(opt => ({
@@ -391,6 +426,9 @@ export default function AdminCombosTab({
 				v.options.forEach((opt, oIdx) => {
 					if (opt.imageFile) fd.append(`variantImage_${pIdx}_${vIdx}_${oIdx}`, opt.imageFile);
 				});
+			});
+			p.chainOptions.forEach((co, cIdx) => {
+				if (co.imageFile) fd.append(`chainImage_${pIdx}_${cIdx}`, co.imageFile);
 			});
 		});
 
@@ -905,6 +943,103 @@ export default function AdminCombosTab({
 															<div style={FIELD}>
 																<label style={LABEL}>SEO Tags <span style={{ fontWeight: 400, color: "#999" }}>(comma-separated)</span></label>
 																<input placeholder="e.g. perfume gift, luxury fragrance" value={p.seoTags} onChange={e => upProduct(pIdx, { seoTags: e.target.value })} style={INP} />
+															</div>
+														</div>
+
+														<div style={{ background: "#f5f4ef", border: "1px solid #e5e5e0", borderRadius: 6, padding: "1rem" }}>
+															<p style={{ margin: "0 0 1rem 0", fontSize: "0.85rem", fontWeight: 700, color: "#3d4a20" }}>Product Charms (Optional)</p>
+															<div style={S.grid2}>
+																<div style={FIELD}>
+																	<label style={LABEL}>Total Charms Allowed</label>
+																	<input type="number" min="0" value={p.totalCharms} onChange={e => upProduct(pIdx, { totalCharms: e.target.value })} style={INP} />
+																</div>
+																<div style={FIELD}>
+																	<label style={LABEL}>Base Per Charm Price (₹)</label>
+																	<input type="number" min="0" value={p.perCharmPrice} onChange={e => upProduct(pIdx, { perCharmPrice: e.target.value })} style={INP} />
+																</div>
+															</div>
+
+															<div style={{ marginTop: "1rem" }}>
+																<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+																	<label style={LABEL}>Tiered Charm Pricing</label>
+																	<button type="button" onClick={() => {
+																		const cp = [...p.charmPiecePricing, { count: 0, price: 0 }];
+																		upProduct(pIdx, { charmPiecePricing: cp });
+																	}} style={{ background: "none", border: "none", color: "#1a7a35", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer" }}>+ Add Tier</button>
+																</div>
+																{p.charmPiecePricing.length === 0 ? <p style={{ margin: 0, fontSize: "0.8rem", color: "#aaa" }}>No tiered pricing added.</p> : (
+																	<div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+																		{p.charmPiecePricing.map((cp, cpIdx) => (
+																			<div key={cpIdx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.5rem", alignItems: "center" }}>
+																				<input type="number" placeholder="Count (e.g. 3)" value={cp.count || ""} onChange={e => {
+																					const ncp = [...p.charmPiecePricing];
+																					ncp[cpIdx] = { ...ncp[cpIdx], count: Number(e.target.value) };
+																					upProduct(pIdx, { charmPiecePricing: ncp });
+																				}} style={INP} />
+																				<input type="number" placeholder="Total Price (e.g. 150)" value={cp.price || ""} onChange={e => {
+																					const ncp = [...p.charmPiecePricing];
+																					ncp[cpIdx] = { ...ncp[cpIdx], price: Number(e.target.value) };
+																					upProduct(pIdx, { charmPiecePricing: ncp });
+																				}} style={INP} />
+																				<button type="button" onClick={() => {
+																					const ncp = [...p.charmPiecePricing];
+																					ncp.splice(cpIdx, 1);
+																					upProduct(pIdx, { charmPiecePricing: ncp });
+																				}} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontWeight: 700, padding: "0 0.2rem" }}>×</button>
+																			</div>
+																		))}
+																	</div>
+																)}
+															</div>
+
+															<div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px dashed #d4d4c8" }}>
+																<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+																	<label style={LABEL}>Chain Options</label>
+																	<button type="button" onClick={() => {
+																		const co = [...p.chainOptions, { value: `chain_${Date.now()}`, label: "", sub: "", price: 0, image: "", imagePreview: null, imageFile: null }];
+																		upProduct(pIdx, { chainOptions: co });
+																	}} style={{ background: "none", border: "none", color: "#1a7a35", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer" }}>+ Add Chain Option</button>
+																</div>
+																{p.chainOptions.length === 0 ? <p style={{ margin: 0, fontSize: "0.8rem", color: "#aaa" }}>No chain options added.</p> : (
+																	<div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+																		{p.chainOptions.map((co, coIdx) => (
+																			<div key={coIdx} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "0.8rem", alignItems: "center", background: "#fdfdf9", padding: "0.6rem", border: "1px solid #e8ead0", borderRadius: 6 }}>
+																				<div style={{ width: 44, height: 44, borderRadius: 6, border: "1px solid #d4d4c8", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#eee", cursor: "pointer", position: "relative" }}>
+																					{co.imagePreview ? <img src={co.imagePreview} alt="Chain" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "0.7rem", color: "#888" }}>IMG</span>}
+																					<input type="file" accept="image/*" onChange={e => {
+																						const file = e.target.files?.[0];
+																						if (!file) return;
+																						const nco = [...p.chainOptions];
+																						nco[coIdx] = { ...nco[coIdx], imageFile: file, imagePreview: URL.createObjectURL(file) };
+																						upProduct(pIdx, { chainOptions: nco });
+																					}} style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }} />
+																				</div>
+																				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+																					<input type="text" placeholder="Name (e.g. Box Chain)" value={co.label} onChange={e => {
+																						const nco = [...p.chainOptions];
+																						nco[coIdx] = { ...nco[coIdx], label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+																						upProduct(pIdx, { chainOptions: nco });
+																					}} style={INP} />
+																					<input type="number" placeholder="Price (e.g. 199)" value={co.price || ""} onChange={e => {
+																						const nco = [...p.chainOptions];
+																						nco[coIdx] = { ...nco[coIdx], price: Number(e.target.value) };
+																						upProduct(pIdx, { chainOptions: nco });
+																					}} style={INP} />
+																					<input type="text" placeholder="Description (e.g. Classic square-link)" value={co.sub} onChange={e => {
+																						const nco = [...p.chainOptions];
+																						nco[coIdx] = { ...nco[coIdx], sub: e.target.value };
+																						upProduct(pIdx, { chainOptions: nco });
+																					}} style={{ ...INP, gridColumn: "1 / -1" }} />
+																				</div>
+																				<button type="button" onClick={() => {
+																					const nco = [...p.chainOptions];
+																					nco.splice(coIdx, 1);
+																					upProduct(pIdx, { chainOptions: nco });
+																				}} style={{ background: "none", border: "none", color: "#d9534f", cursor: "pointer", fontWeight: 700, padding: "0 0.4rem" }}>✕</button>
+																			</div>
+																		))}
+																	</div>
+																)}
 															</div>
 														</div>
 

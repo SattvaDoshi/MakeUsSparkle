@@ -13,6 +13,7 @@ import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
 import type { ReviewData } from '@/lib/catalogApi';
+import { CharmSelector, ChainSelector, CHAIN_OPTIONS, ChainOption } from './CharmProductDetailPage';
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
@@ -36,6 +37,10 @@ interface ProductVariant {
   uploadedImageBase64?: string;
   uploadedImagesBase64?: string[];
   selectedPricingVariant?: { label: string; price: number };
+  charmCount?: number;
+  selectedCharms?: string[];
+  chain?: string;
+  chainPrice?: number;
 }
 
 interface DynamicVariant {
@@ -59,6 +64,11 @@ interface ComboProduct {
   maxImageUploads?: number;
   tags?: string[];
   stock?: number;
+  totalCharms?: number;
+  perCharmPrice?: number;
+  charmPiecePricing?: { count: number; price: number }[];
+  charmPieceOptions?: number[];
+  chainOptions?: ChainOption[];
 }
 
 interface PresetCombo {
@@ -282,7 +292,7 @@ const CUSTOM_SLOTS: CustomComboSlot[] = [
 ];
 
 export function hasCustomisation(v: ProductVariant) {
-  return (v.selections && Object.keys(v.selections).length > 0) || !!v.presetMessage || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0);
+  return (v.selections && Object.keys(v.selections).length > 0) || !!v.presetMessage || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0) || !!v.charmCount || !!v.chain;
 }
 
 /** Returns the list of variant groups (colour/size/etc.) that require a mandatory selection for a product. */
@@ -292,16 +302,26 @@ function getRequiredVariants(product: ComboProduct) {
 
 /** True only if every mandatory variant (colour, size, etc.) has been selected for this product. */
 function isProductSelectionComplete(product: ComboProduct, v: ProductVariant) {
-  const required = getRequiredVariants(product);
-  if (required.length === 0) return true;
-  return required.every(variant => !!v.selections?.[variant.name]);
+  const missing = getMissingVariantNames(product, v);
+  return missing.length === 0;
 }
 
 /** Returns the names of variant groups still missing a selection. */
 function getMissingVariantNames(product: ComboProduct, v: ProductVariant) {
-  return getRequiredVariants(product)
+  const missing = getRequiredVariants(product)
     .filter(variant => !v.selections?.[variant.name])
     .map(variant => variant.name);
+    
+  if (product.totalCharms && product.totalCharms > 0) {
+    if (!v.chain) {
+      missing.push('Chain Style');
+    }
+    if (!v.charmCount || v.charmCount === 0 || !v.selectedCharms || v.selectedCharms.filter(Boolean).length !== v.charmCount) {
+      missing.push('Charms');
+    }
+  }
+  
+  return missing;
 }
 
 function CompactCustSummary({ variant }: { variant: ProductVariant }) {
@@ -717,7 +737,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   };
 
   const variants = hideVariants ? [] : (product.variants || []);
-  const hasAny  = (local.selections && Object.keys(local.selections).length > 0) || !!local.personalMessage || !!local.uploadedImageBase64;
+  const hasAny = Object.keys(local.selections || {}).length > 0 || !!local.personalMessage || !!(local.uploadedImagesBase64?.length) || !!local.charmCount;
 
   const requiredVariants = hideVariants ? [] : getRequiredVariants(product);
   const missing = requiredVariants.filter(variant => !local.selections?.[variant.name]);
@@ -880,6 +900,35 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
             );
           })()}
 
+          {product.totalCharms ? (() => {
+            const chainOpts = product.chainOptions && product.chainOptions.length > 0 ? product.chainOptions : CHAIN_OPTIONS;
+            return (
+            <div className="modal-field" style={{ padding: '0 0.4rem', borderTop: '1px solid #f2f2ef', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
+              <ChainSelector
+                value={local.chain || ''}
+                onChange={val => {
+                  const p = chainOpts.find(c => c.value === val)?.price || 0;
+                  setLocal(prev => ({ ...prev, chain: val, chainPrice: p }));
+                }}
+                onViewImage={(chain) => setLightboxImg(chain.image)}
+                options={chainOpts}
+              />
+              <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
+                <span className="modal-field-num">{picNum + (product.allowImageCustomization ? 1 : 0)}</span>
+                Charms Selection
+              </label>
+              <CharmSelector
+                charmPieceOptions={product.charmPieceOptions || []}
+                totalCharms={product.totalCharms}
+                validationAttempt={showValidation ? 1 : 0}
+                onChange={({ count, charms }) => {
+                  setLocal(prev => ({ ...prev, charmCount: count, selectedCharms: charms }));
+                }}
+              />
+            </div>
+            );
+          })() : null}
+
           {hasAny && (
             <div className="modal-summary-box">
               <div className="modal-summary-title">Your selections</div>
@@ -889,6 +938,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                 ))}
                 {local.personalMessage     && <span className="modal-sum-tag">Message added</span>}
                 {local.uploadedImagesBase64?.map((_, i) => <span key={i} className="modal-sum-tag">Photo added</span>)}
+                {local.charmCount ? <span className="modal-sum-tag">{local.charmCount} charms</span> : null}
               </div>
             </div>
           )}
@@ -1023,7 +1073,23 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
   };
 
   const products = combo.includedProducts;
-  const currentPrice = comboVariant.selectedPricingVariant?.price ?? combo.price;
+  const charmsPriceTotal = products.reduce((acc, p) => {
+    const v = variants[p.id];
+    if (!v) return acc;
+    let total = 0;
+    if (v.chainPrice) total += v.chainPrice;
+    if (v.charmCount && v.charmCount > 0 && p.totalCharms) {
+      if (p.charmPiecePricing && p.charmPiecePricing.length > 0) {
+        const match = p.charmPiecePricing.find(tier => tier.count === v.charmCount);
+        if (match) total += match.price;
+      } else {
+        total += (p.perCharmPrice || 0) * v.charmCount;
+      }
+    }
+    return acc + total;
+  }, 0);
+
+  const currentPrice = (comboVariant.selectedPricingVariant?.price ?? combo.price) + charmsPriceTotal;
   const priceDiff = currentPrice - combo.price;
   const currentOriginalPrice = combo.originalPrice + priceDiff;
   const pct = currentOriginalPrice > currentPrice
@@ -1261,6 +1327,32 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                     </div>
                   );
                 })()}
+
+                {p.totalCharms ? (() => {
+                  const chainOpts = p.chainOptions && p.chainOptions.length > 0 ? p.chainOptions : CHAIN_OPTIONS;
+                  return (
+                  <div className="hamper-piece-field">
+                    <span className="hamper-piece-field-label">Charms Selection</span>
+                    <ChainSelector
+                      value={v.chain || ''}
+                      onChange={val => {
+                        const chainP = chainOpts.find(c => c.value === val)?.price || 0;
+                        onVariantChange(p.id, { ...v, chain: val, chainPrice: chainP });
+                      }}
+                      onViewImage={(chain) => setLightboxImg(chain.image)}
+                      options={chainOpts}
+                    />
+                    <CharmSelector
+                      charmPieceOptions={p.charmPieceOptions || []}
+                      totalCharms={p.totalCharms}
+                      validationAttempt={showValidation ? 1 : 0}
+                      onChange={({ count, charms }) => {
+                        onVariantChange(p.id, { ...v, charmCount: count, selectedCharms: charms });
+                      }}
+                    />
+                  </div>
+                  );
+                })() : null}
               </div>
             </div>
           );
@@ -1786,6 +1878,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 imageCustomizationTitle: p.imageCustomizationTitle || '',
                 maxImageUploads: p.maxImageUploads || 1,
                 tags: p.tags || [],
+                totalCharms: p.totalCharms || 0,
+                perCharmPrice: p.perCharmPrice || 0,
+                charmPiecePricing: p.charmPiecePricing || [],
+                charmPieceOptions: p.charmPiecePricing?.length ? p.charmPiecePricing.map((cp: any) => cp.count) : (p.charmPieceOptions || []),
+                chainOptions: p.chainOptions || [],
                 stock: p.stock ?? undefined,
               });
             }
@@ -1871,9 +1968,28 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
   function handlePresetAddToCart(combo: PresetCombo) {
     const cv = comboVariants[combo.id] || {};
+    const charmsPriceTotal = combo.includedProducts.reduce((acc, p) => {
+      const v = presetVariants[p.id];
+      if (!v) return acc;
+      let total = 0;
+      if (v.chainPrice) total += v.chainPrice;
+      if (v.charmCount && v.charmCount > 0 && p.totalCharms) {
+        if (p.charmPiecePricing && p.charmPiecePricing.length > 0) {
+          const match = p.charmPiecePricing.find(tier => tier.count === v.charmCount);
+          if (match) total += match.price;
+        } else {
+          total += ((p.perCharmPrice || 0) * v.charmCount);
+        }
+      }
+      return acc + total;
+    }, 0);
+    const finalPrice = (cv.selectedPricingVariant?.price ?? combo.price) + charmsPriceTotal;
+    const priceDiff = finalPrice - combo.price;
+    const finalOriginalPrice = combo.originalPrice + priceDiff;
+
     addItem({
-      id: combo.id, name: combo.name, price: cv.selectedPricingVariant?.price ?? combo.price,
-      originalPrice: (cv.selectedPricingVariant?.price ?? combo.price) > combo.price ? combo.originalPrice + ((cv.selectedPricingVariant?.price ?? combo.price) - combo.price) : combo.originalPrice, image: combo.image,
+      id: combo.id, name: combo.name, price: finalPrice,
+      originalPrice: finalOriginalPrice > finalPrice ? finalOriginalPrice : finalOriginalPrice, image: combo.image,
       color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-PRESET-${combo.id}`,
       href: `/categories/${gender}/curated-combos`,
@@ -1897,7 +2013,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
               personalMessage: v.personalMessage,
               uploadedImageBase64: v.uploadedImageBase64,
               uploadedImagesBase64: v.uploadedImagesBase64,
-              isCustomised: hasCustomisation(v)
+              isCustomised: hasCustomisation(v),
+              charmCount: v.charmCount,
+              selectedCharms: v.selectedCharms,
+              chain: v.chain,
+              chainPrice: v.chainPrice,
             }
           };
         }),
@@ -1926,10 +2046,29 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     const vars = slotVariants[slot.id]   || {};
     const cv   = comboVariants[slot.id]  || {};
     if (ids.length !== slot.maxItems) return;
+    
+    const charmsPriceTotal = ids.reduce((acc, pid) => {
+      const p = slot.allowedProducts.find(x => x.id === pid)!;
+      const v = vars[pid];
+      if (!v) return acc;
+      let total = 0;
+      if (v.chainPrice) total += v.chainPrice;
+      if (v.charmCount && v.charmCount > 0 && p.totalCharms) {
+        if (p.charmPiecePricing && p.charmPiecePricing.length > 0) {
+          const match = p.charmPiecePricing.find(tier => tier.count === v.charmCount);
+          if (match) total += match.price;
+        } else {
+          total += ((p.perCharmPrice || 0) * v.charmCount);
+        }
+      }
+      return acc + total;
+    }, 0);
+    const finalPrice = (cv.selectedPricingVariant?.price ?? slot.fixedPrice) + charmsPriceTotal;
+
     addItem({
       id: `custom-slot-${slot.id}-${Date.now()}`,
       sourceId: slot.id,
-      name: slot.name, price: cv.selectedPricingVariant?.price ?? slot.fixedPrice, originalPrice: cv.selectedPricingVariant?.price ?? slot.fixedPrice,
+      name: slot.name, price: finalPrice, originalPrice: finalPrice,
       image: slot.image, color: 'Default', colorHex: '#c9a84c',
       sku: `COMBO-CUSTOM-${slot.id}`,
       href: `/categories/${gender}/curated-combos`,
@@ -1951,7 +2090,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
               presetMessage: v.presetMessage,
               personalMessage: v.personalMessage,
               uploadedImageBase64: v.uploadedImageBase64,
-              isCustomised: hasCustomisation(v)
+              isCustomised: hasCustomisation(v),
+              charmCount: v.charmCount,
+              selectedCharms: v.selectedCharms,
+              chain: v.chain,
+              chainPrice: v.chainPrice,
             }
           };
         }),
@@ -2287,6 +2430,145 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-drawer-item-name { flex:1;font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
         .builder-drawer-item-name em { font-style:normal;color:var(--gold);font-size:10px; }
         .builder-drawer-item button { width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:13px;line-height:1;flex-shrink:0; }
+
+        /* ════════════════════════════════════════════
+           CHARM & CHAIN SELECTORS
+        ════════════════════════════════════════════ */
+        .charm-section-label{
+          font-size: 11px; font-weight: 700; letter-spacing: .06em;
+          text-transform: uppercase; color: var(--olive-600);
+          display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+        }
+
+        .charm-fixed-count-note{
+          display: flex; align-items: flex-start; gap: 8px;
+          background: rgba(201,168,76,.1);
+          border: 1px solid rgba(201,168,76,.28);
+          border-radius: 10px;
+          padding: 9px 12px;
+          font-size: 12px; font-weight: 400; color: #6b5518;
+          line-height: 1.55;
+        }
+        .charm-fixed-count-note strong{ font-weight: 700; color: var(--olive-600); }
+
+        .charm-count-grid{ display: flex; flex-wrap: wrap; gap: 8px; }
+        .charm-count-btn{
+          width: 38px; height: 38px; border-radius: 10px;
+          background: white; border: 1px solid var(--beige-dkr);
+          font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500; color: var(--ink);
+          cursor: pointer; transition: all .15s;
+        }
+        .charm-count-btn:hover{ border-color: var(--olive-400); background: var(--olive-50); }
+        .charm-count-btn.active{
+          background: linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05));
+          color: #8c6b20; box-shadow: 0 0 0 3px rgba(201,168,76,.15);
+          transform: translateY(-2px); border-color: transparent;
+        }
+
+        .charm-dropdowns{ margin-top: 4px; }
+        .charm-dropdown-list{ display: flex; flex-direction: column; gap: 10px; }
+        .charm-dropdown-item{
+          background: white; border: 1.5px solid var(--beige-dkr);
+          border-radius: 12px; padding: 10px 12px 12px; transition: border-color .2s;
+        }
+        .charm-dropdown-item:focus-within{ border-color: var(--olive-400); }
+
+        .charm-dropdown-label-row{
+          display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+        }
+        .charm-num-badge{
+          width: 22px; height: 22px; border-radius: 50%;
+          background: var(--olive-600); color: var(--beige);
+          font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .charm-slot-label{
+          font-size: 11px; font-weight: 600; letter-spacing: .06em;
+          text-transform: uppercase; color: var(--olive-600);
+        }
+        .charm-selected-tag{
+          font-size: 10px; font-weight: 500; color: #8c6b20;
+          background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3);
+          padding: 2px 8px; border-radius: 4px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        .charm-select-inner{ position: relative; }
+        .charm-select{
+          width: 100%; appearance: none; -webkit-appearance: none;
+          background: var(--beige); border: 1.5px solid var(--beige-dkr);
+          border-radius: 8px; padding: 10px 36px 10px 12px;
+          font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 400; color: #101010;
+          cursor: pointer; outline: none; transition: border-color .2s, box-shadow .2s;
+        }
+        .charm-select:focus{ border-color: var(--olive-400); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
+        .charm-select--filled{ background: var(--olive-50); border-color: rgba(90,110,35,.25); color: var(--olive-900); font-weight: 500; }
+        .charm-select-chevron{
+          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+          width: 14px; height: 14px; color: var(--mist); pointer-events: none;
+        }
+        
+        .chain-selector-wrap{
+          background: linear-gradient(135deg, rgba(90,110,35,.07), rgba(201,168,76,.06));
+          border: 1.5px solid rgba(90,110,35,.2); border-radius: 18px;
+          padding: 14px 14px 16px; margin-bottom: 20px; position: relative;
+        }
+        .chain-trigger{
+          width: 100%; display: flex; align-items: center; gap: 10px;
+          background: white; border: 1.5px solid var(--beige-dkr); border-radius: 12px;
+          padding: 7px 10px; cursor: pointer; font-family: 'Jost', sans-serif; text-align: left;
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .chain-trigger:hover{ border-color: var(--olive-400); }
+        .chain-trigger--open{ border-color: var(--olive-500); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
+        .chain-trigger--missing{ border-color: var(--red); background: rgba(192,57,43,.04); }
+        .chain-trigger-thumb{
+          width: 44px; height: 44px; border-radius: 8px;
+          overflow: hidden; flex-shrink: 0; background: white;
+          border: 1px solid rgba(61,74,34,.1); display: flex; align-items: center; justify-content: center;
+          cursor: zoom-in; position: relative;
+        }
+        .chain-trigger-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+        .chain-trigger-zoom{
+          position: absolute; bottom: 3px; right: 3px;
+          width: 16px; height: 16px; border-radius: 50%;
+          background: rgba(26,31,13,.65); color: white; display: flex; align-items: center; justify-content: center;
+        }
+        .chain-trigger-zoom svg{ width: 9px; height: 9px; }
+        .chain-trigger-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .chain-trigger-label{ font-size: 12px; font-weight: 600; color: var(--olive-900); letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chain-trigger-price{ font-size: 10px; font-weight: 600; color: var(--olive-600); letter-spacing: .02em; }
+        .chain-trigger-chevron{
+          width: 16px; height: 16px; color: var(--mist); flex-shrink: 0; transition: transform .25s ease;
+        }
+        .chain-trigger--open .chain-trigger-chevron{ transform: rotate(180deg); }
+        .chain-options-panel{
+          margin-top: 10px; background: white; border: 1.5px solid var(--beige-dkr);
+          border-radius: 16px; overflow: hidden; animation: chainPanelIn .2s ease both;
+        }
+        .chain-option-row{
+          width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px;
+          background: white; border: none; border-bottom: 1px solid rgba(61,74,34,.07);
+          cursor: pointer; text-align: left; transition: background .15s;
+        }
+        .chain-option-row:last-child{ border-bottom: none; }
+        .chain-option-row:hover{ background: var(--olive-50); }
+        .chain-option-row--active{ background: rgba(201,168,76,.09); }
+        .chain-option-thumb{
+          width: 72px; height: 72px; border-radius: 12px; overflow: hidden; flex-shrink: 0; position: relative;
+          background: white; border: 1px solid rgba(61,74,34,.1); cursor: zoom-in;
+        }
+        .chain-option-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .3s ease; }
+        .chain-option-row:hover .chain-option-thumb img{ transform: scale(1.05); }
+        .chain-option-zoom{
+          position: absolute; bottom: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
+          background: rgba(26,31,13,.65); color: white; display: flex; align-items: center; justify-content: center;
+        }
+        .chain-option-zoom svg{ width: 11px; height: 11px; }
+        .chain-option-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .chain-option-label{ font-size: 12px; font-weight: 600; color: var(--olive-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chain-option-price{ font-size: 10px; font-weight: 700; color: var(--olive-600); letter-spacing: .01em; }
+        .chain-option-check{ width: 18px; height: 18px; color: var(--olive-500); flex-shrink: 0; }
+        @keyframes chainPanelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
         @media(max-width:1200px) { .builder-grid { grid-template-columns:repeat(4,1fr); } }
         @media(max-width:1100px) { .builder-grid { grid-template-columns:repeat(3,1fr); } }

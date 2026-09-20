@@ -300,6 +300,11 @@ export default function CartDrawer() {
                           <span className="di-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
                         )}
                       </div>
+                      {(item as any).priceBreakdown && (
+                        <div style={{ fontSize: 9.5, color: 'var(--mist)', marginTop: 2 }}>
+                          {(item as any).priceBreakdown}
+                        </div>
+                      )}
                     </div>
                     <div className="di-actions">
                       <button
@@ -316,6 +321,12 @@ export default function CartDrawer() {
                       )}
                     </div>
                   </div>
+
+                  {item.chain && (
+                    <div style={{ fontSize: 11, color: 'var(--olive-600)', marginTop: 8, padding: '0 10px' }}>
+                      Chain: <strong>{item.chainLabel || item.chain}</strong>
+                    </div>
+                  )}
 
                   {item.selectedCharms && item.selectedCharms.length > 0 && (
                     <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -347,7 +358,7 @@ export default function CartDrawer() {
                               <span style={{ fontSize: 12 }}>{charm.emoji || '◈'}</span>
                               {charm.name || 'Charm'}
                             </span>
-                            <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 10 }}>₹{(charm.price || 0).toLocaleString('en-IN')}</span>
+                            {charm.price ? <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 10 }}>₹{charm.price.toLocaleString('en-IN')}</span> : null}
                           </div>
                         );
                       })}
@@ -374,10 +385,14 @@ export default function CartDrawer() {
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontSize: 9, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
                                 <span style={{ fontSize: 11, color: 'var(--olive-900)' }}>{selection.name}</span>
-                                {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage)) && (
+                                {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage) || Boolean(selection.customData?.chain) || (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0)) && (
                                   <div style={{ fontSize: 9.5, color: 'var(--olive-600)', marginTop: 2 }}>
                                     {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
                                     {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                    {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
+                                    {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
+                                      <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
+                                    )}
                                   </div>
                                 )}
                               </div>

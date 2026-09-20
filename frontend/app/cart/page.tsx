@@ -858,7 +858,6 @@ import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
-import ExitIntent from '@/components/cart/ExitIntent';
 import UpperNav from '@/components/ui/UpperNav';
 import CartBanner from '@/components/cart/CartBanner';
 
@@ -1233,7 +1232,6 @@ export default function CartPage() {
 
       <div className="cp-root">
         <UpperNav />
-        <ExitIntent />
 
         <div className="cp-layout"  >
 
@@ -1297,6 +1295,16 @@ export default function CartPage() {
                               <span className="cp-item-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
                             )}
                           </div>
+                          {(item as any).priceBreakdown && (
+                            <div style={{ fontSize: 10.5, color: 'var(--mist)', marginTop: 4 }}>
+                              {(item as any).priceBreakdown}
+                            </div>
+                          )}
+                          {item.chain && (
+                            <div style={{ fontSize: 12, color: 'var(--olive-600)', marginTop: 8 }}>
+                              Chain: <strong>{item.chainLabel || item.chain}</strong>
+                            </div>
+                          )}
                           {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
                             <p className="cp-item-per">₹{item.price.toLocaleString('en-IN')} per item</p>
                           )}
@@ -1374,10 +1382,14 @@ export default function CartPage() {
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
                                     <span style={{ fontSize: 12, color: 'var(--olive-900)' }}>{selection.name}</span>
-                                    {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage)) && (
+                                    {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage) || Boolean(selection.customData?.chain) || (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0)) && (
                                       <div style={{ fontSize: 10.5, color: 'var(--olive-600)', marginTop: 2 }}>
                                         {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
                                         {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                        {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
+                                        {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
+                                          <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
+                                        )}
                                       </div>
                                     )}
                                   </div>

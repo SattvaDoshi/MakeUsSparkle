@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type ChangeEvent, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchProductById, fetchCharmItems, type CatalogProduct, type CharmItemData } from '@/lib/catalogApi';
 import { useCart } from '@/lib/cartContext';
@@ -37,62 +37,10 @@ interface ChainOption {
   price?: number;
 }
 
-/* ─── Charm option list (extend as needed) ─── */
-const CHARM_OPTIONS = [
-  { value: '', label: 'Select a charm…' },
-  { value: 'initial_a', label: '𝑨 Initial — A' },
-  { value: 'initial_b', label: '𝑩 Initial — B' },
-  { value: 'initial_c', label: '𝑪 Initial — C' },
-  { value: 'initial_d', label: '𝑫 Initial — D' },
-  { value: 'initial_e', label: '𝑬 Initial — E' },
-  { value: 'initial_f', label: '𝑭 Initial — F' },
-  { value: 'initial_g', label: '𝑮 Initial — G' },
-  { value: 'initial_h', label: '𝑯 Initial — H' },
-  { value: 'initial_i', label: '𝑰 Initial — I' },
-  { value: 'initial_j', label: '𝑱 Initial — J' },
-  { value: 'initial_k', label: '𝑲 Initial — K' },
-  { value: 'initial_l', label: '𝑳 Initial — L' },
-  { value: 'initial_m', label: '𝑴 Initial — M' },
-  { value: 'initial_n', label: '𝑵 Initial — N' },
-  { value: 'initial_o', label: '𝑶 Initial — O' },
-  { value: 'initial_p', label: '𝑷 Initial — P' },
-  { value: 'initial_q', label: '𝑸 Initial — Q' },
-  { value: 'initial_r', label: '𝑹 Initial — R' },
-  { value: 'initial_s', label: '𝑺 Initial — S' },
-  { value: 'initial_t', label: '𝑻 Initial — T' },
-  { value: 'initial_u', label: '𝑼 Initial — U' },
-  { value: 'initial_v', label: '𝑽 Initial — V' },
-  { value: 'initial_w', label: '𝑾 Initial — W' },
-  { value: 'initial_x', label: '𝑿 Initial — X' },
-  { value: 'initial_y', label: '𝒀 Initial — Y' },
-  { value: 'initial_z', label: '𝒁 Initial — Z' },
-  { value: 'heart', label: '♥ Heart' },
-  { value: 'star', label: '★ Star' },
-  { value: 'moon', label: '☽ Moon' },
-  { value: 'sun', label: '☀ Sun' },
-  { value: 'flower', label: '✿ Flower' },
-  { value: 'butterfly', label: '🦋 Butterfly' },
-  { value: 'infinity', label: '∞ Infinity' },
-  { value: 'crown', label: '♛ Crown' },
-  { value: 'diamond', label: '◈ Diamond' },
-  { value: 'birthstone_jan', label: '💎 Birthstone — January (Garnet)' },
-  { value: 'birthstone_feb', label: '💎 Birthstone — February (Amethyst)' },
-  { value: 'birthstone_mar', label: '💎 Birthstone — March (Aquamarine)' },
-  { value: 'birthstone_apr', label: '💎 Birthstone — April (Diamond)' },
-  { value: 'birthstone_may', label: '💎 Birthstone — May (Emerald)' },
-  { value: 'birthstone_jun', label: '💎 Birthstone — June (Pearl)' },
-  { value: 'birthstone_jul', label: '💎 Birthstone — July (Ruby)' },
-  { value: 'birthstone_aug', label: '💎 Birthstone — August (Peridot)' },
-  { value: 'birthstone_sep', label: '💎 Birthstone — September (Sapphire)' },
-  { value: 'birthstone_oct', label: '💎 Birthstone — October (Opal)' },
-  { value: 'birthstone_nov', label: '💎 Birthstone — November (Topaz)' },
-  { value: 'birthstone_dec', label: '💎 Birthstone — December (Turquoise)' },
-];
-
 /* ─── Chain option list — each chain has a photo shown large in the picker ─── */
 // ── NOTE: `price` here is a placeholder — wire this up to the real
 // per-chain price from your product/catalog data when available. ──
-const CHAIN_OPTIONS: ChainOption[] = [
+export const CHAIN_OPTIONS: ChainOption[] = [
   { value: 'box_chain', label: 'Box Chain', sub: 'Classic square-link, sits flat', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80', price: 199 },
   { value: 'cable_chain', label: 'Cable Chain', sub: 'Timeless round links', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80', price: 249 },
   { value: 'rope_chain', label: 'Rope Chain', sub: 'Twisted, high-shine finish', image: 'https://images.unsplash.com/photo-1599643477873-108bb9622d17?w=600&q=80', price: 349 },
@@ -100,7 +48,8 @@ const CHAIN_OPTIONS: ChainOption[] = [
   { value: 'curb_chain', label: 'Curb Chain', sub: 'Flattened, interlocking links', image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=600&q=80', price: 279 },
 ];
 
-const MAX_CHARM_COUNT = 10;
+
+
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
 // ── Replace with actual size chart image path ──
 const SIZE_CHART_IMAGE = '/images/size-chart.jpg';
@@ -335,20 +284,22 @@ const GOES_WELL_WITH = [
 ];
 
 /* ─── CHAIN SELECTOR — compact dropdown with a large, fully-visible preview photo ─── */
-function ChainSelector({
+export function ChainSelector({
   value,
   onChange,
   onViewImage,
   showMissing,
+  options,
 }: {
   value: string;
   onChange: (v: string) => void;
   onViewImage: (chain: ChainOption) => void;
   showMissing?: boolean;
+  options: ChainOption[];
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const selected = CHAIN_OPTIONS.find(c => c.value === value) || null;
+  const selected = options.find(c => c.value === value) || null;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -405,7 +356,7 @@ function ChainSelector({
 
       {open && (
         <div className="chain-options-panel">
-          {CHAIN_OPTIONS.map(opt => (
+          {options.map(opt => (
             <button
               type="button"
               key={opt.value}
@@ -441,9 +392,10 @@ function ChainSelector({
 }
 
 /* ─── CHARM SELECTOR COMPONENT ─── */
-function CharmSelector({
+export function CharmSelector({
   onChange,
   charmPieceOptions = [],
+  totalCharms = 8,
   validationAttempt,
 }: {
   onChange: (data: { count: number; charms: string[] }) => void;
@@ -451,21 +403,23 @@ function CharmSelector({
   totalCharms?: number;
   validationAttempt?: number;
 }) {
-  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : Array.from({ length: totalCharms }, (_, i) => i + 1);
   // When the product only offers a single charm count (e.g. always 3 charms),
   // that count is fixed — there's nothing to "choose", so we don't show a picker
   // for it and the user can never end up with fewer than that many charms.
   const isFixedCount = optionsList.length === 1;
-  const [charmCount, setCharmCount] = useState(() => optionsList[0] || 1);
+  const [charmCount, setCharmCount] = useState(0); // 0 means no selection initially
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
   const [showMissing, setShowMissing] = useState(false);
 
   // Sync count options change
   useEffect(() => {
-    if (charmPieceOptions && charmPieceOptions.length > 0) {
+    if (charmPieceOptions && charmPieceOptions.length === 1) {
       setCharmCount(charmPieceOptions[0]);
-      setSelectedCharms([]);
+    } else {
+      setCharmCount(0);
     }
+    setSelectedCharms([]);
   }, [charmPieceOptions]);
 
   // Keep selectedCharms array in sync with charmCount
@@ -479,9 +433,14 @@ function CharmSelector({
     setShowMissing(false);
   }, [charmCount]);
 
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    onChange({ count: charmCount, charms: selectedCharms });
-  }, [charmCount, selectedCharms, onChange]);
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    onChangeRef.current({ count: charmCount, charms: selectedCharms });
+  }, [charmCount, selectedCharms]);
 
   // Parent bumps this counter every time the user tries to add-to-cart/buy-now
   // with an incomplete charm selection — trigger the inline warning state.
@@ -498,7 +457,13 @@ function CharmSelector({
   };
 
   const filledCount = selectedCharms.filter(Boolean).length;
-  const availableCharms = CHARM_OPTIONS; // includes the placeholder at index 0
+  const availableCharms = [
+    { value: '', label: 'Select a charm...' },
+    ...Array.from({ length: totalCharms }, (_, i) => ({
+      value: String(i + 1),
+      label: String(i + 1)
+    }))
+  ];
   const allCharmsSelected = filledCount === charmCount;
 
   return (
@@ -537,22 +502,24 @@ function CharmSelector({
       )}
 
       {/* One native <select> per slot */}
-      <p className="charm-section-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        Select Your Charms <span style={{ color: 'var(--red)' }}>*</span>
-        <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
-      </p>
+      {charmCount > 0 && (
+        <>
+          <p className="charm-section-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            Select Your Charms <span style={{ color: 'var(--red)' }}>*</span>
+            <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
+          </p>
 
-      {showMissing && !allCharmsSelected && (
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginBottom: 10 }}>
-          Please select all {charmCount} charm{charmCount > 1 ? 's' : ''} before adding to cart.
-        </p>
-      )}
+          {showMissing && !allCharmsSelected && (
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginBottom: 10 }}>
+              Please select all {charmCount} charm{charmCount > 1 ? 's' : ''} before adding to cart.
+            </p>
+          )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {Array.from({ length: charmCount }, (_, i) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Array.from({ length: charmCount }, (_, i) => {
           const chosen = selectedCharms[i] || '';
           const usedValues = new Set(selectedCharms.filter((c, idx) => c && idx !== i));
           const isMissing = showMissing && !chosen;
@@ -639,13 +606,14 @@ function CharmSelector({
                     (e.currentTarget as HTMLButtonElement).style.color = 'var(--mist)';
                   }}
                 >
-                  ×
                 </button>
               )}
             </div>
           );
         })}
       </div>
+      </>
+      )}
 
       {/* Summary strip */}
       {filledCount > 0 && (
@@ -661,7 +629,7 @@ function CharmSelector({
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {selectedCharms.map((c, i) => {
-              const label = CHARM_OPTIONS.find(o => o.value === c)?.label || '';
+              const label = availableCharms.find(o => o.value === c)?.label || '';
               return (
                 <span key={i} className={`charm-summary-pill${!c ? ' charm-summary-pill--empty' : ''}`}>
                   <span className="charm-summary-num">{i + 1}</span>
@@ -1120,7 +1088,8 @@ const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
 const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
 const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
 // A charm selection round is only "complete" once every slot for the chosen count has a charm.
-const charmSelectionIncomplete = charmData.charms.filter(Boolean).length < charmData.count;
+// It also requires that a valid charm count has been picked (> 0).
+const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filter(Boolean).length < charmData.count;
   useEffect(() => {
     if (!product) return;
     setActiveColor(0);
@@ -1151,8 +1120,31 @@ const charmSelectionIncomplete = charmData.charms.filter(Boolean).length < charm
   const baseOriginalPrice = originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
   
-  const totalCharmPrice = basePrice + (perCharmPrice * selectedCharmCount);
-  const totalCharmOriginalPrice = baseOriginalPrice + (perCharmPrice * selectedCharmCount);
+  const chainOptions = useMemo(() => {
+    const dynamicChainOptions = (product?.variants || [])
+      .filter(v => v.bandName)
+      .map(v => ({
+        value: v.bandName || '',
+        label: v.bandName || '',
+        image: v.bandExistingImage || v.image || FALLBACK_PRODUCT_IMAGE,
+        sub: '',
+        price: v.salePrice || v.price || 0,
+      }));
+    return dynamicChainOptions.length > 0 ? dynamicChainOptions : CHAIN_OPTIONS;
+  }, [product?.variants]);
+
+  const selectedChainObj = chainOptions.find(c => c.value === selectedChain);
+  const chainPrice = selectedChainObj?.price || 0;
+
+  const getCharmsPrice = (count: number) => {
+    const specificPricing = product?.charmPiecePricing?.find(p => p.count === count);
+    if (specificPricing) return specificPricing.price;
+    return perCharmPrice * count;
+  };
+  const charmsPrice = getCharmsPrice(selectedCharmCount);
+  
+  const totalCharmPrice = basePrice + chainPrice + charmsPrice;
+  const totalCharmOriginalPrice = baseOriginalPrice + chainPrice + charmsPrice;
   const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
 
   const wished = product ? isWished(product.id) : false;
@@ -1162,58 +1154,65 @@ const charmSelectionIncomplete = charmData.charms.filter(Boolean).length < charm
     toggleItem({ id: product.id, name: product.name || 'Product', price: totalCharmPrice, originalPrice: totalCharmOriginalPrice, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
   }, [toggleItem, product, totalCharmPrice, totalCharmOriginalPrice, displayImg, normalizedColors]);
 
-  const buildCartItem = useCallback(() => ({
-    id: String(product!.sourceId),
-    name: product!.name || '',
-    price: totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0),
-    originalPrice: totalCharmOriginalPrice,
-    image: displayImg,
-    color: currentColor?.label || '',
-    colorHex: currentColor?.hex || '#c9a84c',
-    size: activeSize || undefined,
-    sku: product!.sku,
-    href: product!.href || `/products/${product!.sourceId}`,
-    sourceId: String(product!.sourceId),
-    category,
-    categoryId: product!.categoryId,
-    subCategoryId: product!.subCategoryId,
-    style: product!.style,
-    styleId: product!.styleId,
-    customNote: customData.wantCustom ? customData.globalNote : undefined,
-    customImages: customData.wantCustom ? customData.uploads : undefined,
-    giftMessage: giftMessage.customMessage || undefined,
-    giftBox: giftBoxAdded || undefined,
-    chain: selectedChain || undefined,
-    chainLabel: CHAIN_OPTIONS.find(c => c.value === selectedChain)?.label || undefined,
-    selectedCharms: charmData.charms.filter(Boolean).map(charm => ({
-      sourceId: charm,
-      name: charm,
-      quantity: 1,
-      price: basePrice,
-      images: customData.wantCustom ? customData.uploads : [],
-      customText: customData.wantCustom ? customData.globalNote : undefined,
-    })),
-    selectionGroups: [{
-      type: 'multi_item_selection',
+  const buildCartItem = useCallback(() => {
+    let breakdown = `Base ₹${basePrice}`;
+    if (chainPrice > 0) breakdown += ` + ₹${chainPrice} (Chain)`;
+    if (selectedCharmCount > 0) breakdown += ` + ₹${charmsPrice} (${selectedCharmCount} charms)`;
+
+    return {
+      id: String(product!.sourceId),
+      name: product!.name || '',
+      price: totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0),
+      originalPrice: totalCharmOriginalPrice,
+      image: displayImg,
+      color: currentColor?.label || '',
+      colorHex: currentColor?.hex || '#c9a84c',
+      size: activeSize || undefined,
+      sku: product!.sku,
+      href: product!.href || `/products/${product!.sourceId}`,
+      sourceId: String(product!.sourceId),
       category,
-      label: 'Charm Selection',
-      selectionKey: 'selectedCharms',
-      itemRefModel: 'CharmItem',
-      items: charmData.charms.filter(Boolean).map(charm => ({
+      categoryId: product!.categoryId,
+      subCategoryId: product!.subCategoryId,
+      style: product!.style,
+      styleId: product!.styleId,
+      customNote: customData.wantCustom ? customData.globalNote : undefined,
+      customImages: customData.wantCustom ? customData.uploads : undefined,
+      giftMessage: giftMessage.customMessage || undefined,
+      giftBox: giftBoxAdded || undefined,
+      chain: selectedChain || undefined,
+      chainLabel: chainOptions.find(c => c.value === selectedChain)?.label || undefined,
+      priceBreakdown: breakdown,
+      selectedCharms: charmData.charms.filter(Boolean).map(charm => ({
         sourceId: charm,
         name: charm,
         quantity: 1,
-        price: basePrice,
+        price: 0,
         images: customData.wantCustom ? customData.uploads : [],
         customText: customData.wantCustom ? customData.globalNote : undefined,
       })),
-      metadata: {
-        requestedCount: selectedCharmCount,
-      },
-    }],
-    charms: charmData.charms.filter(Boolean),
-    charmCount: selectedCharmCount,
-  }), [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded, selectedChain]);
+      selectionGroups: [{
+        type: 'multi_item_selection',
+        category,
+        label: 'Charm Selection',
+        selectionKey: 'selectedCharms',
+        itemRefModel: 'CharmItem',
+        items: charmData.charms.filter(Boolean).map(charm => ({
+          sourceId: charm,
+          name: charm,
+          quantity: 1,
+          price: 0,
+          images: customData.wantCustom ? customData.uploads : [],
+          customText: customData.wantCustom ? customData.globalNote : undefined,
+        })),
+        metadata: {
+          requestedCount: selectedCharmCount,
+        },
+      }],
+      charms: charmData.charms.filter(Boolean),
+      charmCount: selectedCharmCount,
+    };
+  }, [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded, selectedChain, chainOptions, chainPrice, charmsPrice]);
 
  const handleAddToCart = useCallback(() => {
     if (!product) return;
@@ -1222,7 +1221,11 @@ const charmSelectionIncomplete = charmData.charms.filter(Boolean).length < charm
       return;
     }
     if (charmSelectionIncomplete) {
-      setErrorToast(`Please select all ${charmData.count} charms before adding to cart.`);
+      if (charmData.count === 0) {
+        setErrorToast('Please select the number of charms first.');
+      } else {
+        setErrorToast(`Please select all ${charmData.count} charms before adding to cart.`);
+      }
       setCharmValidationAttempt(t => t + 1);
       return;
     }
@@ -1251,7 +1254,11 @@ const handleBuyNow = useCallback(() => {
       return;
     }
     if (charmSelectionIncomplete) {
-      setErrorToast(`Please select all ${charmData.count} charms before proceeding.`);
+      if (charmData.count === 0) {
+        setErrorToast('Please select the number of charms first.');
+      } else {
+        setErrorToast(`Please select all ${charmData.count} charms before proceeding.`);
+      }
       setCharmValidationAttempt(t => t + 1);
       return;
     }
@@ -1984,9 +1991,11 @@ const handleBuyNow = useCallback(() => {
                 </>
               )}
             </div>
-            {selectedCharmCount > 0 && (
+            {(selectedCharmCount > 0 || chainPrice > 0) && (
               <p style={{ marginBottom: 18, fontSize: 11, color: 'var(--mist)', letterSpacing: '.04em' }}>
-                Base ₹{basePrice.toLocaleString('en-IN')} + ₹{perCharmPrice.toLocaleString('en-IN')} each × {selectedCharmCount} charms
+                Base ₹{basePrice.toLocaleString('en-IN')}
+                {chainPrice > 0 && ` + ₹${chainPrice.toLocaleString('en-IN')} (Chain)`}
+                {selectedCharmCount > 0 && ` + ₹${charmsPrice.toLocaleString('en-IN')} (${selectedCharmCount} charms)`}
               </p>
             )}
             {discountTag && (
@@ -2077,6 +2086,7 @@ const handleBuyNow = useCallback(() => {
               onChange={setSelectedChain}
               onViewImage={c => setChainLightbox(c)}
               showMissing={chainValidationAttempt > 0}
+              options={chainOptions}
             />
 
             <div className="pdp-divider" />

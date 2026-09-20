@@ -74,6 +74,10 @@ export default function ExitIntent() {
   }, [closeModal]);
 
   const handleSurveySubmit = useCallback(async () => {
+    if (!selected) {
+      alert('Please select a reason before submitting.');
+      return;
+    }
     try {
       await apiRequest('/exit-surveys', {
         method: 'POST',

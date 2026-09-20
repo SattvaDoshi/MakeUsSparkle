@@ -39,6 +39,22 @@ const processProductsImages = async (products, imageService) => {
 					})
 				);
 			}
+
+			// Process chainOptions images
+			if (Array.isArray(newProduct.chainOptions)) {
+				newProduct.chainOptions = await Promise.all(
+					newProduct.chainOptions.map(async (opt) => {
+						const newOpt = { ...opt };
+						if (opt.imageBuffer) {
+							const uploadedOptImage = await imageService.uploadImage(opt.imageBuffer, "combo-chains");
+							newOpt.image = uploadedOptImage.url;
+							newOpt.imagePublicId = uploadedOptImage.publicId;
+							delete newOpt.imageBuffer;
+						}
+						return newOpt;
+					})
+				);
+			}
 			
 			return newProduct;
 		})

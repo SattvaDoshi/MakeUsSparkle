@@ -21,7 +21,28 @@ const comboProductSchema = new mongoose.Schema({
   textCustomizationTitle: String,       // Title/prompt shown to user
   allowImageCustomization: { type: Boolean, default: false },
   imageCustomizationTitle: String,      // Title/prompt shown to user
-  maxImageUploads: { type: Number, default: 1 }  // How many photos allowed
+  maxImageUploads: { type: Number, default: 1 },  // How many photos allowed
+
+  // Charm specific configurations for this combo product
+  charmPieceOptions: { type: [Number], default: [] },
+  charmPiecePricing: [
+    {
+      count: { type: Number },
+      price: { type: Number },
+    }
+  ],
+  chainOptions: [
+    {
+      value: { type: String },
+      label: { type: String },
+      sub: { type: String },
+      price: { type: Number },
+      image: { type: String },
+      imagePublicId: { type: String }
+    }
+  ],
+  totalCharms: { type: Number, default: 0 },
+  perCharmPrice: { type: Number, default: 0 }
 });
 
 const comboSchema = new mongoose.Schema(

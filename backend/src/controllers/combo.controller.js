@@ -70,6 +70,18 @@ function parseComboData(req) {
 					return v;
 				});
 			}
+
+			// Extract chain images
+			if (Array.isArray(p.chainOptions)) {
+				p.chainOptions = p.chainOptions.map((chainOpt, chainIndex) => {
+					const chainImgFile = files.find((f) => f.fieldname === `chainImage_${pIndex}_${chainIndex}`);
+					if (chainImgFile) {
+						chainOpt.imageBuffer = chainImgFile.buffer;
+					}
+					return chainOpt;
+				});
+			}
+
 			return p;
 		});
 	}

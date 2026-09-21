@@ -74,6 +74,8 @@ export interface CartItem {
   style?: string;
   styleId?: string;
   paymentMode?: 'cod_allowed' | 'prepaid_only' | 'partial_cod';
+  chain?: string;
+  chainLabel?: string;
 }
 
 export const GIFT_OPTIONS = [

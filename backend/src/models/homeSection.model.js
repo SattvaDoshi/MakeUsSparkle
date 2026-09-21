@@ -1,5 +1,43 @@
 import mongoose from "mongoose";
 
+const openSectionItemSchema = new mongoose.Schema(
+	{
+		type: {
+			type: String,
+			enum: ["product", "category"],
+			required: true,
+		},
+		// If type === "product"
+		product: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Product",
+			default: null,
+		},
+		// If type === "category"
+		image: {
+			type: String,
+			default: "",
+		},
+		imagePublicId: {
+			type: String,
+			default: "",
+		},
+		link: {
+			type: String,
+			default: "",
+		},
+		label: {
+			type: String,
+			default: "",
+		},
+		sortOrder: {
+			type: Number,
+			default: 0,
+		},
+	},
+	{ _id: true }
+);
+
 const homeSectionSchema = new mongoose.Schema(
 	{
 		key: {
@@ -24,6 +62,8 @@ const homeSectionSchema = new mongoose.Schema(
 				ref: "Product",
 			},
 		],
+		// Used by the "open-section" key — supports mixed product/category items
+		items: [openSectionItemSchema],
 		isActive: {
 			type: Boolean,
 			default: true,

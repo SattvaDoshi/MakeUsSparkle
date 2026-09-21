@@ -22,6 +22,7 @@ import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
 import AdminCombosTab from "./_components/tabs/AdminCombosTab";
 import AdminExitSurveysTab from "./_components/tabs/AdminExitSurveysTab";
 import AdminShippingTab from "./_components/tabs/AdminShippingTab";
+import AdminOpenSectionTab, { type OpenSectionForm, type OpenSectionItem } from "./_components/tabs/AdminOpenSectionTab";
 import type { AdminExitSurvey, ShippingInfo } from "./_lib/admin.types";
 
 type DashboardStatsResponse = {
@@ -273,12 +274,13 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "categories", label: "Categories" },
 	{ key: "newArrivals", label: "New Arrivals" },
+	{ key: "openSection", label: "Open Section" },
 	{ key: "combos", label: "Combos" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
@@ -504,6 +506,15 @@ export default function AdminDashboardPage() {
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
 	const [newArrivalsForm, setNewArrivalsForm] = useState(defaultNewArrivalsForm);
 
+	const defaultOpenSectionForm: OpenSectionForm = {
+		eyebrow: "",
+		title: "New Arrivals",
+		isActive: true,
+		items: [],
+	};
+	const [openSectionForm, setOpenSectionForm] = useState<OpenSectionForm>(defaultOpenSectionForm);
+	const [openSectionSaving, setOpenSectionSaving] = useState(false);
+
 	const [categories, setCategories] = useState<AdminCategory[]>([]);
 	const [subcategories, setSubCategories] = useState<AdminSubCategory[]>([]);
 	const [styles, setStyles] = useState<AdminStyle[]>([]);
@@ -671,6 +682,32 @@ export default function AdminDashboardPage() {
 		});
 	}, []);
 
+	const loadOpenSection = useCallback(async () => {
+		const result = await apiRequest<{ success: boolean; section?: any }>("/admin/home-sections/open-section");
+		const section = result.section;
+		if (!section) return;
+		const items: OpenSectionItem[] = (section.items || []).map((item: any) => {
+			if (item.type === "product") {
+				const productId = typeof item.product === "string" ? item.product : item.product?._id;
+				return { type: "product" as const, product: productId || "", _id: item._id };
+			}
+			return {
+				type: "category" as const,
+				image: item.image || "",
+				imagePublicId: item.imagePublicId || "",
+				link: item.link || "",
+				label: item.label || "",
+				_id: item._id,
+			};
+		});
+		setOpenSectionForm({
+			eyebrow: section.eyebrow || "",
+			title: section.title || "",
+			isActive: section.isActive !== false,
+			items,
+		});
+	}, []);
+
 	const loadSurveys = useCallback(async () => {
 		const result = await apiRequest<{ success: boolean; surveys: AdminExitSurvey[] }>("/admin/exit-surveys");
 		setSurveys(result.surveys || []);
@@ -700,7 +737,8 @@ export default function AdminDashboardPage() {
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
-			if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
+		if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
+		if (tab === "openSection") await Promise.all([loadProducts(), loadOpenSection()]);
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
 			if (tab === "surveys") await loadSurveys();
 		} catch (error) {
@@ -708,7 +746,7 @@ export default function AdminDashboardPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos, loadSurveys]);
+	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos, loadSurveys, loadOpenSection]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -1265,6 +1303,45 @@ export default function AdminDashboardPage() {
 		}, "New arrivals updated");
 	};
 
+	const handleOpenSectionSubmit = async () => {
+		setOpenSectionSaving(true);
+		try {
+			const formData = new FormData();
+			formData.append("title", openSectionForm.title);
+			formData.append("eyebrow", openSectionForm.eyebrow);
+			formData.append("isActive", String(openSectionForm.isActive));
+
+			// Serialize items without the _newImageFile (File objects can't be JSON-stringified)
+			const itemsPayload = openSectionForm.items.map((item) => {
+				if (item.type === "category") {
+					const { _newImageFile, ...rest } = item as any;
+					void _newImageFile; // suppress unused var
+					return rest;
+				}
+				return item;
+			});
+			formData.append("items", JSON.stringify(itemsPayload));
+
+			// Append any new category image files
+			openSectionForm.items.forEach((item, index) => {
+				if (item.type === "category" && (item as any)._newImageFile) {
+					formData.append(`categoryImage_${index}`, (item as any)._newImageFile);
+				}
+			});
+
+			await apiRequest("/admin/home-sections/open-section", {
+				method: "PUT",
+				body: formData,
+			});
+			await loadOpenSection();
+			setNotice("Open section updated");
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to save open section");
+		} finally {
+			setOpenSectionSaving(false);
+		}
+	};
+
 	const handleSignOut = () => {
 		signOut();
 		router.push("/admin/login");
@@ -1395,6 +1472,13 @@ export default function AdminDashboardPage() {
 		products={products}
 		onChange={setNewArrivalsForm}
 		onSubmit={handleNewArrivalsSubmit}
+	/>;
+	if (activeTab === "openSection") return <AdminOpenSectionTab
+		form={openSectionForm}
+		products={products}
+		onChange={setOpenSectionForm}
+		onSubmit={handleOpenSectionSubmit}
+		saving={openSectionSaving}
 	/>;
 	if (activeTab === "categories") return <AdminCategoriesTab
 		categories={categories}

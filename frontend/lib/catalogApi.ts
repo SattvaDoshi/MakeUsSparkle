@@ -548,6 +548,174 @@ export async function fetchNewArrivalsSection(): Promise<CatalogHomeSection | nu
   };
 }
 
+export interface CatalogOpenSectionItem {
+  _id: string;
+  type: "product" | "category";
+  // product items
+  product?: CatalogProduct;
+  // category banner items
+  image?: string;
+  link?: string;
+  label?: string;
+  imagePublicId?: string;
+  sortOrder?: number;
+}
+
+export interface CatalogOpenSection {
+  key: string;
+  eyebrow: string;
+  title: string;
+  items: CatalogOpenSectionItem[];
+  isActive: boolean;
+}
+
+interface BackendOpenSectionItem {
+  _id?: string;
+  type: "product" | "category";
+  product?: BackendProduct;
+  image?: string;
+  imagePublicId?: string;
+  link?: string;
+  label?: string;
+  sortOrder?: number;
+}
+
+interface BackendOpenSection {
+  _id?: string;
+  key: string;
+  eyebrow?: string;
+  title?: string;
+  items?: BackendOpenSectionItem[];
+  isActive?: boolean;
+}
+
+export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
+  try {
+    const sectionResponse = await apiRequest<{ success: boolean; section?: BackendOpenSection }>("/home-sections/open-section");
+
+    const section = sectionResponse.section;
+    if (!section || section.isActive === false) return null;
+    if (!section.items || section.items.length === 0) return null;
+
+    const items: CatalogOpenSectionItem[] = (section.items || []).map((raw) => {
+      if (raw.type === "product" && raw.product) {
+        // Products are fully populated by the backend — normalize inline without extra lookup calls
+        const p = raw.product as BackendProduct;
+        const rawColors = Array.isArray(p.colors) ? p.colors : [];
+        const colorsFromBackend = rawColors.map((c) => ({
+          label: c.name || "Color",
+          hex: c.hex || "#c9a84c",
+          image: c.image,
+        }));
+        const imagePool = uniqueStrings([
+          ...(Array.isArray(p.images) ? p.images : []),
+          p.mainImage,
+        ]);
+        const dbPrice = Number(p.price ?? 0);
+        const discountedPrice = p.discountedPrice ? Number(p.discountedPrice) : null;
+        const originalPrice = discountedPrice ? dbPrice : null;
+        const price = discountedPrice || dbPrice;
+        const rating = Number(p.rating ?? 0);
+        const reviewCount = Array.isArray(p.reviews) ? p.reviews.length : 0;
+        const slug = p._id;
+        const catId = getRefId(p.category);
+        const subCatId = getRefId(p.subCategory);
+        const styleId = getRefId(p.style);
+
+        const product: CatalogProduct = {
+          id: toNumericId(p._id || ""),
+          sourceId: p._id || "",
+          name: p.title || "Product",
+          description: p.description || "",
+          about: p.about || "",
+          price,
+          discountedPrice,
+          discountTag: p.discountTag || null,
+          allowCustomization: p.allowCustomization === true,
+          maxCustomImages: p.maxCustomImages,
+          customImageLabels: Array.isArray(p.customImageLabels) ? p.customImageLabels : [],
+          originalPrice,
+          rating,
+          reviewCount,
+          category: "Jewellery",
+          categoryId: catId,
+          categorySlug: "",
+          subCategory: "",
+          subCategoryId: subCatId,
+          subCategorySlug: "",
+          style: "",
+          styleId,
+          styleSlug: "",
+          type: "",
+          gender: p.gender || "unisex",
+          stock: Number(p.stock ?? 0),
+          numberOfProducts: Number(p.numberOfProducts ?? 1),
+          badge: p.productLabel || pickBadge(rating),
+          offer: p.discountTag || null,
+          sku: `SKU-${(p._id || "").slice(-6).toUpperCase()}`,
+          href: `/products/${slug || ""}`,
+          colors: colorsFromBackend,
+          sizes: Array.isArray(p.sizes) ? p.sizes : [],
+          variants: [],
+          images: imagePool.length > 0 ? imagePool : [FALLBACK_IMAGE],
+          mainImage: p.mainImage || null,
+          faqs: Array.isArray(p.faqs) ? p.faqs : [],
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          seoTags: Array.isArray(p.seoTags) ? p.seoTags : [],
+          charmPieceOptions: [],
+          charmPiecePricing: [],
+          totalCharms: 0,
+          perCharmPrice: 0,
+          sizeChartImage: p.sizeChartImage || null,
+          sizeChartSteps: p.sizeChartSteps || "",
+          giftBox: p.giftBox ? {
+            enabled: p.giftBox.enabled !== false,
+            heading: p.giftBox.heading || "Premium Gift Box",
+            description: p.giftBox.description || "",
+            price: Number(p.giftBox.price ?? 99),
+            image: p.giftBox.image || null,
+          } : null,
+          partialCOD: p.partialCOD ? {
+            enabled: Boolean(p.partialCOD.enabled),
+            percentage: Number(p.partialCOD.percentage || 0),
+          } : undefined,
+          paymentMode: (p as any).paymentMode || "cod_allowed",
+        };
+
+        return {
+          _id: raw._id || "",
+          type: "product" as const,
+          product,
+          sortOrder: raw.sortOrder ?? 0,
+        };
+      }
+
+      return {
+        _id: raw._id || "",
+        type: "category" as const,
+        image: raw.image || "",
+        imagePublicId: raw.imagePublicId || "",
+        link: raw.link || "",
+        label: raw.label || "",
+        sortOrder: raw.sortOrder ?? 0,
+      };
+    });
+
+    return {
+      key: section.key,
+      eyebrow: section.eyebrow || "",
+      title: section.title || "",
+      items,
+      isActive: true,
+    };
+  } catch (err) {
+    console.error("[fetchOpenSection] error:", err);
+    return null;
+  }
+}
+
+
+
 /**
  * Fetch a single product by its MongoDB _id.
  * Also fetches categories/subcategories/styles in parallel to resolve references.

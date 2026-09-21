@@ -11,11 +11,13 @@ import TopNav from '@/components/ui/UpperNav';
 import SingleBanner from '@/components/home/SingleBanner'
 import Arrivals from '@/components/home/NewArrivals';
 import NewArrivals from '@/components/home/NewArrivals';
+import OpenSection from '@/components/home/OpenSection';
 export default function HomePage() {
   return (
     <main>
       <TopNav/>
       <HeroVideo />
+      <OpenSection />
       <PromoSection/>
       <SingleBanner/>
       <BannerSection />

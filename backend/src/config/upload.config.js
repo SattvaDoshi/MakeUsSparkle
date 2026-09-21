@@ -99,6 +99,19 @@ export const uploadComboImages = multer({
 	},
 }).any();
 
+// Open Section images multer — dynamic categoryImage_N fields
+export const uploadOpenSectionImages = multer({
+	storage: uploadStorage,
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+		if (allowedMimes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
+		}
+	},
+}).any();
+
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {
 	return new Promise((resolve, reject) => {

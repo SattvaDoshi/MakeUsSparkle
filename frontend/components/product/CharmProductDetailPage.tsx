@@ -29,7 +29,7 @@ interface UploadItem {
   note: string;
 }
 
-interface ChainOption {
+export interface ChainOption {
   value: string;
   label: string;
   image: string;

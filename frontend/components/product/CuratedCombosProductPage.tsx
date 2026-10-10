@@ -137,6 +137,25 @@ function lookupColorImage(colorImages: Record<string, string> | undefined, optio
   return match ? colorImages[match] : undefined;
 }
 
+/**
+ * Merge a PATCH into an existing ProductVariant.
+ * - `selections` is merged key-by-key, so choosing a colour never wipes the size
+ *   (and vice-versa), and one product's selections never touch another product's.
+ * - Every other field in the patch simply overrides the previous value.
+ * Always used with a functional setState (prev => ...) so stale closures can never
+ * overwrite a selection that was just made.
+ */
+function mergeVariant(prev: ProductVariant | undefined, patch: ProductVariant): ProductVariant {
+  const base = prev || {};
+  const next: ProductVariant = { ...base, ...patch };
+  if (patch.selections) {
+    next.selections = { ...(base.selections || {}), ...patch.selections };
+  } else if (base.selections) {
+    next.selections = base.selections;
+  }
+  return next;
+}
+
 const IMG = {
   ring1:    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80',
   ring2:    'https://images.unsplash.com/photo-1573408301185-9519f94f0200?w=600&q=80',
@@ -351,6 +370,50 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
       </button>
       <img src={src} alt="Enlarged preview" className="lightbox-img" onClick={e => e.stopPropagation()} />
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   OPTION SWATCH — one selectable option (colour / size / etc.)
+   • Tapping the image OR the name SELECTS the option (same action).
+   • A small separate "eye" button on the image opens the enlarged preview.
+   • The selected option stays highlighted (outline + tick) until changed.
+───────────────────────────────────────────────────────────── */
+interface OptionSwatchProps {
+  name: string;
+  image?: string;
+  stock?: number;
+  selected: boolean;
+  onSelect: () => void;
+  small?: boolean;
+}
+
+function OptionSwatch({ name, image, stock, selected, onSelect, small }: OptionSwatchProps) {
+  const outOfStock = stock === 0;
+  return (
+    <div className={`hamper-colour-swatch${selected ? ' on' : ''}${image ? '' : ' text-only'}${outOfStock ? ' out' : ''}${small ? ' sm' : ''}`}>
+      <button
+        type="button"
+        className="hamper-colour-swatch-btn"
+        aria-pressed={selected}
+        disabled={outOfStock}
+        onClick={onSelect}
+      >
+        {image && (
+          <span className="hamper-colour-swatch-img-wrap">
+            <img src={image} alt={name} />
+          </span>
+        )}
+        <span className="hamper-colour-swatch-label">{name}{outOfStock ? ' (Out of Stock)' : ''}</span>
+      </button>
+    </div>
+  );
+}
+
+/** Small text link shown beside the selected option's name — opens that option's photo enlarged. */
+function ViewPhotoLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="swatch-view-link" onClick={onClick}>View photo</button>
   );
 }
 
@@ -740,7 +803,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   const hasAny = Object.keys(local.selections || {}).length > 0 || !!local.personalMessage || !!(local.uploadedImagesBase64?.length) || !!local.charmCount;
 
   const requiredVariants = hideVariants ? [] : getRequiredVariants(product);
-  const missing = requiredVariants.filter(variant => !local.selections?.[variant.name]);
+  const missing = requiredVariants.filter(vg => !local.selections?.[vg.name]);
   const canSave = missing.length === 0;
   const hasRequiredVariants = requiredVariants.length > 0;
 
@@ -781,40 +844,38 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
         </div>
 
         <div className="modal-body">
-          {variants.map((variant, idx) => {
-            const isRequired = variant.options.length > 0;
-            const isMissing = showValidation && isRequired && !local.selections?.[variant.name];
+          {variants.map((vg, idx) => {
+            const isRequired = vg.options.length > 0;
+            const isMissing = showValidation && isRequired && !local.selections?.[vg.name];
             return (
-            <div key={variant.name} className="modal-field">
+            <div key={vg.name} className="modal-field">
               <label className="modal-field-label">
                 <span className="modal-field-num">{idx + 1}</span>
-                {variant.name}
-                {isRequired && !local.selections?.[variant.name] && <span className="modal-field-required">required</span>}
-                {local.selections?.[variant.name] && <span className="modal-selected-badge">{local.selections[variant.name]}</span>}
+                {vg.name}
+                {isRequired && !local.selections?.[vg.name] && <span className="modal-field-required">required</span>}
+                {local.selections?.[vg.name] && <span className="modal-selected-badge">{local.selections[vg.name]}</span>}
+                {(() => {
+                  const img = vg.options.find(o => o.name === local.selections?.[vg.name])?.image;
+                  return img ? <ViewPhotoLink onClick={() => setLightboxImg(img)} /> : null;
+                })()}
               </label>
-              <div className={`modal-chips${isMissing ? ' modal-chips-error' : ''}`} style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '0.8rem', paddingBottom: '4px' }}>
-                {variant.options.map(opt => {
-                  const isSelected = local.selections?.[variant.name] === opt.name;
-                  return (
-                    <button key={opt.name} 
-                      className={`chip${isSelected ? ' chip-on' : ''}`}
-                      onClick={() => { setShowValidation(false); setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [variant.name]: opt.name } })); }}
-                      disabled={opt.stock === 0}
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', height: 'auto', flexShrink: 0, opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}>
-                      {opt.image && (
-                        <span
-                          className="chip-img-wrap"
-                          onClick={(e) => { e.stopPropagation(); setLightboxImg(opt.image!); }}
-                        >
-                          <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </span>
-                      )}
-                      <span>{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
-                    </button>
-                  );
-                })}
+              <div className={`hamper-colour-swatch-row${isMissing ? ' hamper-colour-swatch-row-error' : ''}`}>
+                {vg.options.map(opt => (
+                  <OptionSwatch
+                    key={opt.name}
+                    name={opt.name}
+                    image={opt.image}
+                    stock={opt.stock}
+                    selected={local.selections?.[vg.name] === opt.name}
+                    onSelect={() => {
+                      setShowValidation(false);
+                      setLocal(p => ({ ...p, selections: { ...(p.selections || {}), [vg.name]: opt.name } }));
+                    }}
+                    small
+                  />
+                ))}
               </div>
-              {isMissing && <span className="modal-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
+              {isMissing && <span className="modal-field-error-text">Please select a {vg.name.toLowerCase()}</span>}
             </div>
             );
           })}
@@ -881,9 +942,12 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                               const reader = new FileReader();
                               reader.onloadend = () => {
                                 const base64String = reader.result as string;
-                                const newUploaded = [...uploaded];
-                                newUploaded[i] = base64String;
-                                setLocal(prev => ({ ...prev, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined }));
+                                setLocal(prev => {
+                                  const prevArr = prev.uploadedImagesBase64 || (prev.uploadedImageBase64 ? [prev.uploadedImageBase64] : []);
+                                  const newUploaded = [...prevArr];
+                                  newUploaded[i] = base64String;
+                                  return { ...prev, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined };
+                                });
                               };
                               reader.readAsDataURL(file);
                             }} />
@@ -1025,7 +1089,8 @@ interface PresetHamperSectionProps {
   variants: Record<string, ProductVariant>;
   comboVariant: ProductVariant;
   onComboVariantChange: (v: ProductVariant) => void;
-  onVariantChange: (pid: string, v: ProductVariant) => void;
+  /** PATCH-style: only pass the fields that changed — they are merged into that product's existing state. */
+  onVariantChange: (pid: string, patch: ProductVariant) => void;
   onAddToCart: (combo: PresetCombo) => void;
   cartAdded: boolean;
   onBack: () => void;
@@ -1051,7 +1116,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     const arr = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
     const newArr = [...arr];
     newArr.splice(index, 1);
-    onVariantChange(pid, { ...v, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
+    onVariantChange(pid, { uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
   
   const removeComboFile = (index: number) => {
@@ -1061,15 +1126,11 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
 
-  /** Select an option for a given product's variant group, always merging into that
-   *  product's own existing selections — never touches any other product's entry, so
-   *  every piece keeps its highlighted (selected) swatch independently of the others. */
+  /** Select an option for a given product's variant group. Sends only a patch
+   *  ({ selections: { [variantName]: optionName } }) which is merged into THAT product's
+   *  own state, so every piece keeps its own highlighted option independently. */
   const selectVariantOption = (pid: string, variantName: string, optionName: string) => {
-    const current = variants[pid] || {};
-    onVariantChange(pid, {
-      ...current,
-      selections: { ...(current.selections || {}), [variantName]: optionName },
-    });
+    onVariantChange(pid, { selections: { [variantName]: optionName } });
   };
 
   const products = combo.includedProducts;
@@ -1222,34 +1283,24 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                     <div key={variant.name} className="hamper-piece-field">
                       <span className="hamper-piece-field-label">
                         {variant.name}
-                        <span className="hamper-piece-field-required">required</span>
+                        {!selectedOpt && <span className="hamper-piece-field-required">required</span>}
                         {selectedOpt && <em>· {selectedOpt}</em>}
+                        {(() => {
+                          const img = variant.options.find(o => o.name === selectedOpt)?.image;
+                          return img ? <ViewPhotoLink onClick={() => setLightboxImg(img)} /> : null;
+                        })()}
                       </span>
                       <div className={`hamper-colour-swatch-row${isMissing ? ' hamper-colour-swatch-row-error' : ''}`}>
-                        {variant.options.map(opt => {
-                          const isOn = selectedOpt === opt.name;
-                          return (
-                            <button
-                              key={opt.name}
-                              type="button"
-                              className={`hamper-colour-swatch${isOn ? ' on' : ''}`}
-                              aria-pressed={isOn}
-                              onClick={() => { setShowValidation(false); selectVariantOption(p.id, variant.name, opt.name); }}
-                              disabled={opt.stock === 0}
-                              style={{ opacity: opt.stock === 0 ? 0.5 : 1, cursor: opt.stock === 0 ? 'not-allowed' : 'pointer' }}
-                            >
-                              {opt.image && (
-                                <span
-                                  className="hamper-colour-swatch-img-wrap"
-                                  onClick={(e) => { e.stopPropagation(); setLightboxImg(opt.image!); }}
-                                >
-                                  <img src={opt.image} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                </span>
-                              )}
-                              <span className="hamper-colour-swatch-label">{opt.name} {opt.stock === 0 ? '(Out of Stock)' : ''}</span>
-                            </button>
-                          );
-                        })}
+                        {variant.options.map(opt => (
+                          <OptionSwatch
+                            key={`${p.id}-${variant.name}-${opt.name}`}
+                            name={opt.name}
+                            image={opt.image}
+                            stock={opt.stock}
+                            selected={selectedOpt === opt.name}
+                            onSelect={() => { setShowValidation(false); selectVariantOption(p.id, variant.name, opt.name); }}
+                          />
+                        ))}
                       </div>
                       {isMissing && <span className="hamper-piece-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
                     </div>
@@ -1264,7 +1315,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                       onChange={e => {
                         const val = e.target.value;
                         const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
-                        onVariantChange(p.id, { ...v, presetMessage: msg || undefined });
+                        onVariantChange(p.id, { presetMessage: msg || undefined });
                       }}>
                       {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
@@ -1273,7 +1324,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                       className="modal-textarea"
                       placeholder="E.g. 'To my dearest Priya, with love…'"
                       value={v.personalMessage || ''}
-                      onChange={e => onVariantChange(p.id, { ...v, personalMessage: e.target.value })}
+                      onChange={e => onVariantChange(p.id, { personalMessage: e.target.value })}
                       maxLength={120}
                       rows={2}
                     />
@@ -1311,7 +1362,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                                       const base64String = reader.result as string;
                                       const newUploaded = [...uploaded];
                                       newUploaded[i] = base64String;
-                                      onVariantChange(p.id, { ...v, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
+                                      onVariantChange(p.id, { uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
                                     };
                                     reader.readAsDataURL(file);
                                   }} />
@@ -1337,7 +1388,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                       value={v.chain || ''}
                       onChange={val => {
                         const chainP = chainOpts.find(c => c.value === val)?.price || 0;
-                        onVariantChange(p.id, { ...v, chain: val, chainPrice: chainP });
+                        onVariantChange(p.id, { chain: val, chainPrice: chainP });
                       }}
                       onViewImage={(chain) => setLightboxImg(chain.image)}
                       options={chainOpts}
@@ -1347,7 +1398,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                       totalCharms={p.totalCharms}
                       validationAttempt={showValidation ? 1 : 0}
                       onChange={({ count, charms }) => {
-                        onVariantChange(p.id, { ...v, charmCount: count, selectedCharms: charms });
+                        onVariantChange(p.id, { charmCount: count, selectedCharms: charms });
                       }}
                     />
                   </div>
@@ -1492,7 +1543,7 @@ interface CustomBuilderSectionProps {
   comboVariant: ProductVariant;
   onComboVariantChange: (v: ProductVariant) => void;
   onToggle: (pid: string) => void;
-  onVariantChange: (pid: string, v: ProductVariant) => void;
+  onVariantChange: (pid: string, patch: ProductVariant) => void;
   onAddToCart: (slot: CustomComboSlot) => void;
   cartAdded: boolean;
   onBack: () => void;
@@ -1552,7 +1603,6 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 
   const handleCustomiserSkip = () => {
     if (!customising || !customising.isAddFlow) return;
-    onVariantChange(customising.product.id, {});
     onToggle(customising.product.id);
     setCustomising(null);
   };
@@ -2037,8 +2087,17 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     });
   }
 
-  function handleSlotVariantChange(slotId: string, pid: string, v: ProductVariant) {
-    setSlotVariants(prev => ({ ...prev, [slotId]: { ...(prev[slotId] || {}), [pid]: v } }));
+  /** PATCH-merge: only the passed fields change, everything else (incl. other selections) is preserved. */
+  function handleSlotVariantChange(slotId: string, pid: string, patch: ProductVariant) {
+    setSlotVariants(prev => {
+      const slotMap = prev[slotId] || {};
+      return { ...prev, [slotId]: { ...slotMap, [pid]: mergeVariant(slotMap[pid], patch) } };
+    });
+  }
+
+  /** PATCH-merge for curated sets — functional update, so rapid taps / child effects never use stale state. */
+  function handlePresetVariantChange(pid: string, patch: ProductVariant) {
+    setPresetVariants(prev => ({ ...prev, [pid]: mergeVariant(prev[pid], patch) }));
   }
 
   function handleCustomAddToCart(slot: CustomComboSlot) {
@@ -2327,18 +2386,40 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-chip.on { background:var(--olive);color:#fff !important;border-color:var(--olive);font-weight:600; }
         .hamper-chip-sm { min-width:34px;text-align:center; }
 
-        .hamper-colour-swatch-row { display:flex;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:4px;scrollbar-width:thin; }
+        /* ── OPTION SWATCHES (colour / size / etc.) ──
+           Whole swatch (image + name) = ONE select button.
+           The small eye button (top-right of the image) = separate "view larger photo" action. */
+        .hamper-colour-swatch-row { display:flex;flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:4px 2px 6px;scrollbar-width:thin; }
         .hamper-colour-swatch-row::-webkit-scrollbar { height:4px; }
         .hamper-colour-swatch-row::-webkit-scrollbar-thumb { background:var(--bdr2);border-radius:3px; }
         .hamper-colour-swatch-row-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 10px; padding: 6px 6px 10px; }
-        .hamper-colour-swatch { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:6px 10px;cursor:pointer;flex-shrink:0;border-radius:8px;transition:background .18s; }
-        .hamper-colour-swatch:hover { background:var(--olivedim); }
-        .hamper-colour-swatch-img-wrap { width:56px;aspect-ratio:4/5;overflow:hidden;transition:all .18s;border-radius:6px;border:1.5px solid transparent;cursor:zoom-in; }
+
+        .hamper-colour-swatch { position:relative;flex-shrink:0;display:flex; }
+        .hamper-colour-swatch-btn { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:8px 10px;cursor:pointer;border-radius:10px;transition:background .18s, box-shadow .18s; }
+        .hamper-colour-swatch-btn:hover { background:var(--olivedim); }
+        .hamper-colour-swatch-btn:disabled { cursor:not-allowed; }
+        .hamper-colour-swatch.out { opacity:.5; }
+
+        .hamper-colour-swatch-img-wrap { position:relative;display:block;flex-shrink:0;width:56px;min-width:56px;aspect-ratio:4/5;overflow:hidden;transition:all .18s;border:1.5px solid transparent; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
-        .hamper-colour-swatch:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
-        .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.15); }
+        .hamper-colour-swatch-btn:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
+
+        /* Selected = clearly highlighted until the user picks something else */
+        .hamper-colour-swatch.on .hamper-colour-swatch-btn { background:var(--olivedim);box-shadow:inset 0 0 0 1.5px var(--olive); }
+        .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.18); }
+
+        .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:40px;min-width:40px; }
         .hamper-colour-swatch-label { font-size:12.5px;font-weight:600;color:var(--ink7);white-space:nowrap; }
         .hamper-colour-swatch.on .hamper-colour-swatch-label { color:var(--olive);font-weight:700; }
+
+        /* text-only options (sizes etc. with no photo) → pill style */
+        .hamper-colour-swatch.text-only .hamper-colour-swatch-btn { padding:9px 16px;border:1.5px solid var(--bdr2);border-radius:50px;min-height:38px;justify-content:center; }
+        .hamper-colour-swatch.text-only.on .hamper-colour-swatch-btn { border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive); }
+
+        /* "View photo" text link next to the selected option name */
+        .swatch-view-link { font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--olive2);text-decoration:underline;text-underline-offset:2px;padding:0;margin-left:auto; }
+        .swatch-view-link:hover { color:var(--olive); }
+        .modal-field-label .swatch-view-link { margin-left:8px; }
 
         .hamper-global-error { margin-top:16px;padding:10px 14px;border-radius:8px;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.3);color:var(--red);font-size:12px;font-weight:500;line-height:1.5; }
 
@@ -2361,7 +2442,8 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           .hamper-page { padding:14px 14px 0; }
           .hamper-main-img-wrap { aspect-ratio:2/3;  }
           .hamper-piece-img-link { width:48px; }
-          .hamper-colour-swatch-img-wrap { width:65px; }
+          .hamper-colour-swatch-img-wrap { width:65px;min-width:65px; }
+          .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:40px;min-width:40px; }
           .hamper-colour-swatch-label { font-size:11.5px; }
           .hamper-sticky-bar { padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom)); gap:10px; }
           .hamper-sticky-price-val { font-size:1.05rem; }
@@ -2590,9 +2672,6 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         }
 
         /* ── RESPONSIVE (hero/modebar/general page) ── */
-        // @media(max-width:1024px) {
-        //   .hero { margin-top:20px; }
-        // }
         @media(max-width:900px) {
           .hero { padding-left:24px;padding-right:24px; }
           .modebar { padding-left:24px;padding-right:24px; }
@@ -2610,76 +2689,77 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         @media(max-width:340px) {
           .hero h1 { font-size:1.5rem; }
         }
-          /* ── TRUST BADGES ── */
-.combo-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
-.combo-trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;transition:transform .2s,box-shadow .2s;}
-.combo-trust-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
-.combo-trust-icon{width:36px;height:36px;color:var(--olive2);margin-bottom:7px;}
-.combo-trust-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);margin-bottom:2px;}
-.combo-trust-sub{font-size:9px;color:var(--ink7);}
 
-/* ── ACCORDION / POLICY LINKS ── */
-.combo-accordion{border-top:1px solid var(--bdr);margin:20px 0;}
-.combo-acc-item{border-bottom:1px solid var(--bdr);}
-.combo-acc-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;background:none;border:none;cursor:pointer;transition:background .15s;}
-.combo-acc-head:hover{background:rgba(61,80,22,.03);}
-.combo-acc-head-left{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:500;color:var(--ink);text-align:left;}
-.combo-acc-emoji{font-size:15px;}
-.combo-acc-chevron{color:var(--ink4);flex-shrink:0;transition:transform .32s ease;}
-.combo-acc-item--open .combo-acc-chevron{transform:rotate(180deg);}
-.combo-acc-body{padding:0 2px 16px 33px;font-size:12px;font-weight:300;line-height:1.8;color:var(--ink7);}
-.combo-acc-nav-link{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--bdr);font-size:12.5px;font-weight:500;transition:background .15s;}
-.combo-acc-nav-link:hover{background:rgba(61,80,22,.03);}
-.combo-acc-nav-link svg{color:var(--ink4);flex-shrink:0;}
+        /* ── TRUST BADGES ── */
+        .combo-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
+        .combo-trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;transition:transform .2s,box-shadow .2s;}
+        .combo-trust-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+        .combo-trust-icon{width:36px;height:36px;color:var(--olive2);margin-bottom:7px;}
+        .combo-trust-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);margin-bottom:2px;}
+        .combo-trust-sub{font-size:9px;color:var(--ink7);}
 
-/* ── ESTIMATED DELIVERY ── */
-.combo-delivery{margin:20px 0;}
-.combo-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px;}
-.combo-delivery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.combo-delivery-card{border:1.5px solid var(--bdr);border-radius:14px;padding:14px 12px;background:var(--surf);}
-.combo-delivery-icon{font-size:22px;margin-bottom:4px;}
-.combo-delivery-opt-label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:10px;}
-.combo-delivery-tier{margin-bottom:6px;}
-.combo-delivery-tier-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--olive2);margin-bottom:1px;}
-.combo-delivery-tier-val{font-size:12px;font-weight:600;color:var(--ink);}
-.combo-delivery-rate{font-size:13px;font-weight:800;color:var(--olive2);}
-.combo-delivery-freebar{margin-top:10px;padding:11px 14px;background:linear-gradient(135deg,#e6f4e7,#f0faf0);border:1.5px solid rgba(42,96,48,.22);border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#0a2e12;line-height:1.4;}
+        /* ── ACCORDION / POLICY LINKS ── */
+        .combo-accordion{border-top:1px solid var(--bdr);margin:20px 0;}
+        .combo-acc-item{border-bottom:1px solid var(--bdr);}
+        .combo-acc-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;background:none;border:none;cursor:pointer;transition:background .15s;}
+        .combo-acc-head:hover{background:rgba(61,80,22,.03);}
+        .combo-acc-head-left{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:500;color:var(--ink);text-align:left;}
+        .combo-acc-emoji{font-size:15px;}
+        .combo-acc-chevron{color:var(--ink4);flex-shrink:0;transition:transform .32s ease;}
+        .combo-acc-item--open .combo-acc-chevron{transform:rotate(180deg);}
+        .combo-acc-body{padding:0 2px 16px 33px;font-size:12px;font-weight:300;line-height:1.8;color:var(--ink7);}
+        .combo-acc-nav-link{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--bdr);font-size:12.5px;font-weight:500;transition:background .15s;}
+        .combo-acc-nav-link:hover{background:rgba(61,80,22,.03);}
+        .combo-acc-nav-link svg{color:var(--ink4);flex-shrink:0;}
 
-/* ── REVIEWS ── */
-.combo-rev-section{margin:24px 0 4px;padding-top:24px;border-top:1px solid var(--bdr);}
-.combo-rev-header{text-align:center;margin-bottom:20px;}
-.combo-rev-eyebrow{display:block;font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
-.combo-rev-title{font-family:var(--ffd);font-size:1.3rem;font-weight:400;font-style:italic;color:var(--olive);}
-.combo-rev-summary{display:flex;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:18px;flex-wrap:wrap;}
-.combo-rev-score{background:linear-gradient(160deg,var(--olive),var(--olive2));padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 130px;}
-.combo-rev-big-num{font-family:var(--ffd);font-size:2.6rem;font-weight:600;color:#f5f0e8;line-height:1;}
-.combo-rev-big-stars{font-size:13px;color:var(--gold);letter-spacing:2px;}
-.combo-rev-total{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.6);}
-.combo-rev-bars{display:flex;flex-direction:column;gap:5px;padding:14px 16px;flex:1;justify-content:center;min-width:180px;}
-.combo-rev-bar-row{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;}
-.combo-rev-bar-row:hover{background:rgba(61,80,22,.05);}
-.combo-rev-bar-row--active{background:var(--golddim);}
-.combo-rev-bar-label{font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right;}
-.combo-rev-bar-track{flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden;}
-.combo-rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px;}
-.combo-rev-bar-count{font-size:9px;color:var(--ink4);min-width:20px;}
-.combo-rev-controls{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:36px;}
-.combo-rev-controls-filter{position:absolute;left:0;top:50%;transform:translateY(-50%);}
-.combo-rev-clear{font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:5px 12px;cursor:pointer;}
-.combo-rev-write-btn{font-size:10.5px;font-weight:600;color:#fff;background:var(--olive);border:none;border-radius:50px;padding:9px 18px;cursor:pointer;}
-.combo-rev-empty{font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0;}
-.combo-rev-list{display:flex;flex-direction:column;gap:12px;}
-.combo-rev-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;}
-.combo-rev-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
-.combo-rev-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--golddim);color:var(--gold);}
-.combo-rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
-.combo-rev-name{font-size:12px;font-weight:600;color:var(--ink);}
-.combo-rev-verified{display:flex;align-items:center;gap:3px;font-size:9px;font-weight:600;text-transform:uppercase;color:var(--olive2);}
-.combo-rev-stars-sm{font-size:11px;color:var(--gold);}
-.combo-rev-date{font-size:10px;color:var(--ink4);}
-.combo-rev-body{font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;}
-.combo-rev-load{display:flex;justify-content:center;margin-top:20px;}
-.combo-rev-load-btn{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--olive);background:var(--surf);border:1.5px solid var(--bdr2);border-radius:50px;padding:11px 26px;cursor:pointer;}
+        /* ── ESTIMATED DELIVERY ── */
+        .combo-delivery{margin:20px 0;}
+        .combo-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px;}
+        .combo-delivery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .combo-delivery-card{border:1.5px solid var(--bdr);border-radius:14px;padding:14px 12px;background:var(--surf);}
+        .combo-delivery-icon{font-size:22px;margin-bottom:4px;}
+        .combo-delivery-opt-label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:10px;}
+        .combo-delivery-tier{margin-bottom:6px;}
+        .combo-delivery-tier-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--olive2);margin-bottom:1px;}
+        .combo-delivery-tier-val{font-size:12px;font-weight:600;color:var(--ink);}
+        .combo-delivery-rate{font-size:13px;font-weight:800;color:var(--olive2);}
+        .combo-delivery-freebar{margin-top:10px;padding:11px 14px;background:linear-gradient(135deg,#e6f4e7,#f0faf0);border:1.5px solid rgba(42,96,48,.22);border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#0a2e12;line-height:1.4;}
+
+        /* ── REVIEWS ── */
+        .combo-rev-section{margin:24px 0 4px;padding-top:24px;border-top:1px solid var(--bdr);}
+        .combo-rev-header{text-align:center;margin-bottom:20px;}
+        .combo-rev-eyebrow{display:block;font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
+        .combo-rev-title{font-family:var(--ffd);font-size:1.3rem;font-weight:400;font-style:italic;color:var(--olive);}
+        .combo-rev-summary{display:flex;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:18px;flex-wrap:wrap;}
+        .combo-rev-score{background:linear-gradient(160deg,var(--olive),var(--olive2));padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 130px;}
+        .combo-rev-big-num{font-family:var(--ffd);font-size:2.6rem;font-weight:600;color:#f5f0e8;line-height:1;}
+        .combo-rev-big-stars{font-size:13px;color:var(--gold);letter-spacing:2px;}
+        .combo-rev-total{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.6);}
+        .combo-rev-bars{display:flex;flex-direction:column;gap:5px;padding:14px 16px;flex:1;justify-content:center;min-width:180px;}
+        .combo-rev-bar-row{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;}
+        .combo-rev-bar-row:hover{background:rgba(61,80,22,.05);}
+        .combo-rev-bar-row--active{background:var(--golddim);}
+        .combo-rev-bar-label{font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right;}
+        .combo-rev-bar-track{flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden;}
+        .combo-rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px;}
+        .combo-rev-bar-count{font-size:9px;color:var(--ink4);min-width:20px;}
+        .combo-rev-controls{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:36px;}
+        .combo-rev-controls-filter{position:absolute;left:0;top:50%;transform:translateY(-50%);}
+        .combo-rev-clear{font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:5px 12px;cursor:pointer;}
+        .combo-rev-write-btn{font-size:10.5px;font-weight:600;color:#fff;background:var(--olive);border:none;border-radius:50px;padding:9px 18px;cursor:pointer;}
+        .combo-rev-empty{font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0;}
+        .combo-rev-list{display:flex;flex-direction:column;gap:12px;}
+        .combo-rev-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;}
+        .combo-rev-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
+        .combo-rev-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--golddim);color:var(--gold);}
+        .combo-rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
+        .combo-rev-name{font-size:12px;font-weight:600;color:var(--ink);}
+        .combo-rev-verified{display:flex;align-items:center;gap:3px;font-size:9px;font-weight:600;text-transform:uppercase;color:var(--olive2);}
+        .combo-rev-stars-sm{font-size:11px;color:var(--gold);}
+        .combo-rev-date{font-size:10px;color:var(--ink4);}
+        .combo-rev-body{font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;}
+        .combo-rev-load{display:flex;justify-content:center;margin-top:20px;}
+        .combo-rev-load-btn{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--olive);background:var(--surf);border:1.5px solid var(--bdr2);border-radius:50px;padding:11px 26px;cursor:pointer;}
       `}</style>
 
       <div className="page">
@@ -2731,7 +2811,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 variants={presetVariants}
                 comboVariant={comboVariants[selectedComboId] || {}}
                 onComboVariantChange={(v) => setComboVariants(prev => ({ ...prev, [selectedComboId]: v }))}
-                onVariantChange={(pid, v) => setPresetVariants(prev => ({ ...prev, [pid]: v }))}
+                onVariantChange={handlePresetVariantChange}
                 onAddToCart={handlePresetAddToCart}
                 cartAdded={!!presetCartAdded[selectedComboId]}
                 onBack={() => {

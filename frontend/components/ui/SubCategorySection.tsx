@@ -363,7 +363,9 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
 
         /* ── Circles section ── */
         .circles-section {
-          padding: 20px 48px 4px;
+          padding: 20px 48px 0;
+          position: relative;
+          z-index: 1;
           opacity: 0; transform: translateY(10px);
           transition: opacity .55s ease .14s, transform .55s ease .14s;
         }
@@ -406,7 +408,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         /* ── Circle button ── */
         .circle-btn {
           display: flex; flex-direction: column; align-items: center; gap: 9px;
-          background: none; border: none; cursor: pointer; padding: 0;
+          background: none; border: none; cursor: pointer; padding: 0 0 8px;
           position: relative;
           transition: transform .28s cubic-bezier(.25,.46,.45,.94);
         }
@@ -455,7 +457,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         .circle-active-dot {
           width: 4px; height: 4px; border-radius: 50%;
           background: var(--sage);
-          position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+          position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
         }
 
         /* ── Divider ── */
@@ -503,7 +505,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
           .marquee-wrap { margin-top: 20px; }
 
           /* Circles — horizontal scroll */
-          .circles-section { padding: 12px 0 0; }
+          .circles-section { padding: 12px 0 4px; }
           .circles-bar { padding: 0 16px; margin-bottom: 8px; }
           .circles-row {
             gap: 0;
@@ -511,10 +513,10 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            padding: 4px 0 10px 0;
+            padding: 4px 0 0 0;
           }
           .circles-row::-webkit-scrollbar { display: none; }
-          .circle-btn { flex-shrink: 0; padding: 0 10px; }
+          .circle-btn { flex-shrink: 0; padding: 0 10px 8px; }
           .circle-btn:first-child { padding-left: 16px; }   
 .circle-btn:last-child  { padding-right: 16px; }  
           .circle-img-wrap { width: 60px; height: 60px; }
@@ -524,7 +526,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
           .scp-rule { margin: 0 16px; }
 
           /* Products */
-          .products-section { padding: 0; margin-top: -12px}
+          .products-section { padding: 0; margin-top: 0}
         }
 
         /* ── Small mobile ── */

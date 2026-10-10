@@ -215,7 +215,7 @@ function ProductCard({
         {/* <p className="pc-category">{product.category}</p> */}
         <p className="pc-name">{name}</p>
 
-        {colors.length > 1 && (
+        {/* {colors.length > 1 && (
           <div className="pc-colors">
             {colors.map((c) => (
               <span
@@ -226,7 +226,7 @@ function ProductCard({
               />
             ))}
           </div>
-        )}
+        )} */}
 
         <div className="pc-price-row">
           <span className="pc-price">₹{price.toLocaleString("en-IN")}</span>

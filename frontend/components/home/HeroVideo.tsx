@@ -2,46 +2,65 @@
 
 import Image from "next/image";
 import { useGender } from "@/lib/genderContext";
-import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
 type Category = "women" | "men" | "kids";
 
+type HeroItem = {
+  image: string;          // used on mobile (and on desktop if desktopImage is missing)
+  desktopImage?: string;  // optional wide image for tablet / laptop
+};
+
+type CategoryItem = { name: string; slug: string; image: string };
+
 type HomeContentResponse = {
   success: boolean;
   homeContent: {
     marqueeItems: string[];
     heroContent: {
-      women?: { image: string };
-      men?: { image: string };
-      kids?: { image: string };
+      women?: HeroItem;
+      men?: HeroItem;
+      kids?: HeroItem;
     };
+    // optional – if your API doesn't send it, the defaults below are used
+    categories?: CategoryItem[];
   };
 };
 
-const defaultHeroContent = {
+const defaultHeroContent: Record<string, HeroItem> = {
   women: { image: "/island-girl.jpg" },
   men:   { image: "/trial.png" },
   kids:  { image: "/trial.png" },
 };
 
 const defaultMarqueeItems = [
-  '✦ Free Shipping above ₹999',
-  '✦ Custom Jewellery',
-  '✦ Free Gifts on all Orders',
+  "✦ Free Shipping above ₹999",
+  "✦ Custom Jewellery",
+  "✦ Free Gifts on all Orders",
 ];
+
+// TODO: replace the image paths with your real category photos
+const defaultCategories: CategoryItem[] = [
+  { name: "Earrings",         slug: "earrings",    image: "/cat-earrings.jpg" },
+  { name: "Rings",            slug: "rings",       image: "/cat-rings.jpg" },
+  { name: "Necklace",         slug: "necklace",    image: "/cat-necklace.jpg" },
+  { name: "Hair Accessories", slug: "hair",        image: "/cat-hair.jpg" },
+];
+
+// TODO: change these to match your real routes
+const categoryRoute = (gender: string, slug: string) => `/shop/${gender}?category=${slug}`;
 
 export default function HeroVideoComponent() {
   const { gender: rawCategory, setGender: setActiveCategory, genders } = useGender();
   const activeCategory = rawCategory || "women";
-    
-  const { isAuthenticated, signOut } = useAuth();
+
   const router = useRouter();
 
   const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
-  const [heroContent, setHeroContent] = useState<Record<string, { image: string }>>(defaultHeroContent);
+  const [heroContent, setHeroContent] = useState<Record<string, HeroItem>>(defaultHeroContent);
+  const [categories, setCategories] = useState<CategoryItem[]>(defaultCategories);
 
   useEffect(() => {
     async function loadHomeContent() {
@@ -54,8 +73,11 @@ export default function HeroVideoComponent() {
           if (data.homeContent.heroContent) {
             setHeroContent((prev) => ({
               ...prev,
-              ...data.homeContent.heroContent
+              ...data.homeContent.heroContent,
             }));
+          }
+          if (data.homeContent.categories && data.homeContent.categories.length > 0) {
+            setCategories(data.homeContent.categories);
           }
         }
       } catch (err) {
@@ -66,17 +88,7 @@ export default function HeroVideoComponent() {
   }, []);
 
   const content = heroContent[activeCategory] || defaultHeroContent.women;
-
-  const handleAuthClick = () => {
-    if (isAuthenticated) {
-      signOut();
-      router.push("/");
-      return;
-    }
-    window.dispatchEvent(
-      new CustomEvent("makeussparkle:auth-open", { detail: { tab: "register" } })
-    );
-  };
+  const hasDesktopImage = !!content.desktopImage;
 
   return (
     <>
@@ -124,7 +136,6 @@ export default function HeroVideoComponent() {
           top: 0;
           z-index: 100;
           border-bottom: 1px solid #e8e8e8;
-          // margin-top: 50px;
           box-sizing: border-box;
         }
 
@@ -176,59 +187,116 @@ export default function HeroVideoComponent() {
           .gender-toggle-bar { gap: 8px; }
         }
 
-        /* ── IMAGE + AUTH SECTION ── */
-        .hero-image-section {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          width: 100%;
-          padding: 24px 0;
-        }
-
-        /* 4/5 aspect ratio — no background, no border */
-        .hero-img-frame {
+        /* ── FULL-BLEED HERO ── */
+        .hero-banner {
           position: relative;
-          width: min(340px, 85vw);
-          aspect-ratio: 4 / 5;
+          width: 100%;
           overflow: hidden;
+          background: #1b1b1b;
+          /* mobile: portrait, like the reference */
+          aspect-ratio: 4 / 5;
         }
 
-        .hero-img-frame img {
+        .hero-banner .hero-bg {
           object-fit: cover;
-          object-position: top center;
+          object-position: center top;
         }
 
-        /* Auth button */
-        .hero-auth-btn {
-          margin-top: 20px;
-          font-family: 'Inter', sans-serif;
-          font-size: 0.82rem;
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          padding: 12px 36px;
-          border: 1.5px solid rgb(42, 71, 54);
-          background: transparent;
-          color: rgb(42, 71, 54);
+        /* swap images only when a separate desktop image is supplied */
+        .hero-bg-desktop { display: none; }
+        .hero-banner.has-desktop .hero-bg-mobile { display: block; }
+
+        .cat-card:focus-visible { outline: 2px solid rgb(42, 71, 54); outline-offset: 3px; }
+
+        /* tablet */
+        @media (min-width: 768px) {
+          .hero-banner { aspect-ratio: 4 / 3; }
+        }
+
+        /* laptop / desktop: wide, never taller than the viewport */
+        @media (min-width: 1100px) {
+          .hero-banner {
+            aspect-ratio: auto;
+            height: min(78vh, 760px);
+            min-height: 520px;
+          }
+          .hero-banner .hero-bg { object-position: center 25%; }
+          .hero-banner.has-desktop .hero-bg-mobile { display: none; }
+          .hero-banner.has-desktop .hero-bg-desktop { display: block; }
+        }
+
+        /* ── CATEGORY STRIP ── */
+        .cat-strip {
+          width: 100%;
+          background: #dcefd9;
+          padding: 16px 0 14px;
+          box-sizing: border-box;
+        }
+
+        .cat-row {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          padding: 0 16px;
+          scroll-snap-type: x proximity;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .cat-row::-webkit-scrollbar { display: none; }
+
+        .cat-card {
+          flex: 0 0 auto;
+          width: clamp(104px, 28vw, 150px);
+          background: none;
+          border: none;
+          padding: 0;
           cursor: pointer;
-          transition: background 0.25s, color 0.25s;
-          border-radius: 0;
-          width: min(340px, 85vw);
+          text-align: center;
+          scroll-snap-align: start;
+          font-family: 'Inter', sans-serif;
         }
 
-        .hero-auth-btn:hover {
-          background: rgb(42, 71, 54);
-          color: #f2e4d6;
+        .cat-img {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          border-radius: 22px;
+          overflow: hidden;
+          background: #c5e0c1;
         }
 
-        .hero-auth-btn.logout {
-          border-color: #8a3a2a;
-          color: #8a3a2a;
+        .cat-img img { object-fit: cover; transition: transform 0.4s ease; }
+        .cat-card:hover .cat-img img { transform: scale(1.05); }
+
+        .cat-name {
+          display: block;
+          margin-top: 8px;
+          font-size: 0.82rem;
+          font-weight: 500;
+          color: #2a2a2a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .hero-auth-btn.logout:hover {
-          background: #8a3a2a;
-          color: #fff;
+        /* tablet + laptop: centered grid, no scrolling */
+        @media (min-width: 768px) {
+          .cat-strip { padding: 28px 0 24px; }
+          .cat-row {
+            overflow: visible;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+          }
+          .cat-card { width: calc((100% - 60px) / 4); max-width: 230px; }
+          .cat-name { font-size: 0.95rem; margin-top: 10px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .bs-marquee-track { animation: none; }
+          .cat-img img { transition: none; }
         }
       `}</style>
 
@@ -256,25 +324,50 @@ export default function HeroVideoComponent() {
         </div>
       </div>
 
-      {/* ── IMAGE + AUTH BUTTON ── */}
-      <div className="hero-image-section">
-        <div className="hero-img-frame">
+      {/* ── FULL-BLEED HERO ── */}
+      <section className={`hero-banner${hasDesktopImage ? " has-desktop" : ""}`}>
+        <Image
+          className="hero-bg hero-bg-mobile"
+          src={content.image}
+          alt={`${activeCategory} jewellery model`}
+          fill
+          priority
+          sizes="100vw"
+        />
+        {hasDesktopImage && (
           <Image
-            src={content.image}
-            alt={`${activeCategory} fashion model`}
+            className="hero-bg hero-bg-desktop"
+            src={content.desktopImage as string}
+            alt={`${activeCategory} jewellery model`}
             fill
             priority
-            sizes="(max-width: 600px) 85vw, 340px"
+            sizes="100vw"
           />
-        </div>
+        )}
+      </section>
 
-        <button
-          className={`hero-auth-btn${isAuthenticated ? " logout" : ""}`}
-          onClick={handleAuthClick}
-        >
-          {isAuthenticated ? "Logout" : "Login / Sign Up"}
-        </button>
-      </div>
+      {/* ── CATEGORY STRIP ── */}
+      <section className="cat-strip" aria-label="Shop by category">
+        <div className="cat-row">
+          {categories.map((c) => (
+            <button
+              key={c.slug}
+              className="cat-card"
+              onClick={() => router.push(categoryRoute(activeCategory, c.slug))}
+            >
+              <div className="cat-img">
+                <Image
+                  src={c.image}
+                  alt={c.name}
+                  fill
+                  sizes="(max-width: 768px) 30vw, 230px"
+                />
+              </div>
+              <span className="cat-name">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
     </>
   );
 }

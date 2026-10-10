@@ -245,7 +245,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #000000;
+  color: #ffff;
   font-family: sans-serif;
   font-weight: 500;
   background: rgba(126, 111, 11, 0.36);          /* ← semi-dark bg */
@@ -517,7 +517,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
                   <img
                     className="bs-card-img"
                     src={b.imgDesktop}
-                    alt={b.imgAlt}
+                    alt={b.imgAlt || "Promotional banner"}
                     loading={idx === 0 ? 'eager' : 'lazy'}
                   />
 

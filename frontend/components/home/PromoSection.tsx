@@ -1,8 +1,9 @@
-
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { getApiUrl } from "@/lib/api";
 import Image from "next/image";
+import Link from "next/link";
 
 type PatternKey = "circles" | "dots" | "lines";
 
@@ -25,6 +26,18 @@ interface BannerItem {
   link?: string;
 }
 
+type BannerTheme = Pick<
+  BannerItem,
+  | "bg"
+  | "textDark"
+  | "pattern"
+  | "titleColor"
+  | "subtitleColor"
+  | "tagColor"
+  | "ctaBorderColor"
+  | "ctaTextColor"
+>;
+
 type ApiBanner = {
   _id: string;
   text?: string;
@@ -45,6 +58,34 @@ type PublicBannersResponse = {
   banners: ApiBanner[];
 };
 
+/* ─────────────────────────────────────────────
+   THEMES — alternate green → beige → green → beige
+   (green is the existing one, unchanged)
+───────────────────────────────────────────── */
+const GREEN_THEME: BannerTheme = {
+  bg: "linear-gradient(135deg, #b8c9a3 0%, #8fa870 40%, #6b7c45 100%)",
+  textDark: false,
+  pattern: "dots",
+  titleColor: "#fdf6e9",
+  subtitleColor: "rgba(253,246,233,0.75)",
+  tagColor: "#fdf6e9",
+  ctaBorderColor: "rgba(253,246,233,0.5)",
+  ctaTextColor: "#fdf6e9",
+};
+
+const BEIGE_THEME: BannerTheme = {
+  bg: "linear-gradient(135deg, #f7efe0 0%, #efe2c8 50%, #e4d2ae 100%)",
+  textDark: true,
+  pattern: "lines",
+  titleColor: "#1a0d00",
+  subtitleColor: "rgba(40,20,0,0.7)",
+  tagColor: "#5c3a00",
+  ctaBorderColor: "rgba(90,50,0,0.55)",
+  ctaTextColor: "#1a0d00",
+};
+
+const bannerThemes: BannerTheme[] = [GREEN_THEME, BEIGE_THEME];
+
 const fallbackBanners: BannerItem[] = [
   {
     id: 1,
@@ -52,16 +93,9 @@ const fallbackBanners: BannerItem[] = [
     title: "Pinteresty Necklaces",
     subtitle: "Dainty chains you've been dreaming of",
     cta: "Shop Now",
-    bg: "linear-gradient(135deg, #e8c07d 0%, #c9a96e 40%, #a07840 100%)",
-    textDark: true,
-    pattern: "circles",
     imageSrc: "/images/hero.png",
     imageAlt: "Pinteresty Necklaces Collection",
-    titleColor: "#101010",
-    subtitleColor: "#101010",
-    tagColor: "#101010",
-    ctaBorderColor: "rgba(37, 20, 0, 0.55)",
-    ctaTextColor: "#1a0d00",
+    ...bannerThemes[0],
   },
   {
     id: 2,
@@ -69,16 +103,9 @@ const fallbackBanners: BannerItem[] = [
     title: "Anti-Tarnish Collection",
     subtitle: "Wear it every day, forever gold",
     cta: "Explore",
-    bg: "linear-gradient(135deg, #b8c9a3 0%, #8fa870 40%, #6b7c45 100%)",
-    textDark: false,
-    pattern: "dots",
     imageSrc: "/images/hero.png",
     imageAlt: "Anti-Tarnish Collection",
-    titleColor: "#fdf6e9",
-    subtitleColor: "rgba(253,246,233,0.75)",
-    tagColor: "#fdfdfd",
-    ctaBorderColor: "rgba(253,246,233,0.5)",
-    ctaTextColor: "#fdf6e9",
+    ...bannerThemes[1],
   },
   {
     id: 3,
@@ -86,16 +113,9 @@ const fallbackBanners: BannerItem[] = [
     title: "Stack & Layer",
     subtitle: "Build your perfect arm party",
     cta: "Shop Bracelets",
-    bg: "linear-gradient(135deg, #f5e6c8 0%, #e8c87d 50%, #d4a843 100%)",
-    textDark: true,
-    pattern: "lines",
     imageSrc: "/images/hero.png",
     imageAlt: "Stack and Layer Bracelets",
-    titleColor: "#1a0d00",
-    subtitleColor: "rgba(40,20,0,0.62)",
-    tagColor: "#5c3a00",
-    ctaBorderColor: "rgba(90,50,0,0.55)",
-    ctaTextColor: "#1a0d00",
+    ...bannerThemes[0],
   },
   {
     id: 4,
@@ -103,16 +123,9 @@ const fallbackBanners: BannerItem[] = [
     title: "Ring Obsessed",
     subtitle: "Stack every finger, no rules",
     cta: "Shop Rings",
-    bg: "linear-gradient(135deg, #3b4a2f 0%, #4e6035 50%, #6b7c45 100%)",
-    textDark: false,
-    pattern: "circles",
     imageSrc: "/images/hero.png",
     imageAlt: "Ring Obsessed Collection",
-    titleColor: "#fdf6e9",
-    subtitleColor: "rgba(253,246,233,0.75)",
-    tagColor: "#fdf6e9",
-    ctaBorderColor: "rgba(253,246,233,0.5)",
-    ctaTextColor: "#fdf6e9",
+    ...bannerThemes[1],
   },
 ];
 
@@ -143,7 +156,7 @@ const Patterns = {
   ),
   lines: ({ color }: { color: string }) => (
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
-      style={{ position: "absolute", inset: 0, opacity: 0.06 }}>
+      style={{ position: "absolute", inset: 0, opacity: 0.08 }}>
       <defs>
         <pattern id="pl" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
           <line x1="0" y1="0" x2="40" y2="40" stroke={color} strokeWidth="1" />
@@ -156,49 +169,6 @@ const Patterns = {
 };
 
 const INTERVAL = 4000;
-
-const bannerThemes = [
-  {
-    bg: "linear-gradient(135deg, #e8c07d 0%, #c9a96e 40%, #a07840 100%)",
-    textDark: true,
-    pattern: "circles" as PatternKey,
-    titleColor: "#000000",
-    subtitleColor: "rgba(0, 0, 0, 0.62)",
-    tagColor: "#311f01",
-    ctaBorderColor: "rgba(37, 20, 0, 0.55)",
-    ctaTextColor: "#1a0d00",
-  },
-  {
-    bg: "linear-gradient(135deg, #b8c9a3 0%, #8fa870 40%, #6b7c45 100%)",
-    textDark: false,
-    pattern: "dots" as PatternKey,
-    titleColor: "#fdf6e9",
-    subtitleColor: "rgba(253,246,233,0.75)",
-    tagColor: "#fdf6e9",
-    ctaBorderColor: "rgba(253,246,233,0.5)",
-    ctaTextColor: "#fdf6e9",
-  },
-  {
-    bg: "linear-gradient(135deg, #f5e6c8 0%, #e8c87d 50%, #d4a843 100%)",
-    textDark: true,
-    pattern: "lines" as PatternKey,
-    titleColor: "#1a0d00",
-    subtitleColor: "rgba(40,20,0,0.62)",
-    tagColor: "#5c3a00",
-    ctaBorderColor: "rgba(90,50,0,0.55)",
-    ctaTextColor: "#1a0d00",
-  },
-  {
-    bg: "linear-gradient(135deg, #3b4a2f 0%, #4e6035 50%, #6b7c45 100%)",
-    textDark: false,
-    pattern: "circles" as PatternKey,
-    titleColor: "#fdf6e9",
-    subtitleColor: "rgba(253,246,233,0.75)",
-    tagColor: "#fdf6e9",
-    ctaBorderColor: "rgba(253,246,233,0.5)",
-    ctaTextColor: "#fdf6e9",
-  },
-];
 
 const mapApiBanner = (banner: ApiBanner, index: number): BannerItem => {
   const theme = bannerThemes[index % bannerThemes.length];
@@ -217,6 +187,47 @@ const mapApiBanner = (banner: ApiBanner, index: number): BannerItem => {
     ...theme,
   };
 };
+
+/* ─────────────────────────────────────────────
+   SlideLink — used for BOTH the image and the CTA
+   so they always go to the same place.
+   Internal paths use next/link, full URLs use <a>.
+───────────────────────────────────────────── */
+function SlideLink({
+  href,
+  className,
+  style,
+  ariaLabel,
+  children,
+}: {
+  href?: string;
+  className?: string;
+  style?: CSSProperties;
+  ariaLabel?: string;
+  children: ReactNode;
+}) {
+  if (!href) {
+    return (
+      <span className={className} style={style}>
+        {children}
+      </span>
+    );
+  }
+
+  if (/^https?:\/\//i.test(href)) {
+    return (
+      <a href={href} className={className} style={style} aria-label={ariaLabel}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className} style={style} aria-label={ariaLabel}>
+      {children}
+    </Link>
+  );
+}
 
 export default function BannerSlider() {
   const [current, setCurrent] = useState(0);
@@ -267,19 +278,21 @@ export default function BannerSlider() {
   const b = displayBanners[safeCurrent];
   const PatternComp = Patterns[b.pattern];
   const patternColor = b.textDark ? "#3b2000" : "#ffffff";
+  const dividerColor = b.textDark ? "rgba(40,20,0,0.25)" : "rgba(253,246,233,0.25)";
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,500;1,600&family=Jost:wght@200;300;400;500&display=swap');
 
-        *, *::before, *::after { box-sizing: border-box; }
+        .bs-section, .bs-section *, .bs-section *::before, .bs-section *::after { box-sizing: border-box; }
 
         /* ── Section ── */
         .bs-section {
           background: #f9f5ef;
           padding: 52px 0 60px;
           font-family: 'Jost', sans-serif;
+          overflow-x: hidden;
         }
 
         /* ── Eyebrow ── */
@@ -294,10 +307,6 @@ export default function BannerSlider() {
         }
         .bs-eyebrow-rule:last-child { background: linear-gradient(90deg, #c9a96e, transparent); }
         .bs-eyebrow-dot { width: 5px; height: 5px; background: #d4af37; border-radius: 50%; }
-        .bs-label {
-          font-size: 10px; font-weight: 700; letter-spacing: 5px;
-          text-transform: uppercase; color: #8fa870; margin-bottom: 6px; display: block;
-        }
         .bs-heading {
           font-family: 'Cormorant Garamond', serif;
           font-size: clamp(26px, 3.5vw, 40px);
@@ -324,7 +333,7 @@ export default function BannerSlider() {
         }
 
         /* ═══════════════════════════════════
-           IMAGE ZONE — 80% of card height
+           IMAGE ZONE
         ═══════════════════════════════════ */
         .bs-image-zone {
           position: relative;
@@ -332,9 +341,21 @@ export default function BannerSlider() {
           height: 460px;
           overflow: hidden;
           flex-shrink: 0;
+          background: #e9e2d3;
         }
 
-        .bs-image-zone img {
+        /* Clickable image — covers the whole zone */
+        .bs-image-link {
+          position: absolute;
+          inset: 0;
+          display: block;
+          z-index: 1;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+        span.bs-image-link { cursor: default; }
+
+        .bs-image-link img {
           position: absolute;
           inset: 0;
           width: 100%;
@@ -342,9 +363,15 @@ export default function BannerSlider() {
           object-fit: cover;
           object-position: center top;
           display: block;
+          transition: transform 0.6s ease;
+        }
+        a.bs-image-link:hover img { transform: scale(1.03); }
+        a.bs-image-link:focus-visible {
+          outline: 2px solid #6b7c45;
+          outline-offset: -4px;
         }
 
-        /* Only a very subtle top-edge vignette — NO left/right/bottom shadow */
+        /* Subtle top-edge vignette only */
         .bs-image-zone::before {
           content: '';
           position: absolute; inset: 0; z-index: 2; pointer-events: none;
@@ -359,20 +386,20 @@ export default function BannerSlider() {
         /* ── Progress bar ── */
         .bs-progress {
           position: absolute; bottom: 0; left: 0; height: 3px;
-          background: rgba(255,255,255,0.55); border-radius: 0 2px 0 0;
+          background: rgba(255,255,255,0.7); border-radius: 0 2px 0 0;
           animation: bsProgress ${INTERVAL}ms linear; z-index: 10;
+          pointer-events: none;
         }
         @keyframes bsProgress { from { width: 0; } to { width: 100%; } }
 
         /* ═══════════════════════════════════
-           TEXT ZONE — 20% colored bar
-           Horizontal layout:
+           TEXT ZONE — horizontal bar
            [TAG] | [TITLE] | [SUBTITLE flex] [CTA]
         ═══════════════════════════════════ */
         .bs-text-zone {
           position: relative;
           width: 100%;
-          min-height: 108px; 
+          min-height: 108px;
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -380,12 +407,11 @@ export default function BannerSlider() {
           padding: 0 32px;
         }
 
-        /* Pattern sits behind everything */
         .bs-text-pattern {
           position: absolute; inset: 0; z-index: 0; pointer-events: none;
         }
 
-        /* — TAG segment — */
+        /* — TAG — */
         .bs-bar-tag {
           position: relative; z-index: 1;
           display: flex; flex-direction: column; justify-content: center; gap: 3px;
@@ -396,6 +422,7 @@ export default function BannerSlider() {
           font-size: 10px; font-weight: 400; letter-spacing: 4px;
           text-transform: uppercase;
           display: flex; align-items: center; gap: 6px;
+          white-space: nowrap;
         }
         .bs-bar-tag-dot {
           width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0;
@@ -404,9 +431,10 @@ export default function BannerSlider() {
         /* — Divider — */
         .bs-bar-divider {
           width: 1px; height: 50px; flex-shrink: 0;
+          position: relative; z-index: 1;
         }
 
-        /* — TITLE segment — */
+        /* — TITLE — */
         .bs-bar-title-block {
           position: relative; z-index: 1;
           display: flex; align-items: center;
@@ -420,7 +448,7 @@ export default function BannerSlider() {
           white-space: nowrap;
         }
 
-        /* — SUBTITLE segment — takes all remaining space — */
+        /* — SUBTITLE — takes all remaining space — */
         .bs-bar-subtitle-block {
           position: relative; z-index: 1;
           padding: 0 24px;
@@ -438,7 +466,7 @@ export default function BannerSlider() {
           -webkit-box-orient: vertical;
         }
 
-        /* — CTA segment — */
+        /* — CTA — */
         .bs-bar-cta-block {
           position: relative; z-index: 1;
           flex-shrink: 0;
@@ -454,6 +482,7 @@ export default function BannerSlider() {
           transition: background 0.22s ease;
           position: relative; overflow: hidden; white-space: nowrap;
         }
+        span.bs-cta { cursor: default; }
         .bs-cta::before {
           content: ''; position: absolute; inset: 0;
           background: currentColor; opacity: 0;
@@ -478,11 +507,7 @@ export default function BannerSlider() {
           display: flex; align-items: center; justify-content: center;
           gap: 24px; margin-top: 22px; flex-wrap: nowrap;
         }
-        
-        .bs-nav-controls {
-          display: flex; align-items: center; gap: 10px;
-        }
-        
+        .bs-nav-controls { display: flex; align-items: center; gap: 10px; }
         .bs-nav-arrow {
           width: 28px; height: 28px; border-radius: 50%;
           border: 1px solid rgba(107,124,69,0.35); background: transparent;
@@ -510,7 +535,7 @@ export default function BannerSlider() {
           width: 24px; border-radius: 3px; background: #6b7c45;
         }
         .bs-counter {
-          font-size: 11px; font-weight: 300; letter-spacing: 2px; color: #8fa870;
+          font-size: 11px; font-weight: 300; letter-spacing: 2px; color: #8fa870; margin: 0;
         }
         .bs-counter span { color: #3b4a2f; font-weight: 400; }
 
@@ -529,131 +554,115 @@ export default function BannerSlider() {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
           font-size: 7px; letter-spacing: 1px; text-transform: uppercase;
-          color: rgba(255,255,255,0.9); text-align: center; padding: 2px;
+          text-align: center; padding: 2px;
           font-family: 'Jost', sans-serif;
+          overflow: hidden;
         }
 
         /* ════════════════════════════
            RESPONSIVE
         ════════════════════════════ */
 
-        /* Tablet landscape ≤ 1024px */
-        @media (max-width: 1024px) {
-          .bs-image-zone { height: 360px; }
+        /* Laptop / small desktop ≤ 1100px */
+        @media (max-width: 1100px) {
+          .bs-image-zone { height: 400px; }
           .bs-text-zone { padding: 0 24px; }
           .bs-bar-tag { padding-right: 18px; }
           .bs-bar-title-block { padding: 0 18px; }
           .bs-bar-subtitle-block { padding: 0 18px; }
           .bs-bar-cta-block { padding-left: 18px; }
+          .bs-bar-tag-label { letter-spacing: 3px; }
         }
 
-        /* Tablet portrait ≤ 768px */
-        @media (max-width: 768px) {
+        /* Tablet ≤ 900px — switch to compact 2-row grid so nothing is squeezed */
+        @media (max-width: 900px) {
+          .bs-image-zone { height: 340px; }
+
+          .bs-text-zone {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            grid-template-areas:
+              "tag   title title"
+              "sub   sub   cta";
+            align-items: center;
+            column-gap: 14px;
+            row-gap: 8px;
+            padding: 16px 22px 18px;
+            min-height: unset;
+          }
+
+          .bs-bar-divider { display: none !important; }
+
+          .bs-bar-tag { grid-area: tag; padding-right: 0; }
+          .bs-bar-tag-label { font-size: 11px; letter-spacing: 3px; font-weight: 400; }
+
+          .bs-bar-title-block {
+            grid-area: title;
+            padding: 0;
+            justify-self: end;
+            min-width: 0;
+          }
+          .bs-bar-title {
+            font-size: 24px;
+            white-space: normal;
+            text-align: right;
+          }
+
+          .bs-bar-subtitle-block { grid-area: sub; padding: 0; }
+          .bs-bar-subtitle { font-size: 13px; -webkit-line-clamp: 2; }
+
+          .bs-bar-cta-block { grid-area: cta; padding-left: 0; justify-self: end; }
+          .bs-cta { padding: 10px 18px; font-size: 9px; letter-spacing: 3px; }
+        }
+
+        /* Large phone ≤ 640px */
+        @media (max-width: 640px) {
+          .bs-section { padding: 40px 0 48px; }
           .bs-image-zone { height: 280px; }
-          .bs-text-zone { min-height: 92px; padding: 0 18px; }
-          .bs-bar-tag { padding-right: 12px; }
-          .bs-bar-tag-label { font-size: 12px; letter-spacing: 3px;font-weight: 300 }
-          .bs-bar-title-block { padding: 0 12px; }
-          .bs-bar-title { font-size: 17px; }
-          .bs-bar-subtitle-block { padding: 0 12px; }
-          .bs-bar-subtitle { font-size: 13px; }
-          .bs-bar-cta-block { padding-left: 12px; }
-          .bs-cta { padding: 10px 16px; font-size: 8px; letter-spacing: 2.5px; }
+          .bs-text-zone { padding: 14px 18px 16px; column-gap: 10px; row-gap: 6px; }
+          .bs-bar-tag-label { font-size: 10px; letter-spacing: 2.5px; }
+          .bs-bar-title { font-size: 20px; }
+          .bs-bar-subtitle { font-size: 12.5px; -webkit-line-clamp: 1; }
+          .bs-cta { padding: 8px 14px; font-size: 8px; letter-spacing: 2px; }
+          .bs-cta-arrow { display: none; }
         }
 
-/* ≤640px — compact 2-row grid layout */
-@media (max-width: 640px) {
-  .bs-text-zone {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "tag   title  title"
-      "sub   sub    cta";
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 6px;
-    padding: 14px 18px 16px;
-    min-height: unset;
-  }
+        /* Phone ≤ 480px */
+        @media (max-width: 480px) {
+          .bs-section { padding: 32px 0 40px; }
+          .bs-wrap { padding: 0 14px; }
+          .bs-image-zone { height: 230px; }
 
-  .bs-bar-divider { display: none !important; }
+          .bs-text-zone { padding: 12px 14px 14px; column-gap: 8px; row-gap: 5px; }
+          .bs-bar-tag-label { font-size: 9.5px; letter-spacing: 2px; font-weight: 400; }
+          .bs-bar-title { font-size: 18px; }
+          .bs-bar-subtitle { font-size: 12px; }
+          .bs-cta { padding: 7px 12px; font-size: 7.5px; letter-spacing: 1.5px; }
 
-  .bs-bar-tag {
-    grid-area: tag;
-    padding-right: 0;
-  }
-.bs-bar-tag-label {
-    font-size: 10px;     /* add this line inside .bs-bar-tag block */
-  }
-  .bs-bar-title-block {
-    grid-area: title;
-    padding-right: 0;
-    justify-self: end;
-  }
-  .bs-bar-title {
-    white-space: nowrap;
-    font-size: 18px; 
-  }
+          .bs-nav { gap: 12px; margin-top: 14px; }
+          .bs-nav-controls { gap: 8px; }
+          .bs-nav-arrow { width: 24px; height: 24px; }
+          .bs-nav-arrow svg { width: 11px; height: 11px; }
 
-  .bs-bar-subtitle-block {
-    display: flex !important;
-    grid-area: sub;
-    padding: 0;
-  }
-  .bs-bar-subtitle {
-    -webkit-line-clamp: 1;
-    font-size: 13px;
-  }
+          .bs-counter { font-size: 10px; }
+          .bs-thumbs { display: none; }
+          .bs-eyebrow { margin-bottom: 18px; padding: 0 14px; }
+          .bs-heading { font-size: clamp(20px, 5vw, 28px); }
+        }
 
-  .bs-bar-cta-block {
-    grid-area: cta;
-    padding-left: 0;
-    justify-self: end;
-  }
-  .bs-cta {
-    padding: 7px 14px;
-    font-size: 8px;
-    letter-spacing: 2px;
-  }
-  .bs-cta-arrow { display: none; }
-}
+        /* Small phone ≤ 380px */
+        @media (max-width: 380px) {
+          .bs-image-zone { height: 200px; }
+          .bs-text-zone { padding: 10px 12px 12px; }
+          .bs-bar-title { font-size: 17px; }
+          .bs-bar-subtitle { font-size: 11.5px; }
+          .bs-nav { gap: 8px; }
+        }
 
-/* ≤480px */
-@media (max-width: 480px) {
-  .bs-section { padding: 32px 0 40px; }
-  .bs-wrap { padding: 0 14px; }
-  .bs-image-zone { height: 220px; }
-
-  .bs-text-zone { padding: 12px 14px 14px; column-gap: 8px; row-gap: 5px; }
-
-  .bs-bar-tag-label { font-size: 10px; letter-spacing: 2px; font-weight: 300; }
-
-  .bs-bar-title { font-size: 16px !important; font-weight: 700; }
-
-  .bs-bar-subtitle { font-size: 11px; }
-
-  .bs-cta { padding: 6px 12px !important; font-size: 7.5px !important; letter-spacing: 1.5px !important; }
-
-  .bs-nav { gap: 12px; margin-top: 14px; }
-  .bs-nav-controls { gap: 8px; }
-  .bs-nav-arrow { width: 24px; height: 24px; }
-  .bs-nav-arrow svg { width: 11px; height: 11px; }
-
-  .bs-counter { font-size: 10px; }
-  .bs-thumbs { display: none; }
-  .bs-eyebrow { margin-bottom: 18px; }
-  .bs-heading { font-size: clamp(20px, 5vw, 28px); }
-}
-
-/* Small phone ≤380px */
-@media (max-width: 380px) {
-  .bs-image-zone { height: 200px; }
-  .bs-text-zone { padding: 10px 12px 12px; }
-  .bs-bar-title { font-size: 20px !important; }
-  .bs-bar-subtitle { font-size: 12px; }
-}
-       
+        /* Touch devices: no hover zoom */
+        @media (hover: none) {
+          a.bs-image-link:hover img { transform: none; }
+        }
       `}</style>
 
       <section
@@ -668,7 +677,6 @@ export default function BannerSlider() {
             <div className="bs-eyebrow-dot" />
             <div className="bs-eyebrow-rule" />
           </div>
-          {/* <span className="bs-label">Featured &amp; Promotions</span> */}
           <h2 className="bs-heading">What&apos;s <em>Hot</em> Right Now</h2>
         </div>
 
@@ -676,13 +684,19 @@ export default function BannerSlider() {
           <div className="bs-track">
             <div className="bs-slide">
 
-              {/* ══ IMAGE ZONE (80%) ══ */}
+              {/* ══ IMAGE ZONE — clickable, goes to the same link as the CTA ══ */}
               <div className="bs-image-zone">
-                <Image src={b.imageSrc} alt={b.imageAlt} fill sizes="100vw" />
+                <SlideLink
+                  href={b.link}
+                  className="bs-image-link"
+                  ariaLabel={`${b.cta}: ${b.title}`}
+                >
+                  <Image src={b.imageSrc} alt={b.imageAlt} fill sizes="(max-width: 1180px) 100vw, 1180px" />
+                </SlideLink>
                 {!paused && <div key={`prog-${safeCurrent}`} className="bs-progress" />}
               </div>
 
-              {/* ══ TEXT ZONE (20%) — horizontal bar ══ */}
+              {/* ══ TEXT ZONE — horizontal bar ══ */}
               <div className="bs-text-zone" style={{ background: b.bg }}>
 
                 {/* Decorative pattern */}
@@ -699,8 +713,7 @@ export default function BannerSlider() {
                 </div>
 
                 {/* DIVIDER 1 */}
-                <div className="bs-bar-divider"
-                  style={{ background: b.textDark ? "rgba(40,20,0,0.25)" : "rgba(253,246,233,0.25)" }} />
+                <div className="bs-bar-divider" style={{ background: dividerColor }} />
 
                 {/* TITLE */}
                 <div className="bs-bar-title-block">
@@ -710,10 +723,9 @@ export default function BannerSlider() {
                 </div>
 
                 {/* DIVIDER 2 */}
-                <div className="bs-bar-divider"
-                  style={{ background: b.textDark ? "rgba(40,20,0,0.25)" : "rgba(253,246,233,0.25)" }} />
+                <div className="bs-bar-divider" style={{ background: dividerColor }} />
 
-                {/* SUBTITLE — fills remaining space */}
+                {/* SUBTITLE */}
                 <div className="bs-bar-subtitle-block">
                   <p className="bs-bar-subtitle" style={{ color: b.subtitleColor }}>
                     {b.subtitle}
@@ -722,18 +734,14 @@ export default function BannerSlider() {
 
                 {/* CTA */}
                 <div className="bs-bar-cta-block">
-                  <button
+                  <SlideLink
+                    href={b.link}
                     className="bs-cta"
                     style={{ color: b.ctaTextColor, borderColor: b.ctaBorderColor }}
-                    onClick={() => {
-                      if (b.link) {
-                        window.location.href = b.link;
-                      }
-                    }}
                   >
                     {b.cta}
                     <span className="bs-cta-arrow" />
-                  </button>
+                  </SlideLink>
                 </div>
 
               </div>{/* /bs-text-zone */}
@@ -743,7 +751,7 @@ export default function BannerSlider() {
 
           {/* ── Navigation ── */}
           <div className="bs-nav">
-            
+
             <div className="bs-dots">
               {displayBanners.map((_, i) => (
                 <button key={i} className={`bs-dot ${i === safeCurrent ? "active" : ""}`}
@@ -760,13 +768,13 @@ export default function BannerSlider() {
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
               </button>
-  
+
               <p className="bs-counter">
                 <span>{String(safeCurrent + 1).padStart(2, "0")}</span>
                 {" / "}
                 {String(displayBanners.length).padStart(2, "0")}
               </p>
-  
+
               <button className="bs-nav-arrow" onClick={next} aria-label="Next">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -774,7 +782,7 @@ export default function BannerSlider() {
                 </svg>
               </button>
             </div>
-            
+
           </div>
 
           {/* ── Thumbnails ── */}
@@ -783,7 +791,9 @@ export default function BannerSlider() {
               <div key={i} className={`bs-thumb ${i === safeCurrent ? "active" : ""}`}
                 onClick={() => goTo(i)}>
                 <div className="bs-thumb-bg" style={{ background: bn.bg }} />
-                <div className="bs-thumb-label">{bn.title.split("\n")[0]}</div>
+                <div className="bs-thumb-label" style={{ color: bn.textDark ? "#1a0d00" : "rgba(255,255,255,0.95)" }}>
+                  {bn.title.split("\n")[0]}
+                </div>
               </div>
             ))}
           </div>

@@ -18,6 +18,13 @@ const orderSchema = new mongoose.Schema(
         customNote: String,
         customImages: [String],
         customData: mongoose.Schema.Types.Mixed,
+        giftBox: { type: Boolean, default: false },
+        giftBoxDetails: {
+          heading: String,
+          description: String,
+          price: Number,
+          image: String,
+        },
         selectedCharms: [{ type: mongoose.Schema.Types.ObjectId, ref: "CharmItem" }],
         selectionGroups: [
           {

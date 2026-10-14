@@ -13,8 +13,11 @@ export default async function SubcategoryRoute({ params }: Props) {
 export function generateStaticParams() {
   return [
     { type: 'necklace' },
+    { type: 'necklaces' },
     { type: 'earrings' },
     { type: 'bracelets' },
+    { type: 'hand-chain' },
+    { type: 'jhumkha' },
     { type: 'rings' },
     { type: 'waist-chains' },
     { type: 'couple-sets' },

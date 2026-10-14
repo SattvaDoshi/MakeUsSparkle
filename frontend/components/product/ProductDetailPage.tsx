@@ -897,6 +897,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
       giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
       giftBox: giftBoxAdded || undefined,
+      giftBoxDetails: giftBoxAdded ? {
+        heading: product.giftBox?.heading || 'Premium Gift Box',
+        description: product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
+        price: product.giftBox?.price ?? 99,
+        image: product.giftBox?.image || GIFT_BOX_IMAGE,
+      } : undefined,
     };
   }, [product, discountedPrice, price, displayImg, currentColor, customData, giftMessage, allowCustomization, giftBoxAdded]);
   const buildCartItems = useCallback(() => {
@@ -944,6 +950,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
         giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
         giftBox: giftBoxAdded || undefined,
+        giftBoxDetails: giftBoxAdded ? {
+          heading: product.giftBox?.heading || 'Premium Gift Box',
+          description: product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
+          price: product.giftBox?.price ?? 99,
+          image: product.giftBox?.image || GIFT_BOX_IMAGE,
+        } : undefined,
         selectionGroups: [{
           type: 'selections',
           items: setSelections.map((sel, idx) => ({

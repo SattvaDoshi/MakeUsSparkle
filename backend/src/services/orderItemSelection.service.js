@@ -251,11 +251,30 @@ export async function normalizeOrderItem(item = {}) {
 				: undefined,
 		quantity: asPositiveInteger(item.quantity ?? item.qty, 1),
 		price: asNumber(item.price, 0),
+		color: item.color ? String(item.color) : undefined,
+		colorHex: item.colorHex ? String(item.colorHex) : undefined,
+		size: item.size ? String(item.size) : undefined,
+		sku: item.sku ? String(item.sku) : undefined,
 		customNote: item.customNote,
 		customImages: normalizeImageList(item.customImages),
 		customData:
 			item.customData && typeof item.customData === "object"
 				? item.customData
+				: undefined,
+		giftBox: Boolean(item.giftBox),
+		giftBoxDetails:
+			item.giftBoxDetails && typeof item.giftBoxDetails === "object"
+				? {
+						heading: item.giftBoxDetails.heading || "Premium Gift Box",
+						description: item.giftBoxDetails.description,
+						price: asNumber(item.giftBoxDetails.price, 99),
+						image: item.giftBoxDetails.image,
+				  }
+				: item.giftBox
+				? {
+						heading: "Premium Gift Box",
+						price: 99,
+				  }
 				: undefined,
 		selectedCharms,
 		selectionGroups,

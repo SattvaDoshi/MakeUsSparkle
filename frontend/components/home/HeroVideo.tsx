@@ -41,16 +41,124 @@ const defaultMarqueeItems = [
   "✦ Free Gifts on all Orders",
 ];
 
-// TODO: replace the image paths with your real category photos
-const defaultCategories: CategoryItem[] = [
-  { name: "Earrings",         slug: "earrings",    image: "/cat-earrings.jpg" },
-  { name: "Rings",            slug: "rings",       image: "/cat-rings.jpg" },
-  { name: "Necklace",         slug: "necklace",    image: "/cat-necklace.jpg" },
-  { name: "Hair Accessories", slug: "hair",        image: "/cat-hair.jpg" },
+type BackendCategory = {
+  _id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  gender?: { _id: string; name: string; slug: string } | string | null;
+};
+
+type BackendSubCategory = {
+  _id: string;
+  name: string;
+  image?: string;
+  category?: {
+    _id: string;
+    name: string;
+    description?: string;
+    image?: string;
+    gender?: { _id: string; name: string; slug: string } | string | null;
+  } | string;
+};
+
+function toSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+const FALLBACK_JEWELLERY_IMAGE = "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg";
+
+const SUBCATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  bracelets: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551076/makeusparkle/subcategories/ndmqu1fwuteg5dainrbd.jpg",
+  earrings: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg",
+  "hand-chain": "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551145/makeusparkle/subcategories/nb2nomsu7caogkuismh5.jpg",
+  jhumkha: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=90",
+  necklaces: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
+  necklace: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
+  rings: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551124/makeusparkle/subcategories/wbi5bd8gwlaze75xmvav.jpg",
+};
+
+const defaultJewellerySubcategories: CategoryItem[] = [
+  {
+    name: "Bracelets",
+    slug: "bracelets",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551076/makeusparkle/subcategories/ndmqu1fwuteg5dainrbd.jpg",
+  },
+  {
+    name: "Earrings",
+    slug: "earrings",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg",
+  },
+  {
+    name: "Hand chain",
+    slug: "hand-chain",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551145/makeusparkle/subcategories/nb2nomsu7caogkuismh5.jpg",
+  },
+  {
+    name: "Jhumkha",
+    slug: "jhumkha",
+    image: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=90",
+  },
+  {
+    name: "Necklaces",
+    slug: "necklaces",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
+  },
+  {
+    name: "Rings",
+    slug: "rings",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551124/makeusparkle/subcategories/wbi5bd8gwlaze75xmvav.jpg",
+  },
 ];
 
-// TODO: change these to match your real routes
-const categoryRoute = (gender: string, slug: string) => `/shop/${gender}?category=${slug}`;
+const categoryRoute = (_gender: string, slug: string) => `/subcategory/${slug}`;
+
+function SubcategoryCard({
+  item,
+  onClick,
+}: {
+  item: CategoryItem;
+  onClick: () => void;
+}) {
+  const [imgSrc, setImgSrc] = useState(
+    item.image || SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE
+  );
+
+  useEffect(() => {
+    setImgSrc(item.image || SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE);
+  }, [item.image, item.slug]);
+
+  return (
+    <button
+      className="cat-card"
+      onClick={onClick}
+      type="button"
+      aria-label={`Shop ${item.name}`}
+    >
+      <div className="cat-img">
+        <Image
+          src={imgSrc}
+          alt={item.name}
+          fill
+          unoptimized
+          sizes="(max-width: 768px) 30vw, 180px"
+          onError={() => {
+            const fallback = SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE;
+            if (imgSrc !== fallback) {
+              setImgSrc(fallback);
+            }
+          }}
+        />
+      </div>
+      <span className="cat-name">{item.name}</span>
+    </button>
+  );
+}
 
 export default function HeroVideoComponent() {
   const { gender: rawCategory, setGender: setActiveCategory, genders } = useGender();
@@ -60,31 +168,84 @@ export default function HeroVideoComponent() {
 
   const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
   const [heroContent, setHeroContent] = useState<Record<string, HeroItem>>(defaultHeroContent);
-  const [categories, setCategories] = useState<CategoryItem[]>(defaultCategories);
+  const [categories, setCategories] = useState<CategoryItem[]>(defaultJewellerySubcategories);
 
   useEffect(() => {
-    async function loadHomeContent() {
+    let isMounted = true;
+
+    async function loadData() {
+      // 1. Fetch home content
       try {
-        const data = await apiRequest<HomeContentResponse>("/home-content");
-        if (data.success && data.homeContent) {
-          if (data.homeContent.marqueeItems && data.homeContent.marqueeItems.length > 0) {
-            setMarqueeItems(data.homeContent.marqueeItems);
+        const homeData = await apiRequest<HomeContentResponse>("/home-content");
+        if (!isMounted) return;
+        if (homeData.success && homeData.homeContent) {
+          if (homeData.homeContent.marqueeItems && homeData.homeContent.marqueeItems.length > 0) {
+            setMarqueeItems(homeData.homeContent.marqueeItems);
           }
-          if (data.homeContent.heroContent) {
+          if (homeData.homeContent.heroContent) {
             setHeroContent((prev) => ({
               ...prev,
-              ...data.homeContent.heroContent,
+              ...homeData.homeContent.heroContent,
             }));
-          }
-          if (data.homeContent.categories && data.homeContent.categories.length > 0) {
-            setCategories(data.homeContent.categories);
           }
         }
       } catch (err) {
         console.error("Failed to load home content:", err);
       }
+
+      // 2. Fetch categories & subcategories from API to dynamically display Jewellery subcategories
+      try {
+        const [catData, subData] = await Promise.all([
+          apiRequest<{ success: boolean; categories?: BackendCategory[] }>("/categories").catch(() => null),
+          apiRequest<{ success: boolean; subcategories?: BackendSubCategory[] }>("/subcategories").catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        const allCategories = catData?.categories || [];
+        const allSubcategories = subData?.subcategories || [];
+
+        // Identify Jewellery Category ID
+        const jewelleryCat = allCategories.find(
+          (c) => c.name?.trim().toLowerCase() === "jewellery"
+        );
+        const jewelleryId = jewelleryCat?._id;
+
+        // Filter subcategories that belong to "Jewellery"
+        const jewellerySubs = allSubcategories.filter((sub) => {
+          if (sub.category && typeof sub.category === "object") {
+            const catName = sub.category.name?.trim().toLowerCase();
+            const catId = sub.category._id;
+            return catName === "jewellery" || (jewelleryId && catId === jewelleryId);
+          }
+          if (typeof sub.category === "string" && jewelleryId) {
+            return sub.category === jewelleryId;
+          }
+          return false;
+        });
+
+        if (jewellerySubs.length > 0) {
+          const mapped: CategoryItem[] = jewellerySubs.map((sub) => {
+            const slug = toSlug(sub.name);
+            const image = sub.image || SUBCATEGORY_FALLBACK_IMAGES[slug] || FALLBACK_JEWELLERY_IMAGE;
+            return {
+              name: sub.name,
+              slug,
+              image,
+            };
+          });
+          setCategories(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load jewellery subcategories:", err);
+      }
     }
-    loadHomeContent();
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const content = heroContent[activeCategory] || defaultHeroContent.women;
@@ -229,13 +390,13 @@ export default function HeroVideoComponent() {
         .cat-strip {
           width: 100%;
           background: #dcefd9;
-          padding: 16px 0 14px;
+          padding: 18px 0 16px;
           box-sizing: border-box;
         }
 
         .cat-row {
           display: flex;
-          gap: 12px;
+          gap: 14px;
           overflow-x: auto;
           padding: 0 16px;
           scroll-snap-type: x proximity;
@@ -246,7 +407,7 @@ export default function HeroVideoComponent() {
 
         .cat-card {
           flex: 0 0 auto;
-          width: clamp(104px, 28vw, 150px);
+          width: clamp(100px, 26vw, 130px);
           background: none;
           border: none;
           padding: 0;
@@ -254,49 +415,72 @@ export default function HeroVideoComponent() {
           text-align: center;
           scroll-snap-align: start;
           font-family: 'Inter', sans-serif;
+          transition: transform 0.25s ease;
+        }
+
+        .cat-card:hover {
+          transform: translateY(-2px);
         }
 
         .cat-img {
           position: relative;
           width: 100%;
           aspect-ratio: 1 / 1;
-          border-radius: 22px;
+          border-radius: 20px;
           overflow: hidden;
           background: #c5e0c1;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
         .cat-img img { object-fit: cover; transition: transform 0.4s ease; }
-        .cat-card:hover .cat-img img { transform: scale(1.05); }
+        .cat-card:hover .cat-img img { transform: scale(1.06); }
 
         .cat-name {
           display: block;
           margin-top: 8px;
-          font-size: 0.82rem;
+          font-size: 0.85rem;
           font-weight: 500;
-          color: #2a2a2a;
+          color: #243522;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        /* tablet + laptop: centered grid, no scrolling */
+        /* tablet + laptop: centered, beautifully spaced */
         @media (min-width: 768px) {
-          .cat-strip { padding: 28px 0 24px; }
+          .cat-strip { padding: 26px 0 22px; }
           .cat-row {
             overflow: visible;
             justify-content: center;
-            gap: 20px;
+            gap: 18px;
             max-width: 1100px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 20px;
           }
-          .cat-card { width: calc((100% - 60px) / 4); max-width: 230px; }
-          .cat-name { font-size: 0.95rem; margin-top: 10px; }
+          .cat-card {
+            flex: 0 1 150px;
+            width: clamp(110px, 14vw, 155px);
+            max-width: 160px;
+          }
+          .cat-name { font-size: 0.92rem; margin-top: 10px; }
+        }
+
+        @media (min-width: 768px) and (max-width: 991px) {
+          .cat-row {
+            overflow-x: auto;
+            justify-content: flex-start;
+            padding: 0 20px;
+          }
+          .cat-card {
+            flex: 0 0 130px;
+            width: 130px;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .bs-marquee-track { animation: none; }
           .cat-img img { transition: none; }
+          .cat-card { transition: none; }
         }
       `}</style>
 
@@ -347,24 +531,14 @@ export default function HeroVideoComponent() {
       </section>
 
       {/* ── CATEGORY STRIP ── */}
-      <section className="cat-strip" aria-label="Shop by category">
+      <section className="cat-strip" aria-label="Shop jewellery subcategories">
         <div className="cat-row">
           {categories.map((c) => (
-            <button
+            <SubcategoryCard
               key={c.slug}
-              className="cat-card"
+              item={c}
               onClick={() => router.push(categoryRoute(activeCategory, c.slug))}
-            >
-              <div className="cat-img">
-                <Image
-                  src={c.image}
-                  alt={c.name}
-                  fill
-                  sizes="(max-width: 768px) 30vw, 230px"
-                />
-              </div>
-              <span className="cat-name">{c.name}</span>
-            </button>
+            />
           ))}
         </div>
       </section>

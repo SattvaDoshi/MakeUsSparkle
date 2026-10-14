@@ -838,6 +838,13 @@ export interface OrderItemPayload {
   sku?: string;
   customNote?: string;
   customImages?: string[];
+  giftBox?: boolean;
+  giftBoxDetails?: {
+    heading?: string;
+    description?: string;
+    price?: number;
+    image?: string;
+  };
   /** Full selectionGroups array produced by CharmKeyChainProductPage / CharmProductDetailPage */
   selectionGroups?: Array<{
     type?: string;

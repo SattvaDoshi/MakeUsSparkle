@@ -14,6 +14,13 @@ interface OrderItem {
   reviewed: boolean;
   rating: number;
   reviewText: string;
+  giftBox?: boolean;
+  giftBoxDetails?: {
+    heading?: string;
+    description?: string;
+    price?: number;
+    image?: string;
+  };
 }
 
 interface Order {
@@ -554,6 +561,13 @@ type BackendOrder = {
     reviewText?: string;
     quantity?: number;
     price?: number;
+    giftBox?: boolean;
+    giftBoxDetails?: {
+      heading?: string;
+      description?: string;
+      price?: number;
+      image?: string;
+    };
   }>;
   totalAmount?: number;
   status?: string;
@@ -617,6 +631,8 @@ export default function ProfileSection() {
             reviewed: Boolean(item.reviewed),
             rating: item.rating || 0,
             reviewText: item.reviewText || '',
+            giftBox: Boolean(item.giftBox),
+            giftBoxDetails: item.giftBoxDetails,
           })),
           amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`,
           status: (order.status || 'placed').charAt(0).toUpperCase() + (order.status || 'placed').slice(1),
@@ -1090,6 +1106,11 @@ export default function ProfileSection() {
                       <div key={index} className="pf-product-row">
                         <div className="pf-product-info">
                           <span className="pf-product-name">{item.name}</span>
+                          {(item.giftBox || item.giftBoxDetails) && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, color: '#8c6b20', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)', padding: '2px 7px', borderRadius: 4, marginTop: 4 }}>
+                              🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
+                            </div>
+                          )}
                           {item.reviewed && (
                             <span className="pf-product-stars">
                               {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}

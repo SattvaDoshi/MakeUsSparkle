@@ -1399,6 +1399,89 @@ export default function CartPage() {
                           )}
                         </div>
                       )}
+
+                      {item.giftBox && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(61,80,22,0.06))',
+                            border: '1.5px solid rgba(201,168,76,0.3)',
+                            borderRadius: 12,
+                            padding: '10px 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                          }}
+                        >
+                          {item.giftBoxDetails?.image ? (
+                            <img
+                              src={item.giftBoxDetails.image}
+                              alt={item.giftBoxDetails.heading || 'Gift Box'}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 8,
+                                objectFit: 'cover',
+                                flexShrink: 0,
+                                border: '1px solid rgba(201,168,76,0.3)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 8,
+                                background: 'rgba(201,168,76,0.18)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 22,
+                                flexShrink: 0,
+                              }}
+                            >
+                              🎁
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span
+                                  style={{
+                                    fontSize: 9.5,
+                                    fontWeight: 700,
+                                    letterSpacing: '.12em',
+                                    textTransform: 'uppercase',
+                                    color: '#8c6b20',
+                                    background: 'rgba(201,168,76,0.18)',
+                                    padding: '2px 7px',
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  🎁 Gift Packaging Added
+                                </span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--olive-900)' }}>
+                                  {item.giftBoxDetails?.heading || 'Premium Gift Box'}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--olive-700)' }}>
+                                +₹{(item.giftBoxDetails?.price ?? 99).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            {item.giftBoxDetails?.description && (
+                              <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--mist)', lineHeight: 1.4 }}>
+                                {item.giftBoxDetails.description}
+                              </p>
+                            )}
+                            {item.giftMessage && (
+                              <div style={{ marginTop: 4, fontSize: 11, color: 'var(--olive-600)', fontStyle: 'italic' }}>
+                                Message card: &ldquo;{item.giftMessage}&rdquo;
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

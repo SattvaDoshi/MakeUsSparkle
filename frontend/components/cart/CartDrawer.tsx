@@ -402,6 +402,77 @@ export default function CartDrawer() {
                       )}
                     </div>
                   )}
+
+                  {item.giftBox && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(61,80,22,0.06))',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                        borderRadius: 10,
+                        padding: '8px 10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      {item.giftBoxDetails?.image ? (
+                        <img
+                          src={item.giftBoxDetails.image}
+                          alt={item.giftBoxDetails.heading || 'Gift Box'}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 6,
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                            border: '1px solid rgba(201,168,76,0.3)',
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 18 }}>🎁</span>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: 'var(--olive-900)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
+                            +₹{item.giftBoxDetails?.price ?? 99}
+                          </span>
+                        </div>
+                        {item.giftBoxDetails?.description && (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: 'var(--mist)',
+                              lineHeight: 1.3,
+                              marginTop: 2,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {item.giftBoxDetails.description}
+                          </div>
+                        )}
+                        {item.giftMessage && (
+                          <div style={{ fontSize: 9.5, color: 'var(--olive-600)', fontStyle: 'italic', marginTop: 2 }}>
+                            &ldquo;{item.giftMessage}&rdquo;
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

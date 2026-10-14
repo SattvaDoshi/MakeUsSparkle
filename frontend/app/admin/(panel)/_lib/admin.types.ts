@@ -173,6 +173,13 @@ export type AdminOrder = {
 			}>;
 		}>;
 		customData?: Record<string, any>;
+		giftBox?: boolean;
+		giftBoxDetails?: {
+			heading?: string;
+			description?: string;
+			price?: number;
+			image?: string;
+		};
 	}>;
 	isGift?: boolean;
 	giftMessage?: string;

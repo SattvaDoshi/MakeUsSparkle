@@ -484,7 +484,12 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 														<span className={`ao-tag ao-tag-${order.paymentMode === "COD" ? "amber" : order.paymentMode === "PARTIAL_COD" ? "amber" : "blue"}`}>
 															{order.paymentMode?.replace(/_/g, " ") || "—"}
 														</span>
-														{order.isGift && <span className="ao-tag ao-tag-gift">🎁 Gift</span>}
+														{order.isGift && <span className="ao-tag ao-tag-gift">🎁 Cart Gift</span>}
+														{order.items?.some((i) => i.giftBox || (i as any).giftBoxDetails) && (
+															<span className="ao-tag ao-tag-gift" style={{ background: "#fef3c7", color: "#92400e", borderColor: "#fde68a", fontWeight: 700 }}>
+																🎁 Item Gift Box
+															</span>
+														)}
 														{hasDiscount && <span className="ao-tag ao-tag-discount">🏷️ Discount</span>}
 														{hasRewardPoints && <span className="ao-tag ao-tag-green">⭐ Rewards</span>}
 														{order.deliveryType && <span className="ao-tag ao-tag-blue">{order.deliveryType}</span>}
@@ -725,6 +730,63 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 																				{item.customNote && (
 																					<div style={{ fontSize: 11.5, color: "#5d4037", background: "#fef9e7", borderRadius: 6, padding: "4px 8px", marginTop: 4, fontStyle: "italic" }}>
 																						📝 {item.customNote}
+																					</div>
+																				)}
+
+																				{/* Included Gift Box packaging requirement */}
+																				{(item.giftBox || (item as any).giftBoxDetails) && (
+																					<div
+																						style={{
+																							fontSize: 12,
+																							color: "#5d4037",
+																							background: "linear-gradient(135deg, rgba(201,168,76,0.15), rgba(61,80,22,0.08))",
+																							border: "1.5px solid rgba(201,168,76,0.45)",
+																							borderRadius: 8,
+																							padding: "8px 10px",
+																							marginTop: 6,
+																							display: "flex",
+																							alignItems: "center",
+																							gap: 10,
+																						}}
+																					>
+																						{(item as any).giftBoxDetails?.image ? (
+																							<img
+																								src={(item as any).giftBoxDetails.image}
+																								alt=""
+																								style={{ width: 38, height: 38, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(201,168,76,0.3)" }}
+																							/>
+																						) : (
+																							<span style={{ fontSize: 20, flexShrink: 0 }}>🎁</span>
+																						)}
+																						<div style={{ flex: 1, minWidth: 0 }}>
+																							<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+																								<span
+																									style={{
+																										fontWeight: 800,
+																										color: "#8c6b20",
+																										fontSize: 10.5,
+																										textTransform: "uppercase",
+																										letterSpacing: ".06em",
+																										background: "rgba(201,168,76,0.2)",
+																										padding: "2px 6px",
+																										borderRadius: 4,
+																									}}
+																								>
+																									Pack In Gift Box
+																								</span>
+																								<strong style={{ color: "#3d4a22", fontSize: 12.5 }}>
+																									{(item as any).giftBoxDetails?.heading || "Premium Gift Box"}
+																								</strong>
+																								<span style={{ fontSize: 11.5, color: "#8c6b20", fontWeight: 700 }}>
+																									(+₹{(item as any).giftBoxDetails?.price ?? 99})
+																								</span>
+																							</div>
+																							{Boolean((item as any).giftBoxDetails?.description) && (
+																								<div style={{ fontSize: 11, color: "#555", marginTop: 2, lineHeight: 1.35 }}>
+																									{(item as any).giftBoxDetails.description}
+																								</div>
+																							)}
+																						</div>
 																					</div>
 																				)}
 

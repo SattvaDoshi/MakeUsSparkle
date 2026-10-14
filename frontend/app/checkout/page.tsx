@@ -301,6 +301,11 @@ export default function CheckoutPage() {
             customNote: combinedNote || undefined,
             customImages: combinedImages.length ? combinedImages : undefined,
             customData: item.customData || undefined,
+            giftBox: Boolean(item.giftBox),
+            giftBoxDetails: item.giftBoxDetails || (item.giftBox ? {
+              heading: 'Premium Gift Box',
+              price: 99,
+            } : undefined),
             selectedCharms,
             selectionGroups,
           };
@@ -1025,6 +1030,28 @@ export default function CheckoutPage() {
                             </div>
                           );
                         })}
+                      </div>
+                    )}
+                    {item.giftBox && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '5px 8px',
+                          background: 'rgba(201,168,76,0.12)',
+                          border: '1px solid rgba(201,168,76,0.25)',
+                          borderRadius: 6,
+                          marginTop: 6,
+                          fontSize: 11,
+                          color: 'var(--olive-900)',
+                        }}
+                      >
+                        <span>🎁</span>
+                        <span style={{ fontWeight: 600 }}>{item.giftBoxDetails?.heading || 'Premium Gift Box'}</span>
+                        <span style={{ color: 'var(--olive-700)', marginLeft: 'auto', fontWeight: 600 }}>
+                          +₹{item.giftBoxDetails?.price ?? 99}
+                        </span>
                       </div>
                     )}
                   </div>

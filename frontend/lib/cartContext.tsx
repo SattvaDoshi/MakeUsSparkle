@@ -32,6 +32,12 @@ export interface CartItem {
   customNote?: string;
   customImages?: string[];
   giftBox?: boolean;
+  giftBoxDetails?: {
+    heading?: string;
+    description?: string;
+    price?: number;
+    image?: string;
+  };
   giftMessage?: string;
   customData?: Record<string, any>;
   selectedCharms?: Array<string | {
@@ -152,7 +158,7 @@ const INITIAL: CartState = {
 };
 
 function key(item: Partial<CartItem>) {
-  return item.cartItemId || `${item.id}__${item.colorHex}__${item.size || ''}__${item.customNote || ''}__${item.selectedCharms?.length || 0}`;
+  return item.cartItemId || `${item.id}__${item.colorHex}__${item.size || ''}__${item.customNote || ''}__${item.selectedCharms?.length || 0}__${item.giftBox ? 'gb' : 'nogb'}`;
 }
 
 function reducer(state: CartState, action: Action): CartState {
@@ -160,7 +166,7 @@ function reducer(state: CartState, action: Action): CartState {
 
 case 'ADD_ITEM': {
   const idx = state.items.findIndex(
-    i => i.id === action.payload.id && i.colorHex === action.payload.colorHex
+    i => i.id === action.payload.id && i.colorHex === action.payload.colorHex && Boolean(i.giftBox) === Boolean(action.payload.giftBox)
   );
 
   if (idx >= 0) {

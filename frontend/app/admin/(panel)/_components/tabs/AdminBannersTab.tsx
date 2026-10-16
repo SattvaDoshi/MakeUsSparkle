@@ -3,6 +3,7 @@ import type { AdminBanner, MainBanner } from "../../_lib/admin.types";
 
 type AdminHomeContent = {
 	marqueeItems: string[];
+	secondMarqueeItems?: string[];
 	heroContent: {
 		women?: { image?: string };
 		men?: { image?: string };
@@ -87,8 +88,9 @@ export default function AdminBannersTab({
 	const [bannerSearch, setBannerSearch] = useState("");
 	const [bannerFilter, setBannerFilter] = useState("all");
 
-	// Hero Content States
+	// Hero Content & Moving Lines States
 	const [marqueeItems, setMarqueeItems] = useState<string>("");
+	const [secondMarqueeItems, setSecondMarqueeItems] = useState<string>("");
 	const [womenImageFile, setWomenImageFile] = useState<File | null>(null);
 	const [menImageFile, setMenImageFile] = useState<File | null>(null);
 	const [kidsImageFile, setKidsImageFile] = useState<File | null>(null);
@@ -105,6 +107,11 @@ export default function AdminBannersTab({
 	useEffect(() => {
 		if (homeContent) {
 			setMarqueeItems(homeContent.marqueeItems?.join(", ") || "");
+			setSecondMarqueeItems(
+				homeContent.secondMarqueeItems && homeContent.secondMarqueeItems.length > 0
+					? homeContent.secondMarqueeItems.join(", ")
+					: homeContent.marqueeItems?.join(", ") || ""
+			);
 			setStyleHeading(homeContent.genderContent?.[activeGender]?.styleHeading || "");
 			const genderPromoBanners = homeContent.genderContent?.[activeGender]?.promoBanners || homeContent.promoBanners;
 			if (genderPromoBanners && genderPromoBanners.length > 0) {
@@ -181,6 +188,13 @@ export default function AdminBannersTab({
 			.map((item) => item.trim())
 			.filter(Boolean);
 		formData.append("marqueeItems", JSON.stringify(parsedMarquee));
+
+		const parsedSecondMarquee = secondMarqueeItems
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+		formData.append("secondMarqueeItems", JSON.stringify(parsedSecondMarquee));
+
 		formData.append("promoBanners", JSON.stringify(promoBanners));
 		formData.append("gender", activeGender);
 		formData.append("styleHeading", styleHeading);
@@ -212,14 +226,30 @@ export default function AdminBannersTab({
 	return (
 		<section className="admin-content">
 			<div className="admin-panel">
+				<h2>Moving Lines (Marquees)</h2>
+				<div className="admin-form-grid" style={{ marginBottom: "1.5rem" }}>
+					<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+						<label>Line 1: Top Moving Line (Under Header / Above Hero)</label>
+						<textarea
+							placeholder="Top line items (comma separated, e.g. ✦ Free Shipping above ₹999, ✦ Custom Jewellery, ✦ Free Gifts on all Orders)"
+							value={marqueeItems}
+							onChange={(e) => setMarqueeItems(e.target.value)}
+							rows={2}
+						/>
+					</div>
+					<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+						<label>Line 2: Second Moving Line (Above Promo Banners / Combos)</label>
+						<textarea
+							placeholder="Second line items (comma separated, e.g. ✦ Free Shipping above ₹999, ✦ Custom Jewellery, ✦ Free Gifts on all Orders)"
+							value={secondMarqueeItems}
+							onChange={(e) => setSecondMarqueeItems(e.target.value)}
+							rows={2}
+						/>
+					</div>
+				</div>
+
 				<h2>Hero Content</h2>
 				<div className="admin-form-grid" style={{ marginBottom: "1rem" }}>
-					<textarea
-						placeholder="Marquee Items (comma separated)"
-						value={marqueeItems}
-						onChange={(e) => setMarqueeItems(e.target.value)}
-						style={{ gridColumn: "1 / -1" }}
-					/>
 					<div>
 						<label>Women Image</label>
 						<input type="file" accept="image/*" onChange={(e) => setWomenImageFile(e.target.files?.[0] || null)} />
@@ -235,6 +265,12 @@ export default function AdminBannersTab({
 						<input type="file" accept="image/*" onChange={(e) => setKidsImageFile(e.target.files?.[0] || null)} />
 						{homeContent?.heroContent?.kids?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.kids.image}</p>}
 					</div>
+				</div>
+
+				<div className="admin-inline-actions" style={{ marginBottom: "2rem" }}>
+					<button className="admin-btn" type="button" onClick={() => void handleHomeContentSubmit()}>
+						Save Moving Lines & Hero
+					</button>
 				</div>
 
 				<h2 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Gender Specific Content</h2>

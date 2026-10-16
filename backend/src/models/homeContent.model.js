@@ -16,6 +16,14 @@ const homeContentSchema = new mongoose.Schema(
         '✦ Free Gifts on all Orders',
       ],
     },
+    secondMarqueeItems: {
+      type: [String],
+      default: [
+        '✦ Free Shipping above ₹999',
+        '✦ Custom Jewellery',
+        '✦ Free Gifts on all Orders',
+      ],
+    },
     heroContent: {
       women: {
         image: { type: String, default: "/island-girl.jpg" },

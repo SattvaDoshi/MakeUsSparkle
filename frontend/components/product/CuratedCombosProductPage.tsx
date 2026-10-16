@@ -69,6 +69,7 @@ interface ComboProduct {
   charmPiecePricing?: { count: number; price: number }[];
   charmPieceOptions?: number[];
   chainOptions?: ChainOption[];
+  chainLabel?: string;
 }
 
 interface PresetCombo {
@@ -331,10 +332,12 @@ function getMissingVariantNames(product: ComboProduct, v: ProductVariant) {
     .filter(variant => !v.selections?.[variant.name])
     .map(variant => variant.name);
     
-  if (product.totalCharms && product.totalCharms > 0) {
+  if (product.chainOptions && product.chainOptions.length > 0) {
     if (!v.chain) {
-      missing.push('Chain Style');
+      missing.push(product.chainLabel || 'Chain Style');
     }
+  }
+  if (product.totalCharms && Number(product.totalCharms) > 0) {
     if (!v.charmCount || v.charmCount === 0 || !v.selectedCharms || v.selectedCharms.filter(Boolean).length !== v.charmCount) {
       missing.push('Charms');
     }
@@ -964,34 +967,45 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
             );
           })()}
 
-          {product.totalCharms ? (() => {
-            const chainOpts = product.chainOptions && product.chainOptions.length > 0 ? product.chainOptions : CHAIN_OPTIONS;
-            return (
+          {((product.chainOptions && product.chainOptions.length > 0) || (Number(product.totalCharms) > 0)) ? (
             <div className="modal-field" style={{ padding: '0 0.4rem', borderTop: '1px solid #f2f2ef', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
-              <ChainSelector
-                value={local.chain || ''}
-                onChange={val => {
-                  const p = chainOpts.find(c => c.value === val)?.price || 0;
-                  setLocal(prev => ({ ...prev, chain: val, chainPrice: p }));
-                }}
-                onViewImage={(chain) => setLightboxImg(chain.image)}
-                options={chainOpts}
-              />
-              <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
-                <span className="modal-field-num">{picNum + (product.allowImageCustomization ? 1 : 0)}</span>
-                Charms Selection
-              </label>
-              <CharmSelector
-                charmPieceOptions={product.charmPieceOptions || []}
-                totalCharms={product.totalCharms}
-                validationAttempt={showValidation ? 1 : 0}
-                onChange={({ count, charms }) => {
-                  setLocal(prev => ({ ...prev, charmCount: count, selectedCharms: charms }));
-                }}
-              />
+              {product.chainOptions && product.chainOptions.length > 0 && (
+                <ChainSelector
+                  value={local.chain || ''}
+                  label={product.chainLabel || 'Chain Type'}
+                  placeholder={
+                    product.chainLabel
+                      ? (product.chainLabel.toLowerCase().startsWith('select')
+                          ? `${product.chainLabel}…`
+                          : `Select a ${product.chainLabel.toLowerCase()}…`)
+                      : 'Select a chain type…'
+                  }
+                  onChange={val => {
+                    const p = product.chainOptions!.find(c => c.value === val)?.price || 0;
+                    setLocal(prev => ({ ...prev, chain: val, chainPrice: p }));
+                  }}
+                  onViewImage={(chain) => setLightboxImg(chain.image)}
+                  options={product.chainOptions}
+                />
+              )}
+              {Number(product.totalCharms) > 0 && (
+                <>
+                  <label className="modal-field-label" style={{ marginBottom: '0.4rem' }}>
+                    <span className="modal-field-num">{picNum + (product.allowImageCustomization ? 1 : 0)}</span>
+                    Charms Selection
+                  </label>
+                  <CharmSelector
+                    charmPieceOptions={product.charmPieceOptions || []}
+                    totalCharms={product.totalCharms}
+                    validationAttempt={showValidation ? 1 : 0}
+                    onChange={({ count, charms }) => {
+                      setLocal(prev => ({ ...prev, charmCount: count, selectedCharms: charms }));
+                    }}
+                  />
+                </>
+              )}
             </div>
-            );
-          })() : null}
+          ) : null}
 
           {hasAny && (
             <div className="modal-summary-box">
@@ -1379,31 +1393,42 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                   );
                 })()}
 
-                {p.totalCharms ? (() => {
-                  const chainOpts = p.chainOptions && p.chainOptions.length > 0 ? p.chainOptions : CHAIN_OPTIONS;
-                  return (
+                {((p.chainOptions && p.chainOptions.length > 0) || (Number(p.totalCharms) > 0)) ? (
                   <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Charms Selection</span>
-                    <ChainSelector
-                      value={v.chain || ''}
-                      onChange={val => {
-                        const chainP = chainOpts.find(c => c.value === val)?.price || 0;
-                        onVariantChange(p.id, { chain: val, chainPrice: chainP });
-                      }}
-                      onViewImage={(chain) => setLightboxImg(chain.image)}
-                      options={chainOpts}
-                    />
-                    <CharmSelector
-                      charmPieceOptions={p.charmPieceOptions || []}
-                      totalCharms={p.totalCharms}
-                      validationAttempt={showValidation ? 1 : 0}
-                      onChange={({ count, charms }) => {
-                        onVariantChange(p.id, { charmCount: count, selectedCharms: charms });
-                      }}
-                    />
+                    {p.chainOptions && p.chainOptions.length > 0 && (
+                      <ChainSelector
+                        value={v.chain || ''}
+                        label={p.chainLabel || 'Chain Type'}
+                        placeholder={
+                          p.chainLabel
+                            ? (p.chainLabel.toLowerCase().startsWith('select')
+                                ? `${p.chainLabel}…`
+                                : `Select a ${p.chainLabel.toLowerCase()}…`)
+                            : 'Select a chain type…'
+                        }
+                        onChange={val => {
+                          const chainP = p.chainOptions!.find(c => c.value === val)?.price || 0;
+                          onVariantChange(p.id, { chain: val, chainPrice: chainP });
+                        }}
+                        onViewImage={(chain) => setLightboxImg(chain.image)}
+                        options={p.chainOptions}
+                      />
+                    )}
+                    {Number(p.totalCharms) > 0 && (
+                      <>
+                        <span className="hamper-piece-field-label">Charms Selection</span>
+                        <CharmSelector
+                          charmPieceOptions={p.charmPieceOptions || []}
+                          totalCharms={p.totalCharms}
+                          validationAttempt={showValidation ? 1 : 0}
+                          onChange={({ count, charms }) => {
+                            onVariantChange(p.id, { charmCount: count, selectedCharms: charms });
+                          }}
+                        />
+                      </>
+                    )}
                   </div>
-                  );
-                })() : null}
+                ) : null}
               </div>
             </div>
           );
@@ -1928,11 +1953,14 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 imageCustomizationTitle: p.imageCustomizationTitle || '',
                 maxImageUploads: p.maxImageUploads || 1,
                 tags: p.tags || [],
-                totalCharms: p.totalCharms || 0,
-                perCharmPrice: p.perCharmPrice || 0,
+                totalCharms: Number(p.totalCharms) || 0,
+                perCharmPrice: Number(p.perCharmPrice) || 0,
                 charmPiecePricing: p.charmPiecePricing || [],
-                charmPieceOptions: p.charmPiecePricing?.length ? p.charmPiecePricing.map((cp: any) => cp.count) : (p.charmPieceOptions || []),
+                charmPieceOptions: p.charmPiecePricing?.length
+                  ? p.charmPiecePricing.map((cp: any) => Number(cp.count)).filter((cnt: number) => cnt > 0)
+                  : ((p.charmPieceOptions || []).map(Number).filter((cnt: number) => cnt > 0)),
                 chainOptions: p.chainOptions || [],
+                chainLabel: p.chainLabel || 'Chain Type',
                 stock: p.stock ?? undefined,
               });
             }

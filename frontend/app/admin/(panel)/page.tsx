@@ -71,6 +71,7 @@ type AdminHomeSection = {
 
 type AdminHomeContent = {
 	marqueeItems: string[];
+	secondMarqueeItems?: string[];
 	heroContent: {
 		women?: { image?: string };
 		men?: { image?: string };

@@ -20,6 +20,7 @@ export type AdminComboProduct = {
 	charmPieceOptions?: number[];
 	charmPiecePricing?: { count: number; price: number }[];
 	chainOptions?: { value: string; label: string; sub: string; price: number; image?: string }[];
+	chainLabel?: string;
 };
 
 export type AdminCombo = {
@@ -77,6 +78,7 @@ type ComboProductState = {
 	maxImageUploads: string;
 	totalCharms: string;
 	perCharmPrice: string;
+	chainLabel: string;
 	charmPiecePricing: { count: number; price: number }[];
 	chainOptions: { value: string; label: string; sub: string; price: number; image?: string; imagePreview?: string | null; imageFile?: File | null }[];
 };
@@ -145,6 +147,7 @@ const defaultProduct: ComboProductState = {
 	maxImageUploads: "1",
 	totalCharms: "0",
 	perCharmPrice: "0",
+	chainLabel: "Chain Type",
 	charmPiecePricing: [],
 	chainOptions: [],
 };
@@ -211,6 +214,7 @@ export default function AdminCombosTab({
 				maxImageUploads: String(p.maxImageUploads || 1),
 				totalCharms: String(p.totalCharms || 0),
 				perCharmPrice: String(p.perCharmPrice || 0),
+				chainLabel: p.chainLabel || "Chain Type",
 				charmPiecePricing: (p.charmPiecePricing || []).map((cp: any) => ({ count: cp.count, price: cp.price })),
 				chainOptions: (p.chainOptions || []).map((co: any) => ({
 					value: co.value || "",
@@ -400,7 +404,10 @@ export default function AdminCombosTab({
 			maxImageUploads: Number(p.maxImageUploads) || 1,
 			totalCharms: Number(p.totalCharms) || 0,
 			perCharmPrice: Number(p.perCharmPrice) || 0,
-			charmPiecePricing: p.charmPiecePricing,
+			chainLabel: p.chainLabel || "Chain Type",
+			charmPiecePricing: (p.charmPiecePricing || [])
+				.filter(cp => cp && Number(cp.count) > 0)
+				.map(cp => ({ count: Number(cp.count), price: Number(cp.price) || 0 })),
 			chainOptions: p.chainOptions.map(co => ({
 				value: co.value,
 				label: co.label,
@@ -993,14 +1000,28 @@ export default function AdminCombosTab({
 															</div>
 
 															<div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px dashed #d4d4c8" }}>
+																<div style={{ marginBottom: "0.8rem" }}>
+																	<label style={LABEL}>Chain / Attachment Option Label</label>
+																	<input
+																		type="text"
+																		placeholder="e.g. Chain Type, Select Keychain Loop, Attachment Type"
+																		value={p.chainLabel ?? "Chain Type"}
+																		onChange={(e) => upProduct(pIdx, { chainLabel: e.target.value })}
+																		style={INP}
+																	/>
+																	<span style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.2rem", display: "block" }}>
+																		Custom label shown to the customer (e.g. &quot;Select Keychain Loop&quot; for keychains or &quot;Chain Type&quot; for necklaces)
+																	</span>
+																</div>
+
 																<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-																	<label style={LABEL}>Chain Options</label>
+																	<label style={LABEL}>Chain / Attachment Options</label>
 																	<button type="button" onClick={() => {
 																		const co = [...p.chainOptions, { value: `chain_${Date.now()}`, label: "", sub: "", price: 0, image: "", imagePreview: null, imageFile: null }];
 																		upProduct(pIdx, { chainOptions: co });
-																	}} style={{ background: "none", border: "none", color: "#1a7a35", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer" }}>+ Add Chain Option</button>
+																	}} style={{ background: "none", border: "none", color: "#1a7a35", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer" }}>+ Add Option</button>
 																</div>
-																{p.chainOptions.length === 0 ? <p style={{ margin: 0, fontSize: "0.8rem", color: "#aaa" }}>No chain options added.</p> : (
+																{p.chainOptions.length === 0 ? <p style={{ margin: 0, fontSize: "0.8rem", color: "#aaa" }}>No chain / attachment options added.</p> : (
 																	<div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
 																		{p.chainOptions.map((co, coIdx) => (
 																			<div key={coIdx} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "0.8rem", alignItems: "center", background: "#fdfdf9", padding: "0.6rem", border: "1px solid #e8ead0", borderRadius: 6 }}>

@@ -289,17 +289,20 @@ export function ChainSelector({
   onChange,
   onViewImage,
   showMissing,
-  options,
+  options = [],
+  label = "Chain Type",
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
   onViewImage: (chain: ChainOption) => void;
   showMissing?: boolean;
-  options: ChainOption[];
+  options?: ChainOption[];
+  label?: string;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const selected = options.find(c => c.value === value) || null;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -309,13 +312,23 @@ export function ChainSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  if (!options || options.length === 0) return null;
+
+  const selected = options.find(c => c.value === value) || null;
+  const displayLabel = label || "Chain Type";
+  const displayPlaceholder = placeholder || (
+    displayLabel.toLowerCase().startsWith('select')
+      ? `${displayLabel}…`
+      : `Select a ${displayLabel.toLowerCase()}…`
+  );
+
   return (
     <div className="chain-selector-wrap" ref={wrapRef}>
       <p className="charm-section-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
           <circle cx="12" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M12 9v6"/>
         </svg>
-        Chain Type
+        {displayLabel}
       </p>
 
       <button type="button" className={`chain-trigger${open ? ' chain-trigger--open' : ''}${showMissing && !selected ? ' chain-trigger--missing' : ''}`} onClick={() => setOpen(o => !o)}>
@@ -338,7 +351,7 @@ export function ChainSelector({
           )}
         </div>
         <div className="chain-trigger-text">
-          <span className="chain-trigger-label">{selected ? selected.label : 'Select a chain type…'}</span>
+          <span className="chain-trigger-label">{selected ? selected.label : displayPlaceholder}</span>
           {selected && typeof selected.price === 'number' && (
             <span className="chain-trigger-price">+₹{selected.price.toLocaleString('en-IN')}</span>
           )}
@@ -350,7 +363,7 @@ export function ChainSelector({
 
       {showMissing && !selected && (
         <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', marginTop: 8 }}>
-          Please choose a chain type before adding to cart.
+          Please choose a {displayLabel.toLowerCase().replace(/^select\s+/i, '')} before proceeding.
         </p>
       )}
 
@@ -403,24 +416,28 @@ export function CharmSelector({
   totalCharms?: number;
   validationAttempt?: number;
 }) {
-  const optionsList = charmPieceOptions.length > 0 ? charmPieceOptions : Array.from({ length: totalCharms }, (_, i) => i + 1);
+  const validPieceOptions = (charmPieceOptions || []).map(Number).filter(n => n > 0);
+  const validTotal = Number(totalCharms) > 0 ? Number(totalCharms) : 0;
+  const optionsList = validPieceOptions.length > 0 ? validPieceOptions : Array.from({ length: validTotal }, (_, i) => i + 1);
   // When the product only offers a single charm count (e.g. always 3 charms),
   // that count is fixed — there's nothing to "choose", so we don't show a picker
   // for it and the user can never end up with fewer than that many charms.
-  const isFixedCount = optionsList.length === 1;
+  const isFixedCount = optionsList.length === 1 && optionsList[0] > 0;
   const [charmCount, setCharmCount] = useState(0); // 0 means no selection initially
   const [selectedCharms, setSelectedCharms] = useState<string[]>([]);
   const [showMissing, setShowMissing] = useState(false);
 
   // Sync count options change
   useEffect(() => {
-    if (charmPieceOptions && charmPieceOptions.length === 1) {
-      setCharmCount(charmPieceOptions[0]);
+    if (validPieceOptions.length === 1) {
+      setCharmCount(validPieceOptions[0]);
+    } else if (validTotal === 1 && validPieceOptions.length === 0) {
+      setCharmCount(1);
     } else {
       setCharmCount(0);
     }
     setSelectedCharms([]);
-  }, [charmPieceOptions]);
+  }, [JSON.stringify(validPieceOptions), validTotal]);
 
   // Keep selectedCharms array in sync with charmCount
   useEffect(() => {
@@ -459,7 +476,7 @@ export function CharmSelector({
   const filledCount = selectedCharms.filter(Boolean).length;
   const availableCharms = [
     { value: '', label: 'Select a charm...' },
-    ...Array.from({ length: totalCharms }, (_, i) => ({
+    ...Array.from({ length: validTotal }, (_, i) => ({
       value: String(i + 1),
       label: String(i + 1)
     }))
@@ -471,7 +488,7 @@ export function CharmSelector({
       {/* Count picker — only rendered when the product actually offers a choice.
           If it only supports one fixed count, that count is shown as a plain
           requirement, not a selectable option, so it can never be reduced. */}
-      {isFixedCount ? (
+      {isFixedCount && charmCount > 0 ? (
         <div className="charm-fixed-count-note" style={{ marginBottom: 20 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)', flexShrink: 0 }}>
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>

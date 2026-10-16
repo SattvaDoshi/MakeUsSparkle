@@ -19,6 +19,7 @@ type HomeContentResponse = {
   success: boolean;
   homeContent: {
     marqueeItems: string[];
+    secondMarqueeItems?: string[];
     heroContent: {
       women?: HeroItem;
       men?: HeroItem;

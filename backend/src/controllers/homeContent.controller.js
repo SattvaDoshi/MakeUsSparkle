@@ -29,12 +29,20 @@ export async function updateHomeContent(req, res) {
       homeContent = new HomeContent({ key: "home-page" });
     }
 
-    if (req.body.marqueeItems) {
+    if (req.body.marqueeItems !== undefined) {
       // It might come as a JSON string
       try {
         homeContent.marqueeItems = JSON.parse(req.body.marqueeItems);
       } catch (e) {
         homeContent.marqueeItems = req.body.marqueeItems;
+      }
+    }
+
+    if (req.body.secondMarqueeItems !== undefined) {
+      try {
+        homeContent.secondMarqueeItems = JSON.parse(req.body.secondMarqueeItems);
+      } catch (e) {
+        homeContent.secondMarqueeItems = req.body.secondMarqueeItems;
       }
     }
 

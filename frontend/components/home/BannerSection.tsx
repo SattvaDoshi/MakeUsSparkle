@@ -45,11 +45,15 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
     async function fetchBanners() {
       try {
         const data = await apiRequest<{ success: boolean; homeContent: any }>('/home-content');
-        if (data.success && (data.homeContent?.genderContent?.[activeCategory]?.promoBanners || data.homeContent?.promoBanners)) {
-          const promoBanners = data.homeContent.genderContent?.[activeCategory]?.promoBanners || data.homeContent.promoBanners;
-          if (data.homeContent?.marqueeItems?.length > 0) {
+        if (data.success) {
+          if (data.homeContent?.secondMarqueeItems && data.homeContent.secondMarqueeItems.length > 0) {
+            setMarqueeItems(data.homeContent.secondMarqueeItems);
+          } else if (data.homeContent?.marqueeItems && data.homeContent.marqueeItems.length > 0) {
             setMarqueeItems(data.homeContent.marqueeItems);
           }
+        }
+        if (data.success && (data.homeContent?.genderContent?.[activeCategory]?.promoBanners || data.homeContent?.promoBanners)) {
+          const promoBanners = data.homeContent.genderContent?.[activeCategory]?.promoBanners || data.homeContent.promoBanners;
           const formattedBanners: Banner[] = promoBanners.map((b: any, index: number) => ({
               id: b._id || String(index),
               tag: b.tag || '',

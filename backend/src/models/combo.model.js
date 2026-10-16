@@ -42,7 +42,8 @@ const comboProductSchema = new mongoose.Schema({
     }
   ],
   totalCharms: { type: Number, default: 0 },
-  perCharmPrice: { type: Number, default: 0 }
+  perCharmPrice: { type: Number, default: 0 },
+  chainLabel: { type: String, default: "Chain Type" }
 });
 
 const comboSchema = new mongoose.Schema(

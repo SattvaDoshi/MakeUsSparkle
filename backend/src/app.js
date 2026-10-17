@@ -55,6 +55,8 @@ const allowedOrigins = new Set(
 	[
 		process.env.FRONTEND_URL,
 		process.env.CORS_ORIGINS,
+		"https://makeyousparkle.in",
+		"https://www.makeyousparkle.in",
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 		"https://make-us-sparkle.vercel.app",

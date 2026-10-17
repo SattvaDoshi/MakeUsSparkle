@@ -170,6 +170,7 @@ export default function AdminCombosTab({
 	const [modal, setModal] = useState<ModalState | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const productsEndRef = useRef<HTMLDivElement>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 
 	// ─── Open modals ────────────────────────────────────────────────────────────
@@ -491,7 +492,12 @@ export default function AdminCombosTab({
 	}, [safeCombos, activeTab, searchQuery]);
 
 	// ─── Product management ──────────────────────────────────────────────────────
-	const addProduct = () => upModal({ products: [...(modal?.products || []), { ...defaultProduct }] });
+	const addProduct = () => {
+		upModal({ products: [...(modal?.products || []), { ...defaultProduct }] });
+		setTimeout(() => {
+			productsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+		}, 80);
+	};
 	const removeProduct = (i: number) => {
 		const ps = [...(modal?.products || [])];
 		ps.splice(i, 1);
@@ -908,7 +914,14 @@ export default function AdminCombosTab({
 									</div>
 
 									{modal.products.length === 0
-										? <div style={{ padding: "1.5rem", textAlign: "center", color: "#888", border: "1px dashed #d4d4c8", borderRadius: 8 }}>No products added yet.</div>
+										? (
+											<div style={{ padding: "1.5rem", textAlign: "center", color: "#888", border: "1px dashed #d4d4c8", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+												<span>No products added yet.</span>
+												<button type="button" onClick={addProduct} className="admin-btn" style={{ padding: "0.35rem 0.9rem", fontSize: "0.82rem" }}>
+													+ Add Product
+												</button>
+											</div>
+										)
 										: (
 											<div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 												{modal.products.map((p, pIdx) => (
@@ -1126,6 +1139,26 @@ export default function AdminCombosTab({
 														</div>
 													</div>
 												))}
+
+												{/* Button below the last product added */}
+												<div style={{ display: "flex", justifyContent: "center", paddingTop: "0.25rem" }}>
+													<button
+														type="button"
+														onClick={addProduct}
+														className="admin-btn"
+														style={{
+															padding: "0.55rem 1.4rem",
+															fontSize: "0.85rem",
+															fontWeight: 600,
+															display: "inline-flex",
+															alignItems: "center",
+															gap: "0.4rem",
+														}}
+													>
+														+ Add Product
+													</button>
+												</div>
+												<div ref={productsEndRef} />
 											</div>
 										)
 									}

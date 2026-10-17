@@ -84,7 +84,7 @@ class ProductService {
 	async getProducts(queryParams = {}) {
 		try {
 			const query = this.buildProductQuery(queryParams);
-			let productQuery = Product.find(query);
+			let productQuery = Product.find(query).lean();
 
 			// Apply sorting
 			if (queryParams.sort === "price_asc") {
@@ -120,7 +120,7 @@ class ProductService {
 
 	async getProductById(productId) {
 		try {
-			const product = await Product.findById(productId);
+			const product = await Product.findById(productId).lean();
 			if (!product) {
 				throw new Error("Product not found");
 			}

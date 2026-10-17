@@ -3,13 +3,14 @@ import imageService from "../services/image.service.js";
 
 export async function getHomeContent(req, res) {
   try {
-    let homeContent = await HomeContent.findOne({ key: "home-page" });
+    let homeContent = await HomeContent.findOne({ key: "home-page" }).lean();
     if (!homeContent) {
       try {
         homeContent = await HomeContent.create({ key: "home-page" });
+        homeContent = homeContent.toObject ? homeContent.toObject() : homeContent;
       } catch (err) {
         if (err.code === 11000) {
-          homeContent = await HomeContent.findOne({ key: "home-page" });
+          homeContent = await HomeContent.findOne({ key: "home-page" }).lean();
         } else {
           throw err;
         }

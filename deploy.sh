@@ -186,6 +186,30 @@ server {
 
     client_max_body_size 50M;
 
+    # Gzip Compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
+
+    # Cache Next.js Static Assets
+    location /_next/static/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_cache_bypass $http_upgrade;
+        expires 365d;
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Cache public images & media
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|webp|svg|woff2?|ttf|eot)$ {
+        proxy_pass http://127.0.0.1:3000;
+        expires 30d;
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000";
+    }
+
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -208,6 +232,13 @@ server {
     server_name api.makeyousparkle.in;
 
     client_max_body_size 50M;
+
+    # Gzip Compression for JSON responses
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types application/json;
 
     location / {
         proxy_pass http://127.0.0.1:5000;

@@ -130,13 +130,13 @@ function ProductCard({
       </div>
       <div className="pc-info">
         <p className="pc-name">{name}</p>
-        {colors.length > 1 && (
+        {/* {colors.length > 1 && (
           <div className="pc-colors">
             {colors.map((c) => (
               <span key={c.label} className="pc-swatch" style={{ background: c.hex }} title={c.label} />
             ))}
           </div>
-        )}
+        )} */}
         <div className="pc-price-row">
           <span className="pc-price">₹{price.toLocaleString("en-IN")}</span>
           {originalPrice && <span className="pc-original">₹{originalPrice.toLocaleString("en-IN")}</span>}

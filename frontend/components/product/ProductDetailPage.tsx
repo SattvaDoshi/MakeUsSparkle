@@ -1063,7 +1063,91 @@ useEffect(() => {
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(product?.sizeChartImage ? [{ id: 'sizechart', emoji: '📏', label: 'Size Chart', content: `<img src="${product.sizeChartImage}" alt="Size Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="padding: 16px 0; font-size: 14px; color: var(--ink); line-height: 1.6; text-align: left; white-space: pre-wrap;">${product.sizeChartSteps ? product.sizeChartSteps : '📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.'}</div>`, isHtml: true }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
-    { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
+       {
+      id: 'shipping',
+      emoji: '🚚',
+      label: 'Shipping Policy',
+      isHtml: true,
+      content: `
+        <div class="pol">
+          <div>
+            <p class="pol-h">🌍 Where we ship</p>
+            <p>We deliver across <strong>India</strong> through our website. For <strong>international orders</strong>, contact us on WhatsApp <a href="https://wa.me/918356939586">+91 8356939586</a> or <a href="mailto:makeyousparkle5@gmail.com">email</a> for a custom quote.</p>
+          </div>
+
+          <div>
+            <p class="pol-h">📦 Rates &amp; timelines</p>
+            <div class="pol-table-wrap">
+              <table class="pol-table">
+                <thead><tr><th>Method</th><th>Rate</th><th>Metro</th><th>Rest of India</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Standard</strong></td><td>₹60</td><td>3–5 days</td><td>4–7 days</td></tr>
+                  <tr><td><strong>Express</strong></td><td>₹110</td><td>2–3 days</td><td>3–4 days</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pol-note">💝 <strong>Free Standard Shipping</strong> on orders above ₹999.<br/>💵 <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping). Business days count from the day after you order.</div>
+          </div>
+
+          <div>
+            <p class="pol-h">🚀 Dispatch</p>
+            <ul>
+              <li><span><strong>Standard:</strong> dispatched within 2 business days.</span></li>
+              <li><span><strong>Express:</strong> orders placed before 11:00 PM are dispatched the same day.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="pol-h">📍 Tracking &amp; changes</p>
+            <p>Get updates via <strong>WhatsApp, SMS and Email</strong>, or track under <strong>Profile → Track Order</strong>. Address or item changes are only possible <strong>before dispatch</strong>, so contact us immediately.</p>
+          </div>
+        </div>
+      `,
+      linkHref: '/shipping-policy',
+      linkLabel: 'Read full shipping policy',
+    },
+    {
+      id: 'returns',
+      emoji: '🔄',
+      label: 'Returns, Refunds & Exchange',
+      isHtml: true,
+      content: `
+        <div class="pol">
+          <div class="pol-alert">🔒 <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.</div>
+
+          <div>
+            <p class="pol-h">💵 Cancellations &amp; changes</p>
+            <ul>
+              <li><span><strong>COD orders</strong> can be cancelled only before our team processes them.</span></li>
+              <li><span><strong>Product, size or colour changes</strong> are possible only before the order ships. Contact us on <a href="https://wa.me/918356939586">WhatsApp</a> or <a href="mailto:makeyousparkle5@gmail.com">email</a>.</span></li>
+              <li><span><strong>Customised items</strong> are non-returnable unless damaged or incorrect.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="pol-h">🔄 Exchange for damaged or wrong items</p>
+            <ul>
+              <li><span>Report within <strong>2–3 days</strong> of delivery.</span></li>
+              <li><span>Share a single, unedited <strong>unboxing video</strong> (mandatory). It should start with a 360° view of the sealed package and shipping label, then show the opening and the defect.</span></li>
+              <li><span>Send your <strong>Order ID + video</strong> via WhatsApp or email.</span></li>
+              <li><span>For exchanges approved due to our error, we cover <strong>all shipping charges</strong>.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="pol-h">💸 Refunds</p>
+            <ul>
+              <li><span><strong>Out of stock:</strong> if an approved exchange item is unavailable, you get a full refund to your original payment method.</span></li>
+              <li><span><strong>Delayed delivery:</strong> refund if your order hasn't arrived within 30 days of dispatch due to courier issues.</span></li>
+              <li><span><strong>Prepaid re-delivery:</strong> if a package is returned because you were unavailable or didn't accept it, shipping must be paid again for a new attempt.</span></li>
+            </ul>
+          </div>
+        </div>
+      `,
+      linkHref: '/refund-policy',
+      linkLabel: 'Read full returns policy',
+    },
+    // { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
   ];
 
   function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
@@ -1365,6 +1449,26 @@ useEffect(() => {
         .rev-load-btn{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--olive-600);background:white;border:1.5px solid var(--beige-dkr);border-radius:50px;padding:14px 36px;cursor:pointer;transition:all .22s}
         .rev-load-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
 
+
+                /* Policy dropdown content */
+        .pol{display:flex;flex-direction:column;gap:14px;font-size:13px;font-weight:400;line-height:1.75;color:#101010;letter-spacing:.03em}
+        .pol p{margin:0}
+        .pol .pol-h{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:4px}
+        .pol strong{font-weight:600;color:var(--ink)}
+        .pol a{color:var(--olive-600);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+        .pol ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+        .pol li{display:flex;gap:8px;align-items:flex-start}
+        .pol li::before{content:'✦';color:var(--olive-400);font-size:9px;margin-top:5px;flex-shrink:0}
+        .pol-table-wrap{overflow-x:auto;border:1px solid var(--olive-100);border-radius:10px;background:white;margin-top:6px}
+        .pol-table{width:100%;border-collapse:collapse;font-size:12px}
+        .pol-table th{background:var(--olive-50);color:var(--olive-600);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 12px;text-align:left;border-bottom:1px solid var(--olive-100);white-space:nowrap}
+        .pol-table td{padding:10px 12px;border-bottom:1px solid var(--olive-50);white-space:nowrap}
+        .pol-table tr:last-child td{border-bottom:none}
+        .pol-note{background:var(--olive-50);border:1px solid var(--olive-100);border-radius:10px;padding:10px 12px;font-size:12px;margin-top:8px}
+        .pol-alert{background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.18);border-left:3px solid rgba(192,57,43,.5);border-radius:8px;padding:10px 12px;font-size:12px}
+        .pol-alert strong{color:var(--red)}
+
+        
         /* ── TABLET (≤ 960px) ── */
         @media(max-width:960px){
           .pdp-layout{grid-template-columns:1fr}
@@ -1738,8 +1842,9 @@ useEffect(() => {
                   onToggle={() => setOpenAccordion(o => o === item.id ? null : item.id)}
                 />
               ))}
-              <NavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
-              <NavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" />
+              
+              {/* <NavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
+              <NavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" /> */}
             </div>
             <EstimatedDeliveryBlock />
           </div>

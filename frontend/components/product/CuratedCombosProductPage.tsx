@@ -13,7 +13,7 @@ import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
 import type { ReviewData } from '@/lib/catalogApi';
-import { CharmSelector, ChainSelector, CHAIN_OPTIONS, ChainOption } from './CharmProductDetailPage';
+import { CharmSelector, ChainSelector, type ChainOption } from './CharmProductDetailPage';
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
@@ -116,35 +116,11 @@ function safeImageSrc(src?: string | null) {
   return src && src.trim() ? src : FALLBACK_COMBO_IMAGE;
 }
 
-function normaliseKey(s: string) {
-  return s.trim().toLowerCase();
-}
-
-function isColourVariantName(name: string) {
-  const n = normaliseKey(name);
-  return n === 'colour' || n === 'color' || n === 'colours' || n === 'colors';
-}
-
-function isSizeVariantName(name: string) {
-  const n = normaliseKey(name);
-  return n === 'size' || n === 'sizes';
-}
-
-function lookupColorImage(colorImages: Record<string, string> | undefined, option: string) {
-  if (!colorImages) return undefined;
-  if (colorImages[option]) return colorImages[option];
-  const target = normaliseKey(option);
-  const match = Object.keys(colorImages).find(k => normaliseKey(k) === target);
-  return match ? colorImages[match] : undefined;
-}
-
 /**
  * Merge a PATCH into an existing ProductVariant.
  * - `selections` is merged key-by-key, so choosing a colour never wipes the size
  *   (and vice-versa), and one product's selections never touch another product's.
  * - Every other field in the patch simply overrides the previous value.
- * Always used with a functional setState (prev => ...) so stale closures can never
- * overwrite a selection that was just made.
  */
 function mergeVariant(prev: ProductVariant | undefined, patch: ProductVariant): ProductVariant {
   const base = prev || {};
@@ -157,181 +133,26 @@ function mergeVariant(prev: ProductVariant | undefined, patch: ProductVariant): 
   return next;
 }
 
-const IMG = {
-  ring1:    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80',
-  ring2:    'https://images.unsplash.com/photo-1573408301185-9519f94f0200?w=600&q=80',
-  ring3:    'https://images.unsplash.com/photo-1635797255620-2d8e5c7d7ad6?w=600&q=80',
-  necklace1:'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80',
-  necklace2:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600&q=80',
-  necklace3:'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80',
-  earring1: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80',
-  earring2: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=600&q=80',
-  earring3: 'https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=600&q=80',
-  bangle1:  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80',
-  bangle2:  'https://images.unsplash.com/photo-1624913503273-5f9c4e980dba?w=600&q=80',
-  bangle3:  'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80',
-  combo1:   'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80',
-  combo2:   'https://images.unsplash.com/photo-1535556116002-6281ff3e9f36?w=800&q=80',
-  combo3:   'https://images.unsplash.com/photo-1616541823729-00fe0aacd32c?w=800&q=80',
-  combo4:   'https://images.unsplash.com/photo-1627293620999-e9b5c2325842?w=800&q=80',
-};
-
-const COLOURS = [{name:'Gold'}, {name:'Silver'}, {name:'Rose Gold'}, {name:'Antique Gold'}];
-const SIZES   = [{name:'XS'}, {name:'S'}, {name:'M'}, {name:'L'}, {name:'XL'}];
-
-const ALL_PRODUCTS: ComboProduct[] = [
-  {
-    id: 'r1', name: 'Floral Solitaire Ring', price: 1299, image: IMG.ring1,
-    description: 'A delicate floral-cut solitaire designed for everyday wear, finished with a hand-polished band that catches the light from every angle.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'},{name:'9'}]}],
-    colorImages: { Gold: IMG.ring1, Silver: IMG.ring2, 'Rose Gold': IMG.ring3, 'Antique Gold': IMG.ring1 },
-  },
-  {
-    id: 'r2', name: 'Twisted Band Ring', price: 999, image: IMG.ring2,
-    description: 'A sculptural twisted band that adds subtle texture and movement — pairs beautifully with stacking rings.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'},{name:'9'}]}],
-    colorImages: { Gold: IMG.ring2, Silver: IMG.ring1, 'Rose Gold': IMG.ring3, 'Antique Gold': IMG.ring2 },
-  },
-  {
-    id: 'r3', name: 'Stacking Midi Ring', price: 799, image: IMG.ring3,
-    description: 'A slim, understated midi ring made for layering — light enough to wear two or three at once.',
-    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'5'},{name:'6'},{name:'7'},{name:'8'}]}],
-    colorImages: { Gold: IMG.ring3, Silver: IMG.ring2, 'Rose Gold': IMG.ring1, 'Antique Gold': IMG.ring3 },
-  },
-  {
-    id: 'n1', name: 'Layered Gold Necklace', price: 1899, image: IMG.necklace1,
-    description: 'Three fine chains of varying lengths layered into one piece, so you get the "stacked necklace" look without the tangle.',
-    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Rose Gold'}]}, {name: 'Size', options: SIZES}],
-    colorImages: { Gold: IMG.necklace1, 'Rose Gold': IMG.necklace3 },
-  },
-  {
-    id: 'n2', name: 'Delicate Pearl Pendant', price: 1499, image: IMG.necklace2,
-    description: 'A single freshwater pearl set on a thread-thin chain — quiet, classic, and easy to dress up or down.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: SIZES}],
-    colorImages: { Gold: IMG.necklace2, Silver: IMG.necklace1, 'Rose Gold': IMG.necklace3, 'Antique Gold': IMG.necklace2 },
-  },
-  {
-    id: 'n3', name: 'Antique Coin Necklace', price: 2199, image: IMG.necklace3,
-    description: 'An heirloom-inspired coin pendant with a hand-finished antique texture, designed to feel like it has a story behind it.',
-    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Antique Gold'}]}, {name: 'Size', options: SIZES}],
-    colorImages: { Gold: IMG.necklace3, 'Antique Gold': IMG.necklace1 },
-  },
-  {
-    id: 'e1', name: 'Jhumki Drop Earrings', price: 1199, image: IMG.earring1,
-    description: 'Traditional jhumki silhouette with a soft bell drop — lightweight enough for all-day wear, festive enough for evenings.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: []}],
-    colorImages: { Gold: IMG.earring1, Silver: IMG.earring2, 'Rose Gold': IMG.earring3, 'Antique Gold': IMG.earring1 },
-  },
-  {
-    id: 'e2', name: 'Minimal Hoop Earrings', price: 799, image: IMG.earring2,
-    description: 'Clean, medium-width hoops that work as an everyday staple — the kind you forget you\'re wearing.',
-    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: []}],
-    colorImages: { Gold: IMG.earring2, Silver: IMG.earring1, 'Rose Gold': IMG.earring3, 'Antique Gold': IMG.earring2 },
-  },
-  {
-    id: 'e3', name: 'Chandelier Statement Earrings', price: 1699, image: IMG.earring3,
-    description: 'Tiered, cascading drops built for occasion wear — the piece that carries an outfit on its own.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: []}],
-    colorImages: { Gold: IMG.earring3, Silver: IMG.earring2, 'Rose Gold': IMG.earring1, 'Antique Gold': IMG.earring3 },
-  },
-  {
-    id: 'b1', name: 'Kundan Bangle Set', price: 2499, image: IMG.bangle1,
-    description: 'A set of hand-set kundan bangles inspired by traditional bridal craftsmanship — sold as a stackable set of two.',
-    customisable: true, variants: [{name: 'Colour', options: [{name:'Gold'},{name:'Antique Gold'}]}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
-    colorImages: { Gold: IMG.bangle1, 'Antique Gold': IMG.bangle3 },
-  },
-  {
-    id: 'b2', name: 'Slim Gold Bangle', price: 1299, image: IMG.bangle2,
-    description: 'A slim, polished bangle designed to stack cleanly with other pieces or stand alone.',
-    customisable: false, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
-    colorImages: { Gold: IMG.bangle2, Silver: IMG.bangle1, 'Rose Gold': IMG.bangle3, 'Antique Gold': IMG.bangle2 },
-  },
-  {
-    id: 'b3', name: 'Beaded Charm Bracelet', price: 999, image: IMG.bangle3,
-    description: 'A playful beaded bracelet finished with a single signature charm — an easy everyday layering piece.',
-    customisable: true, variants: [{name: 'Colour', options: COLOURS}, {name: 'Size', options: [{name:'2.4'},{name:'2.6'},{name:'2.8'}]}],
-    colorImages: { Gold: IMG.bangle3, Silver: IMG.bangle2, 'Rose Gold': IMG.bangle1, 'Antique Gold': IMG.bangle3 },
-  },
-];
-
-const byId = (id: string) => ALL_PRODUCTS.find(p => p.id === id)!;
-
-const PRESET_COMBOS: PresetCombo[] = [
-  {
-    id: 'pc1', name: 'Bridal Glow Set',
-    tagline: 'The complete bridal jewellery edit — layered, luminous, unforgettable.',
-    price: 5499, originalPrice: 7396,
-    image: IMG.combo1, badge: 'Best Seller',
-    includedProducts: [byId('n3'), byId('e1'), byId('b1'), byId('r1')],
-  },
-  {
-    id: 'pc2', name: 'Everyday Minimal Set',
-    tagline: 'Understated elegance for every day, wherever it takes you.',
-    price: 2999, originalPrice: 3997,
-    image: IMG.combo2, badge: 'New Arrival',
-    includedProducts: [byId('n2'), byId('e2'), byId('r2')],
-  },
-  {
-    id: 'pc3', name: 'Statement Night Set',
-    tagline: 'Turn heads at every occasion with this bold, layered edit.',
-    price: 4299, originalPrice: 5597,
-    image: IMG.combo3, badge: 'Limited',
-    includedProducts: [byId('n1'), byId('e3'), byId('b1'), byId('r3')],
-  },
-  {
-    id: 'pc4', name: 'Pearl & Gold Duo',
-    tagline: 'A timeless pearl-and-gold pairing for effortless days.',
-    price: 2699, originalPrice: 3398,
-    image: IMG.combo4, badge: '',
-    includedProducts: [byId('n2'), byId('e2')],
-  },
-];
-
-const CUSTOM_SLOTS: CustomComboSlot[] = [
-  {
-    id: 'cs1', name: 'Any 3 for ₹1,999',
-    tagline: 'Pick 3 pieces from our ring & earring edit',
-    maxItems: 3, fixedPrice: 1999,
-    image: IMG.ring1, badge: 'Save up to 40%',
-    allowedProducts: [byId('r1'), byId('r2'), byId('r3'), byId('e1'), byId('e2'), byId('e3')],
-  },
-  {
-    id: 'cs2', name: 'Any 4 for ₹3,499',
-    tagline: 'Build your dream necklace & bangle stack',
-    maxItems: 4, fixedPrice: 3499,
-    image: IMG.necklace1, badge: 'Most Popular',
-    allowedProducts: [byId('n1'), byId('n2'), byId('n3'), byId('b1'), byId('b2'), byId('b3')],
-  },
-  {
-    id: 'cs3', name: 'Any 5 for ₹4,999',
-    tagline: 'Full head-to-toe jewellery wardrobe',
-    maxItems: 5, fixedPrice: 4999,
-    image: IMG.combo2, badge: 'Best Value',
-    allowedProducts: ALL_PRODUCTS,
-  },
-];
-
 export function hasCustomisation(v: ProductVariant) {
   return (v.selections && Object.keys(v.selections).length > 0) || !!v.presetMessage || !!v.personalMessage || !!v.uploadedImageBase64 || (v.uploadedImagesBase64 && v.uploadedImagesBase64.length > 0) || !!v.charmCount || !!v.chain;
 }
 
-/** Returns the list of variant groups (colour/size/etc.) that require a mandatory selection for a product. */
+/** Variant groups (colour/size/etc.) that require a mandatory selection for a product. */
 function getRequiredVariants(product: ComboProduct) {
   return (product.variants || []).filter(v => v.options && v.options.length > 0);
 }
 
 /** True only if every mandatory variant (colour, size, etc.) has been selected for this product. */
 function isProductSelectionComplete(product: ComboProduct, v: ProductVariant) {
-  const missing = getMissingVariantNames(product, v);
-  return missing.length === 0;
+  return getMissingVariantNames(product, v).length === 0;
 }
 
-/** Returns the names of variant groups still missing a selection. */
+/** Names of variant groups still missing a selection. */
 function getMissingVariantNames(product: ComboProduct, v: ProductVariant) {
   const missing = getRequiredVariants(product)
     .filter(variant => !v.selections?.[variant.name])
     .map(variant => variant.name);
-    
+
   if (product.chainOptions && product.chainOptions.length > 0) {
     if (!v.chain) {
       missing.push(product.chainLabel || 'Chain Style');
@@ -342,7 +163,7 @@ function getMissingVariantNames(product: ComboProduct, v: ProductVariant) {
       missing.push('Charms');
     }
   }
-  
+
   return missing;
 }
 
@@ -378,9 +199,6 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
 
 /* ─────────────────────────────────────────────────────────────
    OPTION SWATCH — one selectable option (colour / size / etc.)
-   • Tapping the image OR the name SELECTS the option (same action).
-   • A small separate "eye" button on the image opens the enlarged preview.
-   • The selected option stays highlighted (outline + tick) until changed.
 ───────────────────────────────────────────────────────────── */
 interface OptionSwatchProps {
   name: string;
@@ -421,7 +239,7 @@ function ViewPhotoLink({ onClick }: { onClick: () => void }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   PRICING TIER SELECTOR — side-by-side pill buttons
+   PRICING TIER SELECTOR
 ───────────────────────────────────────────────────────────── */
 interface PricingTierSelectorProps {
   basePrice: number;
@@ -462,6 +280,7 @@ function PricingTierSelector({ basePrice, pricingVariants, selected, onChange }:
     </div>
   );
 }
+
 /* ── TRUST BADGES ── */
 const COMBO_TRUST_BADGES = [
   {
@@ -505,11 +324,11 @@ function ComboTrustBadges() {
   );
 }
 
-/* ── ACCORDION + POLICY LINKS ── */
+/* ── ACCORDION ── */
 function ComboAccordionItem({ emoji, label, children, open, onToggle }: { emoji: string; label: string; children: React.ReactNode; open: boolean; onToggle: () => void }) {
   return (
     <div className={`combo-acc-item${open ? ' combo-acc-item--open' : ''}`}>
-      <button className="combo-acc-head" onClick={onToggle}>
+      <button className="combo-acc-head" onClick={onToggle} aria-expanded={open}>
         <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
         <span className="combo-acc-chevron">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
@@ -522,31 +341,119 @@ function ComboAccordionItem({ emoji, label, children, open, onToggle }: { emoji:
   );
 }
 
-function ComboNavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
-  return (
-    <Link href={href} className="combo-acc-nav-link">
-      <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-    </Link>
-  );
-}
-
-const CANCELLATION_POLICY_TEXT = 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.';
-
 function ComboPolicySection({ description }: { description?: string }) {
   const [open, setOpen] = useState<string | null>(null);
+  const toggle = (id: string) => setOpen(o => (o === id ? null : id));
+
   return (
     <div className="combo-accordion">
       {description && description.trim() && (
-        <ComboAccordionItem emoji="💎" label="About This Set" open={open === 'about'} onToggle={() => setOpen(o => (o === 'about' ? null : 'about'))}>
+        <ComboAccordionItem emoji="💎" label="About This Set" open={open === 'about'} onToggle={() => toggle('about')}>
           <p style={{ whiteSpace: 'pre-wrap' }}>{description}</p>
         </ComboAccordionItem>
       )}
-      <ComboAccordionItem emoji="↩️" label="Cancellation Policy" open={open === 'cancel'} onToggle={() => setOpen(o => (o === 'cancel' ? null : 'cancel'))}>
-        <p>{CANCELLATION_POLICY_TEXT}</p>
+
+      {/* ── Shipping Policy ── */}
+      <ComboAccordionItem emoji="🚚" label="Shipping Policy" open={open === 'shipping'} onToggle={() => toggle('shipping')}>
+        <div className="cpol">
+          <div>
+            <p className="cpol-h">🌍 Where we ship</p>
+            <p>
+              We deliver across <strong>India</strong> through our website. For <strong>international orders</strong>,
+              contact us on WhatsApp <a href="https://wa.me/918356939586">+91 8356939586</a> or{' '}
+              <a href="mailto:makeyousparkle5@gmail.com">email</a> for a custom quote.
+            </p>
+          </div>
+
+          <div>
+            <p className="cpol-h">📦 Rates and timelines</p>
+            <div className="cpol-table-wrap">
+              <table className="cpol-table">
+                <thead>
+                  <tr><th>Method</th><th>Rate</th><th>Metro</th><th>Rest of India</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>Standard</strong></td><td>₹60</td><td>3–5 days</td><td>4–7 days</td></tr>
+                  <tr><td><strong>Express</strong></td><td>₹110</td><td>2–3 days</td><td>3–4 days</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="cpol-note">
+              💝 <strong>Free Standard Shipping</strong> on orders above ₹999.<br />
+              💵 <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping).
+              Business days count from the day after you order.
+            </div>
+          </div>
+
+          <div>
+            <p className="cpol-h">🚀 Dispatch</p>
+            <ul>
+              <li><span><strong>Standard:</strong> dispatched within 2 business days.</span></li>
+              <li><span><strong>Express:</strong> orders placed before 11:00 PM are dispatched the same day.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="cpol-h">📍 Tracking and changes</p>
+            <p>
+              Get updates via <strong>WhatsApp, SMS and Email</strong>, or track under{' '}
+              <strong>Profile → Track Order</strong>. Address or item changes are only possible{' '}
+              <strong>before dispatch</strong>, so contact us immediately.
+            </p>
+          </div>
+
+          <Link href="/shipping-policy" className="cpol-link">Read full shipping policy →</Link>
+        </div>
       </ComboAccordionItem>
-      <ComboNavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
-      <ComboNavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" />
+
+      {/* ── Returns, Refunds & Exchange ── */}
+      <ComboAccordionItem emoji="🔄" label="Returns, Refunds & Exchange" open={open === 'returns'} onToggle={() => toggle('returns')}>
+        <div className="cpol">
+          <div className="cpol-alert">
+            🔒 <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.
+          </div>
+
+          <div>
+            <p className="cpol-h">💵 Cancellations and changes</p>
+            <ul>
+              <li><span><strong>COD orders</strong> can be cancelled only before our team processes them.</span></li>
+              <li>
+                <span>
+                  <strong>Product, size or colour changes</strong> are possible only before the order ships. Contact us on{' '}
+                  <a href="https://wa.me/918356939586">WhatsApp</a> or <a href="mailto:makeyousparkle5@gmail.com">email</a>.
+                </span>
+              </li>
+              <li><span><strong>Customised items</strong> are non-returnable unless damaged or incorrect.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="cpol-h">🔄 Exchange for damaged or wrong items</p>
+            <ul>
+              <li><span>Report within <strong>2–3 days</strong> of delivery.</span></li>
+              <li>
+                <span>
+                  Share a single, unedited <strong>unboxing video</strong> (mandatory). It should start with a 360° view of
+                  the sealed package and shipping label, then show the opening and the defect.
+                </span>
+              </li>
+              <li><span>Send your <strong>Order ID + video</strong> via WhatsApp or email.</span></li>
+              <li><span>For exchanges approved due to our error, we cover <strong>all shipping charges</strong>.</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="cpol-h">💸 Refunds</p>
+            <ul>
+              <li><span><strong>Out of stock:</strong> if an approved exchange item is unavailable, you get a full refund to your original payment method.</span></li>
+              <li><span><strong>Delayed delivery:</strong> refund if your order has not arrived within 30 days of dispatch due to courier issues.</span></li>
+              <li><span><strong>Prepaid re-delivery:</strong> if a package is returned because you were unavailable or did not accept it, shipping must be paid again for a new attempt.</span></li>
+            </ul>
+          </div>
+
+          <Link href="/refund-policy" className="cpol-link">Read full returns policy →</Link>
+        </div>
+      </ComboAccordionItem>
     </div>
   );
 }
@@ -579,6 +486,19 @@ function ComboEstimatedDelivery() {
       <div className="combo-delivery-freebar">
         <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
         <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
+      </div>
+    </div>
+  );
+}
+
+/** Trust badges + policies + delivery — one block reused on both detail pages. */
+function ComboExtras({ description }: { description?: string }) {
+  return (
+    <div className="combo-extras">
+      <ComboTrustBadges />
+      <div className="combo-extras-grid">
+        <ComboPolicySection description={description} />
+        <ComboEstimatedDelivery />
       </div>
     </div>
   );
@@ -677,9 +597,7 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
 
       <div className="combo-rev-controls">
         {filterStar !== null && (
-          <div className="combo-rev-controls-filter">
-            <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>
-          </div>
+          <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>
         )}
         {!showForm && <button className="combo-rev-write-btn" onClick={() => setShowForm(true)}>Write a Review</button>}
       </div>
@@ -689,12 +607,12 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
           {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             {[1, 2, 3, 4, 5].map(star => (
-              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 22, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
+              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
             ))}
           </div>
           <textarea required placeholder="Share your experience with this set…" value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={3} className="modal-textarea" style={{ marginBottom: 14 }} />
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive)', fontWeight: 600, border: '1px solid var(--olive)', padding: '6px 12px', borderRadius: 4 }}>
               <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
                 if (e.target.files) {
                   setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
@@ -713,7 +631,7 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button type="submit" disabled={isSubmitting} className="combo-rev-write-btn">{isSubmitting ? 'Submitting…' : 'Submit Review'}</button>
             <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--ink4)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
           </div>
@@ -759,6 +677,10 @@ function ComboReviewsSection({ comboId }: { comboId: string }) {
     </div>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────
+   PRODUCT CUSTOMISER MODAL
+───────────────────────────────────────────────────────────── */
 interface CustomiserProps {
   product: ComboProduct;
   variant: ProductVariant;
@@ -775,24 +697,6 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   const [showValidation, setShowValidation] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
-  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.currentTarget.files || []);
-    if (!files.length) return;
-    files.forEach(f => {
-      const r = new FileReader();
-      r.onload = ev => {
-        setLocal(prev => {
-          const arr = prev.uploadedImagesBase64 || (prev.uploadedImageBase64 ? [prev.uploadedImageBase64] : []);
-          if (arr.length < (product.maxImageUploads || 1)) {
-            return { ...prev, uploadedImagesBase64: [...arr, ev.target?.result as string], uploadedImageBase64: undefined };
-          }
-          return prev;
-        });
-      };
-      r.readAsDataURL(f);
-    });
-  };
-  
   const removeImage = (index: number) => {
     setLocal(prev => {
       const arr = prev.uploadedImagesBase64 || (prev.uploadedImageBase64 ? [prev.uploadedImageBase64] : []);
@@ -916,7 +820,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
             const maxCount = product.maxImageUploads || 1;
             const titles = (product.imageCustomizationTitle || 'Upload Photo').split(',').map(t => t.trim());
             const uploaded = local.uploadedImagesBase64 || (local.uploadedImageBase64 ? [local.uploadedImageBase64] : []);
-            
+
             return (
               <div className="modal-field">
                 <label className="modal-field-label">
@@ -924,21 +828,21 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                   {product.imageCustomizationTitle || 'Upload Photo'}
                   <span className="field-required-star">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+                <div className="upload-tiles">
                   {Array.from({ length: maxCount }).map((_, i) => {
                     const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
                     const currentImg = uploaded[i];
-                    
+
                     return (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
+                      <div key={i} className="upload-tile">
+                        <span className="upload-tile-label">{tag}</span>
                         {currentImg ? (
-                          <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
-                            <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <button type="button" onClick={(e) => { e.preventDefault(); removeImage(i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                          <div className="upload-tile-preview">
+                            <img src={currentImg} alt="Preview" />
+                            <button type="button" className="upload-tile-remove" onClick={(e) => { e.preventDefault(); removeImage(i); }}>&times;</button>
                           </div>
                         ) : (
-                          <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                          <label className="upload-tile-zone">
                             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
@@ -954,9 +858,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                               };
                               reader.readAsDataURL(file);
                             }} />
-                            <div className="modal-upload-empty" style={{ padding: 0 }}>
-                              <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
-                            </div>
+                            <span className="upload-tile-plus">+</span>
                           </label>
                         )}
                       </div>
@@ -968,7 +870,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
           })()}
 
           {((product.chainOptions && product.chainOptions.length > 0) || (Number(product.totalCharms) > 0)) ? (
-            <div className="modal-field" style={{ padding: '0 0.4rem', borderTop: '1px solid #f2f2ef', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
+            <div className="modal-field modal-field-charm">
               {product.chainOptions && product.chainOptions.length > 0 && (
                 <ChainSelector
                   value={local.chain || ''}
@@ -1039,6 +941,9 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   GRIDS
+───────────────────────────────────────────────────────────── */
 interface PresetComboGridProps {
   combos: PresetCombo[];
   onSelect: (id: string) => void;
@@ -1098,6 +1003,9 @@ function CustomSlotGrid({ slots, onSelect }: CustomSlotGridProps) {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   PRESET HAMPER DETAIL
+───────────────────────────────────────────────────────────── */
 interface PresetHamperSectionProps {
   combo: PresetCombo;
   variants: Record<string, ProductVariant>;
@@ -1109,6 +1017,10 @@ interface PresetHamperSectionProps {
   cartAdded: boolean;
   onBack: () => void;
 }
+
+const TAG_ICON = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+);
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
   const [showValidation, setShowValidation] = useState(false);
@@ -1132,17 +1044,8 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     newArr.splice(index, 1);
     onVariantChange(pid, { uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
-  
-  const removeComboFile = (index: number) => {
-    const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
-    const newArr = [...arr];
-    newArr.splice(index, 1);
-    onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
-  };
 
-  /** Select an option for a given product's variant group. Sends only a patch
-   *  ({ selections: { [variantName]: optionName } }) which is merged into THAT product's
-   *  own state, so every piece keeps its own highlighted option independently. */
+  /** Sends only a patch which is merged into THAT product's own state. */
   const selectVariantOption = (pid: string, variantName: string, optionName: string) => {
     onVariantChange(pid, { selections: { [variantName]: optionName } });
   };
@@ -1185,6 +1088,8 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     onAddToCart(combo);
   };
 
+  const comboUploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
+
   return (
     <div className="hamper-page">
       <button className="hamper-back-btn" onClick={onBack}>
@@ -1195,34 +1100,23 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       </button>
 
       <div className="hamper-main-block">
-        <div>
-          <div className="hamper-main-img-wrap" onClick={() => setLightboxImg(allComboImages[activeComboImgIdx] || safeImageSrc(combo.image))} style={{ cursor: 'zoom-in' }}>
+        <div className="hamper-gallery">
+          <div className="hamper-main-img-wrap" onClick={() => setLightboxImg(allComboImages[activeComboImgIdx] || safeImageSrc(combo.image))}>
             <img src={allComboImages[activeComboImgIdx] || safeImageSrc(combo.image)} alt={combo.name} />
             {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
             {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
           </div>
           {allComboImages.length > 1 && (
-            <div className="hamper-gallery-thumbs" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="hamper-thumbs">
               {allComboImages.map((imgUrl: string, i: number) => (
                 <button
                   key={`${imgUrl}-${i}`}
                   type="button"
+                  className={`hamper-thumb${activeComboImgIdx === i ? ' on' : ''}`}
                   onClick={() => setActiveComboImgIdx(i)}
-                  style={{
-                    width: '58px',
-                    height: '58px',
-                    borderRadius: '10px',
-                    overflow: 'hidden',
-                    border: activeComboImgIdx === i ? '2px solid #3d4a20' : '1px solid #d4d4c8',
-                    padding: 0,
-                    cursor: 'pointer',
-                    background: '#f5f4ef',
-                    opacity: activeComboImgIdx === i ? 1 : 0.75,
-                    transition: 'all 0.2s ease',
-                    flexShrink: 0,
-                  }}
+                  aria-label={`View image ${i + 1}`}
                 >
-                  <img src={imgUrl} alt={`${combo.name} ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={imgUrl} alt={`${combo.name} ${i + 1}`} />
                 </button>
               ))}
             </div>
@@ -1247,207 +1141,205 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
             />
           )}
-        {combo.description && <p className="hamper-description" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#484840', whiteSpace: 'pre-wrap' }}>{combo.description}</p>}
-
+          {combo.description && <p className="hamper-description">{combo.description}</p>}
         </div>
       </div>
 
-      <div className="hamper-divider" />
+      {products.length > 0 && (
+        <>
+          <div className="hamper-divider" />
 
-      <div className="hamper-section-label-row">
-        <p className="hamper-section-label">Pieces in this set</p>
-        <span className="hamper-cust-progress">{customisedCount}/{products.length} customised</span>
-      </div>
+          <div className="hamper-section-label-row">
+            <p className="hamper-section-label">Pieces in this set</p>
+            <span className="hamper-cust-progress">{customisedCount}/{products.length} customised</span>
+          </div>
 
-      <div className="hamper-piece-list">
-        {products.map((p, i) => {
-          const v = variants[p.id] || {};
-          const missingNames = getMissingVariantNames(p, v);
-          const showPieceError = showValidation && missingNames.length > 0;
+          <div className="hamper-piece-list">
+            {products.map((p, i) => {
+              const v = variants[p.id] || {};
+              const missingNames = getMissingVariantNames(p, v);
+              const showPieceError = showValidation && missingNames.length > 0;
 
-          return (
-            <div key={p.id} id={`hamper-piece-${p.id}`} className={`hamper-piece${showPieceError ? ' hamper-piece-error' : ''}`}>
-              <span className="hamper-piece-index">{i + 1}</span>
+              return (
+                <div key={p.id} id={`hamper-piece-${p.id}`} className={`hamper-piece${showPieceError ? ' hamper-piece-error' : ''}`}>
+                  <span className="hamper-piece-index">{i + 1}</span>
 
-              <div className="hamper-piece-head">
-                
-                <div className="hamper-piece-headinfo">
-                  <a className="hamper-piece-name-link">
-                    <span className="hamper-piece-name">{p.name}</span>
-                  </a>
-                  {p.price != null && <span className="hamper-piece-price">₹{p.price.toLocaleString('en-IN')}</span>}
-                  {p.tags && p.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                  <div className="hamper-piece-head">
+                    <div className="hamper-piece-headinfo">
+                      <span className="hamper-piece-name">{p.name}</span>
+                      {p.price != null && <span className="hamper-piece-price">₹{p.price.toLocaleString('en-IN')}</span>}
+                      {p.tags && p.tags.length > 0 && (
+                        <div className="hamper-piece-tags">
+                          {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                        </div>
+                      )}
                     </div>
+                  </div>
+
+                  {p.description && p.description.trim() && (
+                    <p className="hamper-piece-desc">{p.description}</p>
                   )}
-                </div>
-              </div>
 
-              {p.description && p.description.trim() && (
-                <p className="hamper-piece-desc">{p.description}</p>
-              )}
+                  <div className="hamper-piece-body">
+                    {p.variants.map((variant) => {
+                      if (variant.options.length === 0) return null;
+                      const selectedOpt = v.selections?.[variant.name];
+                      const isMissing = showValidation && !selectedOpt;
+                      return (
+                        <div key={variant.name} className="hamper-piece-field">
+                          <span className="hamper-piece-field-label">
+                            {variant.name}
+                            {!selectedOpt && <span className="hamper-piece-field-required">required</span>}
+                            {selectedOpt && <em>· {selectedOpt}</em>}
+                            {(() => {
+                              const img = variant.options.find(o => o.name === selectedOpt)?.image;
+                              return img ? <ViewPhotoLink onClick={() => setLightboxImg(img)} /> : null;
+                            })()}
+                          </span>
+                          <div className={`hamper-colour-swatch-row${isMissing ? ' hamper-colour-swatch-row-error' : ''}`}>
+                            {variant.options.map(opt => (
+                              <OptionSwatch
+                                key={`${p.id}-${variant.name}-${opt.name}`}
+                                name={opt.name}
+                                image={opt.image}
+                                stock={opt.stock}
+                                selected={selectedOpt === opt.name}
+                                onSelect={() => { setShowValidation(false); selectVariantOption(p.id, variant.name, opt.name); }}
+                              />
+                            ))}
+                          </div>
+                          {isMissing && <span className="hamper-piece-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
+                        </div>
+                      );
+                    })}
 
-              <div className="hamper-piece-body">
-                {p.variants.map((variant) => {
-                  if (variant.options.length === 0) return null;
-                  const selectedOpt = v.selections?.[variant.name];
-                  const isMissing = showValidation && !selectedOpt;
-                  return (
-                    <div key={variant.name} className="hamper-piece-field">
-                      <span className="hamper-piece-field-label">
-                        {variant.name}
-                        {!selectedOpt && <span className="hamper-piece-field-required">required</span>}
-                        {selectedOpt && <em>· {selectedOpt}</em>}
-                        {(() => {
-                          const img = variant.options.find(o => o.name === selectedOpt)?.image;
-                          return img ? <ViewPhotoLink onClick={() => setLightboxImg(img)} /> : null;
-                        })()}
-                      </span>
-                      <div className={`hamper-colour-swatch-row${isMissing ? ' hamper-colour-swatch-row-error' : ''}`}>
-                        {variant.options.map(opt => (
-                          <OptionSwatch
-                            key={`${p.id}-${variant.name}-${opt.name}`}
-                            name={opt.name}
-                            image={opt.image}
-                            stock={opt.stock}
-                            selected={selectedOpt === opt.name}
-                            onSelect={() => { setShowValidation(false); selectVariantOption(p.id, variant.name, opt.name); }}
-                          />
-                        ))}
-                      </div>
-                      {isMissing && <span className="hamper-piece-field-error-text">Please select a {variant.name.toLowerCase()}</span>}
-                    </div>
-                  );
-                })}
-
-                {p.allowTextCustomization && (
-                  <div className="hamper-piece-field">
-                    <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
-                    <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
-                      value={PRESET_MESSAGES.find(m => m.label === v.presetMessage)?.value || ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
-                        onVariantChange(p.id, { presetMessage: msg || undefined });
-                      }}>
-                      {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                    <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="field-required-star">*</span></span>
-                    <textarea
-                      className="modal-textarea"
-                      placeholder="E.g. 'To my dearest Priya, with love…'"
-                      value={v.personalMessage || ''}
-                      onChange={e => onVariantChange(p.id, { personalMessage: e.target.value })}
-                      maxLength={120}
-                      rows={2}
-                    />
-                  </div>
-                )}
-
-                {p.allowImageCustomization && (() => {
-                  const maxCount = p.maxImageUploads || 1;
-                  const titles = (p.imageCustomizationTitle || 'Upload Photo').split(',').map(t => t.trim());
-                  const uploaded = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
-                  
-                  return (
-                    <div className="hamper-piece-field">
-                      <span className="hamper-piece-field-label">Image Customisation <span className="field-required-star">*</span></span>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        {Array.from({ length: maxCount }).map((_, i) => {
-                          const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
-                          const currentImg = uploaded[i];
-                          
-                          return (
-                            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
-                              {currentImg ? (
-                                <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
-                                  <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  <button type="button" onClick={(e) => { e.preventDefault(); removeFileFor(p.id, i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
-                                </div>
-                              ) : (
-                                <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
-                                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                      const base64String = reader.result as string;
-                                      const newUploaded = [...uploaded];
-                                      newUploaded[i] = base64String;
-                                      onVariantChange(p.id, { uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
-                                    };
-                                    reader.readAsDataURL(file);
-                                  }} />
-                                  <div className="modal-upload-empty" style={{ padding: 0 }}>
-                                    <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
-                                  </div>
-                                </label>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {((p.chainOptions && p.chainOptions.length > 0) || (Number(p.totalCharms) > 0)) ? (
-                  <div className="hamper-piece-field">
-                    {p.chainOptions && p.chainOptions.length > 0 && (
-                      <ChainSelector
-                        value={v.chain || ''}
-                        label={p.chainLabel || 'Chain Type'}
-                        placeholder={
-                          p.chainLabel
-                            ? (p.chainLabel.toLowerCase().startsWith('select')
-                                ? `${p.chainLabel}…`
-                                : `Select a ${p.chainLabel.toLowerCase()}…`)
-                            : 'Select a chain type…'
-                        }
-                        onChange={val => {
-                          const chainP = p.chainOptions!.find(c => c.value === val)?.price || 0;
-                          onVariantChange(p.id, { chain: val, chainPrice: chainP });
-                        }}
-                        onViewImage={(chain) => setLightboxImg(chain.image)}
-                        options={p.chainOptions}
-                      />
-                    )}
-                    {Number(p.totalCharms) > 0 && (
-                      <>
-                        <span className="hamper-piece-field-label">Charms Selection</span>
-                        <CharmSelector
-                          charmPieceOptions={p.charmPieceOptions || []}
-                          totalCharms={p.totalCharms}
-                          validationAttempt={showValidation ? 1 : 0}
-                          onChange={({ count, charms }) => {
-                            onVariantChange(p.id, { charmCount: count, selectedCharms: charms });
-                          }}
+                    {p.allowTextCustomization && (
+                      <div className="hamper-piece-field">
+                        <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
+                        <select className="modal-textarea" style={{ marginBottom: '0.6rem', appearance: 'auto' }}
+                          value={PRESET_MESSAGES.find(m => m.label === v.presetMessage)?.value || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            const msg = PRESET_MESSAGES.find(m => m.value === val)?.label || '';
+                            onVariantChange(p.id, { presetMessage: msg || undefined });
+                          }}>
+                          {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                        <span className="hamper-piece-field-label">{p.textCustomizationTitle || 'Personal Message'} <span className="field-required-star">*</span></span>
+                        <textarea
+                          className="modal-textarea"
+                          placeholder="E.g. 'To my dearest Priya, with love…'"
+                          value={v.personalMessage || ''}
+                          onChange={e => onVariantChange(p.id, { personalMessage: e.target.value })}
+                          maxLength={120}
+                          rows={2}
                         />
-                      </>
+                      </div>
                     )}
+
+                    {p.allowImageCustomization && (() => {
+                      const maxCount = p.maxImageUploads || 1;
+                      const titles = (p.imageCustomizationTitle || 'Upload Photo').split(',').map(t => t.trim());
+                      const uploaded = v.uploadedImagesBase64 || (v.uploadedImageBase64 ? [v.uploadedImageBase64] : []);
+
+                      return (
+                        <div className="hamper-piece-field">
+                          <span className="hamper-piece-field-label">Image Customisation <span className="field-required-star">*</span></span>
+                          <div className="upload-tiles">
+                            {Array.from({ length: maxCount }).map((_, i) => {
+                              const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
+                              const currentImg = uploaded[i];
+
+                              return (
+                                <div key={i} className="upload-tile">
+                                  <span className="upload-tile-label">{tag}</span>
+                                  {currentImg ? (
+                                    <div className="upload-tile-preview">
+                                      <img src={currentImg} alt="Preview" />
+                                      <button type="button" className="upload-tile-remove" onClick={(e) => { e.preventDefault(); removeFileFor(p.id, i); }}>&times;</button>
+                                    </div>
+                                  ) : (
+                                    <label className="upload-tile-zone">
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          const base64String = reader.result as string;
+                                          const newUploaded = [...uploaded];
+                                          newUploaded[i] = base64String;
+                                          onVariantChange(p.id, { uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }} />
+                                      <span className="upload-tile-plus">+</span>
+                                    </label>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {((p.chainOptions && p.chainOptions.length > 0) || (Number(p.totalCharms) > 0)) ? (
+                      <div className="hamper-piece-field">
+                        {p.chainOptions && p.chainOptions.length > 0 && (
+                          <ChainSelector
+                            value={v.chain || ''}
+                            label={p.chainLabel || 'Chain Type'}
+                            placeholder={
+                              p.chainLabel
+                                ? (p.chainLabel.toLowerCase().startsWith('select')
+                                    ? `${p.chainLabel}…`
+                                    : `Select a ${p.chainLabel.toLowerCase()}…`)
+                                : 'Select a chain type…'
+                            }
+                            onChange={val => {
+                              const chainP = p.chainOptions!.find(c => c.value === val)?.price || 0;
+                              onVariantChange(p.id, { chain: val, chainPrice: chainP });
+                            }}
+                            onViewImage={(chain) => setLightboxImg(chain.image)}
+                            options={p.chainOptions}
+                          />
+                        )}
+                        {Number(p.totalCharms) > 0 && (
+                          <>
+                            <span className="hamper-piece-field-label">Charms Selection</span>
+                            <CharmSelector
+                              charmPieceOptions={p.charmPieceOptions || []}
+                              totalCharms={p.totalCharms}
+                              validationAttempt={showValidation ? 1 : 0}
+                              onChange={({ count, charms }) => {
+                                onVariantChange(p.id, { charmCount: count, selectedCharms: charms });
+                              }}
+                            />
+                          </>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {(combo.allowComboTextCustomization || combo.allowComboImageCustomization) && (
         <>
-          <div className="hamper-divider" style={{ margin: "2rem 0" }} />
-          <div className="hamper-piece">
-            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span>
+          <div className="hamper-divider" />
+          <div className="hamper-piece hamper-box">
+            <span className="hamper-piece-index">{TAG_ICON}</span>
             <div className="hamper-piece-head">
-              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+              <div className="hamper-piece-headinfo">
                 <span className="hamper-piece-name">Box Customisation</span>
               </div>
             </div>
             <p className="hamper-piece-desc">Add a personal touch to the entire hamper box.</p>
-            
-            <div className="hamper-piece-body">
+
+            <div className="hamper-piece-body hamper-box-body">
               {combo.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
                   <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
@@ -1475,47 +1367,43 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
               {combo.allowComboImageCustomization && (() => {
                 const maxCount = combo.comboMaxImageUploads || 1;
                 const titles = (combo.comboImageCustomizationTitle || 'Upload Photo for Box').split(',').map(t => t.trim());
-                const uploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
 
                 return (
                   <div className="hamper-piece-field">
                     <span className="hamper-piece-field-label">Combo Image Customisation <span className="field-required-star">*</span></span>
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div className="upload-tiles">
                       {Array.from({ length: maxCount }).map((_, i) => {
                         const tag = titles[i] || titles[0] || `Photo ${i + 1}`;
-                        const currentImg = uploaded[i];
-                        
+                        const currentImg = comboUploaded[i];
+
                         return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5c22' }}>{tag}</span>
+                          <div key={i} className="upload-tile">
+                            <span className="upload-tile-label">{tag}</span>
                             {currentImg ? (
-                              <div className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
-                                <img src={currentImg} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                <button type="button" onClick={(e) => {
+                              <div className="upload-tile-preview">
+                                <img src={currentImg} alt="Preview" />
+                                <button type="button" className="upload-tile-remove" onClick={(e) => {
                                   e.preventDefault();
-                                  const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
-                                  const newArr = [...arr];
+                                  const newArr = [...comboUploaded];
                                   newArr.splice(i, 1);
                                   onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
-                                }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                                }}>&times;</button>
                               </div>
                             ) : (
-                              <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                              <label className="upload-tile-zone">
                                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
                                     const base64String = reader.result as string;
-                                    const newUploaded = [...uploaded];
+                                    const newUploaded = [...comboUploaded];
                                     newUploaded[i] = base64String;
                                     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newUploaded, uploadedImageBase64: undefined });
                                   };
                                   reader.readAsDataURL(file);
                                 }} />
-                                <div className="modal-upload-empty" style={{ padding: 0 }}>
-                                  <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
-                                </div>
+                                <span className="upload-tile-plus">+</span>
                               </label>
                             )}
                           </div>
@@ -1529,10 +1417,6 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           </div>
         </>
       )}
-<div className="hamper-divider" style={{ margin: '2rem 0 1.5rem' }} />
-<ComboTrustBadges />
-<ComboPolicySection description={combo.description} />
-<ComboEstimatedDelivery />
 
       {showValidation && !canAddToCart && (
         <div className="hamper-global-error">
@@ -1540,27 +1424,35 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
         </div>
       )}
 
-      <div className="hamper-sticky-bar">
-        <div className="hamper-sticky-info">
-          <span className="hamper-sticky-label">Set Total</span>
-          <div className="hamper-sticky-price">
-            <span className="hamper-sticky-price-val">₹{currentPrice.toLocaleString('en-IN')}</span>
-            {pct > 0 && <span className="hamper-sticky-price-orig">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
-          </div>
-        </div>
-        <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hamper-sticky-btn-disabled' : ''}`} onClick={handleAddToCartClick}>
-          {cartAdded
-            ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added</>
-            : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart</>
-          }
-        </button>
-      </div>
+      <div className="hamper-divider" />
+      <ComboExtras description={combo.description} />
       <ComboReviewsSection comboId={combo.id} />
+
+      <div className="hamper-sticky-bar">
+        <div className="sticky-inner">
+          <div className="hamper-sticky-info">
+            <span className="hamper-sticky-label">Set Total</span>
+            <div className="hamper-sticky-price">
+              <span className="hamper-sticky-price-val">₹{currentPrice.toLocaleString('en-IN')}</span>
+              {pct > 0 && <span className="hamper-sticky-price-orig">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
+            </div>
+          </div>
+          <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hamper-sticky-btn-disabled' : ''}`} onClick={handleAddToCartClick}>
+            {cartAdded
+              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added</>
+              : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart</>
+            }
+          </button>
+        </div>
+      </div>
       {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   BUILD-YOUR-OWN DETAIL
+───────────────────────────────────────────────────────────── */
 interface CustomBuilderSectionProps {
   slot: CustomComboSlot;
   selectedIds: string[];
@@ -1575,17 +1467,21 @@ interface CustomBuilderSectionProps {
   gender?: string;
 }
 
-function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack, gender = 'women' }: CustomBuilderSectionProps) {
+function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onComboVariantChange, onToggle, onVariantChange, onAddToCart, cartAdded, onBack }: CustomBuilderSectionProps) {
   const [customising, setCustomising] = useState<{ product: ComboProduct; isAddFlow: boolean } | null>(null);
   const [activeSlotImgIdx, setActiveSlotImgIdx] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const allSlotImages = useMemo(() => {
+    if (!slot) return [];
     return [safeImageSrc(slot.image), ...(slot.images || []).map(img => safeImageSrc(img))].filter((v, i, a) => v && a.indexOf(v) === i);
-  }, [slot.image, slot.images]);
+  }, [slot]);
 
   useEffect(() => {
     setActiveSlotImgIdx(0);
-  }, [slot.id]);
+  }, [slot?.id]);
+
+  if (!slot) return null;
 
   const handleComboFile = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.currentTarget.files || []);
@@ -1595,27 +1491,25 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
       r.onload = ev => {
         const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
         if (arr.length < (slot.comboMaxImageUploads || 1)) {
-           onComboVariantChange({ ...comboVariant, uploadedImagesBase64: [...arr, ev.target?.result as string], uploadedImageBase64: undefined });
+          onComboVariantChange({ ...comboVariant, uploadedImagesBase64: [...arr, ev.target?.result as string], uploadedImageBase64: undefined });
         }
       };
       r.readAsDataURL(f);
     });
   };
-  
+
   const removeComboFile = (index: number) => {
     const arr = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
     const newArr = [...arr];
     newArr.splice(index, 1);
     onComboVariantChange({ ...comboVariant, uploadedImagesBase64: newArr, uploadedImageBase64: undefined });
   };
-  const [expanded, setExpanded] = useState(false);
-
-  if (!slot) return null;
 
   const remaining = slot.maxItems - selectedIds.length;
   const currentPrice = comboVariant.selectedPricingVariant?.price ?? slot.fixedPrice;
   const selectedProducts = slot.allowedProducts.filter(p => selectedIds.includes(p.id));
   const canAddToCart = selectedIds.length === slot.maxItems;
+  const slotUploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
 
   const handleAddWithCustomise = (product: ComboProduct) => setCustomising({ product, isAddFlow: true });
 
@@ -1641,55 +1535,43 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
         Back to bundle options
       </button>
 
-      <div className="builder-header-row" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem' }}>
+      <div className="builder-header-row">
         {allSlotImages.length > 0 && (
-          <div style={{ flexShrink: 0 }}>
-            <div style={{ width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--bdr, #d4d4c8)' }}>
-              <img src={allSlotImages[activeSlotImgIdx] || safeImageSrc(slot.image)} alt={slot.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div className="builder-header-media">
+            <div className="builder-header-img">
+              <img src={allSlotImages[activeSlotImgIdx] || safeImageSrc(slot.image)} alt={slot.name} />
             </div>
             {allSlotImages.length > 1 && (
-              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+              <div className="builder-header-thumbs">
                 {allSlotImages.map((imgUrl: string, i: number) => (
                   <button
                     key={`${imgUrl}-${i}`}
                     type="button"
+                    className={`builder-header-thumb${activeSlotImgIdx === i ? ' on' : ''}`}
                     onClick={() => setActiveSlotImgIdx(i)}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      border: activeSlotImgIdx === i ? '2px solid var(--gold, #c9a84c)' : '1px solid var(--bdr, #d4d4c8)',
-                      padding: 0,
-                      cursor: 'pointer',
-                      background: 'var(--surf, #f5f4ef)',
-                      opacity: activeSlotImgIdx === i ? 1 : 0.75,
-                    }}
+                    aria-label={`View image ${i + 1}`}
                   >
-                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={imgUrl} alt="" />
                   </button>
                 ))}
               </div>
             )}
           </div>
         )}
-        <div style={{ flex: 1, minWidth: '200px' }}>
+        <div className="builder-header-text">
           <h2 className="builder-header-title">{slot.name}</h2>
           <p className="builder-header-tagline">{slot.tagline}</p>
-          {slot.description && <p style={{ marginTop: '0.4rem', fontSize: '0.9rem', color: '#555', whiteSpace: 'pre-wrap' }}>{slot.description}</p>}
+          {slot.description && <p className="builder-header-desc">{slot.description}</p>}
+          {slot.pricingVariants && slot.pricingVariants.length > 0 && (
+            <PricingTierSelector
+              basePrice={slot.fixedPrice}
+              pricingVariants={slot.pricingVariants}
+              selected={comboVariant.selectedPricingVariant}
+              onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
+            />
+          )}
         </div>
       </div>
-
-      {slot.pricingVariants && slot.pricingVariants.length > 0 && (
-        <div className="builder-pricing-wrap">
-          <PricingTierSelector
-            basePrice={slot.fixedPrice}
-            pricingVariants={slot.pricingVariants}
-            selected={comboVariant.selectedPricingVariant}
-            onChange={opt => onComboVariantChange({ ...comboVariant, selectedPricingVariant: opt })}
-          />
-        </div>
-      )}
 
       <div className="builder-progress-wrap">
         <div className="builder-progress-track">
@@ -1727,9 +1609,9 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
                 </a>
                 {p.price != null && <div className="builder-card-price">₹{p.price.toLocaleString('en-IN')}</div>}
                 {p.tags && p.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                      {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
-                    </div>
+                  <div className="hamper-piece-tags">
+                    {p.tags.map(tag => <span key={tag} className="combo-product-tag">{tag}</span>)}
+                  </div>
                 )}
 
                 {isChosen ? (
@@ -1766,18 +1648,18 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
       )}
 
       {(slot.allowComboTextCustomization || slot.allowComboImageCustomization) && (
-        <div style={{ margin: "2rem auto", padding: "0 1.5rem", maxWidth: "600px" }}>
-          <div className="hamper-divider" style={{ margin: "0 0 2rem 0" }} />
-          <div className="hamper-piece">
-            <span className="hamper-piece-index"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span>
+        <>
+          <div className="hamper-divider" style={{ marginTop: 24 }} />
+          <div className="hamper-piece hamper-box">
+            <span className="hamper-piece-index">{TAG_ICON}</span>
             <div className="hamper-piece-head">
-              <div className="hamper-piece-headinfo" style={{ marginLeft: 0 }}>
+              <div className="hamper-piece-headinfo">
                 <span className="hamper-piece-name">Box Customisation</span>
               </div>
             </div>
             <p className="hamper-piece-desc">Add a personal touch to the entire hamper box.</p>
-            
-            <div className="hamper-piece-body">
+
+            <div className="hamper-piece-body hamper-box-body">
               {slot.allowComboTextCustomization && (
                 <div className="hamper-piece-field">
                   <span className="hamper-piece-field-label">Select Occasion / Template Card <span className="field-required-star">*</span></span>
@@ -1805,76 +1687,83 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
               {slot.allowComboImageCustomization && (
                 <div className="hamper-piece-field">
                   <span className="hamper-piece-field-label">{slot.comboImageCustomizationTitle || 'Upload Photo for Box'} <span className="field-required-star">*</span></span>
-                    
-                    <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                      {(comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : [])).map((img, i) => (
-                        <div key={i} className="modal-upload-preview" style={{ position: 'relative', width: 80, height: 80, padding: 0, borderRadius: 8, overflow: 'hidden' }}>
-                          <img src={img} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" onClick={(e) => { e.preventDefault(); removeComboFile(i); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>&times;</button>
+                  <div className="upload-tiles">
+                    {slotUploaded.map((img, i) => (
+                      <div key={i} className="upload-tile">
+                        <div className="upload-tile-preview">
+                          <img src={img} alt="Preview" />
+                          <button type="button" className="upload-tile-remove" onClick={(e) => { e.preventDefault(); removeComboFile(i); }}>&times;</button>
                         </div>
-                      ))}
-                      
-                      {((comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : [])).length < (slot.comboMaxImageUploads || 1)) && (
-                        <label className="modal-upload-zone" style={{ width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                      </div>
+                    ))}
+
+                    {slotUploaded.length < (slot.comboMaxImageUploads || 1) && (
+                      <div className="upload-tile">
+                        <label className="upload-tile-zone">
                           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleComboFile} multiple />
-                          <div className="modal-upload-empty" style={{ padding: 0 }}>
-                            <span className="modal-upload-cta" style={{ fontSize: 24, lineHeight: 1 }}>+</span>
-                          </div>
+                          <span className="upload-tile-plus">+</span>
                         </label>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </>
       )}
-<div style={{ margin: '2rem auto 0', padding: '0 1.5rem', maxWidth: '700px' }}>
-  <ComboTrustBadges />
-  <ComboPolicySection description={slot.description} />
-  <ComboEstimatedDelivery />
-  <ComboReviewsSection comboId={slot.id} />
-</div>
+
+      <div className="hamper-divider" style={{ marginTop: 24 }} />
+      <ComboExtras description={slot.description} />
+      <ComboReviewsSection comboId={slot.id} />
+
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
-          <div className="builder-drawer-head">
-            <span>Your Box ({selectedProducts.length}/{slot.maxItems})</span>
-            <button onClick={() => setExpanded(false)}>Close</button>
-          </div>
-          <div className="builder-drawer-items">
-            {selectedProducts.map(p => {
-              const isCust = hasCustomisation(variants[p.id] || {});
-              return (
-                <div key={p.id} className="builder-drawer-item">
-                  <img src={p.image} alt={p.name} />
-                  <span className="builder-drawer-item-name">{p.name}{isCust && <em> · customised</em>}</span>
-                  <button onClick={() => onToggle(p.id)} aria-label="Remove">×</button>
-                </div>
-              );
-            })}
+          <div className="sticky-inner sticky-inner--col">
+            <div className="builder-drawer-head">
+              <span>Your Box ({selectedProducts.length}/{slot.maxItems})</span>
+              <button onClick={() => setExpanded(false)}>Close</button>
+            </div>
+            <div className="builder-drawer-items">
+              {selectedProducts.map(p => {
+                const isCust = hasCustomisation(variants[p.id] || {});
+                return (
+                  <div key={p.id} className="builder-drawer-item">
+                    <img src={p.image} alt={p.name} />
+                    <span className="builder-drawer-item-name">{p.name}{isCust && <em> · customised</em>}</span>
+                    <button onClick={() => onToggle(p.id)} aria-label="Remove">×</button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
       <div className="builder-sticky-bar">
-        <button className="builder-sticky-toggle" onClick={() => setExpanded(e => !e)} disabled={selectedIds.length === 0}>
-          <span className="builder-sticky-count">{selectedIds.length}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        </button>
-        <div className="builder-sticky-info">
-          {remaining > 0
-            ? <span className="builder-sticky-label">Add {remaining} more product{remaining !== 1 ? 's' : ''} to get the bundle at ₹{currentPrice.toLocaleString('en-IN')}</span>
-            : <span className="builder-sticky-label builder-sticky-label--done">{slot.maxItems} pieces selected — ₹{currentPrice.toLocaleString('en-IN')}</span>}
+        <div className="sticky-inner">
+          <button className="builder-sticky-toggle" onClick={() => setExpanded(e => !e)} disabled={selectedIds.length === 0}>
+            <span className="builder-sticky-count">{selectedIds.length}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          </button>
+          <div className="builder-sticky-info">
+            {remaining > 0
+              ? <span className="builder-sticky-label">Add {remaining} more product{remaining !== 1 ? 's' : ''} to get the bundle at ₹{currentPrice.toLocaleString('en-IN')}</span>
+              : <span className="builder-sticky-label builder-sticky-label--done">{slot.maxItems} pieces selected — ₹{currentPrice.toLocaleString('en-IN')}</span>}
+          </div>
+          <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={!canAddToCart} onClick={() => onAddToCart(slot)}>
+            {cartAdded ? 'Added' : 'Add to Cart'}
+          </button>
         </div>
-        <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={!canAddToCart} onClick={() => onAddToCart(slot)}>
-          {cartAdded ? 'Added' : `Add to Cart`}
-        </button>
       </div>
       {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   PAGE
+───────────────────────────────────────────────────────────── */
 export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
   const { addItem } = useCart();
 
@@ -2133,7 +2022,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     const vars = slotVariants[slot.id]   || {};
     const cv   = comboVariants[slot.id]  || {};
     if (ids.length !== slot.maxItems) return;
-    
+
     const charmsPriceTotal = ids.reduce((acc, pid) => {
       const p = slot.allowedProducts.find(x => x.id === pid)!;
       const v = vars[pid];
@@ -2216,126 +2105,123 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           --ffb:      'DM Sans', system-ui, sans-serif;
           --shadow:   0 4px 24px rgba(26,29,13,.10);
           --shadow-lg:0 8px 40px rgba(26,29,13,.16);
+
+          /* variables used by CharmSelector / ChainSelector (shared components) */
+          --olive-900:#1a1f0d; --olive-600:#3d4a22; --olive-500:#5a6b2e;
+          --olive-400:#7a8e3c; --olive-200:#c4cc9a; --olive-100:#e4e8cc; --olive-50:#f2f4e8;
+          --beige:#f5f0e8; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
+          --mist:rgba(30,35,16,.45);
+
+          --container: 1180px;
         }
 
         *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
         body { font-family: var(--ffb); background: var(--bg); color: var(--ink); overflow-x: hidden; }
         button { font-family: var(--ffb); cursor: pointer; background: transparent; border: none; }
         img { display: block; max-width: 100%; }
-        textarea { font-family: var(--ffb); }
+        textarea, select, input { font-family: var(--ffb); }
 
-        /* ── MODAL ── */
-        .modal-backdrop { position:fixed;inset:0;z-index:1000;background:rgba(10,12,5,.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease; }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-        .modal-box { width:100%;max-width:520px;max-height:calc(100dvh - 32px);background:var(--surf);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:modalIn .28s cubic-bezier(.34,1.1,.64,1); }
         @keyframes modalIn { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .modal-header { display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 14px;background:linear-gradient(135deg,var(--olivedim),#ede9d8);border-bottom:1px solid var(--bdr);flex-shrink:0; }
+        @keyframes sheetIn { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes charmFadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes chainPanelIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ══════════ MODAL ══════════ */
+        .modal-backdrop { position:fixed;inset:0;z-index:1000;background:rgba(10,12,5,.55);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:0;animation:fadeIn .2s ease; }
+        .modal-box { width:100%;max-width:100%;max-height:92dvh;background:var(--surf);border-radius:18px 18px 0 0;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:sheetIn .3s ease; }
+        .modal-header { display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px 12px;background:linear-gradient(135deg,var(--olivedim),#ede9d8);border-bottom:1px solid var(--bdr);flex-shrink:0; }
         .modal-header-text { flex:1;min-width:0; }
         .modal-eyebrow { display:block;font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--sage);margin-bottom:3px; }
         .modal-title { font-family:var(--ffd);font-size:1.25rem;font-weight:500;color:var(--olive);line-height:1.2; }
-        .modal-close { width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink4);background:rgba(255,255,255,.6);transition:all .15s;flex-shrink:0;margin-left:12px;border:1px solid var(--bdr); }
+        .modal-close { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink4);background:rgba(255,255,255,.6);transition:all .15s;flex-shrink:0;margin-left:12px;border:1px solid var(--bdr); }
         .modal-close:hover { background:#fff;color:var(--ink); }
-        .modal-product-strip { display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--bdr);background:#fafaf6;flex-shrink:0; }
+        .modal-product-strip { display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--bdr);background:#fafaf6;flex-shrink:0; }
         .modal-product-img { width:54px;height:54px;border-radius:4px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0; }
         .modal-product-name { font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px; }
         .modal-product-price { font-size:12px;color:var(--olive2);font-weight:600; }
         .modal-product-note { font-size:10px;color:var(--ink4);margin-top:3px; }
-        .modal-body { flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:20px; }
+        .modal-body { flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch; }
         .modal-body::-webkit-scrollbar { width:3px; }
         .modal-body::-webkit-scrollbar-thumb { background:var(--bdr2);border-radius:3px; }
         .modal-field { display:flex;flex-direction:column;gap:9px; }
-        .modal-field-label { display:flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink); }
-        .modal-field-num { width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--ffb);font-variant-numeric: tabular-nums;
-  line-height: 1;  }
-        .modal-field-optional { font-size:8px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--ink4);padding:2px 7px;border:1px solid var(--bdr2);border-radius:50px; }
+        .modal-field-charm { border-top:1px solid #f2f2ef;padding-top:1.1rem; }
+        .modal-field-label { display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink); }
+        .modal-field-num { width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-variant-numeric:tabular-nums;line-height:1; }
         .modal-field-required { font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);padding:2px 7px;border:1px solid rgba(192,57,43,.35);background:rgba(192,57,43,.06);border-radius:50px; }
-        .field-required-star { color:var(--red); font-size:13px; font-weight:700; line-height:1; margin-left:2px; }
+        .field-required-star { color:var(--red);font-size:13px;font-weight:700;line-height:1;margin-left:2px; }
         .modal-field-error-text { font-size:10.5px;font-weight:500;color:var(--red); }
         .modal-selected-badge { font-size:9px;font-weight:600;text-transform:none;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 9px;border-radius:50px;margin-left:auto; }
-        .modal-chips { display:flex;flex-wrap:wrap;gap:8px; }
-        .modal-chips-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 8px; padding: 6px; }
-        .chip { font-size:12px;font-weight:500;padding:8px 16px;border-radius:4px;border:1.5px solid var(--bdr2);color:var(--ink7);transition:all .18s;min-height:38px;display:flex;align-items:center;background:transparent;cursor:pointer;font-family:var(--ffb); }
-        .chip:hover { border-color:var(--olive2);color:var(--olive);background:var(--olivedim); }
-        .chip-on { background:var(--olivedim) !important;color:var(--olive) !important;border-color:var(--olive) !important;font-weight:600 !important;box-shadow:inset 0 0 0 1px var(--olive); }
-        .chip-img-wrap { display:block;width:40px;aspect-ratio:4/5;overflow:hidden;border-radius:4px;cursor:zoom-in; }
-        .modal-textarea { width:100%;border:1.5px solid var(--bdr);border-radius:4px;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--bg);outline:none;resize:none;line-height:1.65;transition:border-color .2s;font-family:var(--ffb); }
+        .modal-textarea { width:100%;border:1.5px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:16px;color:var(--ink);background:var(--bg);outline:none;resize:none;line-height:1.6;transition:border-color .2s; }
         .modal-textarea:focus { border-color:var(--olive2);background:#fff; }
         .modal-textarea::placeholder { color:var(--ink4); }
         .modal-char-count { font-size:10px;color:var(--ink4);text-align:right; }
-        .modal-upload-zone { display:block;border:2px dashed var(--bdr2);border-radius:4px;cursor:pointer;transition:all .2s;overflow:hidden; }
-        .modal-upload-zone:hover { border-color:var(--olive2);background:var(--olivedim); }
-        .modal-upload-empty { display:flex;flex-direction:column;align-items:center;gap:7px;padding:24px 16px;color:var(--ink4);text-align:center; }
-        .modal-upload-cta { font-size:13px;font-weight:500;color:var(--olive); }
-        .modal-upload-sub { font-size:10px; }
-        .modal-upload-preview { display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--olivedim); }
-        .modal-upload-preview img { width:52px;height:52px;border-radius:7px;object-fit:cover; }
-        .modal-upload-preview-name { font-size:12px;font-weight:600;color:var(--olive);display:block; }
-        .modal-upload-change { font-size:10px;color:var(--ink4);display:block;margin-top:2px; }
-        .modal-summary-box { background:var(--golddim);border:1px solid rgba(184,152,42,.25);border-radius:4px;padding:9px 13px; }
+        .modal-summary-box { background:var(--golddim);border:1px solid rgba(184,152,42,.25);border-radius:6px;padding:9px 13px; }
         .modal-summary-title { font-size:8px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:6px; }
         .modal-summary-tags { display:flex;flex-wrap:wrap;gap:5px; }
         .modal-sum-tag { font-size:11px;font-weight:500;color:var(--olive);background:rgba(255,255,255,.8);border:1px solid rgba(90,110,43,.25);padding:3px 10px;border-radius:50px; }
-        .modal-footer { padding:12px 20px 18px;border-top:1px solid var(--bdr);display:flex;gap:10px;flex-shrink:0;background:#fafaf6; }
-        .modal-btn-skip { flex:1;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);border:1.5px solid var(--bdr2);border-radius:4px;padding:12px 14px;transition:all .18s;min-height:44px;font-family:var(--ffb); }
+        .modal-footer { padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--bdr);display:flex;gap:10px;flex-shrink:0;background:#fafaf6; }
+        .modal-btn-skip { flex:1;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);border:1.5px solid var(--bdr2);border-radius:6px;padding:12px 14px;transition:all .18s;min-height:46px; }
         .modal-btn-skip:hover { border-color:var(--ink4);color:var(--ink); }
-        .modal-btn-save { flex:2;display:flex;align-items:center;justify-content:center;gap:7px;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:4px;padding:12px 18px;min-height:44px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;font-family:var(--ffb); }
-        .modal-btn-save:hover { background:#2e3c0e;transform:translateY(-1px); }
+        .modal-btn-save { flex:2;display:flex;align-items:center;justify-content:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:6px;padding:12px 18px;min-height:46px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s; }
+        .modal-btn-save:hover { background:#2e3c0e; }
         .modal-btn-save.modal-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
-        .modal-btn-save.modal-btn-disabled:hover { background:var(--bdr2);transform:none; }
 
-        /* ── LIGHTBOX (enlarged image preview) ── */
-        .lightbox-backdrop { position:fixed;inset:0;z-index:1100;background:rgba(8,10,4,.86);display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .18s ease;cursor:zoom-out; }
-        .lightbox-img { max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.45);cursor:default;object-fit:contain; }
-        .lightbox-close { position:fixed;top:16px;right:16px;z-index:1101;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);transition:background .15s; }
+        /* ══════════ LIGHTBOX ══════════ */
+        .lightbox-backdrop { position:fixed;inset:0;z-index:1100;background:rgba(8,10,4,.86);display:flex;align-items:center;justify-content:center;padding:12px;animation:fadeIn .18s ease;cursor:zoom-out; }
+        .lightbox-img { max-width:96vw;max-height:88vh;border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.45);cursor:default;object-fit:contain; }
+        .lightbox-close { position:fixed;top:14px;right:14px;z-index:1101;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);transition:background .15s; }
         .lightbox-close:hover { background:rgba(255,255,255,.24); }
 
+        /* ══════════ SMALL SHARED BITS ══════════ */
         .cust-compact { display:flex;flex-wrap:wrap;gap:4px;margin-top:3px; }
         .combo-product-tag { font-size:9px;font-weight:600;letter-spacing:.03em;background:var(--olivedim);color:var(--olive);border:1px solid rgba(90,110,43,.3);padding:2px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap; }
         .cust-chip { font-size:9px;font-weight:500;color:var(--olive);background:var(--olivedim);border:1px solid rgba(90,110,43,.2);padding:2px 8px;border-radius:50px;white-space:nowrap; }
 
-        /* ── PRICING TIER SELECTOR (side-by-side, top of page) ── */
         .pricing-tier-block { margin-top:14px;display:flex;flex-direction:column;gap:8px; }
         .pricing-tier-label { font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink4); }
-        .pricing-tier-row { display:flex;flex-wrap:wrap;gap:10px; }
-        .pricing-tier-btn { display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 16px;border-radius:8px;border:1.5px solid var(--bdr2);background:var(--surf);transition:all .18s;min-width:88px; }
+        .pricing-tier-row { display:flex;flex-wrap:wrap;gap:8px; }
+        .pricing-tier-btn { display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;border-radius:8px;border:1.5px solid var(--bdr2);background:var(--surf);transition:all .18s;min-width:84px;flex:1 1 calc(50% - 8px); }
         .pricing-tier-btn:hover { border-color:var(--olive2); }
         .pricing-tier-btn.on { border-color:var(--olive);background:var(--olivedim);box-shadow:inset 0 0 0 1px var(--olive); }
         .pricing-tier-btn-name { font-size:12px;font-weight:700;color:var(--ink); }
         .pricing-tier-btn.on .pricing-tier-btn-name { color:var(--olive); }
         .pricing-tier-btn-price { font-size:11px;font-weight:500;color:var(--ink7); }
         .pricing-tier-btn.on .pricing-tier-btn-price { color:var(--olive2); }
-        .builder-pricing-wrap { max-width:1280px;margin:0 auto 18px; }
 
-        /* ── PAGE ── */
-        .page { min-height:100dvh;background:var(--bg);overflow-x:hidden;width:100%; }
+        /* image upload tiles */
+        .upload-tiles { display:flex;flex-wrap:wrap;gap:12px; }
+        .upload-tile { display:flex;flex-direction:column;gap:5px;align-items:center; }
+        .upload-tile-label { font-size:11px;font-weight:600;color:#4a5c22;text-align:center;max-width:88px; }
+        .upload-tile-zone { width:84px;height:84px;display:flex;align-items:center;justify-content:center;border:2px dashed var(--bdr2);border-radius:10px;cursor:pointer;transition:all .2s;background:var(--bg); }
+        .upload-tile-zone:hover { border-color:var(--olive2);background:var(--olivedim); }
+        .upload-tile-plus { font-size:26px;line-height:1;font-weight:500;color:var(--olive); }
+        .upload-tile-preview { position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:var(--olivedim); }
+        .upload-tile-preview img { width:100%;height:100%;object-fit:cover; }
+        .upload-tile-remove { position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1; }
 
-        /* ── HERO ── */
-        .hero { padding:clamp(24px,4vw,52px) clamp(16px,6vw,72px) clamp(18px,3vw,36px);background:linear-gradient(155deg,#f5f2eb 0%,#ede5d0 55%,#f5f2eb 100%);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden; }
-        .hero::before { content:'';position:absolute;right:-80px;top:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(184,152,42,.1) 0%,transparent 68%);pointer-events:none; }
-        .hero-eyebrow { display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px; }
+        /* ══════════ PAGE / HERO / MODE BAR ══════════ */
+        .page { min-height:100dvh;background:var(--bg);overflow-x:clip;width:100%; }
+
+        .hero { padding:22px 16px 18px;background:linear-gradient(155deg,#f5f2eb 0%,#ede5d0 55%,#f5f2eb 100%);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden; }
+        .hero::before { content:'';position:absolute;right:-80px;top:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(184,152,42,.1) 0%,transparent 68%);pointer-events:none; }
+        .hero-eyebrow { display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px; }
         .hero-line { width:24px;height:1px;background:var(--gold);opacity:.5; }
-        .hero h1 { font-family:var(--ffd);font-size:clamp(1.6rem,5vw,3.4rem);font-weight:500;color:var(--olive);line-height:1.1;margin-bottom:10px; }
+        .hero h1 { font-family:var(--ffd);font-size:clamp(1.6rem,6vw,3.4rem);font-weight:500;color:var(--olive);line-height:1.1;margin-bottom:8px; }
         .hero h1 em { font-style:italic;color:var(--gold); }
-        .hero-desc { font-size:clamp(12px,1.3vw,13.5px);font-weight:300;color:var(--ink7);max-width:400px;line-height:1.8; }
+        .hero-desc { font-size:12.5px;font-weight:300;color:var(--ink7);max-width:420px;line-height:1.75; }
 
-        /* ── MODE BAR ── */
-        .modebar { padding:18px clamp(16px,6vw,72px) 0;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap; }
-        .modetoggle { display:flex;background:var(--surf);border:1.5px solid var(--bdr2);border-radius:4px;padding:4px;gap:3px;box-shadow:var(--shadow);flex-shrink:0;width:100%;max-width:340px; }
-        .modebtn { flex:1;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:clamp(8px,1.5vw,11px) clamp(10px,2.2vw,22px);border-radius:3px;color:var(--ink7);transition:all .22s;min-height:38px;font-family:var(--ffb);white-space:nowrap; }
+        .modebar { padding:14px 16px 0;display:flex;flex-direction:column;align-items:stretch;gap:10px; }
+        .modetoggle { display:flex;background:var(--surf);border:1.5px solid var(--bdr2);border-radius:6px;padding:4px;gap:3px;box-shadow:var(--shadow);width:100%;max-width:360px; }
+        .modebtn { flex:1;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 12px;border-radius:4px;color:var(--ink7);transition:all .22s;min-height:40px;white-space:nowrap; }
         .modebtn.on { background:var(--olive);color:#fff;box-shadow:0 2px 10px rgba(61,80,22,.3); }
-        .modehint { font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;max-width:420px;padding-top:10px; }
+        .modehint { font-size:12px;font-weight:300;color:var(--ink7);line-height:1.7;max-width:460px; }
 
-        @media(min-width:640px) {
-          .modetoggle { width:auto; }
-          .modebtn { flex:none; }
-        }
+        .layout { padding-bottom:96px;width:100%; }
 
-        /* ── LAYOUT WRAPPER ── */
-        .layout { padding-bottom:clamp(90px,10vw,100px);width:100%; }
-
-        /* ── PRESET / CUSTOM GRID (shared) ── */
-        .combo-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1280px;margin:0 auto;padding:20px clamp(16px,4vw,52px) 0; width:100%; }
+        /* ══════════ CARD GRIDS (set picker + product picker) ══════════ */
+        .combo-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:1360px;margin:0 auto;padding:16px 14px 0;width:100%; }
         .combo-card { background:var(--surf);border:1.5px solid var(--bdr);overflow:hidden;display:flex;flex-direction:column;text-align:left;transition:all .2s;min-width:0; }
         .combo-card:hover { border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }
         .combo-card-img-wrap { position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--olivedim); }
@@ -2343,7 +2229,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-card:hover .combo-card-img-wrap img { transform:scale(1.06); }
         .combo-card-pct { position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--olive);color:#fff;padding:3px 8px;border-radius:4px; }
         .combo-card-badge { position:absolute;top:8px;left:8px;font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.93);color:var(--ink);padding:3px 8px;border-radius:4px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-        .combo-card-body { padding:12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0; }
+        .combo-card-body { padding:10px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0; }
         .combo-card-name { font-family:var(--ffd);font-size:1rem;font-weight:600;color:var(--ink);line-height:1.25;word-break:break-word; }
         .combo-card-tagline { font-size:11px;font-weight:300;color:var(--ink7);line-height:1.55;flex:1; }
         .combo-card-price-row { display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:auto; }
@@ -2351,150 +2237,100 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-card-original { font-size:11px;color:var(--ink4);text-decoration:line-through; }
         .combo-card-items-tag { font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);border:1px solid rgba(90,110,43,.2);padding:2px 8px;border-radius:50px;white-space:nowrap; }
 
-        @media(max-width:1200px) { .combo-grid { grid-template-columns:repeat(4,1fr); } }
-        @media(max-width:1100px) { .combo-grid { grid-template-columns:repeat(3,1fr); } }
-        @media(max-width:900px) { .combo-grid { grid-template-columns:repeat(3,1fr);gap:14px; } }
-        @media(max-width:760px) { .combo-grid { grid-template-columns:repeat(2,1fr);gap:12px; } }
-        @media(max-width:480px) { .combo-grid { grid-template-columns:repeat(2,1fr);gap:10px;padding-left:12px;padding-right:12px; } }
-        @media(max-width:380px) { .combo-grid { grid-template-columns:repeat(2,1fr);gap:9px; } }
-
-        /* ══════════════════ HAMPER (PRESET) — portrait hero + stacked piece list ══════════════════ */
-        .hamper-page { padding:20px clamp(16px,4vw,52px) 0;max-width:560px;margin:0 auto;width:100%; }
-        .hamper-back-btn { display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--olive2);margin-bottom:14px; }
+        /* ══════════ DETAIL PAGES — shared container ══════════ */
+        .hamper-page, .builder-page { width:100%;max-width:var(--container);margin:0 auto;padding:14px 14px 0; }
+        .hamper-back-btn { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--olive2);margin-bottom:12px;padding:6px 0; }
         .hamper-back-btn:hover { color:var(--olive); }
+        .hamper-divider { height:1px;background:var(--bdr);margin:16px 0; }
 
-        .hamper-main-block { display:flex;flex-direction:column;gap:14px;margin-bottom:22px; }
-        .hamper-main-img-wrap { position:relative;width:100%;aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--bdr); }
+        /* ── hero block: gallery + info ── */
+        .hamper-main-block { display:flex;flex-direction:column;gap:14px;margin-bottom:6px; }
+        .hamper-gallery { min-width:0; }
+        .hamper-main-img-wrap { position:relative;width:100%;aspect-ratio:4/5;max-height:68vh;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--bdr);cursor:zoom-in; }
         .hamper-main-img-wrap img { width:100%;height:100%;object-fit:cover; }
         .hamper-pct-badge { position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;background:var(--olive);color:#fff;padding:4px 10px;border-radius:4px; }
         .hamper-label-badge { position:absolute;top:10px;left:10px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.93);color:var(--ink);padding:4px 9px;border-radius:4px; }
+        .hamper-thumbs { display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin; }
+        .hamper-thumb { width:56px;height:56px;flex-shrink:0;border-radius:10px;overflow:hidden;border:1px solid var(--bdr2);padding:0;background:var(--surf);opacity:.7;transition:all .2s; }
+        .hamper-thumb.on { border:2px solid var(--olive);opacity:1; }
+        .hamper-thumb img { width:100%;height:100%;object-fit:cover; }
 
-        .hamper-main-info { flex:1;min-width:0; }
+        .hamper-main-info { min-width:0; }
         .hamper-eyebrow { display:block;font-size:9px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:6px; }
-        .hamper-title { font-family:var(--ffd);font-size:clamp(1.5rem,3vw,2rem);font-weight:500;color:var(--olive);line-height:1.15;margin-bottom:6px; }
-        .hamper-tagline { font-size:12.5px;font-weight:300;color:var(--ink7);line-height:1.65;margin-bottom:10px; }
+        .hamper-title { font-family:var(--ffd);font-size:clamp(1.6rem,6vw,2.4rem);font-weight:500;color:var(--olive);line-height:1.15;margin-bottom:6px; }
+        .hamper-tagline { font-size:13px;font-weight:300;color:var(--ink7);line-height:1.65;margin-bottom:10px; }
         .hamper-price-row { display:flex;align-items:baseline;gap:9px;flex-wrap:wrap; }
-        .hamper-price { font-family:var(--ffb);font-size:1.75rem;font-weight:700;color:var(--ink); }
-        .hamper-original { font-size:12px;color:var(--ink4);text-decoration:line-through; }
-        .hamper-save-tag { font-size:9px;font-weight:700;color:var(--green);background:rgba(42,96,48,.08);padding:3px 8px;border-radius:4px; }
+        .hamper-price { font-size:1.7rem;font-weight:700;color:var(--ink); }
+        .hamper-original { font-size:13px;color:var(--ink4);text-decoration:line-through; }
+        .hamper-save-tag { font-size:10px;font-weight:700;color:var(--green);background:rgba(42,96,48,.08);padding:3px 8px;border-radius:4px; }
+        .hamper-description { margin-top:12px;font-size:13.5px;color:#484840;line-height:1.75;white-space:pre-wrap; }
 
-        .hamper-divider { height:1px;background:var(--bdr);margin-bottom:18px; }
+        /* ── pieces ── */
         .hamper-section-label-row { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px; }
         .hamper-section-label { font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink4);font-weight:600; }
         .hamper-cust-progress { font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);border:1px solid rgba(90,110,43,.25);padding:3px 10px;border-radius:50px; }
 
-        .hamper-piece-list { display:flex;flex-direction:column;gap:16px; }
-        .hamper-piece { display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1.5px solid var(--bdr);background:var(--surf);position:relative;transition:border-color .2s,box-shadow .2s; }
+        .hamper-piece-list { display:grid;grid-template-columns:minmax(0,1fr);gap:18px; }
+        .hamper-piece { display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1.5px solid var(--bdr);background:var(--surf);position:relative;min-width:0;transition:border-color .2s,box-shadow .2s; }
         .hamper-piece.hamper-piece-error { border-color:var(--red);box-shadow:0 0 0 1px rgba(192,57,43,.25); }
-        .hamper-piece-index { position:absolute;top:-8px;left:10px;width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center; }
-
-        .hamper-piece-head { display:flex;align-items:center;gap:10px; }
-        .hamper-piece-img-link { flex-shrink:0;display:block;width:56px;aspect-ratio:4/5;border-radius:8px;overflow:hidden;border:1px solid var(--bdr); }
-        .hamper-piece-img-link img { width:100%;height:100%;object-fit:cover;transition:transform .3s; }
-        .hamper-piece-img-link:hover img { transform:scale(1.06); }
+        .hamper-piece-index { position:absolute;top:-9px;left:12px;min-width:22px;height:22px;padding:0 4px;border-radius:50%;background:var(--olive);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center; }
+        .hamper-piece-head { display:flex;align-items:center;gap:10px;padding-top:2px; }
         .hamper-piece-headinfo { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
-        .hamper-piece-name-link { text-decoration:none;color:inherit; }
-        .hamper-piece-name-link:hover .hamper-piece-name { text-decoration:underline;text-decoration-color:var(--bdr2); }
-        .hamper-piece-name { font-size:13px;font-weight:600;color:var(--ink); }
-        .hamper-piece-price { font-size:11.5px;font-weight:600;color:var(--olive2); }
-
-        .hamper-piece-desc { font-size:11.5px;font-weight:300;color:var(--ink7);line-height:1.6; }
-
-        .hamper-piece-body { display:flex;flex-direction:column;gap:9px; }
-        .hamper-piece-variant-img { width:100%;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--olivedim);border:1px solid var(--bdr); }
-        .hamper-piece-variant-img img { width:100%;height:100%;object-fit:cover; }
-        .hamper-piece-field { display:flex;flex-direction:column;gap:6px; }
+        .hamper-piece-name { font-size:14px;font-weight:600;color:var(--ink); }
+        .hamper-piece-price { font-size:12px;font-weight:600;color:var(--olive2); }
+        .hamper-piece-tags { display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap; }
+        .hamper-piece-desc { font-size:12px;font-weight:300;color:var(--ink7);line-height:1.65; }
+        .hamper-piece-body { display:flex;flex-direction:column;gap:12px; }
+        .hamper-piece-field { display:flex;flex-direction:column;gap:6px;min-width:0; }
         .hamper-piece-field-label { font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
         .hamper-piece-field-label em { font-style:normal;color:var(--olive2);text-transform:none;letter-spacing:0;font-weight:600; }
         .hamper-piece-field-required { font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);padding:2px 7px;border:1px solid rgba(192,57,43,.35);background:rgba(192,57,43,.06);border-radius:50px; }
         .hamper-piece-field-error-text { font-size:10.5px;font-weight:500;color:var(--red); }
-        .hamper-chip-row { display:flex;flex-wrap:wrap;gap:6px; }
-        .hamper-chip { font-size:10.5px;font-weight:500;padding:6px 12px;border-radius:50px;border:1.3px solid var(--bdr2);color:var(--ink7);background:transparent;transition:all .18s; }
-        .hamper-chip:hover { border-color:var(--olive2);color:var(--olive);background:var(--olivedim); }
-        .hamper-chip.on { background:var(--olive);color:#fff !important;border-color:var(--olive);font-weight:600; }
-        .hamper-chip-sm { min-width:34px;text-align:center; }
+        .hamper-global-error { margin-top:16px;padding:10px 14px;border-radius:8px;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.3);color:var(--red);font-size:12px;font-weight:500;line-height:1.5; }
 
-        /* ── OPTION SWATCHES (colour / size / etc.) ──
-           Whole swatch (image + name) = ONE select button.
-           The small eye button (top-right of the image) = separate "view larger photo" action. */
-        .hamper-colour-swatch-row { display:flex;flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:4px 2px 6px;scrollbar-width:thin; }
-        .hamper-colour-swatch-row::-webkit-scrollbar { height:4px; }
-        .hamper-colour-swatch-row::-webkit-scrollbar-thumb { background:var(--bdr2);border-radius:3px; }
-        .hamper-colour-swatch-row-error { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 10px; padding: 6px 6px 10px; }
-
-        .hamper-colour-swatch { position:relative;flex-shrink:0;display:flex; }
-        .hamper-colour-swatch-btn { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:8px 10px;cursor:pointer;border-radius:10px;transition:background .18s, box-shadow .18s; }
+        /* ── option swatches ── */
+        .hamper-colour-swatch-row { display:flex;flex-wrap:wrap;gap:4px;padding:2px 0 4px; }
+        .hamper-colour-swatch-row-error { box-shadow:inset 0 0 0 1.5px var(--red);border-radius:10px;padding:6px; }
+        .hamper-colour-swatch { position:relative;display:flex; }
+        .hamper-colour-swatch-btn { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:7px 8px;cursor:pointer;border-radius:10px;transition:background .18s,box-shadow .18s; }
         .hamper-colour-swatch-btn:hover { background:var(--olivedim); }
         .hamper-colour-swatch-btn:disabled { cursor:not-allowed; }
         .hamper-colour-swatch.out { opacity:.5; }
-
-        .hamper-colour-swatch-img-wrap { position:relative;display:block;flex-shrink:0;width:56px;min-width:56px;aspect-ratio:4/5;overflow:hidden;transition:all .18s;border:1.5px solid transparent; }
+        .hamper-colour-swatch-img-wrap { position:relative;display:block;flex-shrink:0;width:60px;aspect-ratio:4/5;overflow:hidden;border:1.5px solid transparent;transition:all .18s; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
         .hamper-colour-swatch-btn:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
-
-        /* Selected = clearly highlighted until the user picks something else */
         .hamper-colour-swatch.on .hamper-colour-swatch-btn { background:var(--olivedim);box-shadow:inset 0 0 0 1.5px var(--olive); }
         .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.18); }
-
-        .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:40px;min-width:40px; }
-        .hamper-colour-swatch-label { font-size:12.5px;font-weight:600;color:var(--ink7);white-space:nowrap; }
+        .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:44px; }
+        .hamper-colour-swatch-label { font-size:12px;font-weight:600;color:var(--ink7);white-space:nowrap; }
         .hamper-colour-swatch.on .hamper-colour-swatch-label { color:var(--olive);font-weight:700; }
-
-        /* text-only options (sizes etc. with no photo) → pill style */
-        .hamper-colour-swatch.text-only .hamper-colour-swatch-btn { padding:9px 16px;border:1.5px solid var(--bdr2);border-radius:50px;min-height:38px;justify-content:center; }
+        .hamper-colour-swatch.text-only .hamper-colour-swatch-btn { padding:9px 16px;border:1.5px solid var(--bdr2);border-radius:50px;min-height:40px;justify-content:center; }
         .hamper-colour-swatch.text-only.on .hamper-colour-swatch-btn { border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive); }
-
-        /* "View photo" text link next to the selected option name */
         .swatch-view-link { font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--olive2);text-decoration:underline;text-underline-offset:2px;padding:0;margin-left:auto; }
         .swatch-view-link:hover { color:var(--olive); }
         .modal-field-label .swatch-view-link { margin-left:8px; }
 
-        .hamper-global-error { margin-top:16px;padding:10px 14px;border-radius:8px;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.3);color:var(--red);font-size:12px;font-weight:500;line-height:1.5; }
+        /* ══════════ BUILDER ══════════ */
+        .builder-header-row { display:flex;gap:14px;align-items:flex-start;margin-bottom:16px; }
+        .builder-header-media { flex-shrink:0;width:96px; }
+        .builder-header-img { width:96px;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--bdr); }
+        .builder-header-img img { width:100%;height:100%;object-fit:cover; }
+        .builder-header-thumbs { display:flex;gap:5px;margin-top:6px;flex-wrap:wrap; }
+        .builder-header-thumb { width:28px;height:28px;border-radius:6px;overflow:hidden;border:1px solid var(--bdr);padding:0;opacity:.75; }
+        .builder-header-thumb.on { border:2px solid var(--gold);opacity:1; }
+        .builder-header-thumb img { width:100%;height:100%;object-fit:cover; }
+        .builder-header-text { flex:1;min-width:0; }
+        .builder-header-title { font-family:var(--ffd);font-size:clamp(1.3rem,5vw,1.9rem);font-weight:600;color:var(--olive);line-height:1.2;margin-bottom:4px; }
+        .builder-header-tagline { font-size:12.5px;font-weight:300;color:var(--ink7);line-height:1.6; }
+        .builder-header-desc { margin-top:6px;font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap; }
 
-        .hamper-sticky-bar { position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:12px clamp(16px,4vw,52px);padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:16px; }
-        .hamper-sticky-info { flex:1;min-width:0; }
-        .hamper-sticky-label { display:block;font-size:8px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px; }
-        .hamper-sticky-price { display:flex;align-items:baseline;gap:8px;flex-wrap:wrap; }
-        .hamper-sticky-price-val { font-family:var(--ffd);font-size:1.25rem;font-weight:600;color:var(--ink); }
-        .hamper-sticky-price-orig { font-size:11px;color:var(--ink4);text-decoration:line-through; }
-        .hamper-sticky-btn { flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 22px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
-        .hamper-sticky-btn:hover { background:#2e3c0e;transform:translateY(-1px); }
-        .hamper-sticky-btn.done { background:var(--green) !important; }
-        .hamper-sticky-btn.hamper-sticky-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
-        .hamper-sticky-btn.hamper-sticky-btn-disabled:hover { background:var(--bdr2);transform:none; }
-
-        @media(max-width:768px) {
-          .hamper-page { max-width:520px; }
-        }
-        @media(max-width:520px) {
-          .hamper-page { padding:14px 14px 0; }
-          .hamper-main-img-wrap { aspect-ratio:2/3;  }
-          .hamper-piece-img-link { width:48px; }
-          .hamper-colour-swatch-img-wrap { width:65px;min-width:65px; }
-          .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:40px;min-width:40px; }
-          .hamper-colour-swatch-label { font-size:11.5px; }
-          .hamper-sticky-bar { padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom)); gap:10px; }
-          .hamper-sticky-price-val { font-size:1.05rem; }
-          .hamper-sticky-btn { padding:12px 16px;font-size:9px; }
-          .pricing-tier-btn { padding:8px 12px;min-width:76px; }
-        }
-        @media(max-width:360px) {
-          .hamper-sticky-label { font-size:7px; }
-          .hamper-sticky-btn { padding:11px 12px;font-size:8px;gap:5px; }
-        }
-
-        /* ══════════════════ BUILD YOUR OWN — bundle grid + product picker + sticky bar ══════════════════ */
-        .builder-page { padding:20px clamp(16px,4vw,52px) 0;width:100%; }
-        .builder-header-row { max-width:1280px;margin:0 auto 16px; }
-        .builder-header-title { font-family:var(--ffd);font-size:clamp(1.3rem,2.6vw,1.7rem);font-weight:600;color:var(--olive);line-height:1.2;margin-bottom:4px; }
-        .builder-header-tagline { font-size:12px;font-weight:300;color:var(--ink7);line-height:1.6; }
-        .builder-progress-wrap { max-width:1280px;margin:0 auto 18px; }
+        .builder-progress-wrap { margin-bottom:16px; }
         .builder-progress-track { height:5px;background:var(--bdr);border-radius:3px;overflow:hidden;margin-bottom:8px; }
         .builder-progress-fill { height:100%;background:var(--olive);border-radius:3px;transition:width .3s ease; }
-        .builder-hint { font-size:11px;font-weight:500;color:var(--olive2); }
+        .builder-hint { font-size:11.5px;font-weight:500;color:var(--olive2); }
         .builder-hint.done { color:var(--green); }
 
-        .builder-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1280px;margin:0 auto; }
+        .builder-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
         .builder-card { background:var(--surf);border:1.5px solid var(--bdr);overflow:hidden;display:flex;flex-direction:column;transition:all .2s;min-width:0; }
         .builder-card:hover:not(.disabled) { border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }
         .builder-card.chosen { border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,152,42,.15); }
@@ -2504,290 +2340,334 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-card-img-link img { width:100%;height:100%;object-fit:cover;transition:transform .35s ease; }
         .builder-card:hover:not(.disabled) .builder-card-img-link img { transform:scale(1.06); }
         .builder-card-check { position:absolute;top:8px;right:8px;width:24px;height:24px;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700; }
-        .builder-card-body { padding:12px 12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0; }
+        .builder-card-body { padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0;flex:1; }
         .builder-card-name-link { text-decoration:none;color:inherit; }
         .builder-card-name-link:hover .builder-card-name { color:var(--olive); }
-        .builder-card-name { font-family:var(--ffd);font-size:.95rem;font-weight:600;color:var(--ink);line-height:1.25;word-break:break-word; }
+        .builder-card-name { font-family:var(--ffd);font-size:.98rem;font-weight:600;color:var(--ink);line-height:1.25;word-break:break-word; }
         .builder-card-price { font-size:12px;font-weight:600;color:var(--olive2); }
-        .builder-no-cust { font-size:9.5px;color:var(--ink4);font-style:italic; }
-        .builder-card-actions { display:flex;gap:6px;margin-top:2px; }
-        .builder-edit-btn { flex:1;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);border:1.3px solid var(--olive2);border-radius:50px;padding:7px 0;transition:all .18s; }
+        .builder-no-cust { font-size:10px;color:var(--ink4);font-style:italic; }
+        .builder-card-actions { display:flex;gap:6px;margin-top:auto; }
+        .builder-edit-btn { flex:1;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);border:1.3px solid var(--olive2);border-radius:50px;padding:9px 0;transition:all .18s; }
         .builder-edit-btn:hover { background:var(--olive);color:#fff; }
-        .builder-remove-btn { flex:1;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink4);border:1.3px solid var(--bdr2);border-radius:50px;padding:7px 0;transition:all .18s; }
+        .builder-remove-btn { flex:1;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink4);border:1.3px solid var(--bdr2);border-radius:50px;padding:9px 0;transition:all .18s; }
         .builder-remove-btn:hover { color:var(--red);border-color:var(--red); }
-        .builder-add-btn { margin-top:2px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:50px;padding:10px 0;transition:all .2s; }
+        .builder-add-btn { margin-top:auto;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:50px;padding:11px 0;transition:all .2s; }
         .builder-add-btn:hover:not(:disabled) { background:#2e3c0e; }
         .builder-add-btn:disabled { opacity:.4;cursor:not-allowed;background:var(--bdr2);color:var(--ink4); }
 
-        .builder-sticky-bar { position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:12px clamp(16px,4vw,52px);padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:14px; }
+        /* ══════════ STICKY BARS ══════════ */
+        .hamper-sticky-bar, .builder-sticky-bar { position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:10px 14px calc(10px + env(safe-area-inset-bottom)); }
+        .sticky-inner { max-width:var(--container);margin:0 auto;display:flex;align-items:center;gap:12px; }
+        .sticky-inner--col { flex-direction:column;align-items:stretch;gap:0; }
+
+        .hamper-sticky-info { flex:1;min-width:0; }
+        .hamper-sticky-label { display:block;font-size:8px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px; }
+        .hamper-sticky-price { display:flex;align-items:baseline;gap:8px;flex-wrap:wrap; }
+        .hamper-sticky-price-val { font-family:var(--ffd);font-size:1.2rem;font-weight:600;color:var(--ink); }
+        .hamper-sticky-price-orig { font-size:11px;color:var(--ink4);text-decoration:line-through; }
+        .hamper-sticky-btn { flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 20px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
+        .hamper-sticky-btn:hover { background:#2e3c0e; }
+        .hamper-sticky-btn.done { background:var(--green) !important; }
+        .hamper-sticky-btn.hamper-sticky-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
+
         .builder-sticky-toggle { flex-shrink:0;display:flex;align-items:center;gap:6px;background:var(--olivedim);border:1.5px solid var(--bdr2);border-radius:50px;padding:9px 14px;color:var(--olive);transition:all .18s; }
         .builder-sticky-toggle:disabled { opacity:.5; }
         .builder-sticky-count { font-size:13px;font-weight:700; }
         .builder-sticky-info { flex:1;min-width:0; }
-        .builder-sticky-label { font-size:12px;font-weight:600;color:var(--ink);line-height:1.4;display:block; }
+        .builder-sticky-label { font-size:11px;font-weight:600;color:var(--ink);line-height:1.4;display:block; }
         .builder-sticky-label--done { color:var(--green); }
-        .builder-sticky-cart { flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 20px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
-        .builder-sticky-cart:hover:not(:disabled) { background:#2e3c0e;transform:translateY(-1px); }
+        .builder-sticky-cart { flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 18px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
+        .builder-sticky-cart:hover:not(:disabled) { background:#2e3c0e; }
         .builder-sticky-cart:disabled { opacity:.4;cursor:not-allowed; }
         .builder-sticky-cart.done { background:var(--green) !important; }
 
-        .builder-drawer { position:fixed;left:0;right:0;bottom:64px;z-index:299;max-height:50vh;overflow-y:auto;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:14px clamp(16px,4vw,52px); }
+        .builder-drawer { position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:299;max-height:50vh;overflow-y:auto;background:var(--surf);border-top:1.5px solid var(--bdr);box-shadow:0 -6px 24px rgba(26,29,13,.10);padding:14px; }
         .builder-drawer-head { display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);margin-bottom:10px; }
-        .builder-drawer-head button { font-size:10px;color:var(--ink4);text-decoration:underline; }
+        .builder-drawer-head button { font-size:11px;color:var(--ink4);text-decoration:underline;padding:4px; }
         .builder-drawer-items { display:flex;flex-direction:column;gap:8px; }
         .builder-drawer-item { display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:8px;padding:6px 10px; }
         .builder-drawer-item img { width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0; }
         .builder-drawer-item-name { flex:1;font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
         .builder-drawer-item-name em { font-style:normal;color:var(--gold);font-size:10px; }
-        .builder-drawer-item button { width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:13px;line-height:1;flex-shrink:0; }
+        .builder-drawer-item button { width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;line-height:1;flex-shrink:0; }
 
-        /* ════════════════════════════════════════════
-           CHARM & CHAIN SELECTORS
-        ════════════════════════════════════════════ */
-        .charm-section-label{
-          font-size: 11px; font-weight: 700; letter-spacing: .06em;
-          text-transform: uppercase; color: var(--olive-600);
-          display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+        /* ══════════ CHARM & CHAIN SELECTORS (shared components) ══════════ */
+        .charm-selector { width:100%; }
+        .charm-section-label { font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive-600);display:flex;align-items:center;flex-wrap:wrap;gap:8px;row-gap:6px;margin-bottom:12px; }
+        .charm-filled-badge { margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--beige);background:var(--olive-500);padding:2px 8px;border-radius:4px;text-transform:uppercase; }
+        .charm-all-done { color:var(--olive-500);font-weight:600; }
+        .charm-fixed-count-note { display:flex;align-items:flex-start;gap:8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.28);border-radius:10px;padding:9px 12px;font-size:12px;color:#6b5518;line-height:1.55; }
+        .charm-fixed-count-note strong { font-weight:700;color:var(--olive-600); }
+        .charm-count-grid { display:flex;flex-wrap:wrap;gap:8px; }
+        .charm-count-btn { width:40px;height:40px;border-radius:10px;background:#fff;border:1px solid var(--beige-dkr);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;transition:all .15s; }
+        .charm-count-btn:hover { border-color:var(--olive-400);background:var(--olive-50); }
+        .charm-count-btn.active { background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));color:#8c6b20;box-shadow:0 0 0 3px rgba(201,168,76,.15);transform:translateY(-2px);border-color:transparent; }
+        .charm-summary-strip { background:linear-gradient(135deg,rgba(90,110,35,.08),rgba(201,168,76,.06));border:1px solid rgba(90,110,35,.18);border-radius:12px;padding:12px 14px; }
+        .charm-summary-header { display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--mist);margin-bottom:10px;line-height:1.5; }
+        .charm-summary-header strong { font-weight:700;color:var(--olive-600); }
+        .charm-summary-pill { display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:500;color:var(--ink);background:#fff;border:1px solid rgba(61,74,34,.12);padding:4px 10px 4px 4px;border-radius:50px; }
+        .charm-summary-pill--empty { color:var(--mist);background:var(--beige-dk);border-color:var(--beige-dkr);font-style:italic; }
+        .charm-summary-num { width:20px;height:20px;border-radius:50%;background:var(--olive-600);color:var(--beige);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+        .charm-summary-pill--empty .charm-summary-num { background:var(--beige-dkr);color:var(--mist); }
+
+        .chain-selector-wrap { background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.06));border:1.5px solid rgba(90,110,35,.2);border-radius:18px;padding:14px 14px 16px;margin-bottom:16px;position:relative; }
+        .chain-trigger { width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:7px 10px;cursor:pointer;text-align:left;transition:border-color .2s,box-shadow .2s; }
+        .chain-trigger:hover { border-color:var(--olive-400); }
+        .chain-trigger--open { border-color:var(--olive-500);box-shadow:0 0 0 3px rgba(90,110,35,.1); }
+        .chain-trigger--missing { border-color:var(--red);background:rgba(192,57,43,.04); }
+        .chain-trigger-thumb { width:46px;height:46px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#fff;border:1px solid rgba(61,74,34,.1);display:flex;align-items:center;justify-content:center;cursor:zoom-in;position:relative; }
+        .chain-trigger-thumb img { width:100%;height:100%;object-fit:contain;display:block; }
+        .chain-trigger-zoom { position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;background:rgba(26,31,13,.65);color:#fff;display:flex;align-items:center;justify-content:center; }
+        .chain-trigger-zoom svg { width:9px;height:9px; }
+        .chain-trigger-text { flex:1;min-width:0;display:flex;flex-direction:column;gap:1px; }
+        .chain-trigger-label { font-size:12.5px;font-weight:600;color:var(--olive-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .chain-trigger-price { font-size:10.5px;font-weight:600;color:var(--olive-600); }
+        .chain-trigger-chevron { width:16px;height:16px;color:var(--mist);flex-shrink:0;transition:transform .25s ease; }
+        .chain-trigger--open .chain-trigger-chevron { transform:rotate(180deg); }
+        .chain-options-panel { margin-top:10px;background:#fff;border:1.5px solid var(--beige-dkr);border-radius:16px;overflow:hidden;animation:chainPanelIn .2s ease both; }
+        .chain-option-row { width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;background:#fff;border:none;border-bottom:1px solid rgba(61,74,34,.07);cursor:pointer;text-align:left;transition:background .15s; }
+        .chain-option-row:last-child { border-bottom:none; }
+        .chain-option-row:hover { background:var(--olive-50); }
+        .chain-option-row--active { background:rgba(201,168,76,.09); }
+        .chain-option-thumb { width:68px;height:68px;border-radius:12px;overflow:hidden;flex-shrink:0;position:relative;background:#fff;border:1px solid rgba(61,74,34,.1);cursor:zoom-in; }
+        .chain-option-thumb img { width:100%;height:100%;object-fit:contain;display:block;transition:transform .3s ease; }
+        .chain-option-row:hover .chain-option-thumb img { transform:scale(1.05); }
+        .chain-option-zoom { position:absolute;bottom:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(26,31,13,.65);color:#fff;display:flex;align-items:center;justify-content:center; }
+        .chain-option-zoom svg { width:11px;height:11px; }
+        .chain-option-text { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
+        .chain-option-label { font-size:12.5px;font-weight:600;color:var(--olive-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .chain-option-price { font-size:10.5px;font-weight:700;color:var(--olive-600); }
+        .chain-option-check { width:18px;height:18px;color:var(--olive-500);flex-shrink:0; }
+        .charm-select { width:100%;appearance:none;-webkit-appearance:none;background:var(--beige);border:1.5px solid var(--beige-dkr);border-radius:8px;padding:10px 36px 10px 12px;font-size:16px;color:#101010;cursor:pointer;outline:none; }
+
+        /* ══════════ EXTRAS: trust + policies + delivery ══════════ */
+        .combo-extras { display:flex;flex-direction:column;gap:16px; }
+        .combo-extras-grid { display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start; }
+
+        .combo-trust { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px; }
+        .combo-trust-item { display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 4px;background:var(--surf);border:1px solid var(--bdr);border-radius:12px;transition:transform .2s,box-shadow .2s; }
+        .combo-trust-item:hover { transform:translateY(-3px);box-shadow:var(--shadow); }
+        .combo-trust-icon { width:26px;height:26px;color:var(--olive2);margin-bottom:5px; }
+        .combo-trust-title { font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--olive);margin-bottom:2px; }
+        .combo-trust-sub { font-size:8px;color:var(--ink7);line-height:1.3; }
+
+        .combo-accordion { border-top:1px solid var(--bdr); }
+        .combo-acc-item { border-bottom:1px solid var(--bdr); }
+        .combo-acc-head { display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;transition:background .15s; }
+        .combo-acc-head:hover { background:rgba(61,80,22,.03); }
+        .combo-acc-head-left { display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--ink);text-align:left; }
+        .combo-acc-emoji { font-size:15px; }
+        .combo-acc-chevron { color:var(--ink4);flex-shrink:0;transition:transform .32s ease; }
+        .combo-acc-item--open .combo-acc-chevron { transform:rotate(180deg); }
+        .combo-acc-body { padding:0 2px 16px 4px;font-size:12.5px;font-weight:300;line-height:1.8;color:var(--ink7); }
+
+        .cpol { display:flex;flex-direction:column;gap:14px;font-size:12.5px;font-weight:400;line-height:1.75;color:var(--ink); }
+        .cpol p { margin:0; }
+        .cpol .cpol-h { font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);margin-bottom:4px; }
+        .cpol strong { font-weight:600;color:var(--ink); }
+        .cpol a { color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px; }
+        .cpol ul { list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px; }
+        .cpol li { display:flex;gap:8px;align-items:flex-start; }
+        .cpol li::before { content:'✦';color:var(--sage);font-size:9px;margin-top:5px;flex-shrink:0; }
+        .cpol-table-wrap { overflow-x:auto;border:1px solid var(--bdr);border-radius:10px;background:var(--surf);margin-top:6px; }
+        .cpol-table { width:100%;border-collapse:collapse;font-size:12px; }
+        .cpol-table th { background:var(--olivedim);color:var(--olive);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 12px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap; }
+        .cpol-table td { padding:10px 12px;border-bottom:1px solid var(--olivedim);white-space:nowrap; }
+        .cpol-table tr:last-child td { border-bottom:none; }
+        .cpol-note { background:var(--olivedim);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;font-size:12px;margin-top:8px; }
+        .cpol-alert { background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.18);border-left:3px solid rgba(192,57,43,.5);border-radius:8px;padding:10px 12px;font-size:12px; }
+        .cpol-alert strong { color:var(--red); }
+        .cpol .cpol-link { align-self:flex-start;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border-bottom:1.5px solid var(--bdr2);padding-bottom:1px; }
+        .cpol .cpol-link:hover { border-color:var(--olive); }
+
+        .combo-delivery-label { font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px; }
+        .combo-delivery-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+        .combo-delivery-card { border:1.5px solid var(--bdr);border-radius:14px;padding:12px 10px;background:var(--surf); }
+        .combo-delivery-icon { font-size:22px;margin-bottom:4px; }
+        .combo-delivery-opt-label { font-size:14px;font-weight:800;color:var(--ink);margin-bottom:10px; }
+        .combo-delivery-tier { margin-bottom:6px; }
+        .combo-delivery-tier-label { font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--olive2);margin-bottom:1px; }
+        .combo-delivery-tier-val { font-size:12px;font-weight:600;color:var(--ink); }
+        .combo-delivery-rate { font-size:13px;font-weight:800;color:var(--olive2); }
+        .combo-delivery-freebar { margin-top:10px;padding:11px 14px;background:linear-gradient(135deg,#e6f4e7,#f0faf0);border:1.5px solid rgba(42,96,48,.22);border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#0a2e12;line-height:1.4; }
+
+        /* ══════════ REVIEWS ══════════ */
+        .combo-rev-wrapper { margin:28px auto 0;padding-top:24px;border-top:1px solid var(--bdr);max-width:900px; }
+        .combo-rev-header { text-align:center;margin-bottom:20px; }
+        .combo-rev-eyebrow { display:block;font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:5px; }
+        .combo-rev-title { font-family:var(--ffd);font-size:1.4rem;font-weight:400;font-style:italic;color:var(--olive); }
+        .combo-rev-summary { display:grid;grid-template-columns:minmax(0,1fr);background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:16px; }
+        .combo-rev-avg-box { background:linear-gradient(160deg,var(--olive),var(--olive2));padding:16px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap; }
+        .combo-rev-avg-num { font-family:var(--ffd);font-size:2.6rem;font-weight:600;color:#f5f0e8;line-height:1; }
+        .combo-rev-stars { font-size:13px;color:var(--gold);letter-spacing:2px; }
+        .combo-rev-total { font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.7); }
+        .combo-rev-bars { display:flex;flex-direction:column;gap:5px;padding:12px 14px;justify-content:center; }
+        .combo-rev-bar-row { display:flex;align-items:center;gap:8px;padding:3px 5px;border-radius:6px; }
+        .combo-rev-bar-row:hover { background:rgba(61,80,22,.05); }
+        .combo-rev-bar-row.active { background:var(--golddim); }
+        .combo-rev-bar-label { font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right; }
+        .combo-rev-bar-track { flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden; }
+        .combo-rev-bar-fill { height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px; }
+        .combo-rev-bar-count { font-size:9px;color:var(--ink4);min-width:20px; }
+        .combo-rev-controls { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;min-height:36px; }
+        .combo-rev-clear { font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:6px 12px; }
+        .combo-rev-write-btn { font-size:11px;font-weight:600;color:#fff;background:var(--olive);border-radius:50px;padding:10px 18px;margin-left:auto; }
+        .combo-rev-empty { font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0; }
+        .combo-rev-list { display:flex;flex-direction:column;gap:12px; }
+        .combo-rev-card { background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:14px; }
+        .combo-rev-card-top { display:flex;align-items:flex-start;gap:12px;margin-bottom:10px; }
+        .combo-rev-avatar { width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--golddim);color:var(--gold); }
+        .combo-rev-meta-row { display:flex;align-items:center;flex-wrap:wrap;gap:7px; }
+        .combo-rev-name { font-size:12.5px;font-weight:600;color:var(--ink); }
+        .combo-rev-verified { display:flex;align-items:center;gap:3px;font-size:9px;font-weight:600;text-transform:uppercase;color:var(--olive2); }
+        .combo-rev-stars-sm { font-size:11px;color:var(--gold); }
+        .combo-rev-date { font-size:10px;color:var(--ink4); }
+        .combo-rev-body { font-size:12.5px;font-weight:300;color:var(--ink7);line-height:1.75; }
+        .combo-rev-load { display:flex;justify-content:center;margin-top:20px; }
+        .combo-rev-load-btn { font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--olive);background:var(--surf);border:1.5px solid var(--bdr2);border-radius:50px;padding:12px 26px; }
+
+        /* Touch devices: no hover lift */
+        @media (hover:none) {
+          .combo-card:hover, .builder-card:hover:not(.disabled), .combo-trust-item:hover { transform:none;box-shadow:none; }
         }
 
-        .charm-fixed-count-note{
-          display: flex; align-items: flex-start; gap: 8px;
-          background: rgba(201,168,76,.1);
-          border: 1px solid rgba(201,168,76,.28);
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-size: 12px; font-weight: 400; color: #6b5518;
-          line-height: 1.55;
-        }
-        .charm-fixed-count-note strong{ font-weight: 700; color: var(--olive-600); }
+        /* ═══════════════════════════════════════════════
+           BREAKPOINTS (mobile-first)
+        ═══════════════════════════════════════════════ */
 
-        .charm-count-grid{ display: flex; flex-wrap: wrap; gap: 8px; }
-        .charm-count-btn{
-          width: 38px; height: 38px; border-radius: 10px;
-          background: white; border: 1px solid var(--beige-dkr);
-          font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500; color: var(--ink);
-          cursor: pointer; transition: all .15s;
-        }
-        .charm-count-btn:hover{ border-color: var(--olive-400); background: var(--olive-50); }
-        .charm-count-btn.active{
-          background: linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05));
-          color: #8c6b20; box-shadow: 0 0 0 3px rgba(201,168,76,.15);
-          transform: translateY(-2px); border-color: transparent;
-        }
-
-        .charm-dropdowns{ margin-top: 4px; }
-        .charm-dropdown-list{ display: flex; flex-direction: column; gap: 10px; }
-        .charm-dropdown-item{
-          background: white; border: 1.5px solid var(--beige-dkr);
-          border-radius: 12px; padding: 10px 12px 12px; transition: border-color .2s;
-        }
-        .charm-dropdown-item:focus-within{ border-color: var(--olive-400); }
-
-        .charm-dropdown-label-row{
-          display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
-        }
-        .charm-num-badge{
-          width: 22px; height: 22px; border-radius: 50%;
-          background: var(--olive-600); color: var(--beige);
-          font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .charm-slot-label{
-          font-size: 11px; font-weight: 600; letter-spacing: .06em;
-          text-transform: uppercase; color: var(--olive-600);
-        }
-        .charm-selected-tag{
-          font-size: 10px; font-weight: 500; color: #8c6b20;
-          background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3);
-          padding: 2px 8px; border-radius: 4px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-
-        .charm-select-inner{ position: relative; }
-        .charm-select{
-          width: 100%; appearance: none; -webkit-appearance: none;
-          background: var(--beige); border: 1.5px solid var(--beige-dkr);
-          border-radius: 8px; padding: 10px 36px 10px 12px;
-          font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 400; color: #101010;
-          cursor: pointer; outline: none; transition: border-color .2s, box-shadow .2s;
-        }
-        .charm-select:focus{ border-color: var(--olive-400); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
-        .charm-select--filled{ background: var(--olive-50); border-color: rgba(90,110,35,.25); color: var(--olive-900); font-weight: 500; }
-        .charm-select-chevron{
-          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-          width: 14px; height: 14px; color: var(--mist); pointer-events: none;
-        }
-        
-        .chain-selector-wrap{
-          background: linear-gradient(135deg, rgba(90,110,35,.07), rgba(201,168,76,.06));
-          border: 1.5px solid rgba(90,110,35,.2); border-radius: 18px;
-          padding: 14px 14px 16px; margin-bottom: 20px; position: relative;
-        }
-        .chain-trigger{
-          width: 100%; display: flex; align-items: center; gap: 10px;
-          background: white; border: 1.5px solid var(--beige-dkr); border-radius: 12px;
-          padding: 7px 10px; cursor: pointer; font-family: 'Jost', sans-serif; text-align: left;
-          transition: border-color .2s, box-shadow .2s;
-        }
-        .chain-trigger:hover{ border-color: var(--olive-400); }
-        .chain-trigger--open{ border-color: var(--olive-500); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
-        .chain-trigger--missing{ border-color: var(--red); background: rgba(192,57,43,.04); }
-        .chain-trigger-thumb{
-          width: 44px; height: 44px; border-radius: 8px;
-          overflow: hidden; flex-shrink: 0; background: white;
-          border: 1px solid rgba(61,74,34,.1); display: flex; align-items: center; justify-content: center;
-          cursor: zoom-in; position: relative;
-        }
-        .chain-trigger-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; }
-        .chain-trigger-zoom{
-          position: absolute; bottom: 3px; right: 3px;
-          width: 16px; height: 16px; border-radius: 50%;
-          background: rgba(26,31,13,.65); color: white; display: flex; align-items: center; justify-content: center;
-        }
-        .chain-trigger-zoom svg{ width: 9px; height: 9px; }
-        .chain-trigger-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-        .chain-trigger-label{ font-size: 12px; font-weight: 600; color: var(--olive-900); letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .chain-trigger-price{ font-size: 10px; font-weight: 600; color: var(--olive-600); letter-spacing: .02em; }
-        .chain-trigger-chevron{
-          width: 16px; height: 16px; color: var(--mist); flex-shrink: 0; transition: transform .25s ease;
-        }
-        .chain-trigger--open .chain-trigger-chevron{ transform: rotate(180deg); }
-        .chain-options-panel{
-          margin-top: 10px; background: white; border: 1.5px solid var(--beige-dkr);
-          border-radius: 16px; overflow: hidden; animation: chainPanelIn .2s ease both;
-        }
-        .chain-option-row{
-          width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px;
-          background: white; border: none; border-bottom: 1px solid rgba(61,74,34,.07);
-          cursor: pointer; text-align: left; transition: background .15s;
-        }
-        .chain-option-row:last-child{ border-bottom: none; }
-        .chain-option-row:hover{ background: var(--olive-50); }
-        .chain-option-row--active{ background: rgba(201,168,76,.09); }
-        .chain-option-thumb{
-          width: 72px; height: 72px; border-radius: 12px; overflow: hidden; flex-shrink: 0; position: relative;
-          background: white; border: 1px solid rgba(61,74,34,.1); cursor: zoom-in;
-        }
-        .chain-option-thumb img{ width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .3s ease; }
-        .chain-option-row:hover .chain-option-thumb img{ transform: scale(1.05); }
-        .chain-option-zoom{
-          position: absolute; bottom: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
-          background: rgba(26,31,13,.65); color: white; display: flex; align-items: center; justify-content: center;
-        }
-        .chain-option-zoom svg{ width: 11px; height: 11px; }
-        .chain-option-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-        .chain-option-label{ font-size: 12px; font-weight: 600; color: var(--olive-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .chain-option-price{ font-size: 10px; font-weight: 700; color: var(--olive-600); letter-spacing: .01em; }
-        .chain-option-check{ width: 18px; height: 18px; color: var(--olive-500); flex-shrink: 0; }
-        @keyframes chainPanelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-
-        @media(max-width:1200px) { .builder-grid { grid-template-columns:repeat(4,1fr); } }
-        @media(max-width:1100px) { .builder-grid { grid-template-columns:repeat(3,1fr); } }
-        @media(max-width:900px) { .builder-grid { grid-template-columns:repeat(3,1fr);gap:14px; } }
-        @media(max-width:760px) { .builder-grid { grid-template-columns:repeat(2,1fr);gap:12px; } }
-        @media(max-width:600px) {
-          .builder-page { padding:14px 14px 0; }
-          .builder-sticky-bar { padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom)); gap:10px; }
-          .builder-sticky-label { font-size:10.5px; }
-          .builder-sticky-cart { padding:11px 14px;font-size:9px; }
-          .builder-drawer { bottom:60px; }
-        }
-        @media(max-width:480px) { .builder-grid { grid-template-columns:repeat(2,1fr);gap:10px; } }
-        @media(max-width:380px) { .builder-grid { grid-template-columns:repeat(2,1fr);gap:9px; } }
-        @media(max-width:340px) {
-          .builder-sticky-label { font-size:9px; }
-          .builder-sticky-cart { padding:10px 10px;font-size:8px; }
+        /* very small phones */
+        @media (max-width:380px) {
+          .combo-delivery-grid { grid-template-columns:minmax(0,1fr); }
+          .hamper-sticky-btn { padding:12px 14px;font-size:9px; }
+          .builder-sticky-cart { padding:12px 12px;font-size:9px; }
           .builder-sticky-toggle { padding:8px 10px; }
+          .builder-sticky-label { font-size:10px; }
+          .builder-header-media, .builder-header-img { width:80px; }
+          .builder-header-img { height:80px; }
         }
 
-        /* ── RESPONSIVE (hero/modebar/general page) ── */
-        @media(max-width:900px) {
-          .hero { padding-left:24px;padding-right:24px; }
-          .modebar { padding-left:24px;padding-right:24px; }
-        }
-        @media(max-width:760px) {
-          .hero,.modebar { padding-left:14px;padding-right:14px; }
-          .hero {padding-top:22px;padding-bottom:16px; }
-          .modebar { gap:12px; }
-          .modehint { padding-top:6px;max-width:100%; }
-        }
-        @media(max-width:420px) {
-          
-          .hero-desc { max-width:100%; }
-        }
-        @media(max-width:340px) {
-          .hero h1 { font-size:1.5rem; }
+        /* short landscape phones */
+        @media (max-height:480px) and (orientation:landscape) {
+          .modal-box { max-height:100dvh; }
+          .hamper-sticky-bar, .builder-sticky-bar { padding-top:6px;padding-bottom:6px; }
+          .hamper-main-img-wrap { max-height:80vh; }
         }
 
-        /* ── TRUST BADGES ── */
-        .combo-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
-        .combo-trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;transition:transform .2s,box-shadow .2s;}
-        .combo-trust-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
-        .combo-trust-icon{width:36px;height:36px;color:var(--olive2);margin-bottom:7px;}
-        .combo-trust-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);margin-bottom:2px;}
-        .combo-trust-sub{font-size:9px;color:var(--ink7);}
+        /* ─────────── ≥ 520px (large phones) ─────────── */
+        @media (min-width:520px) {
+          .combo-trust-title { font-size:9.5px; }
+          .combo-trust-sub { font-size:9px; }
+          .combo-trust-icon { width:32px;height:32px; }
+          .hamper-colour-swatch-img-wrap { width:66px; }
+          .pricing-tier-btn { flex:0 1 auto; }
+        }
 
-        /* ── ACCORDION / POLICY LINKS ── */
-        .combo-accordion{border-top:1px solid var(--bdr);margin:20px 0;}
-        .combo-acc-item{border-bottom:1px solid var(--bdr);}
-        .combo-acc-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;background:none;border:none;cursor:pointer;transition:background .15s;}
-        .combo-acc-head:hover{background:rgba(61,80,22,.03);}
-        .combo-acc-head-left{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:500;color:var(--ink);text-align:left;}
-        .combo-acc-emoji{font-size:15px;}
-        .combo-acc-chevron{color:var(--ink4);flex-shrink:0;transition:transform .32s ease;}
-        .combo-acc-item--open .combo-acc-chevron{transform:rotate(180deg);}
-        .combo-acc-body{padding:0 2px 16px 33px;font-size:12px;font-weight:300;line-height:1.8;color:var(--ink7);}
-        .combo-acc-nav-link{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--bdr);font-size:12.5px;font-weight:500;transition:background .15s;}
-        .combo-acc-nav-link:hover{background:rgba(61,80,22,.03);}
-        .combo-acc-nav-link svg{color:var(--ink4);flex-shrink:0;}
+        /* ─────────── ≥ 640px ─────────── */
+        @media (min-width:640px) {
+          .modal-backdrop { align-items:center;padding:16px; }
+          .modal-box { max-width:540px;max-height:calc(100dvh - 32px);border-radius:16px;animation:modalIn .28s cubic-bezier(.34,1.1,.64,1); }
+          .modal-header { padding:18px 20px 14px; }
+          .modal-product-strip { padding:12px 20px; }
+          .modal-body { padding:18px 20px;gap:20px; }
+          .modal-footer { padding:12px 20px 18px; }
+          .modal-textarea, .charm-select { font-size:13px; }
+          .lightbox-backdrop { padding:24px; }
+          .lightbox-close { top:16px;right:16px; }
 
-        /* ── ESTIMATED DELIVERY ── */
-        .combo-delivery{margin:20px 0;}
-        .combo-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px;}
-        .combo-delivery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-        .combo-delivery-card{border:1.5px solid var(--bdr);border-radius:14px;padding:14px 12px;background:var(--surf);}
-        .combo-delivery-icon{font-size:22px;margin-bottom:4px;}
-        .combo-delivery-opt-label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:10px;}
-        .combo-delivery-tier{margin-bottom:6px;}
-        .combo-delivery-tier-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--olive2);margin-bottom:1px;}
-        .combo-delivery-tier-val{font-size:12px;font-weight:600;color:var(--ink);}
-        .combo-delivery-rate{font-size:13px;font-weight:800;color:var(--olive2);}
-        .combo-delivery-freebar{margin-top:10px;padding:11px 14px;background:linear-gradient(135deg,#e6f4e7,#f0faf0);border:1.5px solid rgba(42,96,48,.22);border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#0a2e12;line-height:1.4;}
+          .modebar { flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap; }
+          .modetoggle { width:auto; }
+          .modebtn { flex:none;padding:10px 22px; }
+          .hero-desc { font-size:13.5px; }
+        }
 
-        /* ── REVIEWS ── */
-        .combo-rev-section{margin:24px 0 4px;padding-top:24px;border-top:1px solid var(--bdr);}
-        .combo-rev-header{text-align:center;margin-bottom:20px;}
-        .combo-rev-eyebrow{display:block;font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
-        .combo-rev-title{font-family:var(--ffd);font-size:1.3rem;font-weight:400;font-style:italic;color:var(--olive);}
-        .combo-rev-summary{display:flex;background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:18px;flex-wrap:wrap;}
-        .combo-rev-score{background:linear-gradient(160deg,var(--olive),var(--olive2));padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 130px;}
-        .combo-rev-big-num{font-family:var(--ffd);font-size:2.6rem;font-weight:600;color:#f5f0e8;line-height:1;}
-        .combo-rev-big-stars{font-size:13px;color:var(--gold);letter-spacing:2px;}
-        .combo-rev-total{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.6);}
-        .combo-rev-bars{display:flex;flex-direction:column;gap:5px;padding:14px 16px;flex:1;justify-content:center;min-width:180px;}
-        .combo-rev-bar-row{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;}
-        .combo-rev-bar-row:hover{background:rgba(61,80,22,.05);}
-        .combo-rev-bar-row--active{background:var(--golddim);}
-        .combo-rev-bar-label{font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right;}
-        .combo-rev-bar-track{flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden;}
-        .combo-rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px;}
-        .combo-rev-bar-count{font-size:9px;color:var(--ink4);min-width:20px;}
-        .combo-rev-controls{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:36px;}
-        .combo-rev-controls-filter{position:absolute;left:0;top:50%;transform:translateY(-50%);}
-        .combo-rev-clear{font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:5px 12px;cursor:pointer;}
-        .combo-rev-write-btn{font-size:10.5px;font-weight:600;color:#fff;background:var(--olive);border:none;border-radius:50px;padding:9px 18px;cursor:pointer;}
-        .combo-rev-empty{font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0;}
-        .combo-rev-list{display:flex;flex-direction:column;gap:12px;}
-        .combo-rev-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;}
-        .combo-rev-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
-        .combo-rev-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--golddim);color:var(--gold);}
-        .combo-rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
-        .combo-rev-name{font-size:12px;font-weight:600;color:var(--ink);}
-        .combo-rev-verified{display:flex;align-items:center;gap:3px;font-size:9px;font-weight:600;text-transform:uppercase;color:var(--olive2);}
-        .combo-rev-stars-sm{font-size:11px;color:var(--gold);}
-        .combo-rev-date{font-size:10px;color:var(--ink4);}
-        .combo-rev-body{font-size:12px;font-weight:300;color:var(--ink7);line-height:1.75;}
-        .combo-rev-load{display:flex;justify-content:center;margin-top:20px;}
-        .combo-rev-load-btn{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--olive);background:var(--surf);border:1.5px solid var(--bdr2);border-radius:50px;padding:11px 26px;cursor:pointer;}
+        /* ─────────── TABLET ≥ 768px ─────────── */
+        @media (min-width:768px) {
+          .hero { padding:36px 32px 26px; }
+          .modebar { padding:20px 32px 0; }
+          .layout { padding-bottom:104px; }
+
+          .combo-grid { grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:22px 28px 0; }
+
+          .hamper-page, .builder-page { padding:24px 28px 0; }
+          .hamper-divider { margin:24px 0; }
+
+          /* gallery left (sticky), info right */
+          .hamper-main-block { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start;margin-bottom:8px; }
+          .hamper-gallery { position:sticky;top:96px; }
+          .hamper-main-img-wrap { aspect-ratio:1/1;max-height:none; }
+          .hamper-thumb { width:62px;height:62px; }
+          .hamper-title { font-size:2.1rem; }
+          .hamper-price { font-size:1.9rem; }
+          .hamper-description { font-size:14px; }
+
+          .hamper-piece { padding:18px; }
+          .hamper-piece-index { top:-10px;left:16px; }
+          .hamper-box-body { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start; }
+
+          .builder-header-row { gap:22px;margin-bottom:22px; }
+          .builder-header-media { width:150px; }
+          .builder-header-img { width:150px;height:150px;border-radius:14px; }
+          .builder-header-thumb { width:34px;height:34px; }
+          .builder-header-tagline { font-size:13.5px; }
+          .builder-grid { grid-template-columns:repeat(3,minmax(0,1fr));gap:14px; }
+          .builder-card-body { padding:12px 12px 14px; }
+
+          .hamper-sticky-bar, .builder-sticky-bar { padding:12px 28px calc(12px + env(safe-area-inset-bottom)); }
+          .builder-drawer { padding:16px 28px;bottom:calc(72px + env(safe-area-inset-bottom)); }
+          .builder-sticky-label { font-size:12.5px; }
+          .hamper-sticky-btn, .builder-sticky-cart { padding:14px 28px;font-size:11px; }
+
+          .combo-trust { gap:12px; }
+          .combo-trust-item { padding:16px 10px;border-radius:14px; }
+          .combo-trust-icon { width:38px;height:38px; }
+          .combo-trust-title { font-size:10.5px; }
+          .combo-trust-sub { font-size:10px; }
+          .combo-delivery-card { padding:16px 14px; }
+          .combo-acc-head-left { font-size:13.5px; }
+
+          .combo-rev-summary { grid-template-columns:200px minmax(0,1fr); }
+          .combo-rev-avg-box { flex-direction:column;gap:5px;padding:22px; }
+          .combo-rev-bars { padding:18px 22px; }
+          .combo-rev-card { padding:18px 20px; }
+          .combo-rev-title { font-size:1.6rem; }
+
+          .chain-option-thumb { width:84px;height:84px; }
+          .chain-trigger-thumb { width:52px;height:52px; }
+        }
+
+        /* ─────────── LAPTOP ≥ 1024px ─────────── */
+        @media (min-width:1024px) {
+          .hero { padding:44px 56px 30px; }
+          .modebar { padding:24px 56px 0; }
+
+          .combo-grid { grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;padding:26px 40px 0; }
+
+          .hamper-page, .builder-page { padding:28px 40px 0; }
+          .hamper-main-block { gap:56px; }
+          .hamper-gallery { top:100px; }
+          .hamper-title { font-size:2.5rem; }
+
+          /* pieces: two columns */
+          .hamper-piece-list { grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start; }
+
+          .builder-grid { grid-template-columns:repeat(4,minmax(0,1fr));gap:18px; }
+          .builder-header-media { width:170px; }
+          .builder-header-img { width:170px;height:170px; }
+
+          /* policies and delivery side by side */
+          .combo-extras-grid { grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px; }
+          .combo-delivery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+          .hamper-sticky-bar, .builder-sticky-bar { padding-left:40px;padding-right:40px; }
+          .builder-drawer { padding-left:40px;padding-right:40px; }
+        }
+
+        /* ─────────── LARGE ≥ 1440px ─────────── */
+        @media (min-width:1440px) {
+          :root { --container: 1320px; }
+          .combo-grid { max-width:1440px; }
+          .hamper-main-block { gap:72px; }
+        }
       `}</style>
 
       <div className="page">
@@ -2824,13 +2704,13 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             presetView === 'grid' ? (
               <PresetComboGrid
                 combos={presetCombos}
-                onSelect={id => { 
+                onSelect={id => {
                   const url = new URL(window.location.href);
                   url.searchParams.set('combo', id);
                   url.searchParams.delete('custom');
                   router.push(url.pathname + (url.search || ''), { scroll: false });
-                  setSelectedComboId(id); 
-                  setPresetView('detail'); 
+                  setSelectedComboId(id);
+                  setPresetView('detail');
                 }}
               />
             ) : (
@@ -2854,13 +2734,13 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             customView === 'grid' ? (
               <CustomSlotGrid
                 slots={customSlots}
-                onSelect={id => { 
+                onSelect={id => {
                   const url = new URL(window.location.href);
                   url.searchParams.set('custom', id);
                   url.searchParams.delete('combo');
                   router.push(url.pathname + (url.search || ''), { scroll: false });
-                  setSelectedSlotId(id); 
-                  setCustomView('detail'); 
+                  setSelectedSlotId(id);
+                  setCustomView('detail');
                 }}
               />
             ) : (

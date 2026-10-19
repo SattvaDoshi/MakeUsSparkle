@@ -17,6 +17,17 @@ export default function SignupPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) {
+        sessionStorage.setItem('mus_ref', ref.trim().toUpperCase());
+        localStorage.setItem('mus_ref', ref.trim().toUpperCase());
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (loading) return;
 
     if (isAuthenticated) {

@@ -3,6 +3,7 @@ import imageService from "../services/image.service.js";
 
 export async function getCategories(req, res) {
 	try {
+		res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
 		const result = await categoryService.getCategories();
 		res.json(result);
 	} catch (error) {
@@ -65,6 +66,7 @@ export async function deleteCategory(req, res) {
 
 export async function getSubCategories(req, res) {
 	try {
+		res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
 		const categoryId = req.query.categoryId || null;
 		const result = await categoryService.getSubCategories(categoryId);
 		res.json(result);

@@ -37,9 +37,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 		headers.Authorization = `Bearer ${token}`;
 	}
 
+	const isMutation = requestOptions.method && requestOptions.method !== "GET";
 	const response = await fetch(getApiUrl(path), {
-		// avoid 304 Not Modified causing response.ok === false by default
-		cache: (requestOptions as any).cache ?? "no-store",
+		cache: (requestOptions as any).cache ?? (isMutation ? "no-store" : "default"),
 		...requestOptions,
 		headers,
 	});

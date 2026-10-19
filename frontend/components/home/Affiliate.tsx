@@ -474,14 +474,16 @@ export default function AffiliatePage() {
                 <div className="aff-table-head">
                   <span className="aff-table-title">Referred orders</span>
                   <span className="aff-table-badge">
-                    {commissions.length} referral{commissions.length !== 1 ? 's' : ''}
+                    {commissions.length} order{commissions.length !== 1 ? 's' : ''}
                   </span>
                 </div>
 
                 {commissions.length === 0 ? (
                   <div className="aff-empty">
-                    <strong>No referrals yet</strong>
-                    Share your link above to start earning!
+                    <strong>No orders placed yet</strong>
+                    {stats.totalReferrals > 0
+                      ? 'Users have signed up with your link! When they place their first order, your 10% commission will appear here.'
+                      : 'Share your link above to start earning!'}
                   </div>
                 ) : (
                   <div className="aff-table-wrap">

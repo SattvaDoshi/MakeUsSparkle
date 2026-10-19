@@ -3,6 +3,7 @@ import imageService from "../services/image.service.js";
 
 export async function getGenders(req, res) {
   try {
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
     const result = await genderService.getGenders();
     res.json(result);
   } catch (error) {

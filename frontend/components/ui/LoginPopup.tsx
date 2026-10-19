@@ -65,7 +65,10 @@ export default function LoginPopup() {
     try {
       if (tab === 'register') {
         const refCode = typeof window !== 'undefined'
-          ? new URLSearchParams(window.location.search).get('ref') || undefined
+          ? (new URLSearchParams(window.location.search).get('ref')
+             || sessionStorage.getItem('mus_ref')
+             || localStorage.getItem('mus_ref')
+             || undefined)
           : undefined;
         const result = await apiRequest<AuthResponse>('/auth/register', {
           method: 'POST',
@@ -76,6 +79,10 @@ export default function LoginPopup() {
             ...(refCode ? { refCode } : {}),
           }),
         });
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('mus_ref');
+          localStorage.removeItem('mus_ref');
+        }
         if (result.token) await signIn(result.token, result.user ?? null);
         const couponText = result.welcomeCoupon?.code
           ? ` Your 5% code is ${result.welcomeCoupon.code}.` : '';

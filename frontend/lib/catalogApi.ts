@@ -459,44 +459,110 @@ export function slugifyCatalog(value: string): string {
   return toSlug(value);
 }
 
+// ─── High-Performance In-Memory Cache & In-Flight Deduplication ─────────────────
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const catalogCache = new Map<string, CacheEntry<any>>();
+const inFlightRequests = new Map<string, Promise<any>>();
+const TAXONOMY_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for categories/styles/genders
+const PRODUCT_CACHE_TTL = 3 * 60 * 1000;   // 3 minutes for products
+
+export function clearCatalogCache(prefix?: string) {
+  if (!prefix) {
+    catalogCache.clear();
+    inFlightRequests.clear();
+    return;
+  }
+  for (const key of catalogCache.keys()) {
+    if (key.startsWith(prefix)) catalogCache.delete(key);
+  }
+  for (const key of inFlightRequests.keys()) {
+    if (key.startsWith(prefix)) inFlightRequests.delete(key);
+  }
+}
+
+async function withCatalogCache<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttl = TAXONOMY_CACHE_TTL
+): Promise<T> {
+  const cached = catalogCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+
+  // Deduplicate in-flight requests (prevent duplicate concurrent network calls)
+  if (inFlightRequests.has(key)) {
+    return inFlightRequests.get(key)!;
+  }
+
+  const promise = fetcher()
+    .then((data) => {
+      catalogCache.set(key, { data, expiresAt: Date.now() + ttl });
+      inFlightRequests.delete(key);
+      return data;
+    })
+    .catch((err) => {
+      inFlightRequests.delete(key);
+      throw err;
+    });
+
+  inFlightRequests.set(key, promise);
+  return promise;
+}
+
 export async function fetchCatalogCategories(): Promise<CatalogCategory[]> {
-  const data = await apiRequest<{ success: boolean; categories?: BackendCategory[] }>("/categories");
-  return (data.categories || []).map(toCategory);
+  return withCatalogCache("categories", async () => {
+    const data = await apiRequest<{ success: boolean; categories?: BackendCategory[] }>("/categories");
+    return (data.categories || []).map(toCategory);
+  });
 }
 
 export async function fetchCatalogSubCategories(categoryId?: string): Promise<CatalogSubCategory[]> {
-  const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
-  const data = await apiRequest<{ success: boolean; subcategories?: BackendSubCategory[] }>(`/subcategories${query}`);
-  return (data.subcategories || []).map(toSubCategory);
+  const key = `subcategories_${categoryId || "all"}`;
+  return withCatalogCache(key, async () => {
+    const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
+    const data = await apiRequest<{ success: boolean; subcategories?: BackendSubCategory[] }>(`/subcategories${query}`);
+    return (data.subcategories || []).map(toSubCategory);
+  });
 }
 
 export async function fetchCatalogStyles(): Promise<CatalogStyle[]> {
-  const data = await apiRequest<{ success: boolean; styles?: BackendStyle[] }>("/styles");
-  return (data.styles || []).map(toStyle);
+  return withCatalogCache("styles", async () => {
+    const data = await apiRequest<{ success: boolean; styles?: BackendStyle[] }>("/styles");
+    return (data.styles || []).map(toStyle);
+  });
 }
 
 export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
-  const data = await apiRequest<{ success: boolean; genders?: BackendGender[] }>("/genders");
-  const allowed = new Set(["men", "women", "kids"]);
-  return (data.genders || [])
-    .map(toGender)
-    .map((g) => {
-      const raw = (g.slug || "").toLowerCase();
-      let slug = raw;
-      if (raw === "male" || raw === "man" || raw === "m") slug = "men";
-      if (raw === "female" || raw === "woman" || raw === "f" || raw === "female") slug = "women";
-      if (raw === "kid" || raw === "child") slug = "kids";
-      return { ...g, slug, isActive: g.isActive !== false };
-    })
-    .filter((gender) => allowed.has(gender.slug) && gender.isActive);
+  return withCatalogCache("genders", async () => {
+    const data = await apiRequest<{ success: boolean; genders?: BackendGender[] }>("/genders");
+    const allowed = new Set(["men", "women", "kids"]);
+    return (data.genders || [])
+      .map(toGender)
+      .map((g) => {
+        const raw = (g.slug || "").toLowerCase();
+        let slug = raw;
+        if (raw === "male" || raw === "man" || raw === "m") slug = "men";
+        if (raw === "female" || raw === "woman" || raw === "f" || raw === "female") slug = "women";
+        if (raw === "kid" || raw === "child") slug = "kids";
+        return { ...g, slug, isActive: g.isActive !== false };
+      })
+      .filter((gender) => allowed.has(gender.slug) && gender.isActive);
+  });
 }
 
 export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {
-  const [categories, subCategories, styles] = await Promise.all([
-    fetchCatalogCategories(),
-    fetchCatalogSubCategories(),
-    fetchCatalogStyles(),
-  ]);
+  const key = `products_${filters.subCategorySlug || "all"}`;
+  return withCatalogCache(key, async () => {
+    const [categories, subCategories, styles] = await Promise.all([
+      fetchCatalogCategories(),
+      fetchCatalogSubCategories(),
+      fetchCatalogStyles(),
+    ]);
 
   const params = new URLSearchParams();
   if (filters.subCategorySlug) {
@@ -517,9 +583,10 @@ export async function fetchCatalogProducts(filters: { subCategorySlug?: string }
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
   const styleMap = new Map(styles.map((item) => [item.id, item]));
 
-  return (productsResponse.products || []).map((item) =>
-    normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
-  );
+    return (productsResponse.products || []).map((item) =>
+      normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
+    );
+  }, PRODUCT_CACHE_TTL);
 }
 
 export async function fetchNewArrivalsSection(): Promise<CatalogHomeSection | null> {

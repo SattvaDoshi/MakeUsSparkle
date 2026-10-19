@@ -58,8 +58,10 @@ class AffiliateService {
 	async recordReferral(newUserId, refCode) {
 		if (!refCode) return;
 
+		const cleanCode = String(refCode).trim().toUpperCase();
+
 		// Find the affiliate by their referral code
-		const affiliate = await User.findOne({ referralCode: refCode });
+		const affiliate = await User.findOne({ referralCode: cleanCode });
 		if (!affiliate) return; // silently ignore invalid codes
 
 		// Prevent self-referral
@@ -142,17 +144,16 @@ class AffiliateService {
 			.filter((r) => r.status === "paid")
 			.reduce((s, r) => s + r.earning, 0);
 
-		// Count distinct referred users (signup count)
-		const distinctReferredUsers = await AffiliateCommission.distinct(
-			"referredUser",
-			{ affiliate: affiliateId }
-		);
+		// Count total registered users who signed up with this affiliate's referral link
+		const totalRegisteredReferrals = await User.countDocuments({
+			referredBy: affiliateId,
+		});
 
 		return {
 			success: true,
 			commissions: rows,
 			stats: {
-				totalReferrals: distinctReferredUsers.length,
+				totalReferrals: totalRegisteredReferrals,
 				totalOrderValue,
 				totalEarned,
 				paidEarned,

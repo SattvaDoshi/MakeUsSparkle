@@ -4,13 +4,13 @@ import styles from './Footer.module.css';
 const footerLinks = {
   Help: [
     { label: 'Track Order', href: '/track' },
-    { label: 'Shipping Policy', href: '/shipping' },
-    { label: 'Returns & Exchange', href: '/returns' },
+    { label: 'Shipping Policy', href: '/shipping-policy' },
+    { label: 'Returns & Exchange', href: '/refund-policy' },
     { label: 'Size Guide', href: '/size-guide' },
     { label: 'Contact Us', href: '/contact' },
   ],
   Company: [
-    { label: 'Affiliate Program', href: 'https://saltyfam.bixgrow.com' },
+    { label: 'Affiliate Program', href: '/affiliate' },
     { label: 'Offers & Coupons', href: '/offers' },
     { label: 'Privacy Policy', href: '/privacy' },
   ],
@@ -31,11 +31,22 @@ export default function Footer() {
           <div key={group} className={styles.linkGroup}>
             <h4 className={styles.groupTitle}>{group}</h4>
             <ul className={styles.linkList}>
-              {links.map(l => (
-                <li key={l.label}>
-                  <Link href={l.href} className={styles.link}>{l.label}</Link>
-                </li>
-              ))}
+              {links.map(l => {
+                const isExternal = l.href.startsWith('http') || l.href.startsWith('mailto:');
+                return (
+                  <li key={l.label}>
+                    {isExternal ? (
+                      <a href={l.href} className={styles.link} target="_blank" rel="noopener noreferrer">
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link href={l.href} className={styles.link}>
+                        {l.label}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

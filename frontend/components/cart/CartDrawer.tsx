@@ -266,7 +266,7 @@ export default function CartDrawer() {
             <div className="drawer-empty">
               <div className="drawer-empty-icon">◇</div>
               <p className="drawer-empty-text">Your cart is empty</p>
-              <Link href="/shop" className="drawer-empty-link" onClick={closeDrawer}>
+              <Link href="/categories" className="drawer-empty-link" onClick={closeDrawer}>
                 Start Shopping
               </Link>
             </div>

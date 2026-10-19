@@ -86,7 +86,14 @@ export default function AffiliatePage() {
         apiRequest<AffiliateMe>('/affiliate/me'),
         apiRequest<AffiliateDashboard>('/affiliate/dashboard'),
       ]);
-      setAffiliateLink(meRes.affiliateLink);
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      let link = meRes.affiliateLink || '';
+      if (meRes.affiliateCode && currentOrigin) {
+        link = `${currentOrigin}/signup?ref=${meRes.affiliateCode}`;
+      } else if (link && currentOrigin && link.includes('localhost')) {
+        link = link.replace(/^https?:\/\/localhost(:\d+)?/, currentOrigin);
+      }
+      setAffiliateLink(link);
       setCommissions(dashRes.commissions);
       setStats(dashRes.stats);
     } catch (err) {

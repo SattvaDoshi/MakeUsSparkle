@@ -67,7 +67,10 @@ class AuthService {
 			const token = this.signToken(user);
 
 			// Send welcome email
-			const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+			const frontendUrl = (process.env.NODE_ENV === "production" && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes("localhost")))
+				? "https://makeyousparkle.in"
+				: (process.env.FRONTEND_URL || "https://makeyousparkle.in");
+			const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
 			let welcomeEmailSent = true;
 
 			try {

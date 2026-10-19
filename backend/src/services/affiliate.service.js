@@ -3,8 +3,13 @@ import User from "../models/user.model.js";
 import AffiliateCommission from "../models/affiliate.model.js";
 
 const COMMISSION_RATE = 0.1; // 10%
-const FRONTEND_URL =
-	process.env.FRONTEND_URL || "https://makeussparkle.com";
+
+function getFrontendUrl() {
+	if (process.env.NODE_ENV === "production" && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes("localhost"))) {
+		return "https://makeyousparkle.in";
+	}
+	return process.env.FRONTEND_URL || "https://makeyousparkle.in";
+}
 
 /**
  * Generate a collision-resistant 8-char uppercase hex code.
@@ -34,7 +39,8 @@ class AffiliateService {
 			await user.save();
 		}
 
-		const affiliateLink = `${FRONTEND_URL}/signup?ref=${user.referralCode}`;
+		const frontendUrl = getFrontendUrl();
+		const affiliateLink = `${frontendUrl}/signup?ref=${user.referralCode}`;
 		return {
 			success: true,
 			affiliateCode: user.referralCode,

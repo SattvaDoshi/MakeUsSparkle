@@ -47,7 +47,10 @@ class AbandonedCartService {
 				throw new Error("Abandoned cart not found");
 			}
 
-			const recoveryLink = `${process.env.FRONTEND_URL}/cart-recovery?cartId=${cartId}`;
+			const frontendUrl = (process.env.NODE_ENV === "production" && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes("localhost")))
+				? "https://makeyousparkle.in"
+				: (process.env.FRONTEND_URL || "https://makeyousparkle.in");
+			const recoveryLink = `${frontendUrl}/cart-recovery?cartId=${cartId}`;
 			const itemsList = abandoned.items.map((item) => `${item.product.name} x ${item.quantity}`).join(", ");
 
 			const htmlContent = `

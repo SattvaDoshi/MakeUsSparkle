@@ -103,9 +103,8 @@ else
 fi
 
 # Ensure FRONTEND_URL & CORS_ORIGINS include the production domain
-if grep -q "FRONTEND_URL=" .env; then
-  log_info "Verifying FRONTEND_URL in backend .env..."
-else
+sed -i 's|FRONTEND_URL=http://localhost:3000|FRONTEND_URL=https://makeyousparkle.in|g' .env 2>/dev/null || true
+if ! grep -q "FRONTEND_URL=" .env; then
   echo "" >> .env
   echo "FRONTEND_URL=https://makeyousparkle.in" >> .env
 fi

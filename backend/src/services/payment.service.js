@@ -34,7 +34,9 @@ class PaymentService {
 			// Unique per-transaction merchant order ID
 			const merchantOrderId = `MUS_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
 
-			const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+			const frontendUrl = (process.env.NODE_ENV === "production" && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes("localhost")))
+				? "https://makeyousparkle.in"
+				: (process.env.FRONTEND_URL || "https://makeyousparkle.in");
 			// Build redirect URL with merchantOrderId — orderId will be appended after order creation
 			const baseRedirectUrl = `${frontendUrl}/payment/status`;
 

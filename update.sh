@@ -43,6 +43,9 @@ log_success "Code updated to latest commit."
 # ------------------------------------------------------------------------------
 log_info "Updating Backend dependencies..."
 cd "$REPO_DIR/backend"
+if [ -f ".env" ]; then
+  sed -i 's|FRONTEND_URL=http://localhost:3000|FRONTEND_URL=https://makeyousparkle.in|g' .env
+fi
 npm install --omit=dev || npm install
 log_success "Backend ready."
 

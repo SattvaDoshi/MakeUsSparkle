@@ -371,36 +371,50 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         }
         .circles-section.vis { opacity: 1; transform: none; }
 
-        .circles-bar {
-          display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 10px;
-        }
-        .circles-label {
-          font-size: 11px; letter-spacing: .38em; text-transform: uppercase;
-          color: #1B5E20; font-weight: 400;
-        }
+.circles-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.circles-label {
+  flex: 1 1 0; min-width: 0;            /* lets the label wrap instead of pushing the tag */
+  font-size: 11px; letter-spacing: .38em; text-transform: uppercase;
+  color: #1B5E20; font-weight: 400;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
+}
 
-        .circles-active-tag {
-          display: inline-flex; align-items: center; gap: 7px;
-          font-size: 8px; letter-spacing: .22em; text-transform: uppercase;
-          color: var(--ink-mid);
-          background: var(--beige-pale);
-          border: 1px solid var(--beige-lt);
-          border-radius: 2px;
-          padding: 5px 8px 5px 12px;
-          opacity: 0; transition: opacity .22s; pointer-events: none;
-        }
-        .circles-active-tag.vis { opacity: 1; pointer-events: auto; }
-        .circles-active-tag strong { color: var(--beige); text-transform: capitalize; font-weight: 400; }
-        .circles-clear {
-          background: none; border: none; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          width: 18px; height: 18px; border-radius: 2px;
-          background: rgba(196,164,122,.15);
-          color: var(--beige); font-size: 13px; line-height: 1;
-          transition: background .2s, color .2s;
-        }
-        .circles-clear:hover { background: var(--beige); color: #fff; }
+.circles-active-tag {
+  flex: 0 1 auto; min-width: 0; max-width: 55%;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: #fff;
+  background: #1B5E20;
+  border: 1px solid #1B5E20;
+  border-radius: 2px;
+  padding: 6px 8px 6px 12px;
+  opacity: 0; transition: opacity .22s; pointer-events: none;
+}
+.circles-active-tag.vis { opacity: 1; pointer-events: auto; }
+.circles-active-tag strong {
+  color: #fff; text-transform: capitalize; font-weight: 500;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-word;
+}
+.circles-clear {
+  flex-shrink: 0;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 2px;
+  background: rgba(255,255,255,.22);
+  color: #fff; font-size: 14px; line-height: 1;
+  transition: background .2s, color .2s;
+}
+.circles-clear:hover { background: #fff; color: #1B5E20; }
 
         /* Circles row */
         .circles-row { display: flex; gap: 10px; flex-wrap: wrap; }

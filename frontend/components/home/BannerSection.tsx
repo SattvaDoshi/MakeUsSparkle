@@ -157,7 +157,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
         }
 
         /* Scrolling row of cards */
-        .bs-slider-track {
+        .bs-slider-track {  
           display: flex;
           gap: var(--card-gap);
           /* JS sets transform via inline style */

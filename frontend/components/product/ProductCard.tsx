@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -9,12 +7,12 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/lib/wishlistContext';
-import router from 'next/dist/shared/lib/router/router';
 import { useCart } from '@/lib/cartContext';
 
 /**
  * ProductCard — Rectangular, fully clickable card
- * Image ratio: 4:6 (2:3) — portrait
+ * Image ratio: 4:5 — portrait
+ * Equal-height layout: name reserves 2 lines, price + button pinned to bottom.
  */
 
 interface ProductColor {
@@ -44,7 +42,7 @@ interface ProductCardProduct {
   type?: string;
   perCharmPrice?: number;
   charmPieceOptions?: number[];
-   stock?: number; 
+  stock?: number;
 }
 
 export default function ProductCard({
@@ -57,13 +55,13 @@ export default function ProductCard({
   style?: CSSProperties;
   className?: string;
   productLinkBase?: string;
-} ){
+}) {
   const { name, price, originalPrice, badge, images, colors, href = '#', perCharmPrice, charmPieceOptions } = product;
-const isOutOfStock = (product.stock ?? Infinity) <= 0;
+  const isOutOfStock = (product.stock ?? Infinity) <= 0;
   const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
-const { addItem } = useCart();
-const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
   const [activeColor] = useState(0);
   const [activeImage, setActiveImage] = useState(0);
   const [wishAnim, setWishAnim] = useState(false);
@@ -83,7 +81,7 @@ const [added, setAdded] = useState(false);
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
-    : null; 
+    : null;
 
   const wishlistItem = {
     id: product.id,
@@ -100,24 +98,22 @@ const [added, setAdded] = useState(false);
   };
 
   function handleCardClick(e: MouseEvent<HTMLDivElement>) {
-      console.log('productLinkBase:', productLinkBase, 'product.type:', product.type, 'href:', product.href);
+    if (
+      (e.target as HTMLElement).closest('.pc-wish') ||
+      (e.target as HTMLElement).closest('.pc-dots') ||
+      (e.target as HTMLElement).closest('.pc-cart-btn')
+    ) return;
 
-  if (
-    (e.target as HTMLElement).closest('.pc-wish') ||
-    (e.target as HTMLElement).closest('.pc-dots') ||
-    (e.target as HTMLElement).closest('.pc-cart-btn')   
-  ) return;
+    const slug = (product.href ?? '').split('/').pop()
+      ?? product.id?.toString()
+      ?? 'product';
 
-  const slug = (product.href ?? '').split('/').pop() 
-    ?? product.id?.toString() 
-    ?? 'product';
-
-  if (productLinkBase) {
-    router.push(`${productLinkBase}/${slug}`);
-    return;
+    if (productLinkBase) {
+      router.push(`${productLinkBase}/${slug}`);
+      return;
+    }
+    router.push(product.href ?? `/products/${slug}`);
   }
-  router.push(product.href ?? `/products/${slug}`);
-}
 
   const handleWish = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -126,32 +122,34 @@ const [added, setAdded] = useState(false);
     setWishAnim(true);
     setTimeout(() => setWishAnim(false), 600);
   };
-const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-  if (isOutOfStock) return; 
-  addItem(
-    {
-      id: String(product.id),
-      sourceId: product.sourceId ?? String(product.id),
-      name: product.name,
-      price: product.price,
-      originalPrice: product.originalPrice ?? null,
-      image: product.mainImage ?? images?.[0] ?? '',
-      color: product.colors?.[0]?.label ?? 'Default',
-      colorHex: product.colors?.[0]?.hex ?? '#000000',
-      sku: product.sku ?? `SKU-${product.id}`,
-      href: product.href ?? '',
-      category: product.category,
-      categoryId: product.categoryId,
-      subCategoryId: product.subCategoryId,
-      styleId: product.styleId,
-    },
-    true,
-  );
-  setAdded(true);
-  setTimeout(() => setAdded(false), 1500);
-};
+
+  const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isOutOfStock) return;
+    addItem(
+      {
+        id: String(product.id),
+        sourceId: product.sourceId ?? String(product.id),
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice ?? null,
+        image: product.mainImage ?? images?.[0] ?? '',
+        color: product.colors?.[0]?.label ?? 'Default',
+        colorHex: product.colors?.[0]?.hex ?? '#000000',
+        sku: product.sku ?? `SKU-${product.id}`,
+        href: product.href ?? '',
+        category: product.category,
+        categoryId: product.categoryId,
+        subCategoryId: product.subCategoryId,
+        styleId: product.styleId,
+      },
+      true,
+    );
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
   return (
     <>
       <style>{`
@@ -174,6 +172,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           display: flex;
           flex-direction: column;
           width: 100%;
+          height: 100%;               /* FIX: fill the grid cell so all cards in a row match */
 
           box-shadow: 0 1px 4px rgba(61,74,34,.08);
           transition: box-shadow var(--t), transform var(--t);
@@ -191,11 +190,11 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           box-shadow: 0 1px 4px rgba(61,74,34,.08);
         }
 
-        /* ─── 4:6 (2:3) portrait image zone ─── */
+        /* ─── portrait image zone ─── */
         .pc-img-zone {
           position: relative;
           width: 100%;
-          aspect-ratio: 4 / 5;   /* ← 4:6 portrait ratio */
+          aspect-ratio: 4 / 5;
           background: var(--beige-dk);
           overflow: hidden;
           flex-shrink: 0;
@@ -205,13 +204,12 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          object-position: center top; /* show top of image — better for apparel/product shots */
+          object-position: center top;
           display: block;
           transition: transform .5s cubic-bezier(.25,.46,.45,.94);
         }
         .pc:hover .pc-img { transform: scale(1.05); }
 
-        /* subtle overlay on hover */
         .pc-overlay {
           position: absolute; inset: 0;
           background: rgba(20,26,10,.1);
@@ -291,27 +289,37 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           display: flex;
           flex-direction: column;
           gap: 4px;
-          flex-shrink: 0;
+          flex: 1 1 auto;             /* FIX: grow to fill remaining card height */
           border-top: 1px solid rgba(61,74,34,.06);
         }
 
-.pc-name {
-  font-size: 13px; font-weight: 500;
-  color: var(--ink);
-  line-height: 1.3;
-  letter-spacing: -.01em;
-  margin: 0;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+        .pc-name {
+          font-size: 13px; font-weight: 500;
+          color: var(--ink);
+          line-height: 1.3;
+          letter-spacing: -.01em;
+          margin: 0;
+          white-space: normal;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          // min-height: 2.6em;          /* FIX: always reserve 2 lines (2 × 1.3 line-height) */
+        }
+
+        /* FIX: price + button pinned to the bottom, so they align across cards */
+        .pc-footer {
+          margin-top: auto;
+          display: flex;
+          flex-direction: column;
+        }
 
         .pc-price-row {
           display: flex;
           align-items: baseline;
-          gap: 7px;
+          flex-wrap: wrap;
+          gap: 2px 7px;
+          min-height: 1.5em;          /* keeps row height steady with/without original price */
         }
 
         .pc-price {
@@ -329,50 +337,50 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
           color: var(--olive-md);
           letter-spacing: .04em;
         }
-.pc-cart-btn {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px 0;
-  border: 1.5px solid var(--olive);
-  background: transparent;
-  color: var(--olive);
-  font-family: 'Jost', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background .22s, color .22s;
-  text-align: center;
-  white-space: nowrap;
-}
-.pc-cart-btn:hover  { background: var(--olive); color: var(--beige); }
-.pc-cart-btn--added { background: var(--olive); color: var(--beige); }
 
-/* Tablet */
-@media (min-width: 480px) and (max-width: 1023px) {
-  .pc-cart-btn { font-size: 9.5px; padding: 9px 0; margin-top: 9px; }
-}
+        .pc-cart-btn {
+          display: block;
+          width: 100%;
+          margin-top: 10px;
+          padding: 10px 0;
+          border: 1.5px solid var(--olive);
+          background: transparent;
+          color: var(--olive);
+          font-family: 'Jost', sans-serif;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background .22s, color .22s;
+          text-align: center;
+          white-space: nowrap;
+        }
+        .pc-cart-btn:hover  { background: var(--olive); color: var(--beige); }
+        .pc-cart-btn--added { background: var(--olive); color: var(--beige); }
+        .pc-cart-btn:disabled:hover { background: transparent; color: var(--olive); }
 
-/* Mobile */
-@media (max-width: 479px) {
-  .pc-cart-btn { font-size: 8.5px; padding: 8px 0; margin-top: 7px; letter-spacing: .10em; }
-}
+        /* Tablet */
+        @media (min-width: 480px) and (max-width: 1023px) {
+          .pc-cart-btn { font-size: 9.5px; padding: 9px 0; margin-top: 9px; }
+        }
 
-/* Desktop */
-@media (min-width: 1024px) {
-  .pc-cart-btn { font-size: 10.5px; padding: 11px 0; margin-top: 11px; }
-}
+        /* Mobile */
+        @media (max-width: 479px) {
+          .pc-cart-btn { font-size: 8.5px; padding: 8px 0; margin-top: 7px; letter-spacing: .10em; }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+          .pc-cart-btn { font-size: 10.5px; padding: 11px 0; margin-top: 11px; }
+        }
+
         /* ─── Responsive ─── */
 
         /* Mobile: ≤ 479px */
         @media (max-width: 479px) {
-          .pc {
-            border-radius: 3px;
-          }
-          /* Keep 2:3 ratio — naturally taller, which suits narrow mobile columns */
+          .pc { border-radius: 3px; }
           .pc-info {
             padding: 8px 10px 10px;
             gap: 3px;
@@ -420,7 +428,7 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
         aria-label={`View ${name}`}
       >
 
-        {/* ── IMAGE ZONE (4:6 portrait) ── */}
+        {/* ── IMAGE ZONE ── */}
         <div className="pc-img-zone">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -434,13 +442,13 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
 
           <div className="pc-overlay" />
 
-         {isOutOfStock ? (
-  <span className="pc-badge pc-badge--sale">Sold Out</span>
-) : badge && (
-  <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
-    {badge}
-  </span>
-)}
+          {isOutOfStock ? (
+            <span className="pc-badge pc-badge--sale">Sold Out</span>
+          ) : badge && (
+            <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
+              {badge}
+            </span>
+          )}
 
           <button
             className={`pc-wish${wished ? ' active' : ''}${wishAnim ? ' anim' : ''}`}
@@ -476,41 +484,44 @@ const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
         </div>
 
         {/* ── INFO STRIP ── */}
-<div className="pc-info">
-  <p className="pc-name">{name}</p>
-  <div className="pc-price-row">
-    <span className="pc-price">
-      {perCharmPrice && perCharmPrice > 0 ? (
-        `From ₹${(price + (charmPieceOptions?.[0] ?? 1) * perCharmPrice).toLocaleString('en-IN')}`
-      ) : (
-        `₹${price.toLocaleString('en-IN')}`
-      )}
-    </span>
-    {originalPrice && (
-      <span className="pc-original">
-        ₹{originalPrice.toLocaleString('en-IN')}
-      </span>
-    )}
-    {discount && (
-      <span className="pc-saving">{discount}% off</span>
-    )}
-  </div>
- <button
-  className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
-  onClick={handleAdd}
-  disabled={isOutOfStock}
-  aria-label={isOutOfStock ? `${name} is sold out` : `Add ${name} to cart`}
-  style={{
-    opacity: isOutOfStock ? 0.5 : 1,
-    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-  }}
->
-  {isOutOfStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
-</button>
-</div>
-            
-      
+        <div className="pc-info">
+          <p className="pc-name">{name}</p>
+
+          <div className="pc-footer">
+            <div className="pc-price-row">
+              <span className="pc-price">
+                {perCharmPrice && perCharmPrice > 0 ? (
+                  `From ₹${(price + (charmPieceOptions?.[0] ?? 1) * perCharmPrice).toLocaleString('en-IN')}`
+                ) : (
+                  `₹${price.toLocaleString('en-IN')}`
+                )}
+              </span>
+              {originalPrice && (
+                <span className="pc-original">
+                  ₹{originalPrice.toLocaleString('en-IN')}
+                </span>
+              )}
+              {discount && (
+                <span className="pc-saving">{discount}% off</span>
+              )}
+            </div>
+
+            <button
+              className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
+              onClick={handleAdd}
+              disabled={isOutOfStock}
+              aria-label={isOutOfStock ? `${name} is sold out` : `Add ${name} to cart`}
+              style={{
+                opacity: isOutOfStock ? 0.5 : 1,
+                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isOutOfStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
+            </button>
+          </div>
         </div>
+
+      </div>
     </>
   );
 }

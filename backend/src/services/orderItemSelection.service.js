@@ -267,13 +267,13 @@ export async function normalizeOrderItem(item = {}) {
 				? {
 						heading: item.giftBoxDetails.heading || "Premium Gift Box",
 						description: item.giftBoxDetails.description,
-						price: asNumber(item.giftBoxDetails.price, 99),
+						price: asNumber(item.giftBoxDetails.price, 50),
 						image: item.giftBoxDetails.image,
 				  }
 				: item.giftBox
 				? {
 						heading: "Premium Gift Box",
-						price: 99,
+						price: 50,
 				  }
 				: undefined,
 		selectedCharms,

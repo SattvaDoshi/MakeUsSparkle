@@ -11,6 +11,11 @@ type View = 'main' | 'orders' | 'address' | 'password';
 interface OrderItem {
   name: string;
   productId: string; // MongoDB _id for review API
+  image?: string | null;
+  quantity?: number;
+  price?: number;
+  color?: string;
+  size?: string;
   reviewed: boolean;
   rating: number;
   reviewText: string;
@@ -551,16 +556,19 @@ type ShippingInfo = {
 type BackendOrder = {
   _id: string;
   items: Array<{
-    product?: { _id?: string; name?: string } | string;
+    product?: { _id?: string; name?: string; mainImage?: string } | string;
     sourceId?: string;
     _id?: string;
     name?: string;
+    image?: string | null;
     productId?: string;
     reviewed?: boolean;
     rating?: number;
     reviewText?: string;
     quantity?: number;
     price?: number;
+    color?: string;
+    size?: string;
     giftBox?: boolean;
     giftBoxDetails?: {
       heading?: string;
@@ -628,6 +636,11 @@ export default function ProfileSection() {
           items: (order.items || []).map((item) => ({
             name: item.name || (typeof item.product === 'object' && item.product ? item.product.name || 'Order item' : 'Order item'),
             productId: item.productId || (typeof item.product === 'object' && item.product ? item.product._id || '' : item.sourceId || item._id || ''),
+            image: item.image || (typeof item.product === 'object' && item.product ? item.product.mainImage || null : null),
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            color: item.color,
+            size: item.size,
             reviewed: Boolean(item.reviewed),
             rating: item.rating || 0,
             reviewText: item.reviewText || '',
@@ -1039,102 +1052,149 @@ export default function ProfileSection() {
             )}
 
             <div className="pf-orders">
-              {orders.length > 0 ? orders.map((order) => (
-                <div key={order.id} className="pf-order">
-                  <div className="pf-order-top">
-                    <span className="pf-order-id">#{order.id}</span>
-                    <span className={`pf-order-status ${order.status.toLowerCase()}`}>{order.status}</span>
-                  </div>
-                  <div className="pf-order-date-row">
-                    <span className="pf-order-date">{order.date}</span>
-                    <span className="pf-order-amt">{order.amount}</span>
-                  </div>
+              {orders.length > 0 ? orders.map((order) => {
+                const statusLower = order.status.toLowerCase();
+                const statusColor =
+                  statusLower === 'delivered' ? { bg: '#eff6ea', text: '#3b6d11', border: '#c0dd97' } :
+                  statusLower === 'shipped' ? { bg: '#e8f4fd', text: '#1565c0', border: '#90caf9' } :
+                  statusLower === 'cancelled' || statusLower === 'rto' ? { bg: '#fdecea', text: '#c62828', border: '#ef9a9a' } :
+                  statusLower === 'manifested' ? { bg: '#fff3e0', text: '#e65100', border: '#ffcc80' } :
+                  { bg: '#fdf6e3', text: '#7a5a0a', border: '#e8d48a' }; // placed / processing
+                const shortId = order.id.length > 8 ? order.id.slice(-8).toUpperCase() : order.id;
 
-                  {/* ── Shipment Timeline ── */}
-                  {order.shipping?.awbNumber && (() => {
-                    const STEPS = ['Manifested', 'Picked Up', 'In Transit', 'Out For Delivery', 'Delivered'];
-                    const code = (order.shipping.currentStatusCode || '').toUpperCase();
-                    const str  = (order.shipping.currentStatus || '').toLowerCase();
-                    const activeStep =
-                      code === 'DL' || str.includes('deliver') ? 4 :
-                      code === 'UD' || str.includes('out for') ? 3 :
-                      ['IT', 'NDR', 'EX'].includes(code) || str.includes('transit') ? 2 :
-                      ['PU', 'OP'].includes(code) || str.includes('pick') ? 1 :
-                      0;
-                    return (
-                      <div style={{ marginTop: 12, marginBottom: 4 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#2d5a27', marginBottom: 8 }}>
-                          Shipment Tracking
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                          {STEPS.map((step, i) => (
-                            <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? '1 1 0' : 'none' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                <div style={{
-                                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                                  background: i <= activeStep ? '#2d5a27' : '#e0e0e0',
-                                  border: i === activeStep ? '3px solid #2d5a27' : '2px solid ' + (i < activeStep ? '#2d5a27' : '#ccc'),
-                                  boxSizing: 'border-box',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                  {i < activeStep && <span style={{ color: 'white', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                return (
+                  <div key={order.id} className="pf-order">
+                    {/* Order Header */}
+                    <div className="pf-order-header">
+                      <div className="pf-order-header-left">
+                        <span className="pf-order-id">Order #{shortId}</span>
+                        <span className="pf-order-date">{order.date}</span>
+                      </div>
+                      <div className="pf-order-header-right">
+                        <span
+                          className="pf-order-status-badge"
+                          style={{ background: statusColor.bg, color: statusColor.text, borderColor: statusColor.border }}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Shipment Timeline */}
+                    {order.shipping?.awbNumber && (() => {
+                      const STEPS = ['Manifested', 'Picked Up', 'In Transit', 'Out For Delivery', 'Delivered'];
+                      const code = (order.shipping.currentStatusCode || '').toUpperCase();
+                      const str  = (order.shipping.currentStatus || '').toLowerCase();
+                      const activeStep =
+                        code === 'DL' || str.includes('deliver') ? 4 :
+                        code === 'UD' || str.includes('out for') ? 3 :
+                        ['IT', 'NDR', 'EX'].includes(code) || str.includes('transit') ? 2 :
+                        ['PU', 'OP'].includes(code) || str.includes('pick') ? 1 :
+                        0;
+                      return (
+                        <div className="pf-shipment-tracking">
+                          <div className="pf-shipment-label">Shipment Tracking</div>
+                          <div className="pf-shipment-steps">
+                            {STEPS.map((step, i) => (
+                              <div key={step} className="pf-shipment-step-wrap" style={{ flex: i < STEPS.length - 1 ? '1 1 0' : 'none' }}>
+                                <div className="pf-shipment-step-col">
+                                  <div className={`pf-shipment-dot ${i <= activeStep ? 'active' : ''} ${i === activeStep ? 'current' : ''}`}>
+                                    {i < activeStep && <span className="pf-shipment-check">✓</span>}
+                                  </div>
+                                  <span className={`pf-shipment-step-label ${i <= activeStep ? 'active' : ''}`}>{step}</span>
                                 </div>
-                                <span style={{ fontSize: 9, color: i <= activeStep ? '#2d5a27' : '#aaa', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                                  {step}
-                                </span>
+                                {i < STEPS.length - 1 && (
+                                  <div className={`pf-shipment-line ${i < activeStep ? 'active' : ''}`} />
+                                )}
                               </div>
-                              {i < STEPS.length - 1 && (
-                                <div style={{ flex: 1, height: 2, background: i < activeStep ? '#2d5a27' : '#e0e0e0', marginBottom: 20, minWidth: 8 }} />
-                              )}
+                            ))}
+                          </div>
+                          <div className="pf-shipment-meta">
+                            <span><strong>AWB:</strong> {order.shipping.awbNumber}</span>
+                            {order.shipping.logisticName && <span><strong>Courier:</strong> {order.shipping.logisticName}</span>}
+                            {order.shipping.trackingUrl && (
+                              <a href={order.shipping.trackingUrl} target="_blank" rel="noreferrer" className="pf-shipment-link">
+                                Track Shipment ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Product Items */}
+                    <div className="pf-order-items">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="pf-order-item">
+                          <div className="pf-order-item-thumb">
+                            {item.image ? (
+                              <img src={item.image} alt={item.name} className="pf-order-item-img" />
+                            ) : (
+                              <div className="pf-order-item-placeholder">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b4b4a4" strokeWidth="1.5">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                                  <circle cx="8.5" cy="8.5" r="1.5" />
+                                  <path d="m21 15-5-5L5 21" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="pf-order-item-details">
+                            <span className="pf-order-item-name">{item.name}</span>
+                            <div className="pf-order-item-meta">
+                              {item.quantity && item.quantity > 1 && <span className="pf-order-item-qty">Qty: {item.quantity}</span>}
+                              {item.color && <span className="pf-order-item-variant">{item.color}</span>}
+                              {item.size && <span className="pf-order-item-variant">Size: {item.size}</span>}
+                              {item.price ? <span className="pf-order-item-price">₹{Number(item.price).toLocaleString('en-IN')}</span> : null}
                             </div>
-                          ))}
+                            {(item.giftBox || item.giftBoxDetails) && (
+                              <div className="pf-order-item-gift">
+                                🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
+                              </div>
+                            )}
+                            {item.reviewed && (
+                              <span className="pf-product-stars">
+                                {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="pf-order-item-action">
+                            {order.status === 'Delivered' && (
+                              item.reviewed ? (
+                                <span className="pf-reviewed-badge">✓ Reviewed</span>
+                              ) : (
+                                <button
+                                  className="pf-review-btn"
+                                  onClick={() => setReviewTarget({ orderId: order.id, itemIndex: index })}
+                                >
+                                  Review
+                                </button>
+                              )
+                            )}
+                          </div>
                         </div>
-                        <div style={{ marginTop: 6, fontSize: 12, color: '#5a7a5e', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                          <span><strong>AWB:</strong> {order.shipping.awbNumber}</span>
-                          {order.shipping.logisticName && <span><strong>Courier:</strong> {order.shipping.logisticName}</span>}
-                          {order.shipping.trackingUrl && (
-                            <a href={order.shipping.trackingUrl} target="_blank" rel="noreferrer" style={{ color: '#2d5a27', textDecoration: 'underline', fontSize: 12 }}>
-                              Track Shipment ↗
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div className="pf-order-products">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="pf-product-row">
-                        <div className="pf-product-info">
-                          <span className="pf-product-name">{item.name}</span>
-                          {(item.giftBox || item.giftBoxDetails) && (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, color: '#8c6b20', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)', padding: '2px 7px', borderRadius: 4, marginTop: 4 }}>
-                              🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
-                            </div>
-                          )}
-                          {item.reviewed && (
-                            <span className="pf-product-stars">
-                              {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
-                            </span>
-                          )}
-                        </div>
-                        {order.status === 'Delivered' && (
-                          item.reviewed ? (
-                            <span className="pf-reviewed-badge">✓ Reviewed</span>
-                          ) : (
-                            <button
-                              className="pf-review-btn"
-                              onClick={() => setReviewTarget({ orderId: order.id, itemIndex: index })}
-                            >
-                              Review &amp; Earn
-                            </button>
-                          )
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* Order Footer */}
+                    <div className="pf-order-footer">
+                      <span className="pf-order-item-count">{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
+                      <span className="pf-order-total">Total: {order.amount}</span>
+                    </div>
                   </div>
+                );
+              }) : (
+                <div className="pf-empty-orders">
+                  <div className="pf-empty-orders-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b4b4a4" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                      <line x1="3" x2="21" y1="6" y2="6"/>
+                      <path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                  </div>
+                  <p className="pf-empty-orders-title">No orders yet</p>
+                  <p className="pf-empty-orders-sub">Your order history will appear here once you place your first order.</p>
                 </div>
-              )) : (
-                <div className="pf-address-card"><p className="pf-address-txt">No orders yet.</p></div>
               )}
             </div>
           </div>
@@ -1484,16 +1544,173 @@ const CSS = `
 .pf-review-banner-sub { font-size: 10.5px; color: #a07832; }
 
 /* ── ORDERS ── */
-.pf-orders { display: flex; flex-direction: column; gap: 10px; }
+.pf-orders { display: flex; flex-direction: column; gap: 14px; }
 .pf-order {
   background: #fff; border: 1px solid #e8dfc8;
-  border-radius: 14px; padding: 16px;
+  border-radius: 16px; padding: 0; overflow: hidden;
 }
+
+/* Order Header */
+.pf-order-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 16px 16px 12px; border-bottom: 1px solid #f0e8d8;
+}
+.pf-order-header-left { display: flex; flex-direction: column; gap: 3px; }
+.pf-order-header-right { flex-shrink: 0; }
+.pf-order-id {
+  font-size: 12.5px; font-weight: 700; color: #1c1c17;
+  letter-spacing: .02em;
+}
+.pf-order-date { font-size: 10.5px; color: #828278; }
+.pf-order-status-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; padding: 4px 12px; border-radius: 100px;
+  border: 1px solid; white-space: nowrap;
+}
+
+/* Shipment Tracking */
+.pf-shipment-tracking {
+  padding: 12px 16px; border-bottom: 1px solid #f0e8d8;
+  background: #fafdf7;
+}
+.pf-shipment-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: #2d5a27; margin-bottom: 10px;
+}
+.pf-shipment-steps { display: flex; align-items: flex-start; }
+.pf-shipment-step-wrap { display: flex; align-items: flex-start; }
+.pf-shipment-step-col {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.pf-shipment-dot {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  background: #e0e0e0; border: 2px solid #ccc;
+  display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; transition: all .2s;
+}
+.pf-shipment-dot.active { background: #2d5a27; border-color: #2d5a27; }
+.pf-shipment-dot.current { border-width: 3px; }
+.pf-shipment-check { color: white; font-size: 9px; font-weight: 900; }
+.pf-shipment-step-label {
+  font-size: 8px; font-weight: 700; white-space: nowrap;
+  text-align: center; color: #aaa;
+}
+.pf-shipment-step-label.active { color: #2d5a27; }
+.pf-shipment-line {
+  flex: 1; height: 2px; background: #e0e0e0;
+  margin-top: 8px; min-width: 6px;
+  transition: background .2s;
+}
+.pf-shipment-line.active { background: #2d5a27; }
+.pf-shipment-meta {
+  margin-top: 10px; font-size: 11px; color: #5a7a5e;
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.pf-shipment-link {
+  color: #2d5a27; text-decoration: underline; font-size: 11px;
+  font-weight: 600;
+}
+
+/* Order Item List */
+.pf-order-items { padding: 0; }
+.pf-order-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f0e4;
+}
+.pf-order-item:last-child { border-bottom: none; }
+
+/* Item Thumbnail */
+.pf-order-item-thumb { flex-shrink: 0; }
+.pf-order-item-img {
+  width: 56px; height: 56px; border-radius: 10px;
+  object-fit: cover; background: #f5f0e4;
+  border: 1px solid #e8dfc8;
+}
+.pf-order-item-placeholder {
+  width: 56px; height: 56px; border-radius: 10px;
+  background: #f5f0e4; border: 1px solid #e8dfc8;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Item Details */
+.pf-order-item-details {
+  flex: 1; min-width: 0; display: flex;
+  flex-direction: column; gap: 3px;
+}
+.pf-order-item-name {
+  font-size: 12.5px; font-weight: 600; color: #1c1c17;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+  line-height: 1.35;
+}
+.pf-order-item-meta {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: center; margin-top: 2px;
+}
+.pf-order-item-qty {
+  font-size: 10px; font-weight: 600; color: #828278;
+  background: #f5f0e4; padding: 2px 7px; border-radius: 4px;
+}
+.pf-order-item-variant {
+  font-size: 10px; font-weight: 600; color: #828278;
+  background: #f5f0e4; padding: 2px 7px; border-radius: 4px;
+}
+.pf-order-item-price {
+  font-size: 11px; font-weight: 700; color: #253d18;
+}
+.pf-order-item-gift {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; color: #8c6b20;
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2);
+  padding: 2px 8px; border-radius: 5px; margin-top: 2px;
+  width: fit-content;
+}
+
+/* Item Action (review button area) */
+.pf-order-item-action {
+  flex-shrink: 0; display: flex; align-items: center;
+  padding-top: 2px;
+}
+
+/* Order Footer */
+.pf-order-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid #f0e8d8;
+  background: #fdfbf6;
+}
+.pf-order-item-count {
+  font-size: 10px; font-weight: 600; color: #828278;
+}
+.pf-order-total {
+  font-size: 13px; font-weight: 700; color: #253d18;
+}
+
+/* Empty orders state */
+.pf-empty-orders {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 24px;
+  background: #fff; border: 1px solid #e8dfc8;
+  border-radius: 16px; text-align: center;
+}
+.pf-empty-orders-icon {
+  margin-bottom: 16px; opacity: .6;
+}
+.pf-empty-orders-title {
+  font-size: 15px; font-weight: 700; color: #484840;
+  margin-bottom: 6px;
+}
+.pf-empty-orders-sub {
+  font-size: 11.5px; color: #828278; max-width: 240px;
+  line-height: 1.5;
+}
+
+/* Legacy order styles kept for LegacyProfileSection */
 .pf-order-top {
   display: flex; justify-content: space-between;
   align-items: center; margin-bottom: 6px;
 }
-.pf-order-id { font-size: 11px; font-weight: 700; color: #484840; }
 .pf-order-status {
   font-size: 9px; font-weight: 700; letter-spacing: .14em;
   text-transform: uppercase; padding: 3px 10px; border-radius: 100px;
@@ -1504,10 +1721,9 @@ const CSS = `
   display: flex; justify-content: space-between;
   margin-bottom: 12px;
 }
-.pf-order-date { font-size: 10px; color: #828278; }
 .pf-order-amt { font-size: 12px; font-weight: 700; color: #253d18; }
 
-/* ── PRODUCT ROWS ── */
+/* ── PRODUCT ROWS (legacy) ── */
 .pf-order-products {
   display: flex; flex-direction: column; gap: 8px;
   border-top: 1px solid #f0e8d8; padding-top: 10px;

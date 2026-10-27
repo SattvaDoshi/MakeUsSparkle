@@ -448,7 +448,7 @@ function normalizeProduct(
           enabled:     item.giftBox.enabled !== false,
           heading:     item.giftBox.heading     || "Premium Gift Box",
           description: item.giftBox.description || "Rigid magnetic-close box \u00b7 satin ribbon \u00b7 message card",
-          price:       Number(item.giftBox.price ?? 99),
+          price:       Number(item.giftBox.price ?? 50),
           image:       item.giftBox.image || null,
         }
       : null,
@@ -739,7 +739,7 @@ export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
             enabled: p.giftBox.enabled !== false,
             heading: p.giftBox.heading || "Premium Gift Box",
             description: p.giftBox.description || "",
-            price: Number(p.giftBox.price ?? 99),
+            price: Number(p.giftBox.price ?? 50),
             image: p.giftBox.image || null,
           } : null,
           partialCOD: p.partialCOD ? {

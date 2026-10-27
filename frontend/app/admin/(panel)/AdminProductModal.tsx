@@ -134,7 +134,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		giftBoxEnabled: initialData?.giftBox?.enabled ?? true,
 		giftBoxHeading: initialData?.giftBox?.heading || "Premium Gift Box",
 		giftBoxDescription: initialData?.giftBox?.description || "Rigid magnetic-close box · satin ribbon · message card",
-		giftBoxPrice: initialData?.giftBox?.price?.toString() || "99",
+		giftBoxPrice: initialData?.giftBox?.price?.toString() || "50",
 		giftBoxImage: initialData?.giftBox?.image || null,
 		paymentMode: (initialData as any)?.paymentMode || 'cod_allowed',
 	});

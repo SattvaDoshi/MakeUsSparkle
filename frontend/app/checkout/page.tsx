@@ -304,7 +304,7 @@ export default function CheckoutPage() {
             giftBox: Boolean(item.giftBox),
             giftBoxDetails: item.giftBoxDetails || (item.giftBox ? {
               heading: 'Premium Gift Box',
-              price: 99,
+              price: 50,
             } : undefined),
             selectedCharms,
             selectionGroups,
@@ -1050,7 +1050,7 @@ export default function CheckoutPage() {
                         <span>🎁</span>
                         <span style={{ fontWeight: 600 }}>{item.giftBoxDetails?.heading || 'Premium Gift Box'}</span>
                         <span style={{ color: 'var(--olive-700)', marginLeft: 'auto', fontWeight: 600 }}>
-                          +₹{item.giftBoxDetails?.price ?? 99}
+                          +₹{item.giftBoxDetails?.price ?? 50}
                         </span>
                       </div>
                     )}

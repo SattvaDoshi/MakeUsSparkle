@@ -116,43 +116,57 @@ export default function CartDrawer() {
         .drawer-items::-webkit-scrollbar-thumb { background: var(--beige-dkr); border-radius: 2px; }
 
         .di-card {
-          display: flex; gap: 12px; background: white; border-radius: 14px;
-          padding: 12px; border: 1px solid rgba(61,74,34,.07);
+          display: flex; gap: 14px; background: white; border-radius: 16px;
+          padding: 14px; border: 1px solid rgba(201,168,76,.18);
+          box-shadow: 0 2px 10px rgba(26,31,13,.03);
+          transition: border-color .2s;
         }
+        .di-card:hover { border-color: rgba(201,168,76,.35); }
         .di-img {
-          width: 68px; height: 68px; border-radius: 10px;
+          width: 78px; height: 78px; border-radius: 12px;
           object-fit: cover; flex-shrink: 0; background: var(--beige-dk);
+          border: 1px solid rgba(61,74,34,.08);
         }
         .di-body { flex: 1; min-width: 0; }
         .di-name {
-          font-size: 13px; font-weight: 500; color: var(--olive-900);
-          margin-bottom: 3px; line-height: 1.3;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          font-size: 15px; font-weight: 600; color: var(--olive-900);
+          margin-bottom: 4px; line-height: 1.35;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         .di-color {
           display: flex; align-items: center; gap: 5px;
-          font-size: 11px; color: var(--mist); margin-bottom: 8px;
+          font-size: 11.5px; color: var(--mist); margin-bottom: 6px;
         }
         .di-color-dot {
-          width: 10px; height: 10px; border-radius: 50%;
+          width: 11px; height: 11px; border-radius: 50%;
           border: 1.5px solid rgba(0,0,0,.12); flex-shrink: 0;
         }
-        .di-price-row { display: flex; align-items: center; gap: 6px; }
-        .di-price { font-size: 14px; font-weight: 600; color: var(--olive-900); }
-        .di-original { font-size: 11px; color: var(--mist); text-decoration: line-through; }
+        .di-price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+        .di-price { font-size: 16px; font-weight: 700; color: var(--olive-900); }
+        .di-original { font-size: 12px; color: var(--mist); text-decoration: line-through; }
+        .di-gift-pill {
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 11px; font-weight: 600; color: #8c6b20;
+          background: rgba(201,168,76,0.12);
+          border: 1px solid rgba(201,168,76,0.25);
+          border-radius: 6px; padding: 2px 7px; margin-top: 5px;
+          line-height: 1.3;
+        }
         .di-actions {
           display: flex; flex-direction: column;
           align-items: flex-end; justify-content: space-between;
         }
         .di-remove {
           background: none; border: none; cursor: pointer;
-          color: var(--mist); font-size: 18px; line-height: 1; padding: 2px;
-          transition: color .2s;
+          color: var(--mist); font-size: 20px; line-height: 1; padding: 2px 4px;
+          transition: color .2s, transform .15s; border-radius: 4px;
         }
-        .di-remove:hover { color: var(--red); }
+        .di-remove:hover { color: var(--red); transform: scale(1.1); }
         .di-qty {
           display: flex; align-items: center;
           border: 1.5px solid var(--beige-dkr); border-radius: 50px; overflow: hidden;
+          background: var(--beige);
         }
         .di-qty-btn {
           width: 28px; height: 28px; background: none; border: none;
@@ -163,7 +177,7 @@ export default function CartDrawer() {
         .di-qty-btn:hover { background: var(--olive-50); }
         .di-qty-val {
           min-width: 28px; text-align: center;
-          font-size: 12px; font-weight: 600; color: var(--ink);
+          font-size: 12.5px; font-weight: 600; color: var(--ink);
         }
 
         /* Empty state */
@@ -227,7 +241,7 @@ export default function CartDrawer() {
           .drawer-panel { width: 100vw; }
           .drawer-head  { padding: 16px 16px 12px; }
           .dp-section   { padding: 14px 16px 18px; }
-          .drawer-items { padding: 12px 16px; }
+          .drawer-items { padding: 12px 14px; }
           .drawer-foot  { padding: 14px 16px 20px; }
         }
       `}</style>
@@ -272,209 +286,222 @@ export default function CartDrawer() {
             </div>
           ) : (
             <div className="drawer-items">
-              {items.map(item => (
-                <div
-                  className="di-card"
-                  key={item.cartItemId ?? `${item.id}-${item.colorHex}`}
-                  style={(item.selectedCharms?.length || item.selectionGroups?.length) ? { flexDirection: 'column', gap: 8 } : undefined}
-                >
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ flexShrink: 0 }}>
-  <img className="di-img" src={item.image} alt={item.name} />
-</Link>
-                    <div className="di-body">
-                      <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ textDecoration: 'none' }}>
-  <div className="di-name">{item.name}</div>
-</Link>
+              {items.map(item => {
+                const giftPrice = item.giftBox ? Number(item.giftBoxDetails?.price ?? 50) : 0;
+                const basePrice = item.basePrice ?? Math.max(0, item.price - giftPrice);
+                const itemTotal = item.price * item.qty;
+                const hasStrikethrough = Boolean(item.originalPrice && item.originalPrice > item.price);
 
-                      {/* {!item.selectedCharms?.length && (
-                        <div className="di-color">
-                          <span className="di-color-dot" style={{ background: item.colorHex }} />
-                          {item.color}
-                        </div>
-                      )} */}
-                      <div className="di-price-row">
-                        <span className="di-price">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
-                        {item.originalPrice && (
-                          <span className="di-original">₹{(item.originalPrice * item.qty).toLocaleString('en-IN')}</span>
-                        )}
-                      </div>
-                      {(item as any).priceBreakdown && (
-                        <div style={{ fontSize: 9.5, color: 'var(--mist)', marginTop: 2 }}>
-                          {(item as any).priceBreakdown}
-                        </div>
-                      )}
-                    </div>
-                    <div className="di-actions">
-                      <button
-                        className="di-remove"
-                        onClick={() => removeItem(item.id, item.colorHex)}
-                        aria-label={`Remove ${item.name}`}
-                      >×</button>
-                      {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
-                        <div className="di-qty">
-                          <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
-                          <span className="di-qty-val">{item.qty}</span>
-                          <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                return (
+                  <div
+                    className="di-card"
+                    key={item.cartItemId ?? `${item.id}-${item.colorHex}`}
+                    style={(item.selectedCharms?.length || item.selectionGroups?.length) ? { flexDirection: 'column', gap: 10 } : undefined}
+                  >
+                    <div style={{ display: 'flex', gap: 14 }}>
+                      <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ flexShrink: 0 }}>
+                        <img className="di-img" src={item.image} alt={item.name} />
+                      </Link>
+                      <div className="di-body">
+                        <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ textDecoration: 'none' }}>
+                          <div className="di-name">{item.name}</div>
+                        </Link>
 
-                  {item.chain && (
-                    <div style={{ fontSize: 11, color: 'var(--olive-600)', marginTop: 8, padding: '0 10px' }}>
-                      Chain: <strong>{item.chainLabel || item.chain}</strong>
-                    </div>
-                  )}
+                        <div className="di-price-row">
+                          <span className="di-price">₹{itemTotal.toLocaleString('en-IN')}</span>
+                          {hasStrikethrough && (
+                            <span className="di-original">₹{(item.originalPrice! * item.qty).toLocaleString('en-IN')}</span>
+                          )}
+                        </div>
 
-                  {item.selectedCharms && item.selectedCharms.length > 0 && (
-                    <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                        <span style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600 }}>
-                          {item.selectedCharms.length} Pieces
-                        </span>
-                        {/* Band badge */}
-                        {(item as any).band?.name && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 6px', borderRadius: 12 }}>
-                            {(item as any).band?.image ? (
-                              <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 12, height: 12, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            ) : <span>🪡</span>}
-                            {(item as any).band.name}
-                          </span>
-                        )}
-                        {/* Pack add-on badge */}
-                        {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
-                          <span style={{ fontSize: 8, color: 'var(--mist)', fontStyle: 'italic' }}>
-                            +₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
-                          </span>
-                        )}
-                      </div>
-                      {item.selectedCharms.map((selection, idx: number) => {
-                        const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
-                        return (
-                          <div key={charm.id || charm._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
-                            <span style={{ color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <span style={{ fontSize: 12 }}>{charm.emoji || '◈'}</span>
-                              {charm.name || 'Charm'}
-                            </span>
-                            {charm.price ? <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 10 }}>₹{charm.price.toLocaleString('en-IN')}</span> : null}
+                        {giftPrice > 0 && (
+                          <div className="di-gift-pill">
+                            🎁 ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
 
-                  {!item.selectedCharms?.length && item.selectionGroups && item.selectionGroups.length > 0 && (
-                    <div style={{ background: 'var(--beige)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontSize: 8, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
-                        Included Items
+                        {(item as any).priceBreakdown && (
+                          <div style={{ fontSize: 10.5, color: 'var(--mist)', marginTop: 4 }}>
+                            {(item as any).priceBreakdown}
+                          </div>
+                        )}
                       </div>
-                      {Boolean(item.customData) && (Boolean(item.customData?.comboPresetMessage) || Boolean(item.customData?.comboPersonalMessage)) && (
-                        <div style={{ padding: '4px 6px', background: 'rgba(201,168,76,0.1)', borderRadius: 6, fontSize: 10, color: 'var(--olive-700)', marginBottom: 4 }}>
-                          <div style={{ fontWeight: 600, fontSize: 9, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Box Customisation</div>
-                          {Boolean(item.customData?.comboPresetMessage) && <div>Card: <em>{String(item.customData?.comboPresetMessage)}</em></div>}
-                          {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
+                      <div className="di-actions">
+                        <button
+                          className="di-remove"
+                          onClick={() => removeItem(item.id, item.colorHex)}
+                          aria-label={`Remove ${item.name}`}
+                        >×</button>
+                        {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
+                          <div className="di-qty">
+                            <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
+                            <span className="di-qty-val">{item.qty}</span>
+                            <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {item.chain && (
+                      <div style={{ fontSize: 11.5, color: 'var(--olive-600)', marginTop: 4, padding: '0 4px' }}>
+                        Chain: <strong>{item.chainLabel || item.chain}</strong>
+                      </div>
+                    )}
+
+                    {item.selectedCharms && item.selectedCharms.length > 0 && (
+                      <div style={{ background: 'var(--beige)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                          <span style={{ fontSize: 9.5, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600 }}>
+                            {item.selectedCharms.length} Pieces
+                          </span>
+                          {(item as any).band?.name && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 12 }}>
+                              {(item as any).band?.image ? (
+                                <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                              ) : <span>🪡</span>}
+                              {(item as any).band.name}
+                            </span>
+                          )}
+                          {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
+                            <span style={{ fontSize: 9.5, color: 'var(--mist)', fontStyle: 'italic' }}>
+                              +₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
+                            </span>
+                          )}
                         </div>
-                      )}
-                      {item.selectionGroups.flatMap((group) => 
-                        group.items.map((selection, idx) => (
-                          <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(61,74,34,.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }} />}
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: 9, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
-                                <span style={{ fontSize: 11, color: 'var(--olive-900)' }}>{selection.name}</span>
-                                {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage) || Boolean(selection.customData?.chain) || (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0)) && (
-                                  <div style={{ fontSize: 9.5, color: 'var(--olive-600)', marginTop: 2 }}>
-                                    {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
-                                    {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
-                                    {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
-                                    {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
-                                      <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
-                                    )}
-                                  </div>
-                                )}
+                        {item.selectedCharms.map((selection, idx: number) => {
+                          const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
+                          return (
+                            <div key={(charm as any).id || (charm as any)._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+                              <span style={{ color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 13 }}>{(charm as any).emoji || '◈'}</span>
+                                {(charm as any).name || 'Charm'}
+                              </span>
+                              {(charm as any).price ? <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 11 }}>₹{(charm as any).price.toLocaleString('en-IN')}</span> : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {!item.selectedCharms?.length && item.selectionGroups && item.selectionGroups.length > 0 && (
+                      <div style={{ background: 'var(--beige)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ fontSize: 9.5, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
+                          Included Items
+                        </div>
+                        {Boolean(item.customData) && (Boolean(item.customData?.comboPresetMessage) || Boolean(item.customData?.comboPersonalMessage)) && (
+                          <div style={{ padding: '6px 8px', background: 'rgba(201,168,76,0.12)', borderRadius: 6, fontSize: 11, color: 'var(--olive-700)', marginBottom: 4 }}>
+                            <div style={{ fontWeight: 600, fontSize: 10, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Box Customisation</div>
+                            {Boolean(item.customData?.comboPresetMessage) && <div>Card: <em>{String(item.customData?.comboPresetMessage)}</em></div>}
+                            {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
+                          </div>
+                        )}
+                        {item.selectionGroups.flatMap((group) => 
+                          group.items.map((selection, idx) => (
+                            <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.06)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />}
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
+                                  <span style={{ fontSize: 12.5, color: 'var(--olive-900)', fontWeight: 500 }}>{selection.name}</span>
+                                  {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage) || Boolean(selection.customData?.chain) || (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0)) && (
+                                    <div style={{ fontSize: 10.5, color: 'var(--olive-600)', marginTop: 2 }}>
+                                      {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
+                                      {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                      {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
+                                      {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
+                                        <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {item.giftBox && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(61,80,22,0.06))',
-                        border: '1px solid rgba(201,168,76,0.3)',
-                        borderRadius: 10,
-                        padding: '8px 10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                      }}
-                    >
-                      {item.giftBoxDetails?.image ? (
-                        <img
-                          src={item.giftBoxDetails.image}
-                          alt={item.giftBoxDetails.heading || 'Gift Box'}
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 6,
-                            objectFit: 'cover',
-                            flexShrink: 0,
-                            border: '1px solid rgba(201,168,76,0.3)',
-                          }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 18 }}>🎁</span>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              color: 'var(--olive-900)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
-                          </span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
-                            +₹{item.giftBoxDetails?.price ?? 99}
-                          </span>
-                        </div>
-                        {item.giftBoxDetails?.description && (
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: 'var(--mist)',
-                              lineHeight: 1.3,
-                              marginTop: 2,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {item.giftBoxDetails.description}
-                          </div>
-                        )}
-                        {item.giftMessage && (
-                          <div style={{ fontSize: 9.5, color: 'var(--olive-600)', fontStyle: 'italic', marginTop: 2 }}>
-                            &ldquo;{item.giftMessage}&rdquo;
-                          </div>
+                          ))
                         )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+
+                    {item.giftBox && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(61,80,22,0.06))',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          borderRadius: 12,
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                        }}
+                      >
+                        {item.giftBoxDetails?.image ? (
+                          <img
+                            src={item.giftBoxDetails.image}
+                            alt={item.giftBoxDetails.heading || 'Gift Box'}
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 8,
+                              objectFit: 'cover',
+                              flexShrink: 0,
+                              border: '1px solid rgba(201,168,76,0.3)',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 8,
+                              background: 'rgba(201,168,76,0.18)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 20,
+                              flexShrink: 0,
+                            }}
+                          >
+                            🎁
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+                            <span
+                              style={{
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                color: 'var(--olive-900)',
+                              }}
+                            >
+                              🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
+                              +₹{giftPrice}
+                            </span>
+                          </div>
+                          {item.giftBoxDetails?.description && (
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: 'var(--mist)',
+                                lineHeight: 1.35,
+                                marginTop: 3,
+                              }}
+                            >
+                              {item.giftBoxDetails.description}
+                            </div>
+                          )}
+                          {item.giftMessage && (
+                            <div style={{ fontSize: 10.5, color: 'var(--olive-600)', fontStyle: 'italic', marginTop: 3 }}>
+                              &ldquo;{item.giftMessage}&rdquo;
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

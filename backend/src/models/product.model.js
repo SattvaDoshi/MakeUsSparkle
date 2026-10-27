@@ -85,7 +85,7 @@ const productSchema = new mongoose.Schema(
       enabled:       { type: Boolean, default: true },
       heading:       { type: String,  default: "Premium Gift Box" },
       description:   { type: String,  default: "Rigid magnetic-close box · satin ribbon · message card" },
-      price:         { type: Number,  default: 99 },
+      price:         { type: Number,  default: 50 },
       image:         { type: String,  default: null },
       imagePublicId: { type: String,  default: null },
     },

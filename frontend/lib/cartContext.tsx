@@ -20,6 +20,7 @@ export interface CartItem {
   name: string;
   price: number;
   originalPrice?: number | null;
+  basePrice?: number;
   image: string;
   color: string;
   colorHex: string;
@@ -126,7 +127,10 @@ export function cartSubtotal(items: CartItem[]) {
 }
 export function cartSavings(items: CartItem[]) {
   return items.reduce(
-    (sum, i) => sum + ((i.originalPrice ?? i.price) - i.price) * i.qty,
+    (sum, i) => {
+      const orig = i.originalPrice ?? i.price;
+      return sum + Math.max(0, orig - i.price) * i.qty;
+    },
     0,
   );
 }

@@ -778,7 +778,7 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 																									{(item as any).giftBoxDetails?.heading || "Premium Gift Box"}
 																								</strong>
 																								<span style={{ fontSize: 11.5, color: "#8c6b20", fontWeight: 700 }}>
-																									(+₹{(item as any).giftBoxDetails?.price ?? 99})
+																									(+₹{(item as any).giftBoxDetails?.price ?? 50})
 																								</span>
 																							</div>
 																							{Boolean((item as any).giftBoxDetails?.description) && (

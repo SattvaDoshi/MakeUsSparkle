@@ -40,11 +40,15 @@ class OrderService {
 						item.name ||
 						(prodObj ? prodObj.name || prodObj.title : null) ||
 						"Order item";
+					const image =
+						(prodObj ? prodObj.mainImage || (prodObj.images && prodObj.images[0]) || (prodObj.variants && prodObj.variants[0]?.image) : null) ||
+						null;
 					const rev = targetId ? reviewMap.get(String(targetId)) : null;
 
 					return {
 						...item,
 						name,
+						image,
 						productId: targetId,
 						reviewed: Boolean(rev),
 						rating: rev ? rev.rating || 5 : 0,

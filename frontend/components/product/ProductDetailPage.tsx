@@ -864,7 +864,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
-  const totalWithGiftBox = computedPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
+  const totalWithGiftBox = computedPrice + (giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0);
   const deliveryCharge = shipping === 'express' ? 110 : (computedPrice >= 999 ? 0 : 60);
   const codCharge = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
@@ -881,9 +881,14 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const buildCartItem = useCallback(() => {
     if (!product) return null;
+    const giftBoxPrice = giftBoxAdded ? (product.giftBox?.price ? Number(product.giftBox.price) : 50) : 0;
+    const finalPrice = computedPrice + giftBoxPrice;
+    const finalOriginalPrice = (computedOriginalPrice && computedOriginalPrice > computedPrice)
+      ? computedOriginalPrice + giftBoxPrice
+      : null;
     return {
-      id: String(product.sourceId), name: product.name || '', price: computedPrice + (giftBoxAdded ? (product.giftBox?.price ?? 99) : 0),
-      originalPrice: computedOriginalPrice, image: displayImg, color: currentColor?.label || '',
+      id: String(product.sourceId), name: product.name || '', price: finalPrice,
+      originalPrice: finalOriginalPrice, basePrice: computedPrice, image: displayImg, color: currentColor?.label || '',
       colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
       href: product.href || `/products/${product.sourceId}`,
       sourceId: String(product.sourceId),
@@ -900,11 +905,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       giftBoxDetails: giftBoxAdded ? {
         heading: product.giftBox?.heading || 'Premium Gift Box',
         description: product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
-        price: product.giftBox?.price ?? 99,
+        price: product.giftBox?.price ? Number(product.giftBox.price) : 50,
         image: product.giftBox?.image || GIFT_BOX_IMAGE,
       } : undefined,
     };
-  }, [product, discountedPrice, price, displayImg, currentColor, customData, giftMessage, allowCustomization, giftBoxAdded]);
+  }, [product, computedPrice, computedOriginalPrice, displayImg, currentColor, customData, giftMessage, allowCustomization, giftBoxAdded]);
   const buildCartItems = useCallback(() => {
     if (!product) return [];
 
@@ -927,12 +932,19 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       // Apply volume discount to this specific set
       let discountedSetPrice = computedPrice;
 
+      const giftBoxPrice = giftBoxAdded ? (product.giftBox?.price ? Number(product.giftBox.price) : 50) : 0;
+      const finalPrice = discountedSetPrice + giftBoxPrice;
+      const finalOriginalPrice = (setPrice && setPrice > discountedSetPrice)
+        ? setPrice + giftBoxPrice
+        : null;
+
       const cartItem: Omit<import("@/lib/cartContext").CartItem, "qty"> = {
         id: String(product.sourceId) + `-${Date.now()}-${i}`,
         sourceId: String(product.sourceId),
         name: product.name || '',
-        price: discountedSetPrice + (giftBoxAdded ? (product.giftBox?.price ?? 99) : 0),
-        originalPrice: setPrice,
+        price: finalPrice,
+        originalPrice: finalOriginalPrice,
+        basePrice: discountedSetPrice,
         image: displayImg,
         color: normalizedColors[setSelections[0]?.colorIndex || 0]?.label || '',
         colorHex: normalizedColors[setSelections[0]?.colorIndex || 0]?.hex || '#c9a84c',
@@ -953,7 +965,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         giftBoxDetails: giftBoxAdded ? {
           heading: product.giftBox?.heading || 'Premium Gift Box',
           description: product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
-          price: product.giftBox?.price ?? 99,
+          price: product.giftBox?.price ? Number(product.giftBox.price) : 50,
           image: product.giftBox?.image || GIFT_BOX_IMAGE,
         } : undefined,
         selectionGroups: [{
@@ -1762,7 +1774,7 @@ useEffect(() => {
                   image={product.giftBox?.image || GIFT_BOX_IMAGE}
                   heading={product.giftBox?.heading || 'Premium Gift Box'}
                   description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
-                  price={product.giftBox?.price ?? 99}
+                  price={product.giftBox?.price ? Number(product.giftBox.price) : 50}
                 />
               </>
             )}

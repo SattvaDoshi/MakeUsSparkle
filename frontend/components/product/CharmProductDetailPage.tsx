@@ -1170,7 +1170,7 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
   
   const totalCharmPrice = basePrice + chainPrice + charmsPrice;
   const totalCharmOriginalPrice = baseOriginalPrice + chainPrice + charmsPrice;
-  const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0);
+  const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0);
 
   const wished = product ? isWished(product.id) : false;
 
@@ -1184,11 +1184,18 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
     if (chainPrice > 0) breakdown += ` + ₹${chainPrice} (Chain)`;
     if (selectedCharmCount > 0) breakdown += ` + ₹${charmsPrice} (${selectedCharmCount} charms)`;
 
+    const giftBoxPrice = giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0;
+    const finalPrice = totalCharmPrice + giftBoxPrice;
+    const finalOriginalPrice = (totalCharmOriginalPrice > totalCharmPrice)
+      ? totalCharmOriginalPrice + giftBoxPrice
+      : null;
+
     return {
       id: String(product!.sourceId),
       name: product!.name || '',
-      price: totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ?? 99) : 0),
-      originalPrice: totalCharmOriginalPrice,
+      price: finalPrice,
+      originalPrice: finalOriginalPrice,
+      basePrice: totalCharmPrice,
       image: displayImg,
       color: currentColor?.label || '',
       colorHex: currentColor?.hex || '#c9a84c',
@@ -1205,6 +1212,12 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
       customImages: customData.wantCustom ? customData.uploads : undefined,
       giftMessage: giftMessage.customMessage || undefined,
       giftBox: giftBoxAdded || undefined,
+      giftBoxDetails: giftBoxAdded ? {
+        heading: product?.giftBox?.heading || 'Premium Gift Box',
+        description: product?.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
+        price: product?.giftBox?.price ? Number(product.giftBox.price) : 50,
+        image: product?.giftBox?.image || GIFT_BOX_IMAGE,
+      } : undefined,
       chain: selectedChain || undefined,
       chainLabel: chainOptions.find(c => c.value === selectedChain)?.label || undefined,
       priceBreakdown: breakdown,
@@ -2264,7 +2277,7 @@ const handleBuyNow = useCallback(() => {
                   image={product.giftBox?.image || GIFT_BOX_IMAGE}
                   heading={product.giftBox?.heading || 'Premium Gift Box'}
                   description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
-                  price={product.giftBox?.price ?? 99}
+                  price={product.giftBox?.price ? Number(product.giftBox.price) : 50}
                 />
               </>
             )}

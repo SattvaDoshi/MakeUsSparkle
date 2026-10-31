@@ -125,761 +125,315 @@ export default function CartPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Jost:wght@300;400;500;600;700&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Jost:wght@300;400;500;600;700&display=swap');
 
-        :root {
-          --beige: #fbf8f3;
-          --beige-surface: #f5efe6;
-          --beige-dk: #ede5d5;
-          --beige-dkr: #dcd0bc;
-          --olive-900: #1a1f0d;
-          --olive-800: #2a3315;
-          --olive-700: #38451c;
-          --olive-600: #4a5b25;
-          --olive-500: #5c7030;
-          --olive-400: #7a8e3c;
-          --olive-200: #c4cc9a;
-          --olive-50: #f2f5e8;
-          --gold: #c9a84c;
-          --gold-lt: #eedfa0;
-          --gold-bg: rgba(201, 168, 76, 0.12);
-          --ink: #1a1d13;
-          --mist: #6e7264;
-          --mist-lt: #999d91;
-          --red: #c0392b;
-          --green: #2e7d32;
-        }
+:root {
+  --beige: #fbf8f3; --beige-surface: #f5efe6; --beige-dk: #ede5d5; --beige-dkr: #dcd0bc;
+  --olive-900: #1a1f0d; --olive-800: #2a3315; --olive-700: #38451c; --olive-600: #4a5b25;
+  --olive-500: #5c7030; --olive-400: #7a8e3c; --olive-200: #c4cc9a; --olive-50: #f2f5e8;
+  --gold: #c9a84c; --gold-lt: #eedfa0; --gold-bg: rgba(201,168,76,.12);
+  --ink: #1a1d13; --mist: #5f6355; --mist-lt: #8a8e82; --red: #c0392b; --green: #2e7d32;
+}
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .cp-root {
-          min-height: 100vh;
-          background: var(--beige);
-          font-family: 'Jost', sans-serif;
-          color: var(--ink);
-        }
+.cp-root {
+  min-height: 100vh;
+  background: var(--beige);
+  font-family: 'Jost', sans-serif;
+  color: var(--ink);
+  overflow-x: clip;
+  width: 100%;
+}
 
-        /* ── Breadcrumb & Header ── */
-        .cp-header-wrap {
-          max-width: 1220px;
-          margin: 68px auto 0;
-          padding: 24px 32px 12px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-        .cp-breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 12px;
-          color: var(--mist);
-          letter-spacing: .08em;
-          text-transform: uppercase;
-        }
-        .cp-breadcrumb a {
-          color: var(--mist);
-          text-decoration: none;
-          transition: color .2s;
-        }
-        .cp-breadcrumb a:hover {
-          color: var(--olive-700);
-        }
-        .cp-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 34px;
-          font-weight: 600;
-          color: var(--olive-900);
-          letter-spacing: .02em;
-        }
-        .cp-item-count-badge {
-          font-size: 12px;
-          font-weight: 600;
-          font-family: 'Jost', sans-serif;
-          color: var(--olive-700);
-          background: rgba(74, 91, 37, 0.1);
-          padding: 3px 10px;
-          border-radius: 50px;
-          margin-left: 8px;
-          vertical-align: middle;
-        }
+/* ── Header ── */
+.cp-header-wrap {
+  max-width: 1220px; margin: 0 auto;
+  padding: 14px 16px 8px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.cp-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 600; color: var(--olive-900); letter-spacing: .02em; line-height: 1.15;
+}
+.cp-item-count-badge {
+  font-size: 11px; font-weight: 600; font-family: 'Jost', sans-serif;
+  color: var(--olive-700); background: rgba(74,91,37,.1);
+  padding: 3px 9px; border-radius: 50px; margin-left: 8px; vertical-align: middle;
+}
 
-        /* ── Layout Grid ── */
-        .cp-layout {
-          display: grid;
-          grid-template-columns: 1fr 390px;
-          gap: 28px;
-          max-width: 1220px;
-          margin: 0 auto;
-          padding: 12px 32px 80px;
-          align-items: start;
-        }
-        .cp-left { display: flex; flex-direction: column; gap: 20px; }
-        .cp-right { position: sticky; top: 88px; display: flex; flex-direction: column; gap: 18px; }
+/* ── Layout ── */
+.cp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-width: 1220px; margin: 0 auto;
+  padding: 8px 16px 70px;
+  align-items: start;
+}
+.cp-left, .cp-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
-        /* ── Elevated Glass/Card Panels ── */
-        .cp-panel {
-          background: #ffffff;
-          border-radius: 20px;
-          border: 1px solid rgba(201, 168, 76, 0.2);
-          box-shadow: 0 4px 20px rgba(26, 31, 13, 0.03);
-          overflow: hidden;
-        }
-        .cp-panel-head {
-          padding: 18px 24px;
-          border-bottom: 1px solid rgba(61, 74, 34, 0.08);
-          font-size: 11px;
-          letter-spacing: .25em;
-          text-transform: uppercase;
-          color: var(--mist);
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
+/* ── Panels ── */
+.cp-panel {
+  background: #fff; border-radius: 16px;
+  border: 1px solid rgba(201,168,76,.2);
+  box-shadow: 0 3px 16px rgba(26,31,13,.04);
+  overflow: hidden; min-width: 0;
+}
+.cp-panel-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(61,74,34,.08);
+  font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--mist); font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cp-banner-meter { padding: 14px 16px; }
 
-        /* ── Offer / Banner Meter ── */
-        .cp-banner-meter {
-          padding: 18px 22px;
-        }
+.cp-savings-strip {
+  margin: 12px 14px 4px;
+  background: linear-gradient(135deg, #eaf6ea, #f3faf2);
+  border: 1px solid #b7e4b9; border-radius: 10px;
+  padding: 10px 14px; font-size: 12.5px; color: #1e6b22; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
 
-        /* ── Savings Celebration Strip ── */
-        .cp-savings-strip {
-          margin: 16px 24px 8px;
-          background: linear-gradient(135deg, #eaf6ea 0%, #f3faf2 100%);
-          border: 1px solid #b7e4b9;
-          border-radius: 12px;
-          padding: 12px 18px;
-          font-size: 13.5px;
-          color: #1e6b22;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+/* ── Item ── */
+.cp-item {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid rgba(61,74,34,.07);
+}
+.cp-item:last-child { border-bottom: none; }
 
-        /* ── Cart Item Row ── */
-        .cp-item {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          padding: 22px 24px;
-          border-bottom: 1px solid rgba(61, 74, 34, 0.07);
-          transition: background-color .18s;
-        }
-        .cp-item:last-child { border-bottom: none; }
-        .cp-item:hover { background-color: rgba(251, 248, 243, 0.4); }
+.cp-item-top { display: flex; gap: 12px; align-items: flex-start; }
+.cp-item-img-link {
+  flex-shrink: 0; border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(201,168,76,.22);
+  background: var(--beige-surface);
+}
+.cp-item-img { width: 76px; height: 76px; object-fit: cover; display: block; }
 
-        .cp-item-top {
-          display: flex;
-          gap: 18px;
-          align-items: flex-start;
-        }
-        .cp-item-img-link {
-          flex-shrink: 0;
-          border-radius: 14px;
-          overflow: hidden;
-          border: 1px solid rgba(201, 168, 76, 0.22);
-          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
-          background: var(--beige-surface);
-          transition: transform .2s, border-color .2s;
-        }
-        .cp-item-img-link:hover {
-          transform: scale(1.02);
-          border-color: var(--gold);
-        }
-        .cp-item-img {
-          width: 96px;
-          height: 96px;
-          object-fit: cover;
-          display: block;
-        }
+.cp-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cp-item-name {
+  font-size: 14px; font-weight: 600; color: var(--olive-900);
+  line-height: 1.35; text-decoration: none; overflow-wrap: anywhere;
+}
+.cp-item-name:hover { color: var(--olive-600); }
 
-        .cp-item-body {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .cp-item-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--olive-900);
-          line-height: 1.4;
-          text-decoration: none;
-          transition: color .2s;
-        }
-        .cp-item-name:hover {
-          color: var(--olive-600);
-        }
+.cp-item-pricing { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+.cp-item-price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cp-item-price { font-size: 15px; font-weight: 700; color: var(--olive-900); }
+.cp-item-original { font-size: 12px; color: var(--mist-lt); text-decoration: line-through; }
+.cp-gift-math-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: #8c6b20;
+  background: rgba(201,168,76,.14); border: 1px solid rgba(201,168,76,.28);
+  border-radius: 6px; padding: 2px 8px; width: fit-content; max-width: 100%;
+}
+.cp-item-per { font-size: 11px; color: var(--mist); margin-top: 2px; }
 
-        /* Price display */
-        .cp-item-pricing {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          margin-top: 4px;
-        }
-        .cp-item-price-row {
-          display: flex;
-          align-items: baseline;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .cp-item-price {
-          font-size: 18px;
-          font-weight: 700;
-          color: var(--olive-900);
-          letter-spacing: -.01em;
-        }
-        .cp-item-original {
-          font-size: 13.5px;
-          color: var(--mist-lt);
-          text-decoration: line-through;
-          font-weight: 400;
-        }
-        .cp-gift-math-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          color: #8c6b20;
-          background: rgba(201, 168, 76, 0.14);
-          border: 1px solid rgba(201, 168, 76, 0.28);
-          border-radius: 8px;
-          padding: 3px 9px;
-          width: fit-content;
-          margin-top: 2px;
-        }
+.cp-item-actions {
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;
+  flex-shrink: 0; gap: 12px;
+}
+.cp-item-remove {
+  background: none; border: none; cursor: pointer; color: var(--mist-lt);
+  font-size: 20px; line-height: 1; padding: 2px 4px; border-radius: 6px;
+  transition: color .2s, transform .15s;
+}
+.cp-item-remove:hover { color: var(--red); transform: scale(1.12); }
 
-        .cp-item-per {
-          font-size: 11.5px;
-          color: var(--mist);
-          margin-top: 2px;
-        }
+.cp-qty {
+  display: flex; align-items: center;
+  border: 1.5px solid var(--beige-dkr); border-radius: 50px; overflow: hidden;
+  background: var(--beige-surface);
+}
+.cp-qty-btn {
+  width: 28px; height: 28px; background: none; border: none; font-size: 15px; cursor: pointer;
+  color: var(--olive-700); display: flex; align-items: center; justify-content: center;
+}
+.cp-qty-btn:hover { background: var(--olive-50); }
+.cp-qty-val { min-width: 26px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--ink); }
 
-        .cp-item-actions {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          justify-content: space-between;
-          flex-shrink: 0;
-          gap: 18px;
-        }
-        .cp-item-remove {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: var(--mist-lt);
-          font-size: 22px;
-          line-height: 1;
-          padding: 4px;
-          transition: color .2s, transform .15s;
-          border-radius: 6px;
-        }
-        .cp-item-remove:hover {
-          color: var(--red);
-          transform: scale(1.15);
-        }
+/* ── Included items ── */
+.cp-included-box {
+  background: linear-gradient(135deg, #f9f6ef, #f4efe4);
+  border: 1px solid rgba(201,168,76,.2); border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.cp-included-head { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--mist); font-weight: 700; }
+.cp-included-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(61,74,34,.06); min-width: 0;
+}
+.cp-included-row:last-child { border-bottom: none; }
+.cp-included-name { font-size: 13px; color: var(--olive-900); font-weight: 500; overflow-wrap: anywhere; }
 
-        /* Quantity pill */
-        .cp-qty {
-          display: flex;
-          align-items: center;
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 50px;
-          overflow: hidden;
-          background: var(--beige-surface);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-        }
-        .cp-qty-btn {
-          width: 32px;
-          height: 32px;
-          background: none;
-          border: none;
-          font-size: 17px;
-          cursor: pointer;
-          color: var(--olive-700);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background .15s, color .15s;
-        }
-        .cp-qty-btn:hover {
-          background: var(--olive-50);
-          color: var(--olive-900);
-        }
-        .cp-qty-val {
-          min-width: 32px;
-          text-align: center;
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--ink);
-        }
+/* ── Gift packaging card ── */
+.cp-giftbox-card {
+  background: linear-gradient(135deg, rgba(201,168,76,.12), rgba(92,112,48,.06));
+  border: 1.5px solid rgba(201,168,76,.32); border-radius: 12px;
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px; min-width: 0;
+}
+.cp-giftbox-img, .cp-giftbox-icon-box { width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0; }
+.cp-giftbox-img { object-fit: cover; border: 1px solid rgba(201,168,76,.35); }
+.cp-giftbox-icon-box { background: rgba(201,168,76,.2); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.cp-giftbox-body { flex: 1; min-width: 0; }
+.cp-giftbox-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.cp-giftbox-badge {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: #8c6b20; background: rgba(201,168,76,.22); padding: 2px 7px; border-radius: 5px;
+}
+.cp-giftbox-title { font-size: 12.5px; font-weight: 600; color: var(--olive-900); }
+.cp-giftbox-price { font-size: 12.5px; font-weight: 700; color: var(--olive-700); }
+.cp-giftbox-desc { margin-top: 3px; font-size: 11.5px; color: var(--mist); line-height: 1.4; }
+.cp-giftbox-msg { margin-top: 3px; font-size: 11.5px; color: var(--olive-600); font-style: italic; }
 
-        /* ── Included Items / Pieces / Customization Box ── */
-        .cp-included-box {
-          background: linear-gradient(135deg, #f9f6ef 0%, #f4efe4 100%);
-          border: 1px solid rgba(201, 168, 76, 0.2);
-          border-radius: 12px;
-          padding: 12px 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .cp-included-head {
-          font-size: 10px;
-          letter-spacing: .24em;
-          text-transform: uppercase;
-          color: var(--mist);
-          font-weight: 700;
-        }
-        .cp-included-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 0;
-          border-bottom: 1px solid rgba(61, 74, 34, 0.06);
-        }
-        .cp-included-row:last-child { border-bottom: none; }
-        .cp-included-name {
-          font-size: 13px;
-          color: var(--olive-900);
-          font-weight: 500;
-        }
+/* ── Gift selector ── */
+.cp-gift-panel { padding: 14px 16px; }
+.cp-gift-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cp-gift-heading { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--mist); font-weight: 600; }
+.cp-gift-optional { font-size: 11px; color: var(--mist-lt); font-style: italic; }
+.cp-gift-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cp-gift-card {
+  position: relative; border: 1.5px solid var(--beige-dkr); border-radius: 12px;
+  overflow: hidden; cursor: pointer; background: #fff; transition: all .2s ease; min-width: 0;
+}
+.cp-gift-card:hover { border-color: var(--olive-400); box-shadow: 0 4px 14px rgba(92,112,48,.12); }
+.cp-gift-card--selected { border-color: var(--olive-600); background: rgba(92,112,48,.03); box-shadow: 0 5px 16px rgba(92,112,48,.18); }
+.cp-gift-card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: var(--beige-dk); }
+.cp-gift-card-body { padding: 8px 10px 10px; }
+.cp-gift-card-title { font-size: 12px; font-weight: 600; color: var(--olive-900); margin-bottom: 2px; line-height: 1.3; }
+.cp-gift-card-sub { font-size: 10.5px; color: var(--mist); line-height: 1.35; margin-bottom: 4px; }
+.cp-gift-card-price { font-size: 12.5px; font-weight: 700; color: var(--olive-600); }
+.cp-gift-card-check {
+  position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--olive-600); border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; opacity: 0; transform: scale(.6); transition: all .2s;
+}
+.cp-gift-card--selected .cp-gift-card-check { opacity: 1; transform: scale(1); }
+.cp-gift-msg-wrap { margin-top: 12px; }
+.cp-gift-msg {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--beige-dkr); border-radius: 10px;
+  font-family: 'Jost', sans-serif; font-size: 14px; color: var(--ink); background: #fff;
+  outline: none; resize: none; height: 68px;
+}
+.cp-gift-msg:focus { border-color: var(--olive-500); }
 
-        /* ── Gift Packaging Added Banner on Item ── */
-        .cp-giftbox-card {
-          background: linear-gradient(135deg, rgba(201, 168, 76, 0.12) 0%, rgba(92, 112, 48, 0.06) 100%);
-          border: 1.5px solid rgba(201, 168, 76, 0.32);
-          border-radius: 14px;
-          padding: 12px 16px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-        }
-        .cp-giftbox-img {
-          width: 52px;
-          height: 52px;
-          border-radius: 10px;
-          object-fit: cover;
-          flex-shrink: 0;
-          border: 1px solid rgba(201, 168, 76, 0.35);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .cp-giftbox-icon-box {
-          width: 52px;
-          height: 52px;
-          border-radius: 10px;
-          background: rgba(201, 168, 76, 0.2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          flex-shrink: 0;
-        }
-        .cp-giftbox-body {
-          flex: 1;
-          min-width: 0;
-        }
-        .cp-giftbox-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .cp-giftbox-badge {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-          color: #8c6b20;
-          background: rgba(201, 168, 76, 0.22);
-          padding: 3px 8px;
-          border-radius: 6px;
-        }
-        .cp-giftbox-title {
-          font-size: 13.5px;
-          font-weight: 600;
-          color: var(--olive-900);
-        }
-        .cp-giftbox-price {
-          font-size: 13.5px;
-          font-weight: 700;
-          color: var(--olive-700);
-        }
-        .cp-giftbox-desc {
-          margin-top: 4px;
-          font-size: 12px;
-          color: var(--mist);
-          line-height: 1.4;
-        }
-        .cp-giftbox-msg {
-          margin-top: 4px;
-          font-size: 12px;
-          color: var(--olive-600);
-          font-style: italic;
-        }
+/* ── Coupon / points ── */
+.cp-coupon-row { display: flex; gap: 8px; }
+.cp-coupon-input {
+  flex: 1; min-width: 0; padding: 10px 14px; border: 1.5px solid var(--beige-dkr); border-radius: 50px;
+  font-family: 'Jost', sans-serif; font-size: 14px; color: var(--ink); background: #fff;
+  outline: none; text-transform: uppercase; letter-spacing: .04em;
+}
+.cp-coupon-input:focus { border-color: var(--olive-500); }
+.cp-coupon-input::placeholder { text-transform: none; color: var(--mist-lt); letter-spacing: normal; }
+.cp-coupon-btn {
+  padding: 10px 18px; background: var(--olive-700); color: var(--beige); border: none; border-radius: 50px;
+  font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; cursor: pointer; white-space: nowrap; transition: background .2s;
+}
+.cp-coupon-btn:hover { background: var(--olive-600); }
+.cp-coupon-msg { font-size: 12px; margin-top: 6px; }
+.cp-coupon-msg--error { color: var(--red); }
+.cp-coupon-msg--success { color: var(--green); }
+.cp-coupon-applied {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #eaf6ea; border: 1px solid #c0e8c2; border-radius: 10px;
+  padding: 9px 14px; font-size: 12.5px; color: #1e6b22; font-weight: 600;
+}
+.cp-coupon-remove { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--mist); }
+.cp-coupon-remove:hover { color: var(--red); }
 
-        /* ── Right Panel: Gift Wrap Selector ── */
-        .cp-gift-panel {
-          padding: 20px 22px;
-        }
-        .cp-gift-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 12px;
-        }
-        .cp-gift-heading {
-          font-size: 11px;
-          letter-spacing: .25em;
-          text-transform: uppercase;
-          color: var(--mist);
-          font-weight: 600;
-        }
-        .cp-gift-optional {
-          font-size: 11px;
-          color: var(--mist-lt);
-          font-style: italic;
-        }
-        .cp-gift-cards {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-        .cp-gift-card {
-          position: relative;
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 14px;
-          overflow: hidden;
-          cursor: pointer;
-          background: #ffffff;
-          transition: all .2s ease;
-        }
-        .cp-gift-card:hover {
-          border-color: var(--olive-400);
-          box-shadow: 0 4px 16px rgba(92, 112, 48, 0.12);
-          transform: translateY(-2px);
-        }
-        .cp-gift-card--selected {
-          border-color: var(--olive-600);
-          background: rgba(92, 112, 48, 0.03);
-          box-shadow: 0 6px 20px rgba(92, 112, 48, 0.18);
-        }
-        .cp-gift-card-img {
-          width: 100%;
-          aspect-ratio: 1/1;
-          object-fit: cover;
-          display: block;
-          background: var(--beige-dk);
-        }
-        .cp-gift-card-body {
-          padding: 10px 12px 12px;
-        }
-        .cp-gift-card-title {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--olive-900);
-          margin-bottom: 3px;
-          line-height: 1.3;
-        }
-        .cp-gift-card-sub {
-          font-size: 11px;
-          color: var(--mist);
-          line-height: 1.35;
-          margin-bottom: 6px;
-        }
-        .cp-gift-card-price {
-          font-size: 13.5px;
-          font-weight: 700;
-          color: var(--olive-600);
-        }
-        .cp-gift-card-check {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 22px;
-          height: 22px;
-          border-radius: 50%;
-          background: var(--olive-600);
-          border: 2px solid white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          color: white;
-          opacity: 0;
-          transform: scale(.6);
-          transition: all .2s;
-        }
-        .cp-gift-card--selected .cp-gift-card-check {
-          opacity: 1;
-          transform: scale(1);
-        }
-        .cp-gift-msg-wrap {
-          margin-top: 14px;
-        }
-        .cp-gift-msg {
-          width: 100%;
-          padding: 12px 14px;
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 12px;
-          font-family: 'Jost', sans-serif;
-          font-size: 12.5px;
-          color: var(--ink);
-          background: #ffffff;
-          outline: none;
-          resize: none;
-          height: 72px;
-          transition: border-color .2s;
-        }
-        .cp-gift-msg:focus {
-          border-color: var(--olive-500);
-        }
+/* ── Summary ── */
+.cp-summary-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--mist); margin-bottom: 10px;
+}
+.cp-summary-row span:last-child { font-weight: 600; color: var(--olive-900); }
+.cp-summary-row--savings, .cp-summary-row--savings span:last-child { color: #1e6b22; font-weight: 600; }
+.cp-summary-row--total {
+  font-size: 15px; font-weight: 700; color: var(--olive-900);
+  border-top: 1px solid rgba(61,74,34,.1); padding-top: 12px; margin-top: 6px; margin-bottom: 0;
+}
+.cp-summary-row--total span:last-child { font-size: 19px; font-weight: 700; color: var(--olive-900); }
+.cp-free-tag {
+  background: #2e7d32; color: #fff; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .12em; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;
+}
 
-        /* ── Coupon & Rewards ── */
-        .cp-coupon-row {
-          display: flex;
-          gap: 10px;
-        }
-        .cp-coupon-input {
-          flex: 1;
-          padding: 12px 16px;
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 50px;
-          font-family: 'Jost', sans-serif;
-          font-size: 13px;
-          color: var(--ink);
-          background: #ffffff;
-          outline: none;
-          text-transform: uppercase;
-          letter-spacing: .05em;
-          transition: border-color .2s;
-        }
-        .cp-coupon-input:focus {
-          border-color: var(--olive-500);
-        }
-        .cp-coupon-input::placeholder {
-          text-transform: none;
-          color: var(--mist-lt);
-          letter-spacing: normal;
-        }
-        .cp-coupon-btn {
-          padding: 12px 22px;
-          background: var(--olive-700);
-          color: var(--beige);
-          border: none;
-          border-radius: 50px;
-          font-family: 'Jost', sans-serif;
-          font-size: 11.5px;
-          font-weight: 600;
-          letter-spacing: .15em;
-          text-transform: uppercase;
-          cursor: pointer;
-          transition: background .2s, transform .15s;
-          white-space: nowrap;
-        }
-        .cp-coupon-btn:hover {
-          background: var(--olive-600);
-          transform: translateY(-1px);
-        }
-        .cp-coupon-msg {
-          font-size: 12px;
-          margin-top: 8px;
-        }
-        .cp-coupon-msg--error { color: var(--red); }
-        .cp-coupon-msg--success { color: var(--green); }
-        .cp-coupon-applied {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #eaf6ea;
-          border: 1px solid #c0e8c2;
-          border-radius: 12px;
-          padding: 10px 16px;
-          font-size: 13px;
-          color: #1e6b22;
-          font-weight: 600;
-        }
-        .cp-coupon-remove {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 16px;
-          color: var(--mist);
-          transition: color .2s;
-        }
-        .cp-coupon-remove:hover { color: var(--red); }
+/* ── Checkout ── */
+.cp-checkout-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 14px; background: var(--olive-900); color: #fff; border: none; border-radius: 50px;
+  font-family: 'Jost', sans-serif; font-size: 11.5px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; cursor: pointer; text-decoration: none;
+  box-shadow: 0 6px 22px rgba(26,31,13,.22); transition: all .25s ease;
+}
+.cp-checkout-btn:hover { background: var(--olive-700); transform: translateY(-2px); }
 
-        /* ── Price Summary Panel ── */
-        .cp-summary-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 14px;
-          color: var(--mist);
-          margin-bottom: 12px;
-        }
-        .cp-summary-row span:last-child {
-          font-weight: 600;
-          color: var(--olive-900);
-        }
-        .cp-summary-row--savings {
-          color: #1e6b22;
-          font-weight: 600;
-        }
-        .cp-summary-row--savings span:last-child {
-          color: #1e6b22;
-        }
-        .cp-summary-row--total {
-          font-size: 18px;
-          font-weight: 700;
-          color: var(--olive-900);
-          border-top: 1px solid rgba(61, 74, 34, 0.1);
-          padding-top: 16px;
-          margin-top: 8px;
-          margin-bottom: 0;
-        }
-        .cp-summary-row--total span:last-child {
-          font-size: 22px;
-          font-weight: 700;
-          color: var(--olive-900);
-        }
-        .cp-free-tag {
-          background: #2e7d32;
-          color: #ffffff;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: .14em;
-          padding: 3px 8px;
-          border-radius: 4px;
-          text-transform: uppercase;
-        }
+/* ── Trust ── */
+.cp-trust-strip {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  padding: 14px 16px; background: #fff; border-radius: 14px; border: 1px solid rgba(201,168,76,.2);
+}
+.cp-trust-item { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--olive-800); font-weight: 500; line-height: 1.3; }
 
-        /* ── Checkout CTA ── */
-        .cp-checkout-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          width: 100%;
-          padding: 18px;
-          background: var(--olive-900);
-          color: #ffffff;
-          border: none;
-          border-radius: 50px;
-          font-family: 'Jost', sans-serif;
-          font-size: 12.5px;
-          font-weight: 700;
-          letter-spacing: .22em;
-          text-transform: uppercase;
-          cursor: pointer;
-          text-decoration: none;
-          box-shadow: 0 8px 30px rgba(26, 31, 13, 0.25);
-          transition: all .25s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        .cp-checkout-btn:hover {
-          background: var(--olive-700);
-          transform: translateY(-2px);
-          box-shadow: 0 12px 38px rgba(26, 31, 13, 0.32);
-        }
+/* ── Empty ── */
+.cp-empty {
+  text-align: center; padding: 56px 20px; grid-column: 1 / -1;
+  background: #fff; border-radius: 20px; border: 1px solid rgba(201,168,76,.2);
+}
+.cp-empty-icon { font-family: 'Cormorant Garamond', serif; font-size: 52px; color: rgba(61,74,34,.2); margin-bottom: 12px; }
+.cp-empty-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--olive-900); margin-bottom: 6px; }
+.cp-empty-text { font-size: 13.5px; color: var(--mist); margin-bottom: 20px; }
+.cp-empty-link {
+  display: inline-flex; align-items: center; gap: 8px; padding: 13px 28px;
+  background: var(--olive-900); color: #fff; border-radius: 50px; text-decoration: none;
+  font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+}
 
-        /* ── Trust Badges Strip ── */
-        .cp-trust-strip {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          padding: 16px 20px;
-          background: #ffffff;
-          border-radius: 16px;
-          border: 1px solid rgba(201, 168, 76, 0.2);
-        }
-        .cp-trust-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 11.5px;
-          color: var(--olive-800);
-          font-weight: 500;
-          line-height: 1.3;
-        }
+/* ═══ TABLET ≥ 600px ═══ */
+@media (min-width: 600px) {
+  .cp-header-wrap { padding: 18px 24px 10px; }
+  .cp-layout { padding: 10px 24px 80px; gap: 20px; }
+  .cp-item { padding: 18px 20px; }
+  .cp-item-img { width: 88px; height: 88px; }
+  .cp-item-name { font-size: 15px; }
+  .cp-item-price { font-size: 16.5px; }
+  .cp-panel-head { padding: 16px 20px; }
+  .cp-banner-meter { padding: 16px 20px; }
+  .cp-savings-strip { margin: 14px 20px 4px; font-size: 13px; }
+  .cp-gift-panel { padding: 18px 20px; }
+  .cp-trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-        /* ── Empty Cart View ── */
-        .cp-empty {
-          text-align: center;
-          padding: 90px 24px;
-          grid-column: 1 / -1;
-          background: #ffffff;
-          border-radius: 24px;
-          border: 1px solid rgba(201, 168, 76, 0.2);
-        }
-        .cp-empty-icon {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 64px;
-          color: rgba(61, 74, 34, 0.2);
-          margin-bottom: 16px;
-        }
-        .cp-empty-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px;
-          font-weight: 600;
-          color: var(--olive-900);
-          margin-bottom: 8px;
-        }
-        .cp-empty-text {
-          font-size: 14px;
-          color: var(--mist);
-          margin-bottom: 24px;
-        }
-        .cp-empty-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          padding: 15px 34px;
-          background: var(--olive-900);
-          color: #ffffff;
-          border-radius: 50px;
-          text-decoration: none;
-          font-size: 11.5px;
-          font-weight: 600;
-          letter-spacing: .2em;
-          text-transform: uppercase;
-          transition: all .2s;
-          box-shadow: 0 4px 18px rgba(26, 31, 13, 0.2);
-        }
-        .cp-empty-link:hover {
-          background: var(--olive-700);
-          transform: translateY(-2px);
-        }
+/* ═══ LAPTOP ≥ 960px ═══ */
+@media (min-width: 960px) {
+  .cp-header-wrap { padding: 22px 32px 12px; }
+  .cp-layout { grid-template-columns: minmax(0, 1fr) 380px; gap: 26px; padding: 12px 32px 80px; }
+  .cp-right { position: sticky; top: 88px; gap: 16px; }
+  .cp-item-img { width: 96px; height: 96px; }
+  .cp-item-name { font-size: 16px; }
+  .cp-item-price { font-size: 18px; }
+  .cp-summary-row { font-size: 14px; }
+  .cp-summary-row--total { font-size: 17px; }
+  .cp-summary-row--total span:last-child { font-size: 22px; }
+  .cp-checkout-btn { padding: 16px; font-size: 12px; letter-spacing: .2em; }
+  .cp-trust-strip { grid-template-columns: 1fr; }
+}
 
-        /* ── Responsive ── */
-        @media (max-width: 960px) {
-          .cp-header-wrap { padding: 20px 20px 8px; }
-          .cp-layout { grid-template-columns: 1fr; padding: 12px 20px 60px; gap: 24px; }
-          .cp-right { position: static; }
-        }
-        @media (max-width: 540px) {
-          .cp-header-wrap { margin-top: 55px; padding: 16px 16px 8px; }
-          .cp-title { font-size: 28px; }
-          .cp-layout { padding: 12px 16px 60px; gap: 18px; }
-          .cp-item { padding: 16px; gap: 12px; }
-          .cp-item-img { width: 80px; height: 80px; }
-          .cp-item-name { font-size: 14.5px; }
-          .cp-item-price { font-size: 16.5px; }
-          .cp-qty-btn { width: 28px; height: 28px; font-size: 15px; }
-          .cp-qty-val { min-width: 28px; font-size: 12px; }
-          .cp-giftbox-card { padding: 10px 12px; gap: 10px; }
-          .cp-giftbox-img, .cp-giftbox-icon-box { width: 42px; height: 42px; }
-          .cp-trust-strip { grid-template-columns: 1fr; }
-        }
+/* ═══ SMALL PHONES ═══ */
+@media (max-width: 380px) {
+  .cp-item-img { width: 64px; height: 64px; }
+  .cp-item-top { gap: 10px; }
+  .cp-item-name { font-size: 13.5px; }
+  .cp-checkout-btn { font-size: 10.5px; letter-spacing: .12em; }
+  .cp-trust-strip { grid-template-columns: 1fr; }
+}
       `}</style>
 
       <div className="cp-root">
@@ -887,11 +441,11 @@ export default function CartPage() {
 
         {/* Header Strip */}
         <div className="cp-header-wrap">
-          <div className="cp-breadcrumb">
+          {/* <div className="cp-breadcrumb">
             <Link href="/">Home</Link>
             <span>/</span>
             <span>Shopping Cart</span>
-          </div>
+          </div> */}
           <h1 className="cp-title">
             Your Sparkle Bag
             {itemCount > 0 && (
@@ -1110,13 +664,18 @@ export default function CartPage() {
                                         {group.label || group.category}
                                       </span>
                                       <span className="cp-included-name">{selection.name}</span>
-                                      {Boolean(selection.customData) && (
-                                        <div style={{ fontSize: 11, color: 'var(--olive-600)', marginTop: 2 }}>
-                                          {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
-                                          {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
-                                          {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
-                                        </div>
-                                      )}
+                                    {Boolean(selection.customData) && (
+  <div style={{ fontSize: 12.5, color: 'var(--olive-700)', marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+    {Object.entries((selection.customData?.selections as Record<string, string>) || {}).map(([k, v]) => (
+      <div key={k}>{k}: <strong>{String(v)}</strong></div>
+    ))}
+    {Boolean(selection.customData?.color) && <div>Colour: <strong>{String(selection.customData?.color)}</strong></div>}
+    {Boolean(selection.customData?.size) && <div>Size: <strong>{String(selection.customData?.size)}</strong></div>}
+    {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
+    {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+    {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
+  </div>
+)}
                                     </div>
                                   </div>
                                 </div>

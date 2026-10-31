@@ -1,12 +1,14 @@
 'use client';
-import { useState, useRef, useCallback, useEffect, useMemo, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchProductById, fetchCharmItems, type CatalogProduct, type CharmItemData } from '@/lib/catalogApi';
+
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
 import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
+import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
+import { useAuth } from '@/lib/authContext';
 
 /* ─── Types ─── */
 interface AccordionData {
@@ -39,9 +41,7 @@ export interface ChainOption {
   price?: number;
 }
 
-/* ─── Chain option list — each chain has a photo shown large in the picker ─── */
-// ── NOTE: `price` here is a placeholder — wire this up to the real
-// per-chain price from your product/catalog data when available. ──
+/* ─── Chain option list — fallback when the product has no chain variants ─── */
 export const CHAIN_OPTIONS: ChainOption[] = [
   { value: 'box_chain', label: 'Box Chain', sub: 'Classic square-link, sits flat', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80', price: 199 },
   { value: 'cable_chain', label: 'Cable Chain', sub: 'Timeless round links', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80', price: 249 },
@@ -49,8 +49,6 @@ export const CHAIN_OPTIONS: ChainOption[] = [
   { value: 'figaro_chain', label: 'Figaro Chain', sub: 'Alternating link pattern', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80', price: 299 },
   { value: 'curb_chain', label: 'Curb Chain', sub: 'Flattened, interlocking links', image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=600&q=80', price: 279 },
 ];
-
-
 
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
 // ── Replace with actual size chart image path ──
@@ -106,6 +104,7 @@ function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClo
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
               width: 34, height: 34, borderRadius: '50%', border: '1.5px solid rgba(61,74,34,.15)',
               background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -113,7 +112,7 @@ function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClo
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -159,7 +158,7 @@ function GiftBoxUpsell({
       borderRadius: 14, overflow: 'hidden',
       background: added ? 'linear-gradient(135deg,rgba(201,168,76,.07),rgba(245,240,232,.8))' : 'white',
       transition: 'border-color .25s, background .25s',
-      marginBottom: 20,
+      marginBottom: 0,
     }}>
       {/* Square image, left side */}
       <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
@@ -216,12 +215,12 @@ function GiftBoxUpsell({
         >
           {added ? (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
               Added
             </>
           ) : (
             <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
               Add to order
             </>
           )}
@@ -236,9 +235,9 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="18" width="28" height="18" rx="2"/><path d="M32 22h4l6 8v6h-10V22z"/>
-        <circle cx="14" cy="38" r="3"/><circle cx="36" cy="38" r="3"/>
-        <path d="M4 26h28"/><path d="M10 14h4M16 11v6"/>
+        <rect x="4" y="18" width="28" height="18" rx="2" /><path d="M32 22h4l6 8v6h-10V22z" />
+        <circle cx="14" cy="38" r="3" /><circle cx="36" cy="38" r="3" />
+        <path d="M4 26h28" /><path d="M10 14h4M16 11v6" />
       </svg>
     ),
     title: 'Free Shipping', sub: 'On orders above ₹999',
@@ -246,8 +245,8 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z"/>
-        <path d="M20 22l3 3 6-6"/>
+        <path d="M24 6C14 6 8 14 8 22c0 10 16 22 16 22s16-12 16-22c0-8-6-16-16-16z" />
+        <path d="M20 22l3 3 6-6" />
       </svg>
     ),
     title: 'COD Available', sub: 'On all orders',
@@ -255,27 +254,12 @@ const TRUST_BADGES = [
   {
     icon: (
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M44 4L22 26M44 4L30 44 22 26 4 18 44 4z"/>
+        <path d="M44 4L22 26M44 4L30 44 22 26 4 18 44 4z" />
       </svg>
     ),
     title: 'Express Delivery', sub: '2–3 business days',
   },
 ];
-
-/* ─── Reviews ─── */
-const REVIEWS_DATA = [
-  { id: 1, name: 'Priya Sharma', initials: 'PS', rating: 5, date: '12 Apr 2025', title: 'Absolutely stunning piece!', body: 'I gifted this to my sister and she was in tears. The quality is exceptional — it looks far more expensive than it actually is. The packaging was gorgeous too. Will definitely be ordering again.', verified: true, helpful: 24, colorHex: '#c9a84c', images: ['https://images.unsplash.com/photo-1599643477873-108bb9622d17?w=400&q=80'] },
-  { id: 2, name: 'Anika Reddy', initials: 'AR', rating: 5, date: '3 Apr 2025', title: 'Perfect everyday necklace', body: 'Wore it every day for a month and it still looks brand new. The layered design is so elegant and gets so many compliments. Highly recommend for anyone looking for something that looks luxe but is affordable.', verified: true, helpful: 18, colorHex: '#5a6b2e' },
-  { id: 3, name: 'Meera Joshi', initials: 'MJ', rating: 4, date: '28 Mar 2025', title: 'Beautiful but clasp is slightly fiddly', body: 'The necklace itself is gorgeous — love the delicate layered look. My only minor complaint is the lobster clasp is a tiny bit tricky to fasten solo. Once on though, it stays perfectly and looks stunning.', verified: true, helpful: 11, colorHex: '#3d4a22' },
-  { id: 4, name: 'Divya Nair', initials: 'DN', rating: 5, date: '19 Mar 2025', title: 'Fast delivery, premium quality', body: 'Ordered on a whim and received it in 2 days. The moment I opened the box I knew it was worth every rupee. The gold plating is even and the chains lay perfectly. Zero tarnishing so far.', verified: false, helpful: 8, colorHex: '#c9a84c' },
-  { id: 5, name: 'Roshni Kapoor', initials: 'RK', rating: 5, date: '10 Mar 2025', title: 'My go-to jewellery shop now', body: 'Third order from Maison and they never disappoint. This layered necklace is my favourite so far. It transitions effortlessly from casual daywear to evenings. The rose gold variant I got is dreamy.', verified: true, helpful: 31, colorHex: '#7a8e3c' },
-];
-const RATING_DISTRIBUTION = [
-  { stars: 5, count: 148, pct: 74 }, { stars: 4, count: 32, pct: 16 },
-  { stars: 3, count: 12, pct: 6 },  { stars: 2, count: 4, pct: 2 }, { stars: 1, count: 4, pct: 2 },
-];
-const OVERALL_RATING = 4.8;
-const TOTAL_REVIEWS = 200;
 
 /* ─── Goes well with ─── */
 const GOES_WELL_WITH = [
@@ -292,7 +276,7 @@ export function ChainSelector({
   onViewImage,
   showMissing,
   options = [],
-  label = "Chain Type",
+  label = 'Chain Type',
   placeholder,
 }: {
   value: string;
@@ -317,7 +301,7 @@ export function ChainSelector({
   if (!options || options.length === 0) return null;
 
   const selected = options.find(c => c.value === value) || null;
-  const displayLabel = label || "Chain Type";
+  const displayLabel = label || 'Chain Type';
   const displayPlaceholder = placeholder || (
     displayLabel.toLowerCase().startsWith('select')
       ? `${displayLabel}…`
@@ -328,7 +312,7 @@ export function ChainSelector({
     <div className="chain-selector-wrap" ref={wrapRef}>
       <p className="charm-section-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-          <circle cx="12" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M12 9v6"/>
+          <circle cx="12" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="M12 9v6" />
         </svg>
         {displayLabel}
       </p>
@@ -343,12 +327,12 @@ export function ChainSelector({
             <img src={selected.image} alt={selected.label} />
           ) : (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--olive-400)' }}>
-              <circle cx="12" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M12 9v6"/>
+              <circle cx="12" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="M12 9v6" />
             </svg>
           )}
           {selected && (
             <span className="chain-trigger-zoom">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
             </span>
           )}
         </div>
@@ -359,7 +343,7 @@ export function ChainSelector({
           )}
         </div>
         <svg className="chain-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polyline points="6 9 12 15 18 9"/>
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
@@ -386,7 +370,7 @@ export function ChainSelector({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={opt.image} alt={opt.label} />
                 <span className="chain-option-zoom">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
                 </span>
               </div>
               <div className="chain-option-text">
@@ -396,7 +380,7 @@ export function ChainSelector({
                 )}
               </div>
               {value === opt.value && (
-                <svg className="chain-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg className="chain-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
               )}
             </button>
           ))}
@@ -439,6 +423,7 @@ export function CharmSelector({
       setCharmCount(0);
     }
     setSelectedCharms([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(validPieceOptions), validTotal]);
 
   // Keep selectedCharms array in sync with charmCount
@@ -480,8 +465,8 @@ export function CharmSelector({
     { value: '', label: 'Select a charm...' },
     ...Array.from({ length: validTotal }, (_, i) => ({
       value: String(i + 1),
-      label: String(i + 1)
-    }))
+      label: String(i + 1),
+    })),
   ];
   const allCharmsSelected = filledCount === charmCount;
 
@@ -493,7 +478,7 @@ export function CharmSelector({
       {isFixedCount && charmCount > 0 ? (
         <div className="charm-fixed-count-note" style={{ marginBottom: 20 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)', flexShrink: 0 }}>
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <span>This piece takes exactly <strong>{charmCount}</strong> charm{charmCount > 1 ? 's' : ''} — all {charmCount > 1 ? `${charmCount} are` : 'is'} required below.</span>
         </div>
@@ -501,7 +486,7 @@ export function CharmSelector({
         <>
           <p className="charm-section-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             Number of Charms
           </p>
@@ -525,7 +510,7 @@ export function CharmSelector({
         <>
           <p className="charm-section-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--gold)' }}>
-              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
             Select Your Charms <span style={{ color: 'var(--red)' }}>*</span>
             <span className="charm-filled-badge">{filledCount}/{charmCount} selected</span>
@@ -539,99 +524,101 @@ export function CharmSelector({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Array.from({ length: charmCount }, (_, i) => {
-          const chosen = selectedCharms[i] || '';
-          const usedValues = new Set(selectedCharms.filter((c, idx) => c && idx !== i));
-          const isMissing = showMissing && !chosen;
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Slot number badge */}
-              <span style={{
-                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                background: chosen ? 'var(--olive-600)' : isMissing ? 'var(--red)' : 'var(--beige-dkr)',
-                color: chosen || isMissing ? 'var(--beige)' : 'var(--mist)',
-                fontSize: 10, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background .2s, color .2s',
-              }}>
-                {i + 1}
-              </span>
-
-              {/* Native select — browser renders the list natively, no clipping */}
-              <div style={{ position: 'relative', flex: 1 }}>
-                <select
-                  value={chosen}
-                  onChange={e => setCharm(i, e.target.value)}
-                  style={{
-                    width: '100%',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    background: chosen ? 'var(--olive-50)' : isMissing ? 'rgba(192,57,43,.05)' : 'white',
-                    border: `1.5px solid ${isMissing ? 'var(--red)' : chosen ? 'rgba(90,110,35,.35)' : 'var(--beige-dkr)'}`,
-                    borderRadius: 10,
-                    padding: '10px 36px 10px 14px',
-                    fontFamily: "'Jost', sans-serif",
-                    fontSize: 12.5,
-                    fontWeight: chosen ? 500 : 400,
-                    color: chosen ? 'var(--olive-900)' : 'rgba(30,35,16,.4)',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    transition: 'border-color .2s, background .2s',
-                  }}
-                >
-                  {availableCharms.map(opt => (
-                    <option
-                      key={opt.value}
-                      value={opt.value}
-                      disabled={opt.value === '' ? false : usedValues.has(opt.value)}
-                    >
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Custom chevron */}
-                <svg
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                  style={{
-                    position: 'absolute', right: 11, top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 13, height: 13,
-                    color: 'var(--mist)', pointerEvents: 'none',
-                  }}
-                >
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </div>
-
-              {/* Clear button — only when a charm is chosen */}
-              {chosen && (
-                <button
-                  type="button"
-                  onClick={() => setCharm(i, '')}
-                  title="Clear"
-                  style={{
-                    flexShrink: 0, width: 28, height: 28,
-                    borderRadius: '50%', border: '1.5px solid var(--beige-dkr)',
-                    background: 'white', cursor: 'pointer',
+              const chosen = selectedCharms[i] || '';
+              const usedValues = new Set(selectedCharms.filter((c, idx) => c && idx !== i));
+              const isMissing = showMissing && !chosen;
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {/* Slot number badge */}
+                  <span style={{
+                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                    background: chosen ? 'var(--olive-600)' : isMissing ? 'var(--red)' : 'var(--beige-dkr)',
+                    color: chosen || isMissing ? 'var(--beige)' : 'var(--mist)',
+                    fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--mist)', fontSize: 15, lineHeight: 1,
-                    transition: 'border-color .2s, color .2s',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--red)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--red)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--beige-dkr)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--mist)';
-                  }}
-                >
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      </>
+                    transition: 'background .2s, color .2s',
+                  }}>
+                    {i + 1}
+                  </span>
+
+                  {/* Native select — browser renders the list natively, no clipping */}
+                  <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                    <select
+                      value={chosen}
+                      onChange={e => setCharm(i, e.target.value)}
+                      style={{
+                        width: '100%',
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                        background: chosen ? 'var(--olive-50)' : isMissing ? 'rgba(192,57,43,.05)' : 'white',
+                        border: `1.5px solid ${isMissing ? 'var(--red)' : chosen ? 'rgba(90,110,35,.35)' : 'var(--beige-dkr)'}`,
+                        borderRadius: 10,
+                        padding: '10px 36px 10px 14px',
+                        fontFamily: "'Jost', sans-serif",
+                        fontSize: 16, // 16px stops iOS Safari zooming on focus
+                        fontWeight: chosen ? 500 : 400,
+                        color: chosen ? 'var(--olive-900)' : 'rgba(30,35,16,.4)',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        transition: 'border-color .2s, background .2s',
+                      }}
+                    >
+                      {availableCharms.map(opt => (
+                        <option
+                          key={opt.value}
+                          value={opt.value}
+                          disabled={opt.value === '' ? false : usedValues.has(opt.value)}
+                        >
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Custom chevron */}
+                    <svg
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      style={{
+                        position: 'absolute', right: 11, top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 13, height: 13,
+                        color: 'var(--mist)', pointerEvents: 'none',
+                      }}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+
+                  {/* Clear button — only when a charm is chosen */}
+                  {chosen && (
+                    <button
+                      type="button"
+                      onClick={() => setCharm(i, '')}
+                      title="Clear"
+                      aria-label={`Clear charm ${i + 1}`}
+                      style={{
+                        flexShrink: 0, width: 28, height: 28,
+                        borderRadius: '50%', border: '1.5px solid var(--beige-dkr)',
+                        background: 'white', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'var(--mist)', fontSize: 15, lineHeight: 1,
+                        transition: 'border-color .2s, color .2s',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--red)';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--red)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--beige-dkr)';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--mist)';
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Summary strip */}
@@ -639,7 +626,7 @@ export function CharmSelector({
         <div className="charm-summary-strip" style={{ animation: 'charmFadeUp .35s ease both', marginTop: 16 }}>
           <div className="charm-summary-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--olive-500)', flexShrink: 0, marginTop: 1 }}>
-              <polyline points="20 6 9 17 4 12"/>
+              <polyline points="20 6 9 17 4 12" />
             </svg>
             <span>
               <strong>{filledCount}</strong> of <strong>{charmCount}</strong> selected
@@ -657,6 +644,7 @@ export function CharmSelector({
                     <button
                       type="button"
                       onClick={() => setCharm(i, '')}
+                      aria-label={`Remove charm ${i + 1}`}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 2px', color: 'var(--mist)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
                     >×</button>
                   )}
@@ -671,11 +659,43 @@ export function CharmSelector({
 }
 
 /* ─── Reviews ─── */
-function ReviewsSection() {
+function ReviewsSection({ productId, reviews, setReviews }: { productId: string; reviews: ReviewData[]; setReviews: React.Dispatch<React.SetStateAction<ReviewData[]>> }) {
   const [visibleCount, setVisibleCount] = useState(3);
   const [filterStar, setFilterStar] = useState<number | null>(null);
-  const filtered = REVIEWS_DATA.filter(r => filterStar === null || r.rating === filterStar);
+  const [showForm, setShowForm] = useState(false);
+  const [formState, setFormState] = useState<{ rating: number; body: string; images: File[] }>({ rating: 5, body: '', images: [] });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const { token } = useAuth();
+
+  const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
   const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) { setErrorMsg('You must be logged in to review.'); return; }
+    setIsSubmitting(true);
+    setErrorMsg('');
+    const res = await submitProductReview({ productId, ...formState }, token);
+    setIsSubmitting(false);
+    if (res.success && res.review) {
+      setReviews([res.review, ...reviews]);
+      setShowForm(false);
+      setFormState({ rating: 5, body: '', images: [] });
+    } else {
+      setErrorMsg(res.message || 'Failed to submit review.');
+    }
+  };
+
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
+  const ratingDist = [5, 4, 3, 2, 1].map(stars => {
+    const count = reviews.filter(r => r.rating === stars).length;
+    const pct = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+    return { stars, count, pct };
+  });
 
   return (
     <div className="rev-section">
@@ -687,14 +707,15 @@ function ReviewsSection() {
         </div>
         <div className="rev-header-line" />
       </div>
+
       <div className="rev-summary">
         <div className="rev-summary-score">
-          <span className="rev-big-num">{OVERALL_RATING}</span>
-          <div className="rev-big-stars">{'★'.repeat(Math.round(OVERALL_RATING))}{'☆'.repeat(5 - Math.round(OVERALL_RATING))}</div>
-          <span className="rev-total-cnt">Based on {TOTAL_REVIEWS} reviews</span>
+          <span className="rev-big-num">{avgRating}</span>
+          <div className="rev-big-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
+          <span className="rev-total-cnt">Based on {totalReviews} reviews</span>
         </div>
         <div className="rev-bars">
-          {RATING_DISTRIBUTION.map(d => (
+          {ratingDist.map(d => (
             <button key={d.stars} className={`rev-bar-row${filterStar === d.stars ? ' rev-bar-row--active' : ''}`} onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}>
               <span className="rev-bar-label">{d.stars}★</span>
               <div className="rev-bar-track"><div className="rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
@@ -703,51 +724,91 @@ function ReviewsSection() {
           ))}
         </div>
       </div>
-      {filterStar !== null && (
-        <div className="rev-controls">
-          <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>
+
+      <div className="rev-controls" style={{ justifyContent: 'space-between' }}>
+        <div>
+          {filterStar !== null && <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>}
         </div>
+        {!showForm && (
+          <button className="rev-helpful-btn" style={{ background: 'var(--olive-600)', color: 'white' }} onClick={() => setShowForm(true)}>
+            Write a Review
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} style={{ background: 'white', padding: 24, borderRadius: 18, border: '1px solid rgba(61,74,34,.07)', marginBottom: 20, animation: 'fadeUp .3s ease both' }}>
+          <h3 style={{ fontSize: 16, color: 'var(--olive-900)', marginBottom: 16 }}>Write a Review</h3>
+          {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {[1, 2, 3, 4, 5].map(star => (
+              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
+            ))}
+          </div>
+          <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 16, outline: 'none', resize: 'vertical' }} />
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
+              <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
+                if (e.target.files) setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
+              }} />
+              + Add Photos
+            </label>
+            {formState.images.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {formState.images.map((file, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
+                    <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
+            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'transparent', color: 'var(--mist)', border: 'none', padding: '10px 24px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </form>
       )}
+
+      {visible.length === 0 && !showForm && (
+        <p className="rev-empty">
+          {totalReviews === 0 ? 'No reviews yet — be the first to share your experience.' : <>No reviews match this filter. <button className="rev-clear-link" onClick={() => setFilterStar(null)}>Clear filter</button></>}
+        </p>
+      )}
+
       <div className="rev-list">
         {visible.map((r, i) => (
-          <div key={r.id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
+          <div key={r._id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
             <div className="rev-card-top">
-              <div className="rev-avatar" style={{ background: r.colorHex + '22', color: r.colorHex }}>{r.initials}</div>
+              <div className="rev-avatar" style={{ background: '#c9a84c22', color: '#c9a84c' }}>{r.user?.firstName?.[0] || 'A'}</div>
               <div className="rev-meta">
                 <div className="rev-meta-row">
-                  <span className="rev-name">{r.name}</span>
-                  {r.verified && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified purchase</span>}
+                  <span className="rev-name">{r.user?.firstName} {r.user?.lastName}</span>
+                  {r.isVerifiedPurchase && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
                 </div>
                 <div className="rev-meta-row" style={{ marginTop: 3 }}>
                   <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                  <span className="rev-date">{r.date}</span>
+                  <span className="rev-date">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 </div>
               </div>
             </div>
-            <p className="rev-card-title">{r.title}</p>
             <p className="rev-card-body">{r.body}</p>
             {r.images && r.images.length > 0 && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {r.images.map((imgUrl, idx) => (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img key={idx} src={imgUrl} alt="Review attachment" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
                 ))}
               </div>
             )}
-            <div className="rev-card-foot">
-              <span className="rev-helpful-label">Helpful?</span>
-              <button className="rev-helpful-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                {r.helpful}
-              </button>
-            </div>
           </div>
         ))}
       </div>
-      {visibleCount < filtered.length && (
-        <div className="rev-load-wrap">
-          <button className="rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>Show more reviews</button>
-        </div>
-      )}
+      {hasMore && <div className="rev-load-wrap"><button className="rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>Show more reviews</button></div>}
     </div>
   );
 }
@@ -785,29 +846,28 @@ function CompleteTheLookStrip() {
   );
 }
 
-/* ─── Accordion ─── */
+/* ─── Accordion (grid-rows animation: never clips when width/content changes) ─── */
 function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState(0);
-  useEffect(() => { if (bodyRef.current) setHeight(open ? bodyRef.current.scrollHeight : 0); }, [open]);
   return (
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
       <button className="acc-head" onClick={onToggle}>
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
       </button>
-      <div className="acc-body-wrap" style={{ maxHeight: height, overflow: 'hidden', transition: 'max-height 0.38s cubic-bezier(.4,0,.2,1)' }}>
-          <div ref={bodyRef} className="acc-body">
-          {item.isHtml
-            ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
-            : item.content.split('\n').map((line, i) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
-          }
-          {item.linkHref && item.linkLabel && (
-            <Link href={item.linkHref} className="acc-policy-link">
-              {item.linkLabel}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-            </Link>
-          )}
+      <div className="acc-body-wrap" style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 0.38s cubic-bezier(.4,0,.2,1)' }}>
+        <div style={{ overflow: 'hidden' }}>
+          <div className="acc-body">
+            {item.isHtml
+              ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
+              : item.content.split('\n').map((line, i) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
+            }
+            {item.linkHref && item.linkLabel && (
+              <Link href={item.linkHref} className="acc-policy-link">
+                {item.linkLabel}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -822,7 +882,7 @@ function EstimatedDeliveryBlock() {
         Estimated Delivery
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="est-grid">
         {[
           { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
           { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
@@ -895,7 +955,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
   const filledCount = uploads.filter(Boolean).length;
   const allPhotosUploaded = filledCount === MAX_FILES;
 
-  useEffect(() => { 
+  useEffect(() => {
     if (onChange) {
       const validUploads = uploads.filter(Boolean).map(u => u!.preview);
       onChange({ wantCustom, uploads: validUploads, globalNote });
@@ -929,24 +989,24 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
     <>
       <div style={{ display: 'flex', gap: 10 }}>
         <button className={`cust-toggle-btn yes${wantCustom === true ? ' sel' : ''}`} onClick={() => { setWantCustom(true); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Yes, Customise
         </button>
         <button className={`cust-toggle-btn no${wantCustom === false ? ' sel' : ''}`} onClick={() => { setWantCustom(false); setUploads(Array(MAX_FILES).fill(null)); setGlobalNote(''); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
           No, Standard
         </button>
       </div>
       {wantCustom === false && (
         <div className="cust-info-chip" style={{ marginTop: 12 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p>You'll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          <p>You&apos;ll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours.</p>
         </div>
       )}
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
-          <textarea className="cust-note-global" placeholder={`Add a personalisation note…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-          
+          <textarea className="cust-note-global" placeholder="Add a personalisation note…" value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
+
           <div style={{ marginTop: 16 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 4 }}>
               Required Photos <span style={{ color: 'var(--red)' }}>*</span>
@@ -962,12 +1022,14 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
                 const label = `Photo ${i + 1}`;
                 const upload = uploads[i];
                 return (
-<div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
-                    
+                  <div key={i} style={{ border: `1.5px dashed ${showMissing && !upload ? 'var(--red)' : 'rgba(61,74,34,.15)'}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: showMissing && !upload ? 'rgba(192,57,43,.04)' : 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
+
                     {upload ? (
                       <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
-                        <button type="button" onClick={() => removeSlotUpload(i)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 14, cursor: 'pointer', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                        <button type="button" onClick={() => removeSlotUpload(i)} aria-label={`Remove ${label}`} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 14, cursor: 'pointer', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                       </>
                     ) : (
                       <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', zIndex: 2, width: '100%' }}>
@@ -985,7 +1047,7 @@ function CustomisationPanel({ category, onChange, validationAttempt }: { categor
           </div>
 
           <div className="cust-info-chip" style={{ marginTop: 16 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <p>Our team reviews within <strong>2 business hours</strong>. Customised items are <strong>non-returnable</strong> unless damaged.</p>
           </div>
         </div>
@@ -1013,7 +1075,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
     <div className="gift-msg-panel">
       <div className="gift-msg-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--gold)' }}>
-          <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+          <path d="M20 12v10H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
         </svg>
         <span className="gift-msg-title">Add a Gift Message</span>
         <span className="gift-msg-optional">Optional</span>
@@ -1024,12 +1086,12 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
           <select className="gift-msg-select" value={value.preset} onChange={e => onChange({ ...value, preset: e.target.value })}>
             {PRESET_MESSAGES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg className="gift-msg-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
         </div>
       </div>
       <div className="gift-msg-free-wrap">
         <label className="gift-msg-label gift-msg-label--free">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--olive-500)' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           Type your message
         </label>
         <textarea className="gift-msg-free-textarea" rows={3} maxLength={200} placeholder="Write a heartfelt note…" value={value.customMessage} onChange={e => onChange({ ...value, customMessage: e.target.value })} />
@@ -1053,6 +1115,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [activeSize, setActiveSize] = useState('');
   const [activeImg, setActiveImg] = useState(0);
   const [errorToast, setErrorToast] = useState('');
+  const [productReviews, setProductReviews] = useState<ReviewData[]>([]);
 
   // Automatically clear error toast after 3.5 seconds
   useEffect(() => {
@@ -1072,13 +1135,13 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
   const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null; uploads: string[]; globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
-const [custValidationAttempt, setCustValidationAttempt] = useState(0);
-const [charmValidationAttempt, setCharmValidationAttempt] = useState(0);
-const [chainValidationAttempt, setChainValidationAttempt] = useState(0);
-const MAX_CUST_PHOTOS = 5;
-const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
-const [selectedChain, setSelectedChain] = useState('');
-const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
+  const [custValidationAttempt, setCustValidationAttempt] = useState(0);
+  const [charmValidationAttempt, setCharmValidationAttempt] = useState(0);
+  const [chainValidationAttempt, setChainValidationAttempt] = useState(0);
+  const MAX_CUST_PHOTOS = 5;
+  const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
+  const [selectedChain, setSelectedChain] = useState('');
+  const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
 
   const handleCharmChange = useCallback((data: { count: number; charms: string[] }) => {
     setCharmData(data);
@@ -1092,6 +1155,15 @@ const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
       .catch(() => { if (mounted) { setProduct(null); setLoading(false); } });
     return () => { mounted = false; };
   }, [slug]);
+
+  useEffect(() => {
+    if (product?.sourceId) fetchProductReviews(product.sourceId).then(setProductReviews);
+  }, [product?.sourceId]);
+
+  const dynamicReviewCount = productReviews.length;
+  const dynamicRating = dynamicReviewCount > 0
+    ? Number((productReviews.reduce((a, r) => a + r.rating, 0) / dynamicReviewCount).toFixed(1))
+    : 0;
 
   const price = product?.price ?? 0;
   const originalPrice = product?.originalPrice ?? null;
@@ -1110,16 +1182,18 @@ const [chainLightbox, setChainLightbox] = useState<ChainOption | null>(null);
   const mainImage = product?.mainImage;
   const images = product?.images ?? [];
 
-const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
-const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
-// A charm selection round is only "complete" once every slot for the chosen count has a charm.
-// It also requires that a valid charm count has been picked (> 0).
-const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filter(Boolean).length < charmData.count;
+  const isCustomisable = category ? CUSTOMISABLE_CATEGORIES.some(c => category.toLowerCase().includes(c.toLowerCase())) : false;
+  const custPhotosIncomplete = isCustomisable && customData.wantCustom === true && customData.uploads.length < MAX_CUST_PHOTOS;
+  // A charm selection round is only "complete" once every slot for the chosen count has a charm.
+  // It also requires that a valid charm count has been picked (> 0).
+  const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filter(Boolean).length < charmData.count;
+
   useEffect(() => {
     if (!product) return;
     setActiveColor(0);
     setActiveSize(product.sizes?.[0] || product.variants?.[0]?.size || '');
     setActiveImg(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.sourceId]);
 
   const currentColor = normalizedColors[activeColor] || normalizedColors[0];
@@ -1144,7 +1218,7 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
   const basePrice = discountedPrice || price;
   const baseOriginalPrice = originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
-  
+
   const chainOptions = useMemo(() => {
     const dynamicChainOptions = (product?.variants || [])
       .filter(v => v.bandName)
@@ -1167,7 +1241,7 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
     return perCharmPrice * count;
   };
   const charmsPrice = getCharmsPrice(selectedCharmCount);
-  
+
   const totalCharmPrice = basePrice + chainPrice + charmsPrice;
   const totalCharmOriginalPrice = baseOriginalPrice + chainPrice + charmsPrice;
   const totalWithGiftBox = totalCharmPrice + (giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0);
@@ -1177,6 +1251,7 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
   const handleWishToggle = useCallback(() => {
     if (!product) return;
     toggleItem({ id: product.id, name: product.name || 'Product', price: totalCharmPrice, originalPrice: totalCharmOriginalPrice, image: displayImg, category: product.category || '', href: product.href || `/products/${product.sourceId}`, colors: normalizedColors, badge: product.badge ?? null, rating: product.rating ?? 0, reviewCount: product.reviewCount ?? 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toggleItem, product, totalCharmPrice, totalCharmOriginalPrice, displayImg, normalizedColors]);
 
   const buildCartItem = useCallback(() => {
@@ -1252,7 +1327,7 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
     };
   }, [product, displayImg, currentColor, activeSize, category, customData, giftMessage, charmData, totalCharmPrice, totalCharmOriginalPrice, basePrice, perCharmPrice, selectedCharmCount, giftBoxAdded, selectedChain, chainOptions, chainPrice, charmsPrice]);
 
- const handleAddToCart = useCallback(() => {
+  const handleAddToCart = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
@@ -1283,9 +1358,10 @@ const charmSelectionIncomplete = charmData.count === 0 || charmData.charms.filte
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [addItem, product, qty, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addItem, product, qty, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain, currentStock]);
 
-const handleBuyNow = useCallback(() => {
+  const handleBuyNow = useCallback(() => {
     if (!product) return;
     if (Number(currentStock) <= 0) {
       setErrorToast('This item is currently out of stock.');
@@ -1313,7 +1389,8 @@ const handleBuyNow = useCallback(() => {
     const item = buildCartItem();
     for (let i = 0; i < qty; i++) addItem(item, false);
     router.push('/cart');
-  }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain, currentStock]);
 
   const handleColorChange = useCallback((i: number) => {
     setActiveColor(i); setActiveImg(0);
@@ -1321,6 +1398,7 @@ const handleBuyNow = useCallback(() => {
     if (!nextColor) return;
     const nextSize = variants.find(v => normalizeText(v.color) === normalizeText(nextColor.label))?.size || sizeOptions[0] || '';
     setActiveSize(nextSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedColors, variants, sizeOptions]);
 
   if (loading) return (
@@ -1334,7 +1412,7 @@ const handleBuyNow = useCallback(() => {
   );
 
   if (!product) return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16, padding: 20, textAlign: 'center' }}>
       <p style={{ fontSize: 28, color: '#3d4a22' }}>Product not found</p>
       <a href="/" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: '#f5f0e8', background: '#3d4a22', padding: '12px 28px', borderRadius: 50, textDecoration: 'none' }}>Back to Home</a>
     </div>
@@ -1347,7 +1425,7 @@ const handleBuyNow = useCallback(() => {
     ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: about }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
-        {
+    {
       id: 'shipping',
       emoji: '🚚',
       label: 'Shipping Policy',
@@ -1431,22 +1509,7 @@ const handleBuyNow = useCallback(() => {
       linkHref: '/refund-policy',
       linkLabel: 'Read full returns policy',
     },
-    // { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
   ];
-
-  function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
-    return (
-      <Link href={href} className="acc-nav-link-row">
-        <span className="acc-head-left">
-          <span className="acc-emoji">{emoji}</span>
-          {label}
-        </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </Link>
-    );
-  }
 
   return (
     <>
@@ -1484,6 +1547,7 @@ const handleBuyNow = useCallback(() => {
           --ink:#1e2310; --mist:rgba(30,35,16,.45); --red:#c0392b;
         }
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        img{max-width:100%}
 
         @keyframes sparkle{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(calc(var(--tx,0px)*2.2),calc(var(--ty,0px)*2.2)) scale(0)}}
         @keyframes cartBounce{0%,100%{transform:scale(1)}30%{transform:scale(1.14) rotate(-3deg)}60%{transform:scale(.94) rotate(2deg)}80%{transform:scale(1.04)}}
@@ -1491,34 +1555,56 @@ const handleBuyNow = useCallback(() => {
         @keyframes charmFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes imgIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
         @keyframes stockPulse{0%,100%{opacity:1}50%{opacity:.55}}
-        @keyframes charmPop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
         @keyframes chainPanelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
-        .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink)}
-        .pdp-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1280px;margin:0 auto}
+        .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink);overflow-x:clip;width:100%}
+        .pdp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto;align-items:start}
+        .pdp-layout>*{min-width:0}
 
         /* ── Gallery ── */
-        .pdp-gallery{position:sticky;top:80px;max-height:calc(100vh - 80px);padding:32px 28px 32px 52px;display:flex;flex-direction:column;gap:14px;animation:fadeUp .6s ease both;min-width:0;overflow:hidden}
-        /* CHANGE: main image now uses a 4:5 portrait ratio instead of filling all available space */
-        .pdp-main-img-wrap{aspect-ratio:4/5;width:100%;flex:none;background:var(--beige-dk);overflow:hidden;position:relative}
-        .pdp-main-img{width:100%;height:100%;object-fit:cover;animation:imgIn .4s ease both}
-        .pdp-badge{position:absolute;top:16px;left:16px;font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--beige);background:var(--olive-600);padding:5px 14px 4px;border-radius:50px}
-        .pdp-wish{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(245,240,232,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
+        .pdp-gallery{
+          /* gallery width is derived from viewport height, so image + thumbnails
+             always fit on screen at the exact 4:5 ratio (nothing cropped) */
+          --gal-w:max(300px,calc((100vh - 244px) * .8));
+          position:sticky;top:80px;align-self:start;
+          padding:32px 28px 32px 52px;
+          display:flex;flex-direction:column;align-items:center;gap:14px;
+          animation:fadeUp .6s ease both;min-width:0;
+        }
+        .pdp-main-img-wrap{
+          position:relative;flex:none;
+          width:100%;max-width:var(--gal-w);
+          aspect-ratio:4/5;
+          background:var(--beige-dk);overflow:hidden;border-radius:6px;
+        }
+        .pdp-main-img{width:100%;height:100%;object-fit:contain;display:block;animation:imgIn .4s ease both}
+        .pdp-badge{position:absolute;top:16px;left:16px;z-index:2;font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--beige);background:var(--olive-600);padding:5px 14px 4px;border-radius:50px}
+        .pdp-wish{position:absolute;top:14px;right:14px;z-index:2;width:36px;height:36px;border-radius:50%;background:rgba(245,240,232,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
         .pdp-wish:hover{transform:scale(1.1)}
         .pdp-wish.on{background:var(--olive-600)}
-        .pdp-thumb-row{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;flex-shrink:0}
-        .pdp-thumb-row::-webkit-scrollbar{height:3px}
+        .pdp-thumb-row{
+          display:flex;gap:10px;flex-wrap:nowrap;flex-shrink:0;
+          width:100%;max-width:var(--gal-w);
+          overflow-x:auto;padding:2px 2px 8px;
+          scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+        }
+        .pdp-thumb-row::-webkit-scrollbar{height:4px}
         .pdp-thumb-row::-webkit-scrollbar-thumb{background:var(--beige-dkr);border-radius:4px}
-        .pdp-thumb{width:72px;height:72px;border-radius:12px;overflow:hidden;cursor:pointer;flex-shrink:0;border:2px solid transparent;transition:border-color .2s,transform .2s}
+        .pdp-thumb{
+          flex:0 0 72px;width:72px;height:72px;padding:0;
+          border-radius:12px;overflow:hidden;cursor:pointer;
+          border:2px solid transparent;background:var(--beige-dk);
+          scroll-snap-align:start;transition:border-color .2s,transform .2s;
+        }
         .pdp-thumb:hover{transform:scale(1.06)}
         .pdp-thumb.active{border-color:var(--olive-500)}
-        .pdp-thumb img{width:100%;height:100%;object-fit:cover}
+        .pdp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 
-        /* ── Info ── */
-        .pdp-info{padding:32px 52px 40px 28px;animation:fadeUp .6s ease .1s both;overflow-y:auto}
-        .pdp-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;letter-spacing:-.01em;color:var(--olive-900);margin-bottom:10px}
+        /* ── Info (no overflow-y: it created a second scrollbar) ── */
+        .pdp-info{padding:32px 52px 40px 28px;animation:fadeUp .6s ease .1s both;min-width:0}
+        .pdp-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;letter-spacing:-.01em;color:var(--olive-900);margin-bottom:10px;overflow-wrap:anywhere}
         .pdp-name em{font-style:italic;color:var(--olive-600)}
-        .pdp-rating{display:flex;align-items:center;gap:6px;margin-bottom:14px}
+        .pdp-rating{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .pdp-stars{color:var(--gold);font-size:13px;letter-spacing:1px}
         .pdp-rating-num{font-size:12px;font-weight:600;color:var(--olive-600)}
         .pdp-review-cnt{font-size:11px;color:var(--mist)}
@@ -1547,7 +1633,7 @@ const handleBuyNow = useCallback(() => {
         /* ── Size chart link ── */
         .pdp-size-chart-link{
           display:inline-flex;align-items:center;gap:5px;
-          margin-bottom:20px;
+          margin-bottom:8px;
           font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
           color:var(--olive-500);background:none;border:none;
           cursor:pointer;font-family:'Jost',sans-serif;
@@ -1561,12 +1647,15 @@ const handleBuyNow = useCallback(() => {
         .pdp-size-chart-link:hover svg{transform:scale(1.15)}
 
         .pdp-desc{font-size:14px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
-        .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+        .pdp-qty-row{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:0}
         .pdp-qty{display:flex;align-items:center;border:1.5px solid var(--beige-dkr);border-radius:50px;overflow:hidden}
         .pdp-qty-btn{width:36px;height:36px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--olive-600);display:flex;align-items:center;justify-content:center;transition:background .15s}
         .pdp-qty-btn:hover{background:var(--olive-50)}
         .pdp-qty-val{min-width:36px;text-align:center;font-size:13px;font-weight:600;color:var(--ink)}
         .pdp-stock{font-size:10.5px;font-weight:500;letter-spacing:.06em;color:var(--red);animation:stockPulse 2.2s ease-in-out infinite}
+
+        /* Estimated delivery grid */
+        .est-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
         /* ════════════════════════════════════════════
            CHARM SELECTOR
@@ -1576,7 +1665,7 @@ const handleBuyNow = useCallback(() => {
           border: 1.5px solid rgba(201,168,76,.28);
           border-radius: 18px;
           padding: 20px 20px 18px;
-          margin-bottom: 20px;
+          margin-bottom: 0;
           position: relative;
           overflow: hidden;
         }
@@ -1586,7 +1675,6 @@ const handleBuyNow = useCallback(() => {
           font-size: 48px; color: rgba(201,168,76,.1);
           pointer-events: none; line-height: 1;
         }
-
         .charm-selector-title{
           display: flex; align-items: center; gap: 9px;
           font-size: 11px; font-weight: 700; letter-spacing: .14em;
@@ -1599,7 +1687,6 @@ const handleBuyNow = useCallback(() => {
           line-height: 1.7; letter-spacing: .03em; margin-bottom: 16px;
         }
 
-        /* Count label */
         .charm-section-label{
           display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
           font-size: 9.5px; font-weight: 700; letter-spacing: .3em;
@@ -1607,10 +1694,7 @@ const handleBuyNow = useCallback(() => {
           row-gap: 6px;
         }
 
-        /* Number grid */
-        .charm-count-grid{
-          display: flex; flex-wrap: wrap; gap: 8px;
-        }
+        .charm-count-grid{ display: flex; flex-wrap: wrap; gap: 8px; }
         .charm-count-btn{
           width: 40px; height: 40px;
           border-radius: 10px;
@@ -1632,7 +1716,6 @@ const handleBuyNow = useCallback(() => {
           transform: translateY(-2px);
         }
 
-        /* Fixed-count notice — replaces the picker when there's only one valid count */
         .charm-fixed-count-note{
           display: flex; align-items: flex-start; gap: 8px;
           background: rgba(201,168,76,.1);
@@ -1644,8 +1727,6 @@ const handleBuyNow = useCallback(() => {
         }
         .charm-fixed-count-note strong{ font-weight: 700; color: var(--olive-600); }
 
-        /* Dropdown list */
-        .charm-dropdowns{ margin-top: 4px; }
         .charm-filled-badge{
           margin-left: auto;
           font-size: 9px; font-weight: 700; letter-spacing: .1em;
@@ -1653,61 +1734,6 @@ const handleBuyNow = useCallback(() => {
           padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
         }
 
-        .charm-dropdown-list{ display: flex; flex-direction: column; gap: 10px; }
-        .charm-dropdown-item{
-          animation: charmPop .3s ease both;
-          background: white;
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 12px;
-          padding: 10px 12px 12px;
-          transition: border-color .2s;
-        }
-        .charm-dropdown-item:focus-within{ border-color: var(--olive-400); }
-
-        .charm-dropdown-label-row{
-          display: flex; align-items: center; gap: 8px;
-          margin-bottom: 8px; flex-wrap: wrap;
-        }
-        .charm-num-badge{
-          width: 22px; height: 22px; border-radius: 50%;
-          background: var(--olive-600); color: var(--beige);
-          font-size: 10px; font-weight: 700;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .charm-slot-label{
-          font-size: 11px; font-weight: 600; letter-spacing: .06em;
-          text-transform: uppercase; color: var(--olive-600);
-        }
-        .charm-selected-tag{
-          font-size: 10px; font-weight: 500; color: #8c6b20;
-          background: rgba(201,168,76,.12);
-          border: 1px solid rgba(201,168,76,.3);
-          padding: 2px 8px; border-radius: 4px;
-          max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-
-        .charm-select-inner{ position: relative; }
-        .charm-select{
-          width: 100%;
-          appearance: none; -webkit-appearance: none;
-          background: var(--beige);
-          border: 1.5px solid var(--beige-dkr);
-          border-radius: 8px;
-          padding: 10px 36px 10px 12px;
-          font-family: 'Jost', sans-serif;
-          font-size: 12px; font-weight: 400; color: #101010;
-          cursor: pointer; outline: none;
-          transition: border-color .2s, box-shadow .2s;
-        }
-        .charm-select:focus{ border-color: var(--olive-400); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
-        .charm-select--filled{ background: var(--olive-50); border-color: rgba(90,110,35,.25); color: var(--olive-900); font-weight: 500; }
-        .charm-select-chevron{
-          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-          width: 14px; height: 14px; color: var(--mist); pointer-events: none;
-        }
-
-        /* Summary strip */
         .charm-summary-strip{
           margin-top: 16px;
           background: linear-gradient(135deg, rgba(90,110,35,.08), rgba(201,168,76,.06));
@@ -1722,10 +1748,6 @@ const handleBuyNow = useCallback(() => {
         }
         .charm-summary-header strong{ font-weight: 700; color: var(--olive-600); }
         .charm-all-done{ color: var(--olive-500); font-weight: 600; }
-
-        .charm-summary-list{
-          display: flex; flex-wrap: wrap; gap: 6px;
-        }
         .charm-summary-pill{
           display: inline-flex; align-items: center; gap: 6px;
           font-size: 10.5px; font-weight: 500; color: var(--ink);
@@ -1746,26 +1768,18 @@ const handleBuyNow = useCallback(() => {
         .charm-summary-pill--empty .charm-summary-num{
           background: var(--beige-dkr); color: var(--mist);
         }
-        .charm-remaining-note{
-          margin-top: 10px;
-          font-size: 10.5px; font-weight: 500; color: #a06020;
-          letter-spacing: .03em;
-        }
 
         /* ════════════════════════════════════════════
-           CHAIN SELECTOR — compact dropdown, big fully-visible photo
+           CHAIN SELECTOR
         ════════════════════════════════════════════ */
         .chain-selector-wrap{
           background: linear-gradient(135deg, rgba(90,110,35,.07), rgba(201,168,76,.06));
           border: 1.5px solid rgba(90,110,35,.2);
           border-radius: 18px;
           padding: 18px 18px 20px;
-          margin-bottom: 20px;
+          margin-bottom: 0;
           position: relative;
         }
-
-        /* "Medium" sized trigger — a proper compact select-like control rather than
-           a bulky card. Height stays consistent across breakpoints via clamp(). */
         .chain-trigger{
           width: 100%;
           display: flex; align-items: center; gap: 12px;
@@ -1782,7 +1796,6 @@ const handleBuyNow = useCallback(() => {
         .chain-trigger--open{ border-color: var(--olive-500); box-shadow: 0 0 0 3px rgba(90,110,35,.1); }
         .chain-trigger--missing{ border-color: var(--red); background: rgba(192,57,43,.04); }
 
-        /* Medium-sized preview, fully visible (object-fit: contain) instead of cropped */
         .chain-trigger-thumb{
           width: clamp(48px, 8vw, 60px); height: clamp(48px, 8vw, 60px); border-radius: 10px;
           overflow: hidden; flex-shrink: 0; background: white;
@@ -1798,12 +1811,9 @@ const handleBuyNow = useCallback(() => {
           display: flex; align-items: center; justify-content: center;
         }
         .chain-trigger-zoom svg{ width: 9px; height: 9px; }
-
-        /* Text occupies remaining space — chain name plus its price */
         .chain-trigger-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
         .chain-trigger-label{ font-size: 13px; font-weight: 600; color: var(--olive-900); letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .chain-trigger-price{ font-size: 11px; font-weight: 600; color: var(--olive-600); letter-spacing: .02em; }
-
         .chain-trigger-chevron{
           width: 16px; height: 16px; color: var(--mist); flex-shrink: 0;
           transition: transform .25s ease;
@@ -1829,8 +1839,6 @@ const handleBuyNow = useCallback(() => {
         .chain-option-row:last-child{ border-bottom: none; }
         .chain-option-row:hover{ background: var(--olive-50); }
         .chain-option-row--active{ background: rgba(201,168,76,.09); }
-
-        /* Big fully-visible photo per option — dominates the row, text kept minimal */
         .chain-option-thumb{
           width: 96px; height: 96px; border-radius: 12px;
           overflow: hidden; flex-shrink: 0; position: relative;
@@ -1845,8 +1853,6 @@ const handleBuyNow = useCallback(() => {
           display: flex; align-items: center; justify-content: center;
         }
         .chain-option-zoom svg{ width: 11px; height: 11px; }
-
-        /* Text column takes the remaining space — chain name plus its price */
         .chain-option-text{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
         .chain-option-label{ font-size: 12.5px; font-weight: 600; color: var(--olive-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .chain-option-price{ font-size: 11px; font-weight: 700; color: var(--olive-600); letter-spacing: .01em; }
@@ -1901,24 +1907,18 @@ const handleBuyNow = useCallback(() => {
         .acc-emoji{font-size:16px}
         .acc-chevron{color:var(--mist);flex-shrink:0;transition:transform .32s ease}
         .acc-item--open .acc-chevron{transform:rotate(180deg)}
-        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em}
+        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;overflow-wrap:anywhere}
         .acc-body p{margin-bottom:4px}
-        .acc-nav-link-row{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;text-decoration:none;color:var(--ink);border-bottom:1px solid rgba(61,74,34,.08);font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;transition:background .15s}
-        .acc-nav-link-row:hover{background:rgba(61,74,34,.03)}
-        .acc-nav-link-row svg{color:var(--mist);flex-shrink:0;transition:transform .2s}
-        .acc-nav-link-row:hover svg{transform:translateX(3px)}
-        .acc-delivery-estimate{display:flex;align-items:flex-start;gap:9px;margin-top:16px;background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.07));border:1px solid rgba(90,110,35,.15);border-radius:0;padding:12px 14px}
-        .acc-delivery-label{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive-600);margin-bottom:8px}
-        .acc-delivery-row{display:flex;gap:8px;flex-wrap:wrap}
-        .acc-delivery-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:300;color:#101010;background:white;border:1px solid rgba(61,74,34,.1);padding:4px 10px;border-radius:0;line-height:1.5}
-        .acc-delivery-chip strong{font-weight:600;color:#101010}
-        .acc-delivery-chip--std{border-left:2px solid var(--olive-400)}
-        .acc-delivery-chip--exp{border-left:2px solid var(--gold)}
+        .acc-body img{max-width:100%;height:auto}
+        .acc-policy-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--olive-600);text-decoration:none;border-bottom:1.5px solid var(--olive-200);padding-bottom:1px;transition:color .2s,border-color .2s}
+        .acc-policy-link:hover{color:var(--olive-400);border-color:var(--olive-400)}
+        .acc-policy-link svg{transition:transform .2s}
+        .acc-policy-link:hover svg{transform:translateX(3px)}
 
         /* ── Customisation ── */
-        .pdp-cust-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(90,110,35,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}
+        .pdp-cust-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(90,110,35,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:16px;padding:16px 18px 18px;margin-bottom:0}
         .pdp-cust-banner-head{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:6px}
-        .pdp-cust-banner-head svg{width:16px;height:16px;color:var(--gold)}
+        .pdp-cust-banner-head svg{width:16px;height:16px;color:var(--gold);flex-shrink:0}
         .pdp-cust-banner-sub{font-size:11px;font-weight:300;color:var(--mist);line-height:1.7;letter-spacing:.03em;margin-bottom:14px}
         .cust-toggle-btn{flex:1;padding:11px 10px;border:1.5px solid var(--beige-dkr);border-radius:12px;background:white;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:7px}
         .cust-toggle-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
@@ -1927,37 +1927,25 @@ const handleBuyNow = useCallback(() => {
         .cust-info-chip{display:flex;align-items:flex-start;gap:8px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.22);border-radius:10px;padding:10px 14px}
         .cust-info-chip p{font-size:10.5px;font-weight:300;color:var(--mist);line-height:1.7;letter-spacing:.03em}
         .cust-info-chip p strong{font-weight:600;color:var(--olive-600)}
-        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:var(--ink);background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
+        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:300;color:var(--ink);background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
         .cust-note-global:focus{border-color:var(--olive-400)}
         .cust-note-global::placeholder{color:rgba(30,35,16,.3)}
-        .cust-drop{border:2px dashed var(--beige-dkr);border-radius:16px;padding:24px 20px;text-align:center;cursor:pointer;transition:border-color .22s,background .22s;background:white}
-        .cust-drop.drag-over{border-color:var(--gold);background:rgba(201,168,76,.05)}
-        .cust-drop:hover{border-color:var(--olive-400);background:var(--olive-50)}
-        .cust-drop-title{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--olive-600);margin-bottom:4px}
-        .cust-drop-sub{font-size:10px;color:var(--mist);letter-spacing:.04em}
-        .cust-drop-btn{display:inline-block;margin-top:12px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--beige);background:var(--olive-600);padding:8px 20px;border-radius:50px;border:none;cursor:pointer}
-        .cust-limit{font-size:9px;color:var(--mist);letter-spacing:.1em;text-align:right;margin-top:6px}
-        .cust-limit.warn{color:var(--red);font-weight:600}
-        .cust-previews{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:14px}
-        .cust-preview-item{position:relative;border-radius:12px;overflow:hidden;border:1.5px solid var(--beige-dkr)}
-        .cust-preview-img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
-        .cust-preview-remove{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(26,31,13,.7);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;line-height:1}
 
         /* ── Gift Message ── */
-        .gift-msg-panel{background:linear-gradient(135deg,rgba(201,168,76,.06),rgba(245,240,232,.6));border:1.5px solid rgba(201,168,76,.25);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}
+        .gift-msg-panel{background:linear-gradient(135deg,rgba(201,168,76,.06),rgba(245,240,232,.6));border:1.5px solid rgba(201,168,76,.25);border-radius:16px;padding:16px 18px 18px;margin-bottom:0}
         .gift-msg-header{display:flex;align-items:center;gap:9px;margin-bottom:14px}
         .gift-msg-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);flex:1}
         .gift-msg-optional{font-size:9px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);background:rgba(61,74,34,.07);padding:2px 8px;border-radius:4px}
         .gift-msg-label{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--mist);margin-bottom:8px}
         .gift-msg-select-wrap{margin-bottom:0}
         .gift-msg-select-inner{position:relative}
-        .gift-msg-select{width:100%;appearance:none;-webkit-appearance:none;background:white;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 38px 11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:400;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s}
+        .gift-msg-select{width:100%;appearance:none;-webkit-appearance:none;background:white;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 38px 11px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:400;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s}
         .gift-msg-select:focus{border-color:var(--olive-400)}
         .gift-msg-select-chevron{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--mist);pointer-events:none}
         .gift-msg-char-count{font-size:9.5px;color:var(--mist);text-align:right;margin-top:5px;letter-spacing:.05em}
         .gift-msg-free-wrap{margin-top:18px;padding-top:16px;border-top:1px solid rgba(201,168,76,.2)}
         .gift-msg-label--free{font-size:10px;letter-spacing:.24em;color:var(--olive-600);font-weight:600;margin-bottom:10px}
-        .gift-msg-free-textarea{width:100%;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:0;padding:12px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:var(--ink);background:white;outline:none;line-height:1.75;transition:border-color .2s;min-height:80px;border-left:3px solid var(--gold)}
+        .gift-msg-free-textarea{width:100%;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:0;padding:12px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:300;color:var(--ink);background:white;outline:none;line-height:1.75;transition:border-color .2s;min-height:80px;border-left:3px solid var(--gold)}
         .gift-msg-free-textarea:focus{border-color:var(--olive-400);border-left-color:var(--olive-500)}
         .gift-msg-free-textarea::placeholder{color:rgba(30,35,16,.28)}
 
@@ -1982,32 +1970,28 @@ const handleBuyNow = useCallback(() => {
         .rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive-400));border-radius:50px;transition:width .4s ease}
         .rev-bar-count{font-size:10px;color:var(--mist);min-width:24px}
         .rev-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
-        .rev-clear-filter{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:50px;padding:6px 14px;cursor:pointer;font-family:'Jost',sans-serif}
+        .rev-clear-filter{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:50px;padding:6px 14px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif}
+        .rev-clear-filter:hover{background:rgba(201,168,76,.2)}
+        .rev-empty{font-size:13px;color:var(--mist);text-align:center;padding:32px 0}
+        .rev-clear-link{background:none;border:none;color:var(--gold);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Jost',sans-serif}
         .rev-list{display:flex;flex-direction:column;gap:16px}
         .rev-card{background:white;border:1px solid rgba(61,74,34,.07);border-radius:18px;padding:22px 24px;animation:fadeUp .45s ease both;transition:box-shadow .2s}
         .rev-card:hover{box-shadow:0 8px 28px rgba(61,74,34,.09)}
         .rev-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
         .rev-avatar{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.05em}
-        .rev-meta{flex:1}
+        .rev-meta{flex:1;min-width:0}
         .rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
         .rev-name{font-size:13px;font-weight:600;color:var(--ink)}
         .rev-verified{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--olive-500)}
         .rev-stars-sm{font-size:12px;color:var(--gold);letter-spacing:1px}
         .rev-date{font-size:10.5px;color:var(--mist)}
-        .rev-card-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px}
-        .rev-card-body{font-size:13px;font-weight:400;color:#101010;line-height:1.85;margin-bottom:16px}
-        .rev-card-foot{display:flex;align-items:center;gap:10px;border-top:1px solid rgba(61,74,34,.07);padding-top:12px}
-        .rev-helpful-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist)}
-        .rev-helpful-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--olive-600);background:var(--olive-50);border:1px solid rgba(61,74,34,.12);border-radius:50px;padding:5px 12px;cursor:pointer;font-family:'Jost',sans-serif}
+        .rev-card-body{font-size:13px;font-weight:400;color:#101010;line-height:1.85;margin-bottom:16px;overflow-wrap:anywhere}
+        .rev-helpful-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--olive-600);background:var(--olive-50);border:1px solid rgba(61,74,34,.12);border-radius:50px;padding:8px 18px;cursor:pointer;font-family:'Jost',sans-serif;transition:all .2s}
         .rev-load-wrap{display:flex;justify-content:center;margin-top:28px}
         .rev-load-btn{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--olive-600);background:white;border:1.5px solid var(--beige-dkr);border-radius:50px;padding:14px 36px;cursor:pointer;transition:all .22s}
         .rev-load-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
-        .acc-policy-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--olive-600);text-decoration:none;border-bottom:1.5px solid var(--olive-200);padding-bottom:1px;transition:color .2s,border-color .2s}
-        .acc-policy-link:hover{color:var(--olive-400);border-color:var(--olive-400)}
-        .acc-policy-link svg{transition:transform .2s}
-        .acc-policy-link:hover svg{transform:translateX(3px)}
-        
-                /* Policy dropdown content */
+
+        /* Policy dropdown content */
         .pol{display:flex;flex-direction:column;gap:14px;font-size:13px;font-weight:400;line-height:1.75;color:#101010;letter-spacing:.03em}
         .pol p{margin:0}
         .pol .pol-h{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:4px}
@@ -2025,12 +2009,30 @@ const handleBuyNow = useCallback(() => {
         .pol-alert{background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.18);border-left:3px solid rgba(192,57,43,.5);border-radius:8px;padding:10px 12px;font-size:12px}
         .pol-alert strong{color:var(--red)}
 
-        /* ════ TABLET ════ */
+        /* ═══════════ RESPONSIVE ═══════════ */
+
+        /* Large desktop */
+        @media(min-width:1440px){
+          .pdp-layout{max-width:1440px}
+          .pdp-gallery{padding-left:64px}
+          .pdp-info{padding-right:64px}
+          .rev-section{max-width:1440px;padding-left:64px;padding-right:64px}
+        }
+
+        /* Small laptop: tighter padding so the gallery gets more width */
+        @media(min-width:961px) and (max-width:1200px){
+          .pdp-gallery{padding:24px 16px 24px 28px}
+          .pdp-info{padding:24px 28px 40px 16px}
+          .rev-section{padding-left:28px;padding-right:28px}
+          .pdp-btn-cart,.pdp-btn-buy{letter-spacing:.1em}
+        }
+
+        /* Tablet */
         @media(max-width:960px){
           .pdp-layout{grid-template-columns:1fr}
-          .pdp-gallery{position:static;max-height:none;padding:24px 24px 0}
-          .pdp-info{padding:24px 24px 48px}
-          .pdp-trust{grid-template-columns:repeat(3,1fr)}
+          .pdp-gallery{--gal-w:100%;position:static;padding:24px 24px 0;max-width:720px;margin:0 auto;width:100%}
+          .pdp-main-img-wrap{aspect-ratio:1/1}
+          .pdp-info{padding:24px 24px 48px;max-width:720px;margin:0 auto;width:100%}
           .rev-section{padding:40px 24px 48px}
           .rev-summary{grid-template-columns:180px 1fr}
           .rev-big-num{font-size:3.6rem}
@@ -2039,12 +2041,12 @@ const handleBuyNow = useCallback(() => {
           .chain-option-thumb{width:88px;height:88px}
         }
 
-        /* ════ MOBILE ════ */
+        /* Mobile */
         @media(max-width:600px){
-          .pdp-gallery{padding:16px 16px 0}
+          .pdp-gallery{padding:12px 16px 0}
+          .pdp-main-img-wrap{aspect-ratio:4/5;max-height:70vh}
+          .pdp-thumb{flex-basis:60px;width:60px;height:60px;border-radius:10px}
           .pdp-info{padding:20px 16px 40px}
-          /* 4:5 ratio naturally gives a shorter image on mobile — cap it */
-          .pdp-main-img-wrap{max-height:400px}
           .pdp-trust{grid-template-columns:repeat(3,minmax(80px,1fr));gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
           .pdp-trust::-webkit-scrollbar{display:none}
           .pdp-trust-item{padding:10px 6px;border-radius:12px;min-width:80px}
@@ -2061,10 +2063,12 @@ const handleBuyNow = useCallback(() => {
           .rev-bars{padding:16px 18px}
           .rev-title{font-size:1.3rem}
           .rev-card{padding:18px 16px}
+          .rev-controls{flex-direction:column;align-items:center}
+          .pdp-cust-banner,.gift-msg-panel{padding:14px 12px 16px}
+          .cust-toggle-btn{font-size:10px;letter-spacing:.06em;padding:11px 6px}
           .charm-selector{padding:16px 14px 14px}
           .charm-count-btn{width:34px;height:34px;font-size:12px;border-radius:8px}
           .charm-selector::before{display:none}
-          .charm-selected-tag{max-width:100px}
           .chain-selector-wrap{padding:14px 14px 16px}
           .chain-trigger{padding:7px 10px;gap:10px;border-radius:12px}
           .chain-trigger-thumb{width:44px;height:44px;border-radius:8px}
@@ -2075,12 +2079,13 @@ const handleBuyNow = useCallback(() => {
           .chain-option-price{font-size:10px}
         }
 
-        /* ════ VERY SMALL ════ */
+        /* Very small */
         @media(max-width:380px){
           .pdp-name{font-size:1.7rem}
           .pdp-cta-row{grid-template-columns:1fr}
           .pdp-btn-buy{grid-column:unset}
           .ctl-card{flex:0 0 118px;height:160px}
+          .est-grid{grid-template-columns:1fr}
           .charm-count-btn{width:30px;height:30px;font-size:11px}
           .rev-big-num{font-size:2.6rem}
           .rev-card{padding:14px 12px}
@@ -2095,22 +2100,45 @@ const handleBuyNow = useCallback(() => {
           <div className="pdp-gallery">
             <div className="pdp-main-img-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img key={displayImg} className="pdp-main-img" src={displayImg} alt={productName} />
-              <span className="pdp-badge">Best Seller</span>
+              <img
+                key={displayImg}
+                className="pdp-main-img"
+                src={displayImg}
+                alt={productName}
+                onError={(e) => { if (!e.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) e.currentTarget.src = FALLBACK_PRODUCT_IMAGE; }}
+              />
+              <span className="pdp-badge">{Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}</span>
               <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
               </button>
             </div>
-            <div className="pdp-thumb-row">
-              {currentImages.map((img, i) => (
-                <div key={img} className={`pdp-thumb${activeImg === i ? ' active' : ''}`} onClick={() => setActiveImg(i)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`View ${i + 1}`} />
-                </div>
-              ))}
-            </div>
+
+            {currentImages.length > 0 && (
+              <div className="pdp-thumb-row">
+                {currentImages.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    aria-label={`View image ${i + 1}`}
+                    className={`pdp-thumb${activeImg === i ? ' active' : ''}`}
+                    onClick={(e) => {
+                      setActiveImg(i);
+                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img}
+                      alt={`View ${i + 1}`}
+                      loading="lazy"
+                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Info ── */}
@@ -2120,9 +2148,9 @@ const handleBuyNow = useCallback(() => {
             </h1>
 
             <div className="pdp-rating">
-              <span className="pdp-stars">{'★'.repeat(Math.round(product.rating || 0))}{'☆'.repeat(5 - Math.round(product.rating || 0))}</span>
-              <span className="pdp-rating-num">{product.rating > 0 ? product.rating : 'New'}</span>
-              <span className="pdp-review-cnt">({product.reviewCount || 0} reviews)</span>
+              <span className="pdp-stars">{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</span>
+              <span className="pdp-rating-num">{dynamicRating > 0 ? dynamicRating : 'New'}</span>
+              <span className="pdp-review-cnt">({dynamicReviewCount} reviews)</span>
               {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: 6 }}>{gender}</span>}
             </div>
 
@@ -2157,7 +2185,7 @@ const handleBuyNow = useCallback(() => {
                 <p className="pdp-section-label">Colour: <span>{currentColor?.label || 'Default'}</span></p>
                 <div className="pdp-swatches">
                   {normalizedColors.map((c, i) => (
-                    <button key={c.hex} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
+                    <button key={c.hex + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(i)} title={c.label}>
                       <div className={`pdp-swatch${activeColor === i ? ' active' : ''}`} style={{ background: c.hex, border: c.hex === '#ffffff' ? '2px solid #d9cdb8' : undefined }} />
                       <span className="pdp-swatch-label">{c.label}</span>
                     </button>
@@ -2186,7 +2214,7 @@ const handleBuyNow = useCallback(() => {
             {product?.sizeChartImage && (
               <button className="pdp-size-chart-link" onClick={() => setShowSizeChart(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 6H3"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M21 18H3"/>
+                  <path d="M21 6H3" /><path d="M3 10h18" /><path d="M3 14h18" /><path d="M21 18H3" />
                 </svg>
                 Size Chart
               </button>
@@ -2204,27 +2232,23 @@ const handleBuyNow = useCallback(() => {
 
             <div className="pdp-divider" />
 
-            {/* ══════════════════════════════════════
-                CHARM SELECTOR — key new feature
-            ══════════════════════════════════════ */}
+            {/* CHARM SELECTOR */}
             <div className="charm-selector">
               <div className="charm-selector-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>  
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
                 Build Your Charm Combination
               </div>
               <p className="charm-selector-sub">
-                Pick how many charms you'd like, then choose each one individually. You can mix initials, symbols, birthstones, and more. All charms in your chosen count must be selected before you can add this to your cart.
+                Pick how many charms you&apos;d like, then choose each one individually. You can mix initials, symbols, birthstones, and more. All charms in your chosen count must be selected before you can add this to your cart.
               </p>
               <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} validationAttempt={charmValidationAttempt} />
             </div>
 
             <div className="pdp-divider" />
 
-            {/* ══════════════════════════════════════
-                CHAIN SELECTOR — dropdown with big photos + lightbox
-            ══════════════════════════════════════ */}
+            {/* CHAIN SELECTOR */}
             <ChainSelector
               value={selectedChain}
               onChange={setSelectedChain}
@@ -2241,7 +2265,7 @@ const handleBuyNow = useCallback(() => {
                 <div className="pdp-cust-banner">
                   <div className="pdp-cust-banner-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                     Make it Yours — Customise this {category}
                   </div>
@@ -2258,9 +2282,9 @@ const handleBuyNow = useCallback(() => {
             <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
             <div className="pdp-qty-row">
               <div className="pdp-qty">
-                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
                 <span className="pdp-qty-val">{qty}</span>
-                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock || 99, q + 1))}>+</button>
+                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock || 99, q + 1))} aria-label="Increase quantity">+</button>
               </div>
               {currentStock > 0 && <span className="pdp-stock">Only {currentStock} left in stock!</span>}
             </div>
@@ -2279,10 +2303,10 @@ const handleBuyNow = useCallback(() => {
                   description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
                   price={product.giftBox?.price ? Number(product.giftBox.price) : 50}
                 />
+                <div className="pdp-divider" />
               </>
             )}
 
-            <div className="pdp-divider" />
             <CompleteTheLookStrip />
             <div className="pdp-divider" />
             <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
@@ -2291,14 +2315,14 @@ const handleBuyNow = useCallback(() => {
             {/* CTA */}
             <div className="pdp-cta-row">
               {Number(currentStock) <= 0 && (
-                <div style={{ padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div style={{ gridColumn: '1 / -1', padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                   Out of stock
                 </div>
               )}
               <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle}>
                 <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
                 {wished ? 'Wished' : 'Wishlist'}
               </button>
@@ -2306,7 +2330,7 @@ const handleBuyNow = useCallback(() => {
                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
                   style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
                   {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
                 </button>
                 <Sparkles active={sparkleAnim} />
@@ -2314,7 +2338,7 @@ const handleBuyNow = useCallback(() => {
               <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
                 style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
               </button>
             </div>
@@ -2341,14 +2365,12 @@ const handleBuyNow = useCallback(() => {
                   onToggle={() => setOpenAccordion(o => o === item.id ? null : item.id)}
                 />
               ))}
-              {/* <NavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
-              <NavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" /> */}
             </div>
             <EstimatedDeliveryBlock />
           </div>
         </div>
 
-        <ReviewsSection />
+        <ReviewsSection productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
       </div>
 
       {/* Error Toast */}

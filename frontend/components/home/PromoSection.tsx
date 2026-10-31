@@ -60,7 +60,6 @@ type PublicBannersResponse = {
 
 /* ─────────────────────────────────────────────
    THEMES — alternate green → beige → green → beige
-   (green is the existing one, unchanged)
 ───────────────────────────────────────────── */
 const GREEN_THEME: BannerTheme = {
   bg: "linear-gradient(135deg, #b8c9a3 0%, #8fa870 40%, #6b7c45 100%)",
@@ -229,6 +228,33 @@ function SlideLink({
   );
 }
 
+/* ─────────────────────────────────────────────
+   SlideImage — blurred copy fills empty space,
+   sharp copy is shown fully (never cropped)
+───────────────────────────────────────────── */
+function SlideImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <>
+      <Image
+        src={src}
+        alt=""
+        aria-hidden
+        fill
+        sizes="100vw"
+        quality={20}
+        className="bs-img-blur"
+      />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 1180px) 100vw, 1180px"
+        className="bs-img-fg"
+      />
+    </>
+  );
+}
+
 export default function BannerSlider() {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -338,10 +364,24 @@ export default function BannerSlider() {
         .bs-image-zone {
           position: relative;
           width: 100%;
-          height: 460px;
+          aspect-ratio: 16 / 9;      /* matches the banner image, so nothing is cut */
+          max-height: 520px;         /* stops it getting too tall on big screens */
           overflow: hidden;
           flex-shrink: 0;
           background: #e9e2d3;
+        }
+
+        /* Blurred copy fills any empty space */
+        .bs-img-blur {
+          object-fit: cover;
+          filter: blur(24px) saturate(1.1);
+          transform: scale(1.15);
+        }
+
+        /* Sharp copy — whole image, never cropped */
+        .bs-img-fg {
+          object-fit: contain;
+          transition: transform 0.6s ease;
         }
 
         /* Clickable image — covers the whole zone */
@@ -355,17 +395,7 @@ export default function BannerSlider() {
         }
         span.bs-image-link { cursor: default; }
 
-        .bs-image-link img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center top;
-          display: block;
-          transition: transform 0.6s ease;
-        }
-        a.bs-image-link:hover img { transform: scale(1.03); }
+        a.bs-image-link:hover .bs-img-fg { transform: scale(1.03); }
         a.bs-image-link:focus-visible {
           outline: 2px solid #6b7c45;
           outline-offset: -4px;
@@ -457,7 +487,7 @@ export default function BannerSlider() {
           min-width: 0;
         }
         .bs-bar-subtitle {
-          font-size: clamp(11px, 1vw, 13px);
+          font-size: clamp(14px, 1.4vw, 18px);
           font-weight: 500; line-height: 1.55;
           letter-spacing: 0.3px; margin: 0;
           overflow: hidden;
@@ -561,11 +591,12 @@ export default function BannerSlider() {
 
         /* ════════════════════════════
            RESPONSIVE
+           (image zone height is handled by aspect-ratio,
+            so no fixed heights below)
         ════════════════════════════ */
 
         /* Laptop / small desktop ≤ 1100px */
         @media (max-width: 1100px) {
-          .bs-image-zone { height: 400px; }
           .bs-text-zone { padding: 0 24px; }
           .bs-bar-tag { padding-right: 18px; }
           .bs-bar-title-block { padding: 0 18px; }
@@ -576,8 +607,6 @@ export default function BannerSlider() {
 
         /* Tablet ≤ 900px — switch to compact 2-row grid so nothing is squeezed */
         @media (max-width: 900px) {
-          .bs-image-zone { height: 340px; }
-
           .bs-text-zone {
             display: grid;
             grid-template-columns: auto 1fr auto;
@@ -609,7 +638,7 @@ export default function BannerSlider() {
           }
 
           .bs-bar-subtitle-block { grid-area: sub; padding: 0; }
-          .bs-bar-subtitle { font-size: 13px; -webkit-line-clamp: 2; }
+          .bs-bar-subtitle { font-size: 15px; -webkit-line-clamp: 2; }
 
           .bs-bar-cta-block { grid-area: cta; padding-left: 0; justify-self: end; }
           .bs-cta { padding: 10px 18px; font-size: 9px; letter-spacing: 3px; }
@@ -618,11 +647,10 @@ export default function BannerSlider() {
         /* Large phone ≤ 640px */
         @media (max-width: 640px) {
           .bs-section { padding: 40px 0 48px; }
-          .bs-image-zone { height: 280px; }
           .bs-text-zone { padding: 14px 18px 16px; column-gap: 10px; row-gap: 6px; }
           .bs-bar-tag-label { font-size: 10px; letter-spacing: 2.5px; }
           .bs-bar-title { font-size: 20px; }
-          .bs-bar-subtitle { font-size: 12.5px; -webkit-line-clamp: 1; }
+          .bs-bar-subtitle { font-size: 14px; -webkit-line-clamp: 1; }
           .bs-cta { padding: 8px 14px; font-size: 8px; letter-spacing: 2px; }
           .bs-cta-arrow { display: none; }
         }
@@ -631,12 +659,11 @@ export default function BannerSlider() {
         @media (max-width: 480px) {
           .bs-section { padding: 32px 0 40px; }
           .bs-wrap { padding: 0 14px; }
-          .bs-image-zone { height: 230px; }
 
           .bs-text-zone { padding: 12px 14px 14px; column-gap: 8px; row-gap: 5px; }
           .bs-bar-tag-label { font-size: 9.5px; letter-spacing: 2px; font-weight: 400; }
           .bs-bar-title { font-size: 18px; }
-          .bs-bar-subtitle { font-size: 12px; }
+          .bs-bar-subtitle { font-size: 13.5px; }
           .bs-cta { padding: 7px 12px; font-size: 7.5px; letter-spacing: 1.5px; }
 
           .bs-nav { gap: 12px; margin-top: 14px; }
@@ -652,16 +679,15 @@ export default function BannerSlider() {
 
         /* Small phone ≤ 380px */
         @media (max-width: 380px) {
-          .bs-image-zone { height: 200px; }
           .bs-text-zone { padding: 10px 12px 12px; }
           .bs-bar-title { font-size: 17px; }
-          .bs-bar-subtitle { font-size: 11.5px; }
+          .bs-bar-subtitle { font-size: 13px; }
           .bs-nav { gap: 8px; }
         }
 
         /* Touch devices: no hover zoom */
         @media (hover: none) {
-          a.bs-image-link:hover img { transform: none; }
+          a.bs-image-link:hover .bs-img-fg { transform: none; }
         }
       `}</style>
 
@@ -691,7 +717,7 @@ export default function BannerSlider() {
                   className="bs-image-link"
                   ariaLabel={`${b.cta}: ${b.title}`}
                 >
-                  <Image src={b.imageSrc} alt={b.imageAlt} fill sizes="(max-width: 1180px) 100vw, 1180px" />
+                  <SlideImage key={b.imageSrc} src={b.imageSrc} alt={b.imageAlt} />
                 </SlideLink>
                 {!paused && <div key={`prog-${safeCurrent}`} className="bs-progress" />}
               </div>
@@ -727,9 +753,11 @@ export default function BannerSlider() {
 
                 {/* SUBTITLE */}
                 <div className="bs-bar-subtitle-block">
-                  <p className="bs-bar-subtitle" style={{ color: b.subtitleColor }}>
-                    {b.subtitle}
-                  </p>
+                  {b.subtitle && (
+                    <p className="bs-bar-subtitle" style={{ color: b.subtitleColor }}>
+                      {b.subtitle}
+                    </p>
+                  )}
                 </div>
 
                 {/* CTA */}

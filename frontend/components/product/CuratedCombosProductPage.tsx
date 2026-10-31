@@ -70,6 +70,7 @@ interface ComboProduct {
   charmPieceOptions?: number[];
   chainOptions?: ChainOption[];
   chainLabel?: string;
+  rawImage?: string;
 }
 
 interface PresetCombo {
@@ -114,6 +115,17 @@ const FALLBACK_COMBO_IMAGE = '/images/hero.png';
 
 function safeImageSrc(src?: string | null) {
   return src && src.trim() ? src : FALLBACK_COMBO_IMAGE;
+}
+
+/** Photo for the cart: the chosen option's own photo, else the product's real photo, else nothing (never the site fallback). */
+/** Photo only if the chosen option (colour, size…) has its own photo. Otherwise none. */
+function getPieceImage(p: ComboProduct, v: ProductVariant): string | undefined {
+  for (const vg of p.variants || []) {
+    const chosen = v.selections?.[vg.name];
+    const img = vg.options.find(o => o.name === chosen)?.image;
+    if (img) return img;
+  }
+  return undefined;
 }
 
 /**
@@ -1832,6 +1844,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                 name: p.title || p.name,
                 price: p.price,
                 image: safeImageSrc(p.image || p.mainImage || (p.images && p.images[0])),
+                rawImage: p.image || p.mainImage || (p.images && p.images[0]) || '',
                 description: p.description || p.details || p.longDescription || '',
                 customisable: p.customisable ?? true,
                 variants: parsedVariants,
@@ -1973,7 +1986,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         items: combo.includedProducts.map(p => {
           const v = presetVariants[p.id] || {};
           return {
-            id: p.id, name: p.name, price: p.price, image: p.image, quantity: 1,
+            id: p.id, name: p.name, price: p.price, image: getPieceImage(p, v), quantity: 1,
             customData: {
               selections: v.selections,
               presetMessage: v.presetMessage,
@@ -2060,7 +2073,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           const p = slot.allowedProducts.find(x => x.id === pid)!;
           const v = vars[pid] || {};
           return {
-            id: pid, name: p.name, price: p.price, image: p.image, quantity: 1,
+            id: pid, name: p.name, price: p.price, image: getPieceImage(p, v), quantity: 1,
             customData: {
               selections: v.selections,
               presetMessage: v.presetMessage,
@@ -2509,10 +2522,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-rev-bar-track { flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden; }
         .combo-rev-bar-fill { height:100%;background:linear-gradient(90deg,var(--gold),var(--olive2));border-radius:50px; }
         .combo-rev-bar-count { font-size:9px;color:var(--ink4);min-width:20px; }
-        .combo-rev-controls { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;min-height:36px; }
+.combo-rev-controls { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;min-height:36px; }
         .combo-rev-clear { font-size:10px;font-weight:600;color:var(--gold);background:var(--golddim);border:1px solid rgba(184,152,42,.3);border-radius:50px;padding:6px 12px; }
-        .combo-rev-write-btn { font-size:11px;font-weight:600;color:#fff;background:var(--olive);border-radius:50px;padding:10px 18px;margin-left:auto; }
-        .combo-rev-empty { font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0; }
+.combo-rev-write-btn { font-size:12px;font-weight:600;letter-spacing:.08em;color:#fff;background:var(--olive);border-radius:50px;padding:12px 28px; }        .combo-rev-empty { font-size:12.5px;color:var(--ink4);text-align:center;padding:16px 0; }
         .combo-rev-list { display:flex;flex-direction:column;gap:12px; }
         .combo-rev-card { background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:14px; }
         .combo-rev-card-top { display:flex;align-items:flex-start;gap:12px;margin-bottom:10px; }

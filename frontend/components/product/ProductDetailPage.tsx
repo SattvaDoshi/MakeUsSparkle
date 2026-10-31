@@ -1,7 +1,5 @@
-
-
 'use client';
-import { useState, useRef, useCallback, useEffect, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
 import { useAuth } from '@/lib/authContext';
@@ -22,11 +20,6 @@ interface AccordionData {
   linkLabel?: string;
 }
 
-interface ProductColor {
-  label: string;
-  hex: string;
-}
-
 interface UploadItem {
   id: number;
   file: File;
@@ -35,8 +28,6 @@ interface UploadItem {
 }
 
 const FALLBACK_PRODUCT_IMAGE = '/images/hero.png';
-// ── Replace with actual size chart image path ──
-const SIZE_CHART_IMAGE = '/images/size-chart.jpg';
 // ── Replace with actual gift box image path ──
 const GIFT_BOX_IMAGE = '/smallerBox.png';
 
@@ -102,79 +93,6 @@ const PRESET_MESSAGES = [
   { value: 'just_because', label: '✨ Just Because' },
 ];
 
-// ─── Size Chart Lightbox ──────────────────────────────────────────────────────
-function SizeChartLightbox({ onClose, imageUrl }: { onClose: () => void; imageUrl: string }) {
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', handleKey); document.body.style.overflow = ''; };
-  }, [onClose]);
-
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(10,14,5,.82)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '20px', animation: 'fadeUp .22s ease both',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: 'var(--beige)', borderRadius: 20,
-          overflow: 'hidden', maxWidth: 540, width: '100%',
-          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-          boxShadow: '0 32px 80px rgba(0,0,0,.4)',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px', borderBottom: '1px solid rgba(61,74,34,.1)',
-          flexShrink: 0,
-        }}>
-          <div>
-            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 2 }}>Reference Guide</p>
-            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--olive-900)', fontFamily: 'Cormorant Garamond, serif' }}>Size Chart</p>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 34, height: 34, borderRadius: '50%', border: '1.5px solid rgba(61,74,34,.15)',
-              background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--mist)', transition: 'all .2s',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-        {/* Image */}
-        <div style={{ overflow: 'auto', flexShrink: 1 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt="Size Chart"
-            style={{ width: '100%', height: 'auto', display: 'block' }}
-          />
-        </div>
-        {/* Footer tip */}
-        <div style={{
-          padding: '12px 20px', borderTop: '1px solid rgba(61,74,34,.08)',
-          fontSize: 10, color: 'var(--mist)', letterSpacing: '.06em',
-          background: 'var(--beige-dk)', flexShrink: 0,
-        }}>
-          📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Premium Gift Box Upsell ──────────────────────────────────────────────────
 function GiftBoxUpsell({
   added, onToggle, image, heading, description, price,
@@ -219,7 +137,6 @@ function GiftBoxUpsell({
           fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
           color: '#8c6b20',
         }}>
-
           7 in 10 gifters choose this
         </div>
 
@@ -274,7 +191,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
   const visible = filtered.slice(0, visibleCount);
@@ -335,16 +252,18 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
         </div>
       </div>
 
-      <div className="rev-controls" style={{ justifyContent: 'space-between' }}>
-        <div>
-          {filterStar !== null && <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>}
-        </div>
-        {!showForm && (
-          <button className="rev-helpful-btn" style={{ background: 'var(--olive-600)', color: 'white' }} onClick={() => setShowForm(true)}>
-            Write a Review
-          </button>
-        )}
-      </div>
+<div className="rev-controls">
+  {filterStar !== null && (
+    <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>
+      Showing {filterStar}★ only &nbsp;×
+    </button>
+  )}
+  {!showForm && (
+    <button className="rev-write-btn" onClick={() => setShowForm(true)}>
+      Write a Review
+    </button>
+  )}
+</div>
 
       {showForm && (
         <form onSubmit={handleSubmit} style={{ background: 'white', padding: 24, borderRadius: 18, border: '1px solid rgba(61,74,34,.07)', marginBottom: 20, animation: 'fadeUp .3s ease both' }}>
@@ -355,8 +274,8 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
               <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
             ))}
           </div>
-          <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 13, outline: 'none', resize: 'vertical' }} />
-          
+          <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 16, outline: 'none', resize: 'vertical' }} />
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
               <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
@@ -370,6 +289,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {formState.images.map((file, idx) => (
                   <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
                     <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                   </div>
@@ -378,7 +298,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
             <button type="button" onClick={() => setShowForm(false)} style={{ background: 'transparent', color: 'var(--mist)', border: 'none', padding: '10px 24px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
@@ -408,6 +328,7 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
             {r.images && r.images.length > 0 && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {r.images.map((imgUrl, idx) => (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img key={idx} src={imgUrl} alt="Review attachment" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
                 ))}
               </div>
@@ -467,10 +388,10 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
         <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
         <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
       </button>
-      <div className="acc-body-wrap" style={{ 
-        display: 'grid', 
-        gridTemplateRows: open ? '1fr' : '0fr', 
-        transition: 'grid-template-rows 0.38s cubic-bezier(.4,0,.2,1)' 
+      <div className="acc-body-wrap" style={{
+        display: 'grid',
+        gridTemplateRows: open ? '1fr' : '0fr',
+        transition: 'grid-template-rows 0.38s cubic-bezier(.4,0,.2,1)'
       }}>
         <div style={{ overflow: 'hidden' }}>
           <div className="acc-body">
@@ -499,7 +420,7 @@ function EstimatedDeliveryBlock() {
         Estimated Delivery
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="est-grid">
         {[
           { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
           { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
@@ -560,10 +481,10 @@ function Sparkles({ active }: { active: boolean }) {
 // ─── Customisation Panel ──────────────────────────────────────────────────────
 function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels = [], onChange }: { category: string, maxCustomImages?: number, customImageLabels?: string[], onChange?: (data: { wantCustom: boolean | null, uploads: string[], globalNote: string }) => void }) {
   const [wantCustom, setWantCustom] = useState<boolean | null>(null);
-  
+
   const MAX_FILES = customImageLabels.length > 0 ? customImageLabels.length : maxCustomImages;
   const [uploads, setUploads] = useState<(UploadItem | null)[]>(Array(MAX_FILES).fill(null));
-  
+
   const [globalNote, setGlobalNote] = useState('');
 
   useEffect(() => {
@@ -594,12 +515,12 @@ function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels =
     });
   };
 
-  const handleToggle = (val: boolean) => { 
-    setWantCustom(val); 
-    if (!val) { 
-      setUploads(Array(MAX_FILES).fill(null)); 
-      setGlobalNote(''); 
-    } 
+  const handleToggle = (val: boolean) => {
+    setWantCustom(val);
+    if (!val) {
+      setUploads(Array(MAX_FILES).fill(null));
+      setGlobalNote('');
+    }
   };
   const catLabel = category === 'Key Chain/Charm' ? 'key chain / charm' : category === 'Fan Box' ? 'fan box' : 'gift box';
 
@@ -618,13 +539,13 @@ function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels =
       {wantCustom === false && (
         <div className="cust-info-chip" style={{ marginTop: 12 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, flexShrink: 0, color: 'var(--gold)', marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-          <p>You'll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours of placing your order.</p>
+          <p>You&apos;ll receive the <strong>standard {catLabel}</strong>. You can still personalise it later by contacting us within 2 hours of placing your order.</p>
         </div>
       )}
       {wantCustom === true && (
         <div style={{ marginTop: 14, animation: 'fadeUp .35s ease both' }}>
           <textarea className="cust-note-global" placeholder={`Add a personal message or customisation note for your ${catLabel}…`} value={globalNote} onChange={e => setGlobalNote(e.target.value)} rows={3} />
-          
+
           <div style={{ marginTop: 16 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 12 }}>Required Photos</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
@@ -634,9 +555,10 @@ function CustomisationPanel({ category, maxCustomImages = 1, customImageLabels =
                 return (
                   <div key={i} style={{ border: '1.5px dashed rgba(61,74,34,.15)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', position: 'relative', minHeight: 140, textAlign: 'center' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-900)', marginBottom: 8, zIndex: 2 }}>{label}</div>
-                    
+
                     {upload ? (
                       <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={upload.preview} alt={label} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6, zIndex: 1 }} />
                         <button type="button" onClick={() => removeSlotUpload(i)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 14, cursor: 'pointer', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                       </>
@@ -710,13 +632,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [selections, setSelections] = useState<{ colorIndex: number; size: string }[]>([]);
   const [activeImg, setActiveImg] = useState(0);
-  const [shipping, setShipping] = useState('standard');
-  const [payment, setPayment] = useState('prepaid');
+  const [shipping] = useState('standard');
+  const [payment] = useState('prepaid');
   const [qty, setQty] = useState(1);
   const [cartAnim, setCartAnim] = useState(false);
   const [sparkleAnim, setSparkleAnim] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('about');
-  const [showSizeChart, setShowSizeChart] = useState(false);
   const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const [errorToast, setErrorToast] = useState('');
   const [productReviews, setProductReviews] = useState<ReviewData[]>([]);
@@ -763,7 +684,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const normalizedColors = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c', image: c.image || undefined }));
   const sizes = product?.sizes ?? [];
   const variants = product?.variants ?? [];
-  
+
   const quantityVariants = product?.quantityVariants ?? [];
   const hasQuantityVariants = quantityVariants.length > 0;
   const currentQuantityVariant = hasQuantityVariants ? quantityVariants[selectedVariantIndex] : null;
@@ -792,6 +713,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       return newSelections;
     });
     setActiveImg(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.sourceId, numberOfProducts]);
 
   const getVariantForSelection = useCallback((colorIndex: number, size: string) => {
@@ -801,6 +723,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     return variants.find((v) => normalizeText(v.color) === cLabel && normalizeText(v.size) === sLabel)
       || variants.find((v) => normalizeText(v.color) === cLabel)
       || variants.find((v) => normalizeText(v.size) === sLabel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedColors, variants]);
 
   const currentColor = normalizedColors[selections[0]?.colorIndex || 0] || normalizedColors[0];
@@ -858,15 +781,13 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const currentStock = selections.length > 0
     ? selections.reduce((min, sel) => {
       const v = getVariantForSelection(sel.colorIndex, sel.size);
-      return Math.min(min, v?.stock ?? stock); 
+      return Math.min(min, v?.stock ?? stock);
     }, stock)
     : stock;
-    const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));
+  const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const totalWithGiftBox = computedPrice + (giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0);
-  const deliveryCharge = shipping === 'express' ? 110 : (computedPrice >= 999 ? 0 : 60);
-  const codCharge = payment === 'cod' && shipping !== 'express' ? 70 : 0;
 
   const wished = product ? isWished(product.id) : false;
 
@@ -879,48 +800,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleWishToggle = useCallback(() => { if (!wishlistItem) return; toggleItem(wishlistItem); }, [toggleItem, wishlistItem]);
 
-  const buildCartItem = useCallback(() => {
-    if (!product) return null;
-    const giftBoxPrice = giftBoxAdded ? (product.giftBox?.price ? Number(product.giftBox.price) : 50) : 0;
-    const finalPrice = computedPrice + giftBoxPrice;
-    const finalOriginalPrice = (computedOriginalPrice && computedOriginalPrice > computedPrice)
-      ? computedOriginalPrice + giftBoxPrice
-      : null;
-    return {
-      id: String(product.sourceId), name: product.name || '', price: finalPrice,
-      originalPrice: finalOriginalPrice, basePrice: computedPrice, image: displayImg, color: currentColor?.label || '',
-      colorHex: currentColor?.hex || '#c9a84c', size: selections[0]?.size || undefined, sku: product.sku,
-      href: product.href || `/products/${product.sourceId}`,
-      sourceId: String(product.sourceId),
-      category: product.category || '',
-      categoryId: product.categoryId,
-      subCategoryId: product.subCategoryId,
-      style: product.style,
-      styleId: product.styleId,
-      paymentMode: product.paymentMode,
-      customNote: allowCustomization && customData.wantCustom ? customData.globalNote : undefined,
-      customImages: allowCustomization && customData.wantCustom ? customData.uploads : undefined,
-      giftMessage: allowCustomization ? giftMessage.customMessage || undefined : undefined,
-      giftBox: giftBoxAdded || undefined,
-      giftBoxDetails: giftBoxAdded ? {
-        heading: product.giftBox?.heading || 'Premium Gift Box',
-        description: product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card',
-        price: product.giftBox?.price ? Number(product.giftBox.price) : 50,
-        image: product.giftBox?.image || GIFT_BOX_IMAGE,
-      } : undefined,
-    };
-  }, [product, computedPrice, computedOriginalPrice, displayImg, currentColor, customData, giftMessage, allowCustomization, giftBoxAdded]);
   const buildCartItems = useCallback(() => {
     if (!product) return [];
-
-    let volumeDiscountPct = 0;
-    if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
-      const applicableTiers = product.volumeDiscounts.filter((vd) => qty >= vd.quantity);
-      if (applicableTiers.length > 0) {
-        const bestTier = applicableTiers.reduce((prev, current) => (prev.quantity > current.quantity) ? prev : current);
-        volumeDiscountPct = bestTier.discountPercentage;
-      }
-    }
 
     const itemsToCart: Omit<import("@/lib/cartContext").CartItem, "qty">[] = [];
     const sets = qty;
@@ -928,9 +809,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     for (let i = 0; i < sets; i++) {
       const setSelections = selections;
 
-      let setPrice = computedOriginalPrice;
-      // Apply volume discount to this specific set
-      let discountedSetPrice = computedPrice;
+      const setPrice = computedOriginalPrice;
+      const discountedSetPrice = computedPrice;
 
       const giftBoxPrice = giftBoxAdded ? (product.giftBox?.price ? Number(product.giftBox.price) : 50) : 0;
       const finalPrice = discountedSetPrice + giftBoxPrice;
@@ -983,10 +863,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       itemsToCart.push(cartItem);
     }
     return itemsToCart;
-  }, [product, computedPrice, computedOriginalPrice, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, computedPrice, computedOriginalPrice, displayImg, selections, normalizedColors, customData, allowCustomization, qty, giftBoxAdded, giftMessage, currentQuantityVariant]);
 
   const isSelectionComplete = selections.length > 0 && selections.every(sel =>
-    (normalizedColors.length === 0 || sel.colorIndex !== -1) && 
+    (normalizedColors.length === 0 || sel.colorIndex !== -1) &&
     (sizeOptions.length === 0 || sel.size !== '')
   );
 
@@ -1002,7 +883,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     const items = buildCartItems(); if (items.length === 0) return;
     items.forEach(item => addItem(item, false));
     router.push('/cart');
-  }, [buildCartItems, addItem, router, isSelectionComplete]);
+  }, [buildCartItems, addItem, router, isSelectionComplete, currentStock]);
 
   const handleAddToCart = useCallback(() => {
     if (!isSelectionComplete) {
@@ -1019,7 +900,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setCartAnim(true); setSparkleAnim(true);
     setTimeout(() => setCartAnim(false), 700);
     setTimeout(() => setSparkleAnim(false), 800);
-  }, [buildCartItems, addItem, isSelectionComplete]);
+  }, [buildCartItems, addItem, isSelectionComplete, currentStock]);
 
   const handleColorChange = useCallback((productIndex: number, colorIndex: number) => {
     setSelections(prev => {
@@ -1045,10 +926,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setActiveImg(0);
   }, []);
 
-  useEffect(() => { if (shipping === 'express') setPayment('prepaid'); }, [shipping]);
-useEffect(() => {
-  setQty(q => Math.min(q, maxSelectable));
-}, [maxSelectable]);
+  useEffect(() => { if (shipping === 'express') { /* payment locked to prepaid */ } }, [shipping, payment]);
+  useEffect(() => {
+    setQty(q => Math.min(q, maxSelectable));
+  }, [maxSelectable]);
+
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
@@ -1060,7 +942,7 @@ useEffect(() => {
   );
 
   if (!product) return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16, padding: 20, textAlign: 'center' }}>
       <p style={{ fontSize: 28, color: '#3d4a22' }}>Product not found</p>
       <p style={{ fontSize: 13, color: 'rgba(30,35,16,.5)' }}>This product may have been removed or the link is incorrect.</p>
       <a href="/" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: '#f5f0e8', background: '#3d4a22', padding: '12px 28px', borderRadius: 50, textDecoration: 'none' }}>Back to Home</a>
@@ -1075,7 +957,7 @@ useEffect(() => {
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
     ...(product?.sizeChartImage ? [{ id: 'sizechart', emoji: '📏', label: 'Size Chart', content: `<img src="${product.sizeChartImage}" alt="Size Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="padding: 16px 0; font-size: 14px; color: var(--ink); line-height: 1.6; text-align: left; white-space: pre-wrap;">${product.sizeChartSteps ? product.sizeChartSteps : '📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.'}</div>`, isHtml: true }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
-       {
+    {
       id: 'shipping',
       emoji: '🚚',
       label: 'Shipping Policy',
@@ -1159,22 +1041,7 @@ useEffect(() => {
       linkHref: '/refund-policy',
       linkLabel: 'Read full returns policy',
     },
-    // { id: 'cancel', emoji: '↩️', label: 'Cancellation Policy', content: 'Prepaid orders are not eligible for cancellation, modification, or refund once the order has been placed. For Cash on Delivery (COD) orders, cancellation requests can only be accepted if the order has not yet been processed by our team. Once an order has been processed, no cancellations will be permitted. Refunds are not applicable for prepaid orders or for orders cancelled after processing.' },
   ];
-
-  function NavLinkRow({ emoji, label, href }: { emoji: string; label: string; href: string }) {
-    return (
-      <Link href={href} className="acc-nav-link-row">
-        <span className="acc-head-left">
-          <span className="acc-emoji">{emoji}</span>
-          {label}
-        </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </Link>
-    );
-  }
 
   return (
     <>
@@ -1183,10 +1050,12 @@ useEffect(() => {
       {errorToast && (
         <div style={{
           position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--red)', color: 'white', padding: '14px 28px',
-          borderRadius: '50px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
+          background: 'var(--red)', color: 'white', padding: '14px 24px',
+          borderRadius: '18px', fontSize: '13px', fontWeight: 600, zIndex: 9999,
           boxShadow: '0 12px 32px rgba(192, 57, 43, 0.35)', animation: 'fadeUp 0.35s ease both',
-          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em', whiteSpace: 'nowrap'
+          fontFamily: 'Jost, sans-serif', letterSpacing: '.03em',
+          whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.45,
+          width: 'max-content', maxWidth: 'calc(100vw - 32px)',
         }}>
           {errorToast}
         </div>
@@ -1203,6 +1072,7 @@ useEffect(() => {
           --ink:#1e2310; --mist:rgba(30,35,16,.45); --red:#c0392b; --green:#2e7d32;
         }
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        img{max-width:100%}
 
         @keyframes sparkle{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(calc(var(--tx,0px)*2.2),calc(var(--ty,0px)*2.2)) scale(0)}}
         @keyframes cartBounce{0%,100%{transform:scale(1)}30%{transform:scale(1.14) rotate(-3deg)}60%{transform:scale(.94) rotate(2deg)}80%{transform:scale(1.04)}}
@@ -1210,42 +1080,51 @@ useEffect(() => {
         @keyframes imgIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
         @keyframes stockPulse{0%,100%{opacity:1}50%{opacity:.55}}
 
-        .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink)}
-        .pdp-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1280px;margin:0 auto}
+        .pdp{min-height:100vh;background:var(--beige);font-family:'Jost',sans-serif;color:var(--ink);overflow-x:clip;width:100%}
 
-        /* ── CHANGE 1: Gallery uses aspect-ratio 4/5 instead of fixed height ── */
+        /* ── Layout: two columns on laptop+, stacked on tablet/mobile ── */
+        .pdp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto;align-items:start}
+        .pdp-layout>*{min-width:0}
+
+        /* ── Gallery: NO overflow:hidden / fixed max-height (that clipped the thumbnails) ── */
         .pdp-gallery{
-          position:sticky;top:80px;
-          /* height adjusts to content — no fixed calc height */
+          position:sticky;top:80px;align-self:start;
           padding:32px 28px 32px 52px;
           display:flex;flex-direction:column;gap:14px;
-          animation:fadeUp .6s ease both;min-width:0;overflow:hidden;
-          /* sticky needs a max-height so it doesn't grow taller than viewport */
-          max-height:calc(100vh - 80px);
+          animation:fadeUp .6s ease both;min-width:0;
         }
         .pdp-main-img-wrap{
-          /* 4:5 portrait ratio */
+          position:relative;width:100%;flex:none;
           aspect-ratio:4/5;
-          width:100%;
-          /* Remove flex:1 so ratio is respected */
-          flex:none;
-          background:var(--beige-dk);overflow:hidden;position:relative;
+          /* leave room for navbar + thumbnail row so both always fit in the viewport */
+          max-height:calc(100vh - 80px - 64px - 100px);
+          min-height:320px;
+          background:var(--beige-dk);overflow:hidden;
         }
-        .pdp-main-img{width:100%;height:100%;object-fit:cover;animation:imgIn .4s ease both}
-        .pdp-badge{position:absolute;top:16px;left:16px;font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--beige);background:var(--olive-600);padding:5px 14px 4px;border-radius:50px}
-        .pdp-wish{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(245,240,232,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
+        .pdp-main-img{width:100%;height:100%;object-fit:cover;display:block;animation:imgIn .4s ease both}
+        .pdp-badge{position:absolute;top:16px;left:16px;font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--beige);background:var(--olive-600);padding:5px 14px 4px;border-radius:50px;z-index:3}
+        .pdp-wish{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(245,240,232,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s;z-index:3}
         .pdp-wish:hover{transform:scale(1.1)}
         .pdp-wish.on{background:var(--olive-600)}
-        .pdp-thumb-row{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;flex-shrink:0}
-        .pdp-thumb-row::-webkit-scrollbar{height:3px}
+        .pdp-thumb-row{
+          display:flex;gap:10px;flex-wrap:nowrap;flex-shrink:0;
+          overflow-x:auto;padding:2px 2px 8px;
+          scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+        }
+        .pdp-thumb-row::-webkit-scrollbar{height:4px}
         .pdp-thumb-row::-webkit-scrollbar-thumb{background:var(--beige-dkr);border-radius:4px}
-        .pdp-thumb{width:72px;height:72px;border-radius:12px;overflow:hidden;cursor:pointer;flex-shrink:0;border:2px solid transparent;transition:border-color .2s,transform .2s}
+        .pdp-thumb{
+          flex:0 0 72px;width:72px;height:72px;padding:0;
+          border-radius:12px;overflow:hidden;cursor:pointer;
+          border:2px solid transparent;background:var(--beige-dk);
+          scroll-snap-align:start;transition:border-color .2s,transform .2s;
+        }
         .pdp-thumb:hover{transform:scale(1.06)}
         .pdp-thumb.active{border-color:var(--olive-500)}
-        .pdp-thumb img{width:100%;height:100%;object-fit:cover}
+        .pdp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 
-        .pdp-info{padding:32px 52px 40px 28px;animation:fadeUp .6s ease .1s both;overflow-y:auto}
-        .pdp-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;letter-spacing:-.01em;color:var(--olive-900);margin-bottom:10px}
+        .pdp-info{padding:32px 52px 40px 28px;animation:fadeUp .6s ease .1s both;min-width:0}
+        .pdp-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;letter-spacing:-.01em;color:var(--olive-900);margin-bottom:10px;overflow-wrap:anywhere}
         .pdp-name em{font-style:italic;color:var(--olive-600)}
         .pdp-rating{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
         .pdp-stars{color:var(--gold);font-size:13px;letter-spacing:1px}
@@ -1274,29 +1153,16 @@ useEffect(() => {
         .pdp-size-btn.active{border-color:var(--olive-600);background:var(--olive-600);color:var(--beige)}
         .pdp-size-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
 
-        /* ── CHANGE 2: Size chart link ── */
-        .pdp-size-chart-link{
-          display:inline-flex;align-items:center;gap:5px;
-          margin-bottom:20px;
-          font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
-          color:var(--olive-500);background:none;border:none;
-          cursor:pointer;font-family:'Jost',sans-serif;
-          text-decoration:underline;text-decoration-color:rgba(90,107,46,.35);
-          text-underline-offset:3px;
-          transition:color .2s;
-          padding:0;
-        }
-        .pdp-size-chart-link:hover{color:var(--olive-600)}
-        .pdp-size-chart-link svg{transition:transform .2s}
-        .pdp-size-chart-link:hover svg{transform:scale(1.15)}
-
         .pdp-desc{font-size:14px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;margin-bottom:20px}
-        .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+        .pdp-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
         .pdp-qty{display:flex;align-items:center;border:1.5px solid var(--beige-dkr);border-radius:50px;overflow:hidden}
         .pdp-qty-btn{width:36px;height:36px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--olive-600);display:flex;align-items:center;justify-content:center;transition:background .15s}
         .pdp-qty-btn:hover{background:var(--olive-50)}
         .pdp-qty-val{min-width:36px;text-align:center;font-size:13px;font-weight:600;color:var(--ink)}
         .pdp-stock{font-size:10.5px;font-weight:500;letter-spacing:.06em;color:var(--red);animation:stockPulse 2.2s ease-in-out infinite}
+
+        /* Estimated delivery grid */
+        .est-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
         /* Complete the Look */
         .ctl-strip{margin-bottom:0;padding-bottom:4px}
@@ -1358,8 +1224,9 @@ useEffect(() => {
         .acc-emoji{font-size:16px}
         .acc-chevron{color:var(--mist);flex-shrink:0;transition:transform .32s ease}
         .acc-item--open .acc-chevron{transform:rotate(180deg)}
-        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em}
+        .acc-body{padding:2px 4px 18px 36px;font-size:13px;font-weight:400;line-height:1.85;color:#101010;letter-spacing:.03em;overflow-wrap:anywhere}
         .acc-body p{margin-bottom:4px}
+        .acc-body img{max-width:100%;height:auto}
         .acc-policy-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--olive-600);text-decoration:none;border-bottom:1.5px solid var(--olive-200);padding-bottom:1px;transition:color .2s,border-color .2s}
         .acc-policy-link:hover{color:var(--olive-400);border-color:var(--olive-400)}
         .acc-policy-link svg{transition:transform .2s}
@@ -1368,7 +1235,7 @@ useEffect(() => {
         /* Customisation */
         .pdp-cust-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(90,110,35,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}
         .pdp-cust-banner-head{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:6px}
-        .pdp-cust-banner-head svg{width:16px;height:16px;color:var(--gold)}
+        .pdp-cust-banner-head svg{width:16px;height:16px;color:var(--gold);flex-shrink:0}
         .pdp-cust-banner-sub{font-size:12px;font-weight:400;color:#101010;line-height:1.7;letter-spacing:.03em;margin-bottom:14px}
         .cust-toggle-btn{flex:1;padding:11px 10px;border:1.5px solid var(--beige-dkr);border-radius:12px;background:white;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:7px}
         .cust-toggle-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
@@ -1377,25 +1244,9 @@ useEffect(() => {
         .cust-info-chip{display:flex;align-items:flex-start;gap:8px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.22);border-radius:10px;padding:10px 14px}
         .cust-info-chip p{font-size:10.5px;font-weight:400;color:#101010;line-height:1.7;letter-spacing:.03em}
         .cust-info-chip p strong{font-weight:600;color:var(--olive-600)}
-        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:#101010;background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
+        .cust-note-global{width:100%;min-height:72px;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:300;color:#101010;background:white;outline:none;margin-bottom:14px;transition:border-color .2s}
         .cust-note-global:focus{border-color:var(--olive-400)}
         .cust-note-global::placeholder{color:rgba(30,35,16,.3)}
-        .cust-drop{border:2px dashed var(--beige-dkr);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .22s,background .22s;background:white;position:relative}
-        .cust-drop.drag-over{border-color:var(--gold);background:rgba(201,168,76,.05)}
-        .cust-drop:hover{border-color:var(--olive-400);background:var(--olive-50)}
-        .cust-drop-title{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--olive-600);margin-bottom:4px}
-        .cust-drop-sub{font-size:10px;color:var(--mist);letter-spacing:.04em}
-        .cust-drop-btn{display:inline-block;margin-top:12px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--beige);background:var(--olive-600);padding:8px 20px;border-radius:50px;border:none;cursor:pointer;transition:background .2s}
-        .cust-drop-btn:hover{background:var(--olive-500)}
-        .cust-limit{font-size:9px;color:var(--mist);letter-spacing:.1em;text-align:right;margin-top:6px}
-        .cust-limit.warn{color:var(--red);font-weight:600}
-        .cust-previews{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:14px}
-        .cust-preview-item{position:relative;border-radius:12px;overflow:hidden;border:1.5px solid var(--beige-dkr);animation:fadeUp .3s ease both}
-        .cust-preview-img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
-        .cust-preview-remove{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(26,31,13,.7);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;line-height:1;transition:background .2s}
-        .cust-preview-remove:hover{background:var(--red)}
-        .cust-preview-note{width:100%;border:none;border-top:1px solid var(--beige-dkr);padding:6px 8px;font-family:'Jost',sans-serif;font-size:10px;color:var(--ink);background:white;outline:none;resize:none}
-        .cust-preview-note::placeholder{color:rgba(30,35,16,.3)}
 
         /* Gift Message */
         .gift-msg-panel{background:linear-gradient(135deg,rgba(201,168,76,.06),rgba(245,240,232,.6));border:1.5px solid rgba(201,168,76,.25);border-radius:16px;padding:16px 18px 18px;margin-bottom:20px}
@@ -1405,13 +1256,13 @@ useEffect(() => {
         .gift-msg-label{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--mist);margin-bottom:8px}
         .gift-msg-select-wrap{margin-bottom:0}
         .gift-msg-select-inner{position:relative}
-        .gift-msg-select{width:100%;appearance:none;-webkit-appearance:none;background:white;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 38px 11px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:400;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s,box-shadow .2s}
+        .gift-msg-select{width:100%;appearance:none;-webkit-appearance:none;background:white;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:11px 38px 11px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:400;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s,box-shadow .2s}
         .gift-msg-select:focus{border-color:var(--olive-400);box-shadow:0 0 0 3px rgba(90,110,35,.1)}
         .gift-msg-select-chevron{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--mist);pointer-events:none}
         .gift-msg-char-count{font-size:9.5px;color:var(--mist);text-align:right;margin-top:5px;letter-spacing:.05em}
         .gift-msg-free-wrap{margin-top:18px;padding-top:16px;border-top:1px solid rgba(201,168,76,.2)}
         .gift-msg-label--free{font-size:10px;letter-spacing:.24em;color:var(--olive-600);font-weight:600;margin-bottom:10px}
-        .gift-msg-free-textarea{width:100%;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:0;padding:12px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:300;color:var(--ink);background:white;outline:none;line-height:1.75;letter-spacing:.03em;transition:border-color .2s,box-shadow .2s;min-height:80px;border-left:3px solid var(--gold)}
+        .gift-msg-free-textarea{width:100%;resize:vertical;border:1.5px solid var(--beige-dkr);border-radius:0;padding:12px 14px;font-family:'Jost',sans-serif;font-size:16px;font-weight:300;color:var(--ink);background:white;outline:none;line-height:1.75;letter-spacing:.03em;transition:border-color .2s,box-shadow .2s;min-height:80px;border-left:3px solid var(--gold)}
         .gift-msg-free-textarea:focus{border-color:var(--olive-400);border-left-color:var(--olive-500);box-shadow:0 0 0 3px rgba(90,110,35,.07)}
         .gift-msg-free-textarea::placeholder{color:rgba(30,35,16,.28)}
 
@@ -1435,8 +1286,10 @@ useEffect(() => {
         .rev-bar-track{flex:1;height:6px;background:var(--beige-dkr);border-radius:50px;overflow:hidden}
         .rev-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--olive-400));border-radius:50px;transition:width .4s ease}
         .rev-bar-count{font-size:10px;color:var(--mist);min-width:24px}
-        .rev-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
-        .rev-clear-filter{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:50px;padding:6px 14px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif}
+.rev-controls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.rev-write-btn{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--olive-600);border:none;border-radius:50px;padding:12px 28px;cursor:pointer;transition:background .2s,transform .15s}
+.rev-write-btn:hover{background:var(--olive-500)}
+.rev-write-btn:active{transform:scale(.98)}        .rev-clear-filter{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:50px;padding:6px 14px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif}
         .rev-clear-filter:hover{background:rgba(201,168,76,.2)}
         .rev-empty{font-size:13px;color:var(--mist);text-align:center;padding:32px 0}
         .rev-clear-link{background:none;border:none;color:var(--gold);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Jost',sans-serif}
@@ -1445,14 +1298,14 @@ useEffect(() => {
         .rev-card:hover{box-shadow:0 8px 28px rgba(61,74,34,.09)}
         .rev-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
         .rev-avatar{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.05em}
-        .rev-meta{flex:1}
+        .rev-meta{flex:1;min-width:0}
         .rev-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
         .rev-name{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.02em}
         .rev-verified{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--olive-500)}
         .rev-stars-sm{font-size:12px;color:var(--gold);letter-spacing:1px}
         .rev-date{font-size:10.5px;color:var(--mist)}
         .rev-card-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px;letter-spacing:.02em}
-        .rev-card-body{font-size:13px;font-weight:400;color:#101010;line-height:1.85;letter-spacing:.03em;margin-bottom:16px}
+        .rev-card-body{font-size:13px;font-weight:400;color:#101010;line-height:1.85;letter-spacing:.03em;margin-bottom:16px;overflow-wrap:anywhere}
         .rev-card-foot{display:flex;align-items:center;gap:10px;border-top:1px solid rgba(61,74,34,.07);padding-top:12px}
         .rev-helpful-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist)}
         .rev-helpful-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--olive-600);background:var(--olive-50);border:1px solid rgba(61,74,34,.12);border-radius:50px;padding:5px 12px;cursor:pointer;transition:all .2s;font-family:'Jost',sans-serif}
@@ -1461,8 +1314,7 @@ useEffect(() => {
         .rev-load-btn{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--olive-600);background:white;border:1.5px solid var(--beige-dkr);border-radius:50px;padding:14px 36px;cursor:pointer;transition:all .22s}
         .rev-load-btn:hover{border-color:var(--olive-400);background:var(--olive-50)}
 
-
-                /* Policy dropdown content */
+        /* Policy dropdown content */
         .pol{display:flex;flex-direction:column;gap:14px;font-size:13px;font-weight:400;line-height:1.75;color:#101010;letter-spacing:.03em}
         .pol p{margin:0}
         .pol .pol-h{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-600);margin-bottom:4px}
@@ -1480,23 +1332,50 @@ useEffect(() => {
         .pol-alert{background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.18);border-left:3px solid rgba(192,57,43,.5);border-radius:8px;padding:10px 12px;font-size:12px}
         .pol-alert strong{color:var(--red)}
 
-        
-        /* ── TABLET (≤ 960px) ── */
+        .acc-nav-link-row{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;text-decoration:none;color:var(--ink);border-bottom:1px solid rgba(61,74,34,.08);font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;transition:background .15s}
+        .acc-nav-link-row:hover{background:rgba(61,74,34,.03)}
+        .acc-nav-link-row svg{color:var(--mist);flex-shrink:0;transition:transform .2s}
+        .acc-nav-link-row:hover svg{transform:translateX(3px)}
+
+        /* ═══════════ RESPONSIVE ═══════════ */
+
+        /* Large desktop */
+        @media(min-width:1440px){
+          .pdp-layout{max-width:1440px}
+          .pdp-gallery{padding-left:64px}
+          .pdp-info{padding-right:64px}
+          .rev-section{max-width:1440px;padding-left:64px;padding-right:64px}
+        }
+
+        /* Small laptop */
+        @media(min-width:961px) and (max-width:1200px){
+          .pdp-gallery{padding:28px 20px 28px 32px}
+          .pdp-info{padding:28px 32px 40px 20px}
+          .rev-section{padding-left:32px;padding-right:32px}
+        }
+
+        /* Short laptop screens: keep the image + thumbnails inside the viewport */
+        @media(min-width:961px) and (max-height:700px){
+          .pdp-main-img-wrap{min-height:260px}
+        }
+
+        /* Tablet */
         @media(max-width:960px){
           .pdp-layout{grid-template-columns:1fr}
-          .pdp-gallery{position:static;height:auto;max-height:none;padding:24px 24px 0}
-          .pdp-info{padding:24px 24px 48px}
-          .pdp-trust{grid-template-columns:repeat(3,1fr)}
+          .pdp-gallery{position:static;padding:24px 24px 0;max-width:720px;margin:0 auto;width:100%}
+          .pdp-main-img-wrap{aspect-ratio:1/1;max-height:none;min-height:0}
+          .pdp-info{padding:24px 24px 48px;max-width:720px;margin:0 auto;width:100%}
           .rev-section{padding:40px 24px 48px}
           .rev-summary{grid-template-columns:180px 1fr}
           .rev-big-num{font-size:3.6rem}
         }
-        /* ── MOBILE (≤ 600px) ── */
+
+        /* Mobile */
         @media(max-width:600px){
-          .pdp-gallery{padding:16px 16px 0}
+          .pdp-gallery{padding:12px 16px 0}
+          .pdp-main-img-wrap{aspect-ratio:4/5;max-height:70vh}
+          .pdp-thumb{flex-basis:60px;width:60px;height:60px;border-radius:10px}
           .pdp-info{padding:20px 16px 40px}
-          /* On mobile the 4:5 ratio naturally gives a shorter image — add a max */
-          .pdp-main-img-wrap{max-height:400px}
           .pdp-trust{grid-template-columns:repeat(3,minmax(80px,1fr));gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
           .pdp-trust::-webkit-scrollbar{display:none}
           .pdp-trust-item{padding:10px 6px;border-radius:12px;min-width:80px}
@@ -1506,6 +1385,7 @@ useEffect(() => {
           .pdp-cta-row{grid-template-columns:1fr 1fr}
           .acc-body{padding:2px 4px 14px 26px}
           .ctl-card{flex:0 0 130px;height:175px}
+          .ctl-strip-eyebrow{letter-spacing:.3em;font-size:10px}
           .rev-section{padding:32px 16px 40px}
           .rev-summary{grid-template-columns:1fr;border-radius:16px}
           .rev-summary-score{padding:22px 24px;flex-direction:row;justify-content:center;gap:16px;border-radius:0}
@@ -1514,22 +1394,22 @@ useEffect(() => {
           .rev-header{gap:12px}
           .rev-title{font-size:1.3rem}
           .rev-card{padding:18px 16px}
-          .rev-controls{flex-direction:column;align-items:flex-start}
-          .acc-delivery-row{flex-direction:column;gap:6px}
+          .rev-controls{flex-direction:column;align-items:center}
+          .pdp-cust-banner{padding:14px 12px 16px}
+          .gift-msg-panel{padding:14px 12px 16px}
+          .cust-toggle-btn{font-size:10px;letter-spacing:.06em;padding:11px 6px}
         }
-        /* ── VERY SMALL (≤ 380px) ── */
+
+        /* Very small */
         @media(max-width:380px){
           .pdp-name{font-size:1.7rem}
           .pdp-cta-row{grid-template-columns:1fr}
           .pdp-btn-buy{grid-column:unset}
           .ctl-card{flex:0 0 118px;height:160px}
+          .est-grid{grid-template-columns:1fr}
           .rev-big-num{font-size:2.6rem}
           .rev-card{padding:14px 12px}
         }
-        .acc-nav-link-row{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;text-decoration:none;color:var(--ink);border-bottom:1px solid rgba(61,74,34,.08);font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;transition:background .15s}
-        .acc-nav-link-row:hover{background:rgba(61,74,34,.03)}
-        .acc-nav-link-row svg{color:var(--mist);flex-shrink:0;transition:transform .2s}
-        .acc-nav-link-row:hover svg{transform:translateX(3px)}
       `}</style>
 
       <div className="pdp">
@@ -1538,31 +1418,36 @@ useEffect(() => {
 
           {/* ── Gallery ─────────────────────────────────────────────────────── */}
           <div className="pdp-gallery">
-            {/* CHANGE 1: aspect-ratio:4/5 applied via .pdp-main-img-wrap */}
             <div className="pdp-main-img-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img key={displayImg} className="pdp-main-img" src={displayImg} alt={productName} />
+              <img
+                key={displayImg}
+                className="pdp-main-img"
+                src={displayImg}
+                alt={productName}
+                onError={(e) => { if (!e.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) e.currentTarget.src = FALLBACK_PRODUCT_IMAGE; }}
+              />
               {Number(currentStock) <= 0 && (
-  <div style={{
-    position: 'absolute', inset: 0,
-    background: 'rgba(245,240,232,0.55)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    backdropFilter: 'blur(1px)',
-    zIndex: 2,
-  }}>
-    <span style={{
-      fontSize: 13, fontWeight: 700, letterSpacing: '.22em',
-      textTransform: 'uppercase', color: 'var(--beige)',
-      background: 'rgba(30,35,16,0.75)', padding: '10px 24px',
-      borderRadius: 50,
-    }}>
-      Sold Out
-    </span>
-  </div>
-)}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(245,240,232,0.55)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(1px)',
+                  zIndex: 2,
+                }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 700, letterSpacing: '.22em',
+                    textTransform: 'uppercase', color: 'var(--beige)',
+                    background: 'rgba(30,35,16,0.75)', padding: '10px 24px',
+                    borderRadius: 50,
+                  }}>
+                    Sold Out
+                  </span>
+                </div>
+              )}
               <span className="pdp-badge">
-  {Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}
-</span>
+                {Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}
+              </span>
               {!isFromCombo && (
                 <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
@@ -1571,14 +1456,31 @@ useEffect(() => {
                 </button>
               )}
             </div>
-            <div className="pdp-thumb-row">
-              {currentImages.map((img, i) => (
-                <div key={img} className={`pdp-thumb${activeImg === i ? ' active' : ''}`} onClick={() => setActiveImg(i)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`View ${i + 1}`} />
-                </div>
-              ))}
-            </div>
+
+            {currentImages.length > 0 && (
+              <div className="pdp-thumb-row">
+                {currentImages.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    aria-label={`View image ${i + 1}`}
+                    className={`pdp-thumb${activeImg === i ? ' active' : ''}`}
+                    onClick={(e) => {
+                      setActiveImg(i);
+                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img}
+                      alt={`View ${i + 1}`}
+                      loading="lazy"
+                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Info ────────────────────────────────────────────────────────── */}
@@ -1646,32 +1548,32 @@ useEffect(() => {
               </div>
             )}
 
-            {/* ── CHANGE: Only show qty when NOT in combo context, and place it ABOVE variants ── */}
+            {/* Quantity — hidden when viewing from a combo */}
             {!isFromCombo && (
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
                 <div className="pdp-qty-row">
-               <div className="pdp-qty">
-  <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-  <span className="pdp-qty-val">{qty}</span>
-  <button
-    className="pdp-qty-btn"
-    onClick={() => setQty(q => Math.min(maxSelectable, q + 1))}
-    disabled={qty >= maxSelectable}
-    style={{ opacity: qty >= maxSelectable ? 0.4 : 1, cursor: qty >= maxSelectable ? 'not-allowed' : 'pointer' }}
-  >
-    +
-  </button>
-</div>
-<span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
-  {currentStock === 0
-    ? '❌ Out of Stock'
-    : product?.maxQuantity
-      ? `Limit: ${product.maxQuantity} per order`
-      : currentStock <= 10
-        ? `Only ${currentStock} left in stock!`
-        : ''}
-</span>
+                  <div className="pdp-qty">
+                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                    <span className="pdp-qty-val">{qty}</span>
+                    <button
+                      className="pdp-qty-btn"
+                      onClick={() => setQty(q => Math.min(maxSelectable, q + 1))}
+                      disabled={qty >= maxSelectable}
+                      style={{ opacity: qty >= maxSelectable ? 0.4 : 1, cursor: qty >= maxSelectable ? 'not-allowed' : 'pointer' }}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
+                    {currentStock === 0
+                      ? '❌ Out of Stock'
+                      : product?.maxQuantity
+                        ? `Limit: ${product.maxQuantity} per order`
+                        : currentStock <= 10
+                          ? `Only ${currentStock} left in stock!`
+                          : ''}
+                  </span>
                 </div>
                 <div className="pdp-divider" />
               </>
@@ -1690,21 +1592,34 @@ useEffect(() => {
                   <div className="pdp-swatches">
                     {normalizedColors.map((c, i) => (
                       <button key={c.label + i} type="button" className="pdp-swatch-btn" onClick={() => handleColorChange(pIdx, i)} title={c.label}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={c.image || FALLBACK_PRODUCT_IMAGE}
-                          alt={c.label}
-                          style={{
-                            width: '56px',
-                            height: '56px',
-                            borderRadius: '4px',
-                            objectFit: 'cover',
-                            border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
-                            padding: sel.colorIndex === i ? '2px' : '0',
-                            transition: 'all 0.2s',
-                          }}
-                        />
-                        <span className="pdp-swatch-label" style={{ fontSize: '13px' }}>{c.label}</span>
+                        {c.image ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={c.image}
+                              alt={c.label}
+                              style={{
+                                width: '56px', height: '56px', borderRadius: '4px', objectFit: 'cover',
+                                border: sel.colorIndex === i ? '2px solid var(--olive-600)' : '1px solid var(--beige-dkr)',
+                                padding: sel.colorIndex === i ? '2px' : '0',
+                                transition: 'all 0.2s',
+                              }}
+                            />
+                            <span className="pdp-swatch-label" style={{ fontSize: '13px' }}>{c.label}</span>
+                          </>
+                        ) : (
+                          <span
+                            style={{
+                              padding: '9px 16px', borderRadius: 50, fontSize: 13, fontWeight: 600,
+                              border: sel.colorIndex === i ? '1.5px solid var(--olive-600)' : '1.5px solid var(--beige-dkr)',
+                              background: sel.colorIndex === i ? 'var(--olive-600)' : 'white',
+                              color: sel.colorIndex === i ? 'var(--beige)' : 'var(--olive-600)',
+                              transition: 'all .2s', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {c.label}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -1727,22 +1642,22 @@ useEffect(() => {
               );
             })}
             {description && <p className="pdp-desc">{description}</p>}
-{tags.length > 0 && (
-  <div
-    aria-hidden="true"
-    style={{
-      position: 'absolute',
-      width: 1, height: 1,
-      overflow: 'hidden',
-      opacity: 0,
-      pointerEvents: 'none',
-    }}
-  >
-    {tags.map((tag: string) => (
-      <span key={tag}>#{tag}</span>
-    ))}
-  </div>
-)}
+            {tags.length > 0 && (
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  width: 1, height: 1,
+                  overflow: 'hidden',
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              >
+                {tags.map((tag: string) => (
+                  <span key={tag}>#{tag}</span>
+                ))}
+              </div>
+            )}
             <div className="pdp-divider" />
 
             {allowCustomization && (
@@ -1759,10 +1674,7 @@ useEffect(() => {
               </>
             )}
 
-
-
-
-            {/* CHANGE 3: Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
+            {/* Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
             {!isFromCombo && product?.giftBox?.enabled && (
               <>
                 <p className="pdp-section-label" style={{ marginBottom: 12 }}>
@@ -1798,7 +1710,7 @@ useEffect(() => {
                 <div>
                   <div className="pdp-combo-banner-title">Part of your hamper</div>
                   <p className="pdp-combo-banner-text">
-                    You're viewing this piece as part of a curated hamper. To add it to your cart, go back and use the hamper builder.
+                    You&apos;re viewing this piece as part of a curated hamper. To add it to your cart, go back and use the hamper builder.
                   </p>
                   <button className="pdp-combo-back-btn" onClick={() => router.back()}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1818,18 +1730,18 @@ useEffect(() => {
                 </button>
                 <div className="pdp-btn-cart-wrap">
                   <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
-  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
->
+                    style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
+                  >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-  {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${totalWithGiftBox.toLocaleString('en-IN')}`}
+                    {Number(currentStock) <= 0 ? 'Sold Out' : cartAnim ? 'Added! ✓' : `Add to Cart · ₹${Math.round(totalWithGiftBox).toLocaleString('en-IN')}`}
                   </button>
                   <Sparkles active={sparkleAnim} />
                 </div>
                 <button className="pdp-btn-buy" onClick={handleBuyNow} disabled={Number(currentStock) <= 0}
-  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
->
+                  style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-  {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
+                  {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
                 </button>
               </div>
             )}
@@ -1854,9 +1766,6 @@ useEffect(() => {
                   onToggle={() => setOpenAccordion(o => o === item.id ? null : item.id)}
                 />
               ))}
-              
-              {/* <NavLinkRow emoji="🚚" label="Shipping Policy" href="/shipping-policy" />
-              <NavLinkRow emoji="🔄" label="Returns & Refund Policy" href="/refund-policy" /> */}
             </div>
             <EstimatedDeliveryBlock />
           </div>

@@ -1,10 +1,23 @@
-
 'use client';
 
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
 import CartBanner from '@/components/cart/CartBanner';
+
+/** Chosen options (colour, size, etc.) saved on a hamper piece, as readable text lines */
+function getOptionLines(customData: any): Array<[string, string]> {
+  if (!customData) return [];
+  const lines: Array<[string, string]> = [];
+  const sel = customData.selections as Record<string, string> | undefined;
+  if (sel && typeof sel === 'object') {
+    Object.entries(sel).forEach(([k, v]) => { if (v) lines.push([k, String(v)]); });
+  }
+  const alreadyHas = (label: string) => lines.some(([k]) => k.toLowerCase() === label.toLowerCase());
+  if (customData.color && !alreadyHas('Colour') && !alreadyHas('Color')) lines.push(['Colour', String(customData.color)]);
+  if (customData.size && !alreadyHas('Size')) lines.push(['Size', String(customData.size)]);
+  return lines;
+}
 
 // ─── Main CartDrawer ──────────────────────────────────────────────────────────
 export default function CartDrawer() {
@@ -179,6 +192,13 @@ export default function CartDrawer() {
           min-width: 28px; text-align: center;
           font-size: 12.5px; font-weight: 600; color: var(--ink);
         }
+
+        /* Included item option lines (colour, size…) */
+        .di-opt-lines {
+          display: flex; flex-direction: column; gap: 2px; margin-top: 3px;
+          font-size: 12.5px; color: var(--olive-700);
+        }
+        .di-opt-lines strong { font-weight: 700; color: var(--olive-900); }
 
         /* Empty state */
         .drawer-empty {
@@ -395,28 +415,48 @@ export default function CartDrawer() {
                             {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
                           </div>
                         )}
-                        {item.selectionGroups.flatMap((group) => 
-                          group.items.map((selection, idx) => (
-                            <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.06)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />}
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
-                                  <span style={{ fontSize: 12.5, color: 'var(--olive-900)', fontWeight: 500 }}>{selection.name}</span>
-                                  {Boolean(selection.customData) && (Boolean(selection.customData?.presetMessage) || Boolean(selection.customData?.personalMessage) || Boolean(selection.customData?.chain) || (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0)) && (
-                                    <div style={{ fontSize: 10.5, color: 'var(--olive-600)', marginTop: 2 }}>
-                                      {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
-                                      {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
-                                      {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
-                                      {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
-                                        <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
-                                      )}
-                                    </div>
-                                  )}
+                        {item.selectionGroups.flatMap((group) =>
+                          group.items.map((selection, idx) => {
+                            const optionLines = getOptionLines(selection.customData);
+                            const hasExtra =
+                              Boolean(selection.customData?.presetMessage) ||
+                              Boolean(selection.customData?.personalMessage) ||
+                              Boolean(selection.customData?.chain) ||
+                              (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0);
+
+                            return (
+                              <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.06)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  {/* Photo only when this selection actually has one */}
+                                  {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />}
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
+                                    <span style={{ fontSize: 13.5, color: 'var(--olive-900)', fontWeight: 500 }}>{selection.name}</span>
+
+                                    {/* Chosen colour / size / other options — as text */}
+                                    {optionLines.length > 0 && (
+                                      <div className="di-opt-lines">
+                                        {optionLines.map(([k, v]) => (
+                                          <div key={k}>{k}: <strong>{v}</strong></div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {hasExtra && (
+                                      <div style={{ fontSize: 11.5, color: 'var(--olive-600)', marginTop: 2 }}>
+                                        {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
+                                        {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
+                                        {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
+                                        {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
+                                          <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     )}
@@ -466,13 +506,7 @@ export default function CartDrawer() {
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
-                            <span
-                              style={{
-                                fontSize: 12.5,
-                                fontWeight: 600,
-                                color: 'var(--olive-900)',
-                              }}
-                            >
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--olive-900)' }}>
                               🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
@@ -480,14 +514,7 @@ export default function CartDrawer() {
                             </span>
                           </div>
                           {item.giftBoxDetails?.description && (
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: 'var(--mist)',
-                                lineHeight: 1.35,
-                                marginTop: 3,
-                              }}
-                            >
+                            <div style={{ fontSize: 11, color: 'var(--mist)', lineHeight: 1.35, marginTop: 3 }}>
                               {item.giftBoxDetails.description}
                             </div>
                           )}
@@ -569,7 +596,6 @@ export default function CartDrawer() {
               </div>
             </div>
           )}
-
 
         </div>
       </div>

@@ -911,6 +911,7 @@ function ProductCustomiser({ product, variant, onSave, onSkip, onClose, isAddFlo
                   <CharmSelector
                     charmPieceOptions={product.charmPieceOptions || []}
                     totalCharms={product.totalCharms}
+                    charmStocks={(product as any).charmStocks}
                     validationAttempt={showValidation ? 1 : 0}
                     onChange={({ count, charms }) => {
                       setLocal(prev => ({ ...prev, charmCount: count, selectedCharms: charms }));
@@ -1322,6 +1323,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
                             <CharmSelector
                               charmPieceOptions={p.charmPieceOptions || []}
                               totalCharms={p.totalCharms}
+                              charmStocks={(p as any).charmStocks}
                               validationAttempt={showValidation ? 1 : 0}
                               onChange={({ count, charms }) => {
                                 onVariantChange(p.id, { charmCount: count, selectedCharms: charms });

@@ -139,6 +139,24 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		paymentMode: (initialData as any)?.paymentMode || 'cod_allowed',
 	});
 
+	type CharmStock = { charmNumber: number; stock: number };
+
+	// Charm stock per charm number (e.g. [{ charmNumber: 1, stock: 10 }, ...])
+	const [charmStocks, setCharmStocks] = useState<CharmStock[]>(() => {
+		if (Array.isArray(initialData?.charmStocks) && initialData.charmStocks.length > 0) {
+			return initialData.charmStocks;
+		}
+		const total = parseInt(initialData?.totalCharms || "0", 10);
+		if (total > 0) {
+			return Array.from({ length: total }, (_, i) => ({
+				charmNumber: i + 1,
+				stock: typeof initialData?.stock === "number" ? initialData.stock : 0,
+			}));
+		}
+		return [];
+	});
+	const [bulkStockInput, setBulkStockInput] = useState("");
+
 	// Charm piece-count pricing (e.g. [{count:3,price:50},{count:5,price:80}])
 	const [charmPiecePricing, setCharmPiecePricing] = useState<{ count: number; price: number }[]>(() => {
 		// Migrate from old charmPieceOptions + perCharmPrice if needed
@@ -307,18 +325,66 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 
 	const selectedGender = genderOptions.find((gender) => getGenderSlug(gender) === form.gender);
 
-	// Detect if selected category is a charm/keychain selectable-item category
+	// Detect if selected category or subcategory is a charm/keychain selectable-item category
 	const CHARM_KEYCHAIN_CATEGORY_NAMES = useMemo(() => new Set([
-		"custom charms", "custom charm", "keychains", "keychain", "key chain",
+		"custom charms", "custom charm", "keychains", "keychain", "key chain", "charms", "charm", "charm jewellery", "custom charm jewellery",
 	]), []);
 
 	const isCharmOrKeychain = useMemo(() => {
 		if (!form.category) return false;
 		const selectedCat = categories.find(c => c._id === form.category);
 		if (!selectedCat) return false;
-		const nameSlug = (selectedCat.name || selectedCat.title || "").toLowerCase().trim();
-		return CHARM_KEYCHAIN_CATEGORY_NAMES.has(nameSlug);
-	}, [form.category, categories, CHARM_KEYCHAIN_CATEGORY_NAMES]);
+		const name = (selectedCat.name || selectedCat.title || "").toLowerCase().trim();
+		const slug = (selectedCat.slug || "").toLowerCase().trim();
+
+		const selectedSubCat = subCategories.find(s => s._id === form.subCategory);
+		const subName = (selectedSubCat?.name || selectedSubCat?.title || "").toLowerCase().trim();
+		const subSlug = (selectedSubCat?.slug || "").toLowerCase().trim();
+
+		return (
+			name.includes("charm") ||
+			name.includes("keychain") ||
+			slug.includes("charm") ||
+			slug.includes("keychain") ||
+			subName.includes("charm") ||
+			subName.includes("keychain") ||
+			subSlug.includes("charm") ||
+			subSlug.includes("keychain") ||
+			CHARM_KEYCHAIN_CATEGORY_NAMES.has(name) ||
+			CHARM_KEYCHAIN_CATEGORY_NAMES.has(slug)
+		);
+	}, [form.category, form.subCategory, categories, subCategories, CHARM_KEYCHAIN_CATEGORY_NAMES]);
+
+	const handleTotalCharmsChange = (val: string) => {
+		setForm(f => ({ ...f, totalCharms: val }));
+		const total = parseInt(val, 10);
+		if (!Number.isFinite(total) || total <= 0) {
+			setCharmStocks([]);
+			return;
+		}
+		setCharmStocks(prev => {
+			const existingMap = new Map(prev.map(s => [s.charmNumber, s.stock]));
+			return Array.from({ length: total }, (_, i) => {
+				const charmNum = i + 1;
+				return {
+					charmNumber: charmNum,
+					stock: existingMap.has(charmNum) ? existingMap.get(charmNum)! : 0,
+				};
+			});
+		});
+	};
+
+	const updateCharmStock = (charmNumber: number, stockVal: number) => {
+		setCharmStocks(prev =>
+			prev.map(s => s.charmNumber === charmNumber ? { ...s, stock: Math.max(0, stockVal) } : s)
+		);
+	};
+
+	const applyBulkStock = () => {
+		const val = parseInt(bulkStockInput, 10);
+		if (!Number.isFinite(val) || val < 0) return;
+		setCharmStocks(prev => prev.map(s => ({ ...s, stock: val })));
+	};
 
 	const addPieceOption = () => {
 		const n = parseInt(newPieceCount, 10);
@@ -454,6 +520,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			// Keep legacy fields for backward compat
 			formData.append("charmPieceOptions", JSON.stringify(charmPiecePricing.map(x => x.count)));
 			formData.append("totalCharms", String(form.totalCharms || "0"));
+			formData.append("charmStocks", JSON.stringify(charmStocks));
 			formData.append("perCharmPrice", String(charmPiecePricing[0]?.price || "0"));
 			formData.append("stock", String(form.stock));
 			formData.append("sizeChartSteps", form.sizeChartSteps);
@@ -1219,7 +1286,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												type="number"
 												min={1}
 												value={form.totalCharms}
-												onChange={(e) => setForm(f => ({ ...f, totalCharms: e.target.value }))}
+												onChange={(e) => handleTotalCharmsChange(e.target.value)}
 												placeholder="e.g. 42"
 												style={{
 													width: "100%",
@@ -1234,6 +1301,120 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 												— Customers will choose their charms from Charm 1 to Charm N based on this count
 											</span>
 										</div>
+
+										{/* Individual stock count per charm number */}
+										{parseInt(form.totalCharms, 10) > 0 && (
+											<div
+												style={{
+													marginTop: "0.8rem",
+													padding: "1rem",
+													background: "#ffffff",
+													border: "1.5px solid #b5c27a",
+													borderRadius: "8px",
+													display: "grid",
+													gap: "0.8rem",
+												}}
+											>
+												<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+													<div>
+														<div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#3d4a20" }}>
+															📦 Stock Count per Charm (Charm 1 to Charm {form.totalCharms})
+														</div>
+														<span style={{ fontSize: "0.72rem", color: "#6b6b60" }}>
+															Set stock for each charm number. Charms with 0 stock will be disabled / marked Out of Stock.
+														</span>
+													</div>
+													{/* Bulk stock fill tool */}
+													<div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+														<input
+															type="number"
+															min={0}
+															placeholder="Bulk stock..."
+															value={bulkStockInput}
+															onChange={(e) => setBulkStockInput(e.target.value)}
+															style={{
+																width: 95,
+																padding: "0.4rem 0.6rem",
+																border: "1px solid #b5c27a",
+																borderRadius: "6px",
+																fontSize: "0.82rem",
+															}}
+														/>
+														<button
+															type="button"
+															onClick={applyBulkStock}
+															style={{
+																padding: "0.4rem 0.8rem",
+																background: "#4a5c22",
+																color: "#fff",
+																border: "none",
+																borderRadius: "6px",
+																fontSize: "0.8rem",
+																fontWeight: 600,
+																cursor: "pointer",
+															}}
+														>
+															Apply to All
+														</button>
+													</div>
+												</div>
+
+												<div
+													style={{
+														display: "grid",
+														gridTemplateColumns: "repeat(auto-fill, minmax(115px, 1fr))",
+														gap: "0.6rem",
+														maxHeight: "260px",
+														overflowY: "auto",
+														padding: "0.5rem",
+														background: "#f9f9f6",
+														borderRadius: "6px",
+														border: "1px solid #ecece4",
+													}}
+												>
+													{charmStocks.map((item) => (
+														<div
+															key={item.charmNumber}
+															style={{
+																background: "#fff",
+																border: item.stock <= 0 ? "1.5px solid #f5c6cb" : "1px solid #d4d4c8",
+																borderRadius: "6px",
+																padding: "0.5rem",
+																display: "flex",
+																flexDirection: "column",
+																gap: "0.3rem",
+															}}
+														>
+															<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+																<span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#3d4a20" }}>
+																	Charm #{item.charmNumber}
+																</span>
+																{item.stock <= 0 && (
+																	<span style={{ fontSize: "0.65rem", color: "#d9534f", fontWeight: 700 }}>
+																		Out
+																	</span>
+																)}
+															</div>
+															<input
+																type="number"
+																min={0}
+																value={item.stock}
+																onChange={(e) => updateCharmStock(item.charmNumber, parseInt(e.target.value, 10) || 0)}
+																style={{
+																	padding: "0.35rem 0.5rem",
+																	border: "1px solid #d4d4c8",
+																	borderRadius: "4px",
+																	fontSize: "0.85rem",
+																	width: "100%",
+																	boxSizing: "border-box" as const,
+																	textAlign: "center",
+																}}
+															/>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
 									</div>
 								)}
 

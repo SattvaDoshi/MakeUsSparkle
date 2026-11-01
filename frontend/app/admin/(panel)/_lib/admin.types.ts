@@ -74,6 +74,8 @@ export type AdminProduct = {
 	updatedAt?: string;
 	totalCharms?: number;
 	charmPieceOptions?: number[];
+	charmPiecePricing?: Array<{ count: number; price: number }>;
+	charmStocks?: Array<{ charmNumber: number; stock: number }>;
 	displayOrder?: number;
 };
 

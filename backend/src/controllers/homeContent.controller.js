@@ -68,6 +68,31 @@ export async function updateHomeContent(req, res) {
       }
     }
 
+    // Handle hero clickable links
+    for (const gender of ["women", "men", "kids"]) {
+      const linkKey = `${gender}Link`;
+      if (req.body[linkKey] !== undefined) {
+        if (!homeContent.heroContent) homeContent.heroContent = {};
+        if (!homeContent.heroContent[gender]) homeContent.heroContent[gender] = {};
+        homeContent.heroContent[gender].link = String(req.body[linkKey] || "").trim();
+      }
+    }
+
+    if (req.body.heroLinks) {
+      try {
+        const parsedLinks = typeof req.body.heroLinks === "string" ? JSON.parse(req.body.heroLinks) : req.body.heroLinks;
+        for (const gender of ["women", "men", "kids"]) {
+          if (parsedLinks && parsedLinks[gender] !== undefined) {
+            if (!homeContent.heroContent) homeContent.heroContent = {};
+            if (!homeContent.heroContent[gender]) homeContent.heroContent[gender] = {};
+            homeContent.heroContent[gender].link = String(parsedLinks[gender] || "").trim();
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse heroLinks", e);
+      }
+    }
+
     const targetGender = req.body.gender; // "women", "men", or "kids"
 
     if (targetGender && req.body.styleHeading !== undefined) {
@@ -126,6 +151,7 @@ export async function updateHomeContent(req, res) {
       }
     }
 
+    homeContent.markModified("heroContent");
     await homeContent.save();
 
     res.json({ success: true, homeContent });

@@ -51,19 +51,21 @@ class BannerService {
 	}
 
 	buildBannerPayload(data = {}) {
-		const normalizedTitle = (data.title || data.text || "").trim();
-		const normalizedSubtitle = (data.subtitle || data.description || "").trim();
+		const normalizedTitle = typeof data.title === "string" ? data.title.trim() : (data.text || "").trim();
+		const normalizedSubtitle = typeof data.subtitle === "string"
+			? data.subtitle.trim()
+			: (typeof data.description === "string" ? data.description.trim() : "");
 		const normalizedBannerType = String(data.bannerType || "promo").trim().toLowerCase() === "main" ? "main" : "promo";
 
 		return {
 			bannerType: normalizedBannerType,
-			text: (data.text || normalizedTitle).trim(),
+			text: typeof data.text === "string" && data.text.trim() ? data.text.trim() : normalizedTitle,
 			title: normalizedTitle,
 			subtitle: normalizedSubtitle,
 			tag: (data.tag || "").trim(),
-			cta: (data.cta || "Shop Now").trim(),
+			cta: (data.cta || "").trim(),
 			link: (data.link || "").trim(),
-			description: (data.description || normalizedSubtitle).trim(),
+			description: normalizedSubtitle,
 			tags: this.parseTags(data.tags),
 			product: data.product || undefined,
 			image: typeof data.image === "string" ? data.image.trim() : "",
@@ -155,7 +157,11 @@ class BannerService {
 				throw new Error("Banner not found");
 			}
 
-			const payload = this.buildBannerPayload({ ...banner.toObject(), ...updateData });
+			const payload = this.buildBannerPayload({
+				...banner.toObject(),
+				...updateData,
+				description: typeof updateData.subtitle === "string" ? updateData.subtitle : (updateData.description ?? banner.description),
+			});
 
 			// Handle image update
 			if (newImageBuffer) {

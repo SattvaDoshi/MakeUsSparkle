@@ -6,6 +6,7 @@ import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId } from "./orderItemSelection.service.js";
 import affiliateService from "./affiliate.service.js";
+import inventoryService from "./inventory.service.js";
 
 class PaymentService {
 	async resolveProductId(item = {}) {
@@ -171,6 +172,9 @@ class PaymentService {
 				throw new Error("Order not found");
 			}
 
+			// Deduct inventory for all items in the paid order
+			await inventoryService.deductOrderInventory(order);
+
 			// Send order confirmation email
 			const populated = await order.populate([
 				{ path: "user" },
@@ -235,6 +239,8 @@ class PaymentService {
 			order.status = "cancelled";
 			order.refundReason = reason;
 			await order.save();
+
+			await inventoryService.restoreOrderInventory(order);
 
 			return {
 				success: true,

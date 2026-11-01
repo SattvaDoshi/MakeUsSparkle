@@ -22,10 +22,17 @@ const KEYCHAIN_CATALOG_CATEGORIES = new Set([
   "key chains",
 ]);
 
-function detectPageType(categoryName: string, categorySlug: string) {
+function detectPageType(categoryName: string, categorySlug: string, product?: any) {
   const nameLower = (categoryName || "").toLowerCase().trim();
   const slugLower = (categorySlug || "").toLowerCase().trim();
-  if (CHARM_DETAIL_CATEGORIES.has(nameLower) || CHARM_DETAIL_CATEGORIES.has(slugLower)) {
+  if (
+    CHARM_DETAIL_CATEGORIES.has(nameLower) ||
+    CHARM_DETAIL_CATEGORIES.has(slugLower) ||
+    nameLower.includes("charm") ||
+    slugLower.includes("charm") ||
+    (product?.totalCharms && Number(product.totalCharms) > 0) ||
+    (Array.isArray(product?.charmPiecePricing) && product.charmPiecePricing.length > 0)
+  ) {
     return "charm";
   }
   if (KEYCHAIN_CATALOG_CATEGORIES.has(nameLower) || KEYCHAIN_CATALOG_CATEGORIES.has(slugLower)) {
@@ -76,7 +83,7 @@ export default async function Page({
   // used for routing and adds negligible overhead.
   const product = await fetchProductById(slug).catch(() => null);
   const pageType = product
-    ? detectPageType(product.category, product.categorySlug)
+    ? detectPageType(product.category, product.categorySlug, product)
     : "standard";
 
   if (pageType === "charm") {

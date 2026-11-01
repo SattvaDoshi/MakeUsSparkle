@@ -28,6 +28,8 @@ interface ProductCardProduct {
   price: number;
   originalPrice?: number | null;
   badge?: string | null;
+  offer?: string | null;
+  offerTag?: string | null;
   mainImage?: string | null;
   images: string[];
   colors: ProductColor[];
@@ -58,6 +60,7 @@ export default function ProductCard({
 }) {
   const { name, price, originalPrice, badge, images, colors, href = '#', perCharmPrice, charmPieceOptions } = product;
   const isOutOfStock = (product.stock ?? Infinity) <= 0;
+  const offerTitle = product.offerTag || product.offer;
   const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
   const { addItem } = useCart();
@@ -261,6 +264,30 @@ export default function ProductCard({
         }
         .pc-wish svg { width: 14px; height: 14px; }
 
+        /* ─── Offer / Coupon Tag (top right below wishlist) ─── */
+        .pc-offer-tag {
+          position: absolute; top: 44px; right: 8px; z-index: 2;
+          font-size: 8px; font-weight: 700; letter-spacing: .06em;
+          text-transform: uppercase;
+          color: #f7f2ea;
+          background: #253d18;
+          border: 1px solid rgba(212, 175, 55, 0.4);
+          padding: 3px 8px 2px;
+          border-radius: 2px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.15);
+          max-width: calc(100% - 20px);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          pointer-events: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 3.5px;
+        }
+        .pc-offer-tag svg {
+          flex-shrink: 0;
+        }
+
         /* image dot nav */
         .pc-dots {
           position: absolute; bottom: 10px; left: 50%;
@@ -395,6 +422,11 @@ export default function ProductCard({
           }
           .pc-wish { width: 26px; height: 26px; top: 6px; right: 6px; }
           .pc-wish svg { width: 12px; height: 12px; }
+          .pc-offer-tag {
+            top: 38px; right: 6px;
+            font-size: 7px;
+            padding: 2px 6px;
+          }
           .pc-dot { width: 4px; height: 4px; }
           .pc-dot.active { width: 12px; }
         }
@@ -464,6 +496,16 @@ export default function ProductCard({
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
+
+          {offerTitle && (
+            <span className="pc-offer-tag" title={offerTitle}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              {offerTitle}
+            </span>
+          )}
 
           {currentImages.length > 1 && (
             <div className="pc-dots">

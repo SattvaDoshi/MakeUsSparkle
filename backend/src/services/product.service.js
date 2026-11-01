@@ -3,6 +3,8 @@ import Gender from "../models/gender.model.js";
 import Category from "../models/category.model.js";
 import Style from "../models/style.model.js";
 import Combo from "../models/combo.model.js";
+import Offer from "../models/offer.model.js";
+import Coupon from "../models/coupon.model.js";
 import imageService from "./image.service.js";
 import mongoose from "mongoose";
 
@@ -81,6 +83,76 @@ class ProductService {
 		return query;
 	}
 
+	async attachOfferTags(products) {
+		if (!products) return products;
+		const isSingle = !Array.isArray(products);
+		const productList = isSingle ? [products] : products;
+		if (productList.length === 0) return products;
+
+		try {
+			const now = new Date();
+			const [activeOffers, activeCoupons] = await Promise.all([
+				Offer.find({ isActive: true }).lean(),
+				Coupon.find({ isActive: true }).lean(),
+			]);
+
+			const validOffers = activeOffers.filter(
+				(o) => o.isActive !== false && (!o.startsAt || new Date(o.startsAt) <= now)
+			);
+			const validCoupons = activeCoupons.filter(
+				(c) => c.isActive !== false && (!c.startsAt || new Date(c.startsAt) <= now)
+			);
+
+			for (const prod of productList) {
+				if (!prod) continue;
+				const prodIdStr = String(prod._id || prod.id || "");
+				const catIdStr = prod.category ? String(prod.category._id || prod.category) : "";
+
+				// 1. Direct product match on Offer
+				const matchedOfferProd = validOffers.find((o) =>
+					Array.isArray(o.applicableProducts) && o.applicableProducts.some((pId) => String(pId) === prodIdStr)
+				);
+				if (matchedOfferProd && matchedOfferProd.title) {
+					prod.offerTag = matchedOfferProd.title;
+					continue;
+				}
+
+				// 2. Direct product match on Coupon
+				const matchedCouponProd = validCoupons.find((c) =>
+					Array.isArray(c.applicableProducts) && c.applicableProducts.some((pId) => String(pId) === prodIdStr)
+				);
+				if (matchedCouponProd && (matchedCouponProd.name || matchedCouponProd.code)) {
+					prod.offerTag = matchedCouponProd.name || matchedCouponProd.code;
+					continue;
+				}
+
+				// 3. Category match on Offer
+				if (catIdStr) {
+					const matchedOfferCat = validOffers.find((o) =>
+						Array.isArray(o.applicableCategories) && o.applicableCategories.some((cId) => String(cId) === catIdStr)
+					);
+					if (matchedOfferCat && matchedOfferCat.title) {
+						prod.offerTag = matchedOfferCat.title;
+						continue;
+					}
+
+					// 4. Category match on Coupon
+					const matchedCouponCat = validCoupons.find((c) =>
+						Array.isArray(c.applicableCategories) && c.applicableCategories.some((cId) => String(cId) === catIdStr)
+					);
+					if (matchedCouponCat && (matchedCouponCat.name || matchedCouponCat.code)) {
+						prod.offerTag = matchedCouponCat.name || matchedCouponCat.code;
+						continue;
+					}
+				}
+			}
+		} catch (err) {
+			console.error("Error attaching offer tags to products:", err);
+		}
+
+		return products;
+	}
+
 	async getProducts(queryParams = {}) {
 		try {
 			const query = this.buildProductQuery(queryParams);
@@ -101,6 +173,7 @@ class ProductService {
 			}
 
 			const products = await productQuery;
+			await this.attachOfferTags(products);
 			return { success: true, products };
 		} catch (error) {
 			console.error("Error fetching products:", error);
@@ -124,6 +197,7 @@ class ProductService {
 			if (!product) {
 				throw new Error("Product not found");
 			}
+			await this.attachOfferTags(product);
 			return { success: true, product };
 		} catch (error) {
 			console.error("Error fetching product:", error);
@@ -137,12 +211,13 @@ class ProductService {
 			const regex = new RegExp(q, "i");
 			
 			const [products, categories, styles, combos] = await Promise.all([
-				Product.find({ title: regex }).limit(10),
+				Product.find({ title: regex }).limit(10).lean(),
 				Category.find({ name: regex }).limit(5),
 				Style.find({ name: regex }).limit(5),
 				Combo.find({ name: regex }).limit(5)
 			]);
 
+			await this.attachOfferTags(products);
 			return { success: true, products, categories, styles, combos };
 		} catch (error) {
 			console.error("Error searching products:", error);
@@ -153,7 +228,8 @@ class ProductService {
 	async filterProducts(filterParams) {
 		try {
 			const query = this.buildProductQuery(filterParams);
-			const products = await Product.find(query);
+			const products = await Product.find(query).lean();
+			await this.attachOfferTags(products);
 			return { success: true, products };
 		} catch (error) {
 			console.error("Error filtering products:", error);
@@ -223,6 +299,21 @@ class ProductService {
 	/**
 	 * Parse charmPiecePricing JSON string
 	 */
+	/**
+	 * Parse charmStocks JSON string
+	 */
+	_parseCharmStocks(productData) {
+		try {
+			if (typeof productData.charmStocks === 'string') {
+				return JSON.parse(productData.charmStocks);
+			}
+			if (Array.isArray(productData.charmStocks)) {
+				return productData.charmStocks;
+			}
+		} catch (_) {}
+		return [];
+	}
+
 	_parseCharmPiecePricing(productData) {
 		try {
 			if (typeof productData.charmPiecePricing === "string") {
@@ -419,6 +510,7 @@ class ProductService {
 			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
 			const charmPiecePricing = this._parseCharmPiecePricing(productData);
+			const charmStocks = this._parseCharmStocks(productData);
 			const volumeDiscounts = this._parseVolumeDiscounts(productData);
 			const styles = this._parseStyles(productData);
 			const quantityVariants = this._parseQuantityVariants(productData);
@@ -443,6 +535,7 @@ class ProductService {
 				charmPieceOptions,
 				charmPiecePricing,
 				totalCharms: productData.totalCharms ? Number(productData.totalCharms) : 0,
+				charmStocks,
 				perCharmPrice: productData.perCharmPrice ? Number(productData.perCharmPrice) : 0,
 				stock: productData.stock ? Number(productData.stock) : undefined,
 				gender,
@@ -725,6 +818,7 @@ class ProductService {
 			const sizes = this._parseSizes(updateData);
 			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
 			const charmPiecePricing = this._parseCharmPiecePricing(updateData);
+			const charmStocks = updateData.charmStocks !== undefined ? this._parseCharmStocks(updateData) : undefined;
 			const volumeDiscounts = this._parseVolumeDiscounts(updateData);
 
 			const updatedProduct = await Product.findByIdAndUpdate(
@@ -745,6 +839,7 @@ class ProductService {
 					charmPieceOptions,
 					charmPiecePricing,
 					totalCharms: updateData.totalCharms !== undefined ? Number(updateData.totalCharms) : product.totalCharms,
+					charmStocks: charmStocks !== undefined ? charmStocks : product.charmStocks,
 					perCharmPrice: updateData.perCharmPrice !== undefined ? Number(updateData.perCharmPrice) : product.perCharmPrice,
 					stock: updateData.stock ? Number(updateData.stock) : undefined,
 					gender: updateData.gender === undefined ? product.gender : gender,

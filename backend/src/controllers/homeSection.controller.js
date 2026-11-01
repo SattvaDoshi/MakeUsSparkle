@@ -1,6 +1,7 @@
 import HomeSection from "../models/homeSection.model.js";
 import Product from "../models/product.model.js";
 import imageService from "../services/image.service.js";
+import productService from "../services/product.service.js";
 
 const NEW_ARRIVALS_KEY = "new-arrivals";
 const OPEN_SECTION_KEY = "open-section";
@@ -44,7 +45,11 @@ async function getOrCreateOpenSection() {
 
 export async function getNewArrivalsSection(req, res) {
 	try {
-		const section = await getOrCreateNewArrivals();
+		const sectionDoc = await getOrCreateNewArrivals();
+		const section = sectionDoc ? sectionDoc.toObject() : null;
+		if (section && Array.isArray(section.products)) {
+			await productService.attachOfferTags(section.products);
+		}
 		res.json({ success: true, section });
 	} catch (error) {
 		console.error("Get new arrivals section error:", error);
@@ -84,7 +89,12 @@ export async function updateNewArrivalsSection(req, res) {
 
 export async function getOpenSection(req, res) {
 	try {
-		const section = await getOrCreateOpenSection();
+		const sectionDoc = await getOrCreateOpenSection();
+		const section = sectionDoc ? sectionDoc.toObject() : null;
+		if (section && Array.isArray(section.items)) {
+			const prods = section.items.map((item) => item?.product).filter(Boolean);
+			await productService.attachOfferTags(prods);
+		}
 		res.json({ success: true, section });
 	} catch (error) {
 		console.error("Get open section error:", error);

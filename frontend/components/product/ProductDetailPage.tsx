@@ -730,13 +730,18 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const matchingVariant = selections.length > 0 ? getVariantForSelection(selections[0].colorIndex, selections[0].size) : undefined;
 
   const variantOrColorImage = matchingVariant?.image || currentColor?.image;
-  const galleryList = images && images.length > 0 ? images : [mainImage];
+  const mainImg = mainImage || (product as any)?.image;
+  const galleryList = images && images.length > 0 ? images : [];
+  const colorVariantImages = [
+    ...(normalizedColors.map((c: any) => c.image)),
+    ...(variants.map((v: any) => v.image)),
+  ];
   const currentImages = dedupeImages([
-    variantOrColorImage,
+    mainImg,
     ...galleryList,
-    mainImage,
+    ...colorVariantImages,
   ]).filter(Boolean) as string[];
-  const displayImg = currentImages?.[activeImg] || variantOrColorImage || mainImage || FALLBACK_PRODUCT_IMAGE;
+  const displayImg = currentImages?.[activeImg] || mainImg || variantOrColorImage || FALLBACK_PRODUCT_IMAGE;
 
   let volumeDiscountPct = 0;
   if (product?.volumeDiscounts && product.volumeDiscounts.length > 0) {
@@ -914,8 +919,14 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       }
       return next;
     });
-    setActiveImg(0);
-  }, [normalizedColors, variants]);
+    const colorImg = normalizedColors[colorIndex]?.image;
+    if (colorImg) {
+      const foundIdx = currentImages.indexOf(colorImg);
+      setActiveImg(foundIdx !== -1 ? foundIdx : 0);
+    } else {
+      setActiveImg(0);
+    }
+  }, [normalizedColors, variants, currentImages]);
 
   const handleSizeChange = useCallback((productIndex: number, size: string) => {
     setSelections(prev => {

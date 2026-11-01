@@ -3,7 +3,7 @@ import imageService from "../services/image.service.js";
 
 export async function getStyles(req, res) {
 	try {
-		res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+		res.setHeader("Cache-Control", "no-cache");
 		const result = await styleService.getStyles();
 		res.json(result);
 	} catch (error) {

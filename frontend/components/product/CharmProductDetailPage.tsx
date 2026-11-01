@@ -24,6 +24,7 @@ interface AccordionData {
 interface ProductColor {
   label: string;
   hex: string;
+  image?: string;
 }
 
 interface UploadItem {
@@ -396,11 +397,13 @@ export function CharmSelector({
   charmPieceOptions = [],
   totalCharms = 8,
   validationAttempt,
+  charmStocks = [],
 }: {
   onChange: (data: { count: number; charms: string[] }) => void;
   charmPieceOptions?: number[];
   totalCharms?: number;
   validationAttempt?: number;
+  charmStocks?: Array<{ charmNumber: number; stock: number }>;
 }) {
   const validPieceOptions = (charmPieceOptions || []).map(Number).filter(n => n > 0);
   const validTotal = Number(totalCharms) > 0 ? Number(totalCharms) : 0;
@@ -461,12 +464,23 @@ export function CharmSelector({
   };
 
   const filledCount = selectedCharms.filter(Boolean).length;
+  const stockMap = useMemo(() => {
+    return new Map((charmStocks || []).map(s => [Number(s.charmNumber), Number(s.stock)]));
+  }, [charmStocks]);
+  const hasStockConfig = (charmStocks || []).length > 0;
+
   const availableCharms = [
-    { value: '', label: 'Select a charm...' },
-    ...Array.from({ length: validTotal }, (_, i) => ({
-      value: String(i + 1),
-      label: String(i + 1),
-    })),
+    { value: '', label: 'Select a charm...', disabled: false },
+    ...Array.from({ length: validTotal }, (_, i) => {
+      const charmNum = i + 1;
+      const stock = stockMap.get(charmNum);
+      const isOutOfStock = hasStockConfig && stock !== undefined && stock <= 0;
+      return {
+        value: String(charmNum),
+        label: isOutOfStock ? `Charm ${charmNum} (Out of stock)` : `Charm ${charmNum}`,
+        disabled: isOutOfStock,
+      };
+    }),
   ];
   const allCharmsSelected = filledCount === charmCount;
 
@@ -567,7 +581,7 @@ export function CharmSelector({
                         <option
                           key={opt.value}
                           value={opt.value}
-                          disabled={opt.value === '' ? false : usedValues.has(opt.value)}
+                          disabled={opt.value === '' ? false : (opt.disabled || usedValues.has(opt.value))}
                         >
                           {opt.label}
                         </option>
@@ -1176,7 +1190,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const category = product?.category ?? '';
   const gender = product?.gender ?? '';
 
-  const normalizedColors: ProductColor[] = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c' }));
+  const normalizedColors: ProductColor[] = (product?.colors ?? []).map((c: any) => ({ label: c.label || c.name || 'Default', hex: c.hex || '#c9a84c', image: c.image || undefined }));
   const sizes = product?.sizes ?? [];
   const variants = product?.variants ?? [];
   const mainImage = product?.mainImage;
@@ -1204,8 +1218,18 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     || variants.find(v => normalizeText(v.color) === normalizedColor)
     || variants.find(v => normalizeText(v.size) === normalizedSize);
 
-  const currentImages = dedupeImages([matchingVariant?.image, mainImage, ...images]).filter(Boolean) as string[];
-  const displayImg = currentImages?.[activeImg] || matchingVariant?.image || mainImage || FALLBACK_PRODUCT_IMAGE;
+  const mainImg = mainImage || (product as any)?.image;
+  const galleryList = images && images.length > 0 ? images : [];
+  const colorVariantImages = [
+    ...(normalizedColors.map((c: any) => c.image)),
+    ...(variants.map((v: any) => v.image)),
+  ];
+  const currentImages = dedupeImages([
+    mainImg,
+    ...galleryList,
+    ...colorVariantImages,
+  ]).filter(Boolean) as string[];
+  const displayImg = currentImages?.[activeImg] || mainImg || matchingVariant?.image || FALLBACK_PRODUCT_IMAGE;
 
   let discount = 0;
   if (discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
@@ -1219,8 +1243,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const baseOriginalPrice = originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
 
-  const chainOptions = useMemo(() => {
-    const dynamicChainOptions = (product?.variants || [])
+  const chainOptions: ChainOption[] = useMemo(() => {
+    const dynamicChainOptions: ChainOption[] = (product?.variants || [])
       .filter(v => v.bandName)
       .map(v => ({
         value: v.bandName || '',
@@ -1229,8 +1253,12 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
         sub: '',
         price: v.salePrice || v.price || 0,
       }));
-    return dynamicChainOptions.length > 0 ? dynamicChainOptions : CHAIN_OPTIONS;
-  }, [product?.variants]);
+    if (dynamicChainOptions.length > 0) return dynamicChainOptions;
+    if (Array.isArray((product as any)?.chainOptions) && (product as any).chainOptions.length > 0) {
+      return (product as any).chainOptions as ChainOption[];
+    }
+    return [];
+  }, [product?.variants, (product as any)?.chainOptions]);
 
   const selectedChainObj = chainOptions.find(c => c.value === selectedChain);
   const chainPrice = selectedChainObj?.price || 0;
@@ -1342,7 +1370,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       setCharmValidationAttempt(t => t + 1);
       return;
     }
-    if (!selectedChain) {
+    if (chainOptions.length > 0 && !selectedChain) {
       setErrorToast('Please choose a chain type before adding to cart.');
       setChainValidationAttempt(t => t + 1);
       return;
@@ -1376,7 +1404,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
       setCharmValidationAttempt(t => t + 1);
       return;
     }
-    if (!selectedChain) {
+    if (chainOptions.length > 0 && !selectedChain) {
       setErrorToast('Please choose a chain type before proceeding.');
       setChainValidationAttempt(t => t + 1);
       return;
@@ -1393,13 +1421,19 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   }, [addItem, product, qty, router, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain, currentStock]);
 
   const handleColorChange = useCallback((i: number) => {
-    setActiveColor(i); setActiveImg(0);
+    setActiveColor(i);
     const nextColor = normalizedColors[i];
+    if (nextColor?.image) {
+      const foundIdx = currentImages.indexOf(nextColor.image);
+      setActiveImg(foundIdx !== -1 ? foundIdx : 0);
+    } else {
+      setActiveImg(0);
+    }
     if (!nextColor) return;
     const nextSize = variants.find(v => normalizeText(v.color) === normalizeText(nextColor.label))?.size || sizeOptions[0] || '';
     setActiveSize(nextSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedColors, variants, sizeOptions]);
+  }, [normalizedColors, variants, sizeOptions, currentImages]);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
@@ -2243,21 +2277,24 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               <p className="charm-selector-sub">
                 Pick how many charms you&apos;d like, then choose each one individually. You can mix initials, symbols, birthstones, and more. All charms in your chosen count must be selected before you can add this to your cart.
               </p>
-              <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} validationAttempt={charmValidationAttempt} />
+              <CharmSelector onChange={handleCharmChange} charmPieceOptions={product.charmPieceOptions} totalCharms={product.totalCharms} charmStocks={product.charmStocks} validationAttempt={charmValidationAttempt} />
             </div>
 
             <div className="pdp-divider" />
 
-            {/* CHAIN SELECTOR */}
-            <ChainSelector
-              value={selectedChain}
-              onChange={setSelectedChain}
-              onViewImage={c => setChainLightbox(c)}
-              showMissing={chainValidationAttempt > 0}
-              options={chainOptions}
-            />
-
-            <div className="pdp-divider" />
+            {/* CHAIN SELECTOR - only shown when product variants have chain/band options */}
+            {chainOptions.length > 0 && (
+              <>
+                <ChainSelector
+                  value={selectedChain}
+                  onChange={setSelectedChain}
+                  onViewImage={c => setChainLightbox(c)}
+                  showMissing={chainValidationAttempt > 0}
+                  options={chainOptions}
+                />
+                <div className="pdp-divider" />
+              </>
+            )}
 
             {/* Customisation */}
             {isCustomisable && (

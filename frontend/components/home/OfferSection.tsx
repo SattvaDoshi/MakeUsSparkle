@@ -47,19 +47,7 @@ type PublicOffersResponse = {
 
 
 const isNotExpired = (offer: ApiOffer): boolean => {
-  if (!offer.expiryDate) return true;
-  const exp = new Date(offer.expiryDate);
-  if (Number.isNaN(exp.getTime())) return true;
-  const endOfExpiryDay = new Date(
-    exp.getFullYear(),
-    exp.getMonth(),
-    exp.getDate(),
-    23,
-    59,
-    59,
-    999
-  );
-  return endOfExpiryDay.getTime() >= Date.now();
+  return true;
 };
 
 const mapApiOffer = (offer: ApiOffer, isCoupon: boolean): Offer => {

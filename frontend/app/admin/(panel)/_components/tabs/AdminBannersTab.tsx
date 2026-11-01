@@ -5,9 +5,9 @@ type AdminHomeContent = {
 	marqueeItems: string[];
 	secondMarqueeItems?: string[];
 	heroContent: {
-		women?: { image?: string };
-		men?: { image?: string };
-		kids?: { image?: string };
+		women?: { image?: string; link?: string };
+		men?: { image?: string; link?: string };
+		kids?: { image?: string; link?: string };
 	};
 	promoBanners?: {
 		_id?: string;
@@ -94,6 +94,9 @@ export default function AdminBannersTab({
 	const [womenImageFile, setWomenImageFile] = useState<File | null>(null);
 	const [menImageFile, setMenImageFile] = useState<File | null>(null);
 	const [kidsImageFile, setKidsImageFile] = useState<File | null>(null);
+	const [womenLink, setWomenLink] = useState<string>("");
+	const [menLink, setMenLink] = useState<string>("");
+	const [kidsLink, setKidsLink] = useState<string>("");
 
 	// Promo Banners States
 	const defaultPromo = { tag: "", headline: "", cta: "", link: "", textSide: "right" as const };
@@ -112,6 +115,9 @@ export default function AdminBannersTab({
 					? homeContent.secondMarqueeItems.join(", ")
 					: homeContent.marqueeItems?.join(", ") || ""
 			);
+			setWomenLink(homeContent.heroContent?.women?.link || "");
+			setMenLink(homeContent.heroContent?.men?.link || "");
+			setKidsLink(homeContent.heroContent?.kids?.link || "");
 			setStyleHeading(homeContent.genderContent?.[activeGender]?.styleHeading || "");
 			const genderPromoBanners = homeContent.genderContent?.[activeGender]?.promoBanners || homeContent.promoBanners;
 			if (genderPromoBanners && genderPromoBanners.length > 0) {
@@ -198,6 +204,9 @@ export default function AdminBannersTab({
 		formData.append("promoBanners", JSON.stringify(promoBanners));
 		formData.append("gender", activeGender);
 		formData.append("styleHeading", styleHeading);
+		formData.append("womenLink", womenLink);
+		formData.append("menLink", menLink);
+		formData.append("kidsLink", kidsLink);
 
 		if (womenImageFile) formData.append("women", womenImageFile);
 		if (menImageFile) formData.append("men", menImageFile);
@@ -250,20 +259,41 @@ export default function AdminBannersTab({
 
 				<h2>Hero Content</h2>
 				<div className="admin-form-grid" style={{ marginBottom: "1rem" }}>
-					<div>
+					<div className="admin-form-group">
 						<label>Women Image</label>
 						<input type="file" accept="image/*" onChange={(e) => setWomenImageFile(e.target.files?.[0] || null)} />
 						{homeContent?.heroContent?.women?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.women.image}</p>}
+						<label style={{ marginTop: '0.6rem', display: 'block', fontSize: '0.85rem' }}>Women Clickable Link</label>
+						<input
+							type="text"
+							placeholder="Clickable link (e.g. /categories/women)"
+							value={womenLink}
+							onChange={(e) => setWomenLink(e.target.value)}
+						/>
 					</div>
-					<div>
+					<div className="admin-form-group">
 						<label>Men Image</label>
 						<input type="file" accept="image/*" onChange={(e) => setMenImageFile(e.target.files?.[0] || null)} />
 						{homeContent?.heroContent?.men?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.men.image}</p>}
+						<label style={{ marginTop: '0.6rem', display: 'block', fontSize: '0.85rem' }}>Men Clickable Link</label>
+						<input
+							type="text"
+							placeholder="Clickable link (e.g. /categories/men)"
+							value={menLink}
+							onChange={(e) => setMenLink(e.target.value)}
+						/>
 					</div>
-					<div>
+					<div className="admin-form-group">
 						<label>Kids Image</label>
 						<input type="file" accept="image/*" onChange={(e) => setKidsImageFile(e.target.files?.[0] || null)} />
 						{homeContent?.heroContent?.kids?.image && <p style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>Current: {homeContent.heroContent.kids.image}</p>}
+						<label style={{ marginTop: '0.6rem', display: 'block', fontSize: '0.85rem' }}>Kids Clickable Link</label>
+						<input
+							type="text"
+							placeholder="Clickable link (e.g. /categories/kids)"
+							value={kidsLink}
+							onChange={(e) => setKidsLink(e.target.value)}
+						/>
 					</div>
 				</div>
 

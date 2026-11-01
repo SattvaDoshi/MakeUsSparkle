@@ -4,6 +4,7 @@ import Review from "../models/review.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
+import inventoryService from "./inventory.service.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {
@@ -144,6 +145,9 @@ class OrderService {
 				appliedOffers: orderData.appliedOffers || [],
 			});
 
+			// Deduct inventory for all items in the order
+			await inventoryService.deductOrderInventory(order);
+
 			if (orderData.appliedOffers && orderData.appliedOffers.length > 0) {
 				const offerIds = orderData.appliedOffers.map((o) => o.id);
 				await Offer.updateMany(
@@ -192,6 +196,10 @@ class OrderService {
 				throw new Error("Order not found");
 			}
 
+			if (status === "cancelled") {
+				await inventoryService.restoreOrderInventory(order);
+			}
+
 			return { success: true, order };
 		} catch (error) {
 			console.error("Error updating order status:", error);
@@ -213,6 +221,8 @@ class OrderService {
 
 			order.status = "cancelled";
 			await order.save();
+
+			await inventoryService.restoreOrderInventory(order);
 
 			return { success: true, message: "Order cancelled successfully", order };
 		} catch (error) {

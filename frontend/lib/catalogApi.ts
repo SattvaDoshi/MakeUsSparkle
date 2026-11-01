@@ -75,6 +75,7 @@ export interface CatalogProduct {
   numberOfProducts: number;
   badge: string | null;
   offer: string | null;
+  offerTag?: string | null;
   sku: string;
   href: string;
   colors: CatalogColor[];
@@ -96,6 +97,7 @@ export interface CatalogProduct {
   quantityVariants?: { label: string; quantity: number; price: number }[];
   charmPieceOptions?: number[];
   charmPiecePricing?: { count: number; price: number }[];
+  charmStocks?: Array<{ charmNumber: number; stock: number }>;
   totalCharms?: number;
   perCharmPrice?: number;
   /** Per-product size chart image URL (Cloudinary). Null = use default static fallback. */
@@ -161,6 +163,8 @@ interface BackendProduct {
   price?: number;
   discountedPrice?: number;
   discountTag?: string;
+  offerTag?: string;
+  offer?: string;
   productLabel?: string;
   allowCustomization?: boolean;
   maxCustomImages?: number;
@@ -194,6 +198,7 @@ interface BackendProduct {
   reviews?: BackendReview[];
   charmPieceOptions?: number[];
   charmPiecePricing?: Array<{ count: number; price: number }>;
+  charmStocks?: Array<{ charmNumber: number; stock: number }>;
   totalCharms?: number;
   perCharmPrice?: number;
   sizeChartImage?: string | null;
@@ -426,7 +431,8 @@ function normalizeProduct(
     } : undefined,
     paymentMode: (item as any).paymentMode || 'cod_allowed',
     badge: item.productLabel || pickBadge(rating),
-    offer: item.discountTag || null,
+    offer: (item as any).offerTag || (item as any).offer || item.discountTag || null,
+    offerTag: (item as any).offerTag || null,
     sku: `SKU-${item._id.slice(-6).toUpperCase()}`,
     href: `/products/${slug}`,
     colors: colors.length > 0 ? colors : [],
@@ -439,6 +445,7 @@ function normalizeProduct(
     seoTags: Array.isArray(item.seoTags) ? item.seoTags : [],
     charmPieceOptions: Array.isArray(item.charmPieceOptions) ? item.charmPieceOptions : [],
     charmPiecePricing: Array.isArray(item.charmPiecePricing) ? item.charmPiecePricing : [],
+    charmStocks: Array.isArray(item.charmStocks) ? item.charmStocks : [],
     totalCharms: Number(item.totalCharms ?? 0),
     perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,

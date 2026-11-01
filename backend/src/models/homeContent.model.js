@@ -28,14 +28,17 @@ const homeContentSchema = new mongoose.Schema(
       women: {
         image: { type: String, default: "/island-girl.jpg" },
         imagePublicId: { type: String, default: "" },
+        link: { type: String, default: "" },
       },
       men: {
         image: { type: String, default: "/trial.png" },
         imagePublicId: { type: String, default: "" },
+        link: { type: String, default: "" },
       },
       kids: {
         image: { type: String, default: "/trial.png" },
         imagePublicId: { type: String, default: "" },
+        link: { type: String, default: "" },
       },
     },
     promoBanners: [

@@ -553,6 +553,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -563,6 +564,7 @@ type Category = "women" | "men" | "kids";
 type HeroItem = {
   image: string;          // used on mobile (and on desktop if desktopImage is missing)
   desktopImage?: string;  // optional wide image for tablet / laptop
+  link?: string;
 };
 
 type CategoryItem = { name: string; slug: string; image: string };
@@ -583,9 +585,9 @@ type HomeContentResponse = {
 };
 
 const defaultHeroContent: Record<string, HeroItem> = {
-  women: { image: "/island-girl.jpg" },
-  men:   { image: "/trial.png" },
-  kids:  { image: "/trial.png" },
+  women: { image: "/island-girl.jpg", link: "" },
+  men:   { image: "/trial.png", link: "" },
+  kids:  { image: "/trial.png", link: "" },
 };
 
 const defaultMarqueeItems = [
@@ -951,6 +953,9 @@ const hasDesktopImage = !!content?.desktopImage;
   background: #0b3d22;
   aspect-ratio: 4 / 5;           /* mobile: matches the portrait image */
 }
+.hero-banner.has-link {
+  cursor: pointer;
+}
 
 .hero-pic { position: absolute; inset: 0; }
 .hero-pic-desktop { display: none; }
@@ -1147,28 +1152,47 @@ const hasDesktopImage = !!content?.desktopImage;
       </div>
 
       {/* ── FULL-BLEED HERO ── */}
- <section className={`hero-banner${hasDesktopImage ? " has-desktop" : ""}`}>
-  {!content ? (
-    <div className="hero-skeleton" aria-hidden />
-  ) : (
-    <>
-      <HeroPic
-        key={`m-${content.image}`}
-        src={content.image}
-        alt={`${activeCategory} jewellery model`}
-        variant="mobile"
-      />
-      {hasDesktopImage && (
-        <HeroPic
-          key={`d-${content.desktopImage}`}
-          src={content.desktopImage as string}
-          alt={`${activeCategory} jewellery model`}
-          variant="desktop"
-        />
-      )}
-    </>
-  )}
-</section>
+      <section className={`hero-banner${hasDesktopImage ? " has-desktop" : ""}${content?.link ? " has-link" : ""}`}>
+        {!content ? (
+          <div className="hero-skeleton" aria-hidden />
+        ) : (
+          <>
+            <HeroPic
+              key={`m-${content.image}`}
+              src={content.image}
+              alt={`${activeCategory} jewellery model`}
+              variant="mobile"
+            />
+            {hasDesktopImage && (
+              <HeroPic
+                key={`d-${content.desktopImage}`}
+                src={content.desktopImage as string}
+                alt={`${activeCategory} jewellery model`}
+                variant="desktop"
+              />
+            )}
+            {content.link ? (
+              content.link.startsWith("http://") || content.link.startsWith("https://") ? (
+                <a
+                  href={content.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-click-overlay"
+                  style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "pointer" }}
+                  aria-label={`${activeCategory} hero banner link`}
+                />
+              ) : (
+                <Link
+                  href={content.link}
+                  className="hero-click-overlay"
+                  style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "pointer" }}
+                  aria-label={`${activeCategory} hero banner link`}
+                />
+              )
+            ) : null}
+          </>
+        )}
+      </section>
 
       {/* ── CATEGORY STRIP ── */}
       <section className="cat-strip" aria-label="Shop jewellery subcategories">

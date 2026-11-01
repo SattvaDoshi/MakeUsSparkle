@@ -73,9 +73,9 @@ type AdminHomeContent = {
 	marqueeItems: string[];
 	secondMarqueeItems?: string[];
 	heroContent: {
-		women?: { image?: string };
-		men?: { image?: string };
-		kids?: { image?: string };
+		women?: { image?: string; link?: string };
+		men?: { image?: string; link?: string };
+		kids?: { image?: string; link?: string };
 	};
 	promoBanners?: {
 		_id?: string;
@@ -1128,13 +1128,13 @@ export default function AdminDashboardPage() {
 	const handleBannerSubmit = async (event: FormEvent) => {
 		event.preventDefault();
 		const formData = new FormData();
-		formData.append("text", bannerForm.text);
-		formData.append("title", bannerForm.title);
-		formData.append("subtitle", bannerForm.subtitle);
-		formData.append("tag", bannerForm.tag);
-		formData.append("cta", bannerForm.cta);
-		formData.append("link", bannerForm.link);
-		formData.append("description", bannerForm.description);
+		formData.append("text", bannerForm.text || bannerForm.title || "");
+		formData.append("title", bannerForm.title || "");
+		formData.append("subtitle", bannerForm.subtitle || "");
+		formData.append("tag", bannerForm.tag || "");
+		formData.append("cta", bannerForm.cta || "");
+		formData.append("link", bannerForm.link || "");
+		formData.append("description", bannerForm.subtitle || "");
 		if (bannerForm.product) {
 			formData.append("product", bannerForm.product);
 		}
@@ -1433,11 +1433,11 @@ export default function AdminDashboardPage() {
 				id: entry._id,
 				text: entry.text ?? "",
 				title: entry.title ?? entry.text ?? "",
-				subtitle: entry.subtitle ?? entry.description ?? "",
+				subtitle: entry.subtitle ?? "",
 				tag: entry.tag ?? "",
-				cta: entry.cta ?? "Shop Now",
+				cta: entry.cta ?? "",
 				link: entry.link ?? "",
-				description: entry.description ?? "",
+				description: entry.subtitle ?? "",
 				tags: (entry.tags || []).join(", "),
 				product: entry.product?._id ?? "",
 				image: entry.image ?? "",
@@ -1957,7 +1957,7 @@ export default function AdminDashboardPage() {
 						<input placeholder="Subtitle" value={bannerForm.subtitle ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, subtitle: event.target.value }))} />
 						<input placeholder="Tag (e.g. New Launch)" value={bannerForm.tag ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, tag: event.target.value }))} />
 						<input placeholder="CTA Text" value={bannerForm.cta ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, cta: event.target.value }))} />
-						<input placeholder="Banner Text" value={bannerForm.text ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, text: event.target.value }))} required />
+						<input placeholder="Banner Text" value={bannerForm.text ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, text: event.target.value }))} />
 						<input placeholder="Link" value={bannerForm.link ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, link: event.target.value }))} />
 						<input type="file" accept="image/*" onChange={(event) => {
 							const file = event.target.files?.[0] || null;

@@ -72,6 +72,10 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "partial_paid", "failed", "refunded"],
       default: "pending",
     },
+    inventoryDeducted: {
+      type: Boolean,
+      default: false,
+    },
     phonePeOrderId: String,          // PhonePe merchantOrderId
     phonePeTransactionId: String,    // PhonePe transactionId returned after payment
     deliveryCharge: Number,

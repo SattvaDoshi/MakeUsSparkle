@@ -64,6 +64,12 @@ const productSchema = new mongoose.Schema(
     ],
     totalCharms: { type: Number, default: 0 },
     perCharmPrice: { type: Number, default: 0 },
+    charmStocks: [
+      {
+        charmNumber: { type: Number },
+        stock: { type: Number, default: 0 },
+      }
+    ],
 
     rating: { type: Number, default: 0 },
 

@@ -171,15 +171,15 @@ const INTERVAL = 4000;
 
 const mapApiBanner = (banner: ApiBanner, index: number): BannerItem => {
   const theme = bannerThemes[index % bannerThemes.length];
-  const title = (banner.title || banner.text || "Featured Collection").trim();
-  const subtitle = (banner.subtitle || banner.description || "Discover our latest handcrafted pieces").trim();
+  const title = (banner.title || banner.text || "").trim();
+  const subtitle = (banner.subtitle || "").trim();
 
   return {
     id: index + 1,
-    tag: (banner.tag || "Featured").trim(),
+    tag: (banner.tag || "").trim(),
     title,
     subtitle,
-    cta: (banner.cta || "Shop Now").trim(),
+    cta: (banner.cta || "").trim(),
     imageSrc: (banner.image || "/images/hero.png").trim(),
     imageAlt: (banner.imageAlt || title).trim(),
     link: (banner.link || "").trim(),
@@ -723,56 +723,71 @@ export default function BannerSlider() {
               </div>
 
               {/* ══ TEXT ZONE — horizontal bar ══ */}
-              <div className="bs-text-zone" style={{ background: b.bg }}>
+              {Boolean(b.tag || b.title || b.subtitle || b.cta) && (
+                <div className="bs-text-zone" style={{ background: b.bg }}>
 
-                {/* Decorative pattern */}
-                <div className="bs-text-pattern">
-                  <PatternComp color={patternColor} />
-                </div>
-
-                {/* TAG */}
-                <div className="bs-bar-tag">
-                  <div className="bs-bar-tag-label" style={{ color: b.tagColor }}>
-                    <div className="bs-bar-tag-dot" style={{ background: b.tagColor }} />
-                    {b.tag}
+                  {/* Decorative pattern */}
+                  <div className="bs-text-pattern">
+                    <PatternComp color={patternColor} />
                   </div>
-                </div>
 
-                {/* DIVIDER 1 */}
-                <div className="bs-bar-divider" style={{ background: dividerColor }} />
-
-                {/* TITLE */}
-                <div className="bs-bar-title-block">
-                  <h3 className="bs-bar-title" style={{ color: b.titleColor }}>
-                    {b.title}
-                  </h3>
-                </div>
-
-                {/* DIVIDER 2 */}
-                <div className="bs-bar-divider" style={{ background: dividerColor }} />
-
-                {/* SUBTITLE */}
-                <div className="bs-bar-subtitle-block">
-                  {b.subtitle && (
-                    <p className="bs-bar-subtitle" style={{ color: b.subtitleColor }}>
-                      {b.subtitle}
-                    </p>
+                  {/* TAG */}
+                  {b.tag && (
+                    <>
+                      <div className="bs-bar-tag">
+                        <div className="bs-bar-tag-label" style={{ color: b.tagColor }}>
+                          <div className="bs-bar-tag-dot" style={{ background: b.tagColor }} />
+                          {b.tag}
+                        </div>
+                      </div>
+                      {(b.title || b.subtitle) && (
+                        <div className="bs-bar-divider" style={{ background: dividerColor }} />
+                      )}
+                    </>
                   )}
-                </div>
 
-                {/* CTA */}
-                <div className="bs-bar-cta-block">
-                  <SlideLink
-                    href={b.link}
-                    className="bs-cta"
-                    style={{ color: b.ctaTextColor, borderColor: b.ctaBorderColor }}
-                  >
-                    {b.cta}
-                    <span className="bs-cta-arrow" />
-                  </SlideLink>
-                </div>
+                  {/* TITLE */}
+                  {b.title && (
+                    <div className="bs-bar-title-block">
+                      <h3 className="bs-bar-title" style={{ color: b.titleColor }}>
+                        {b.title}
+                      </h3>
+                    </div>
+                  )}
 
-              </div>{/* /bs-text-zone */}
+                  {/* SUBTITLE */}
+                  {b.subtitle && (
+                    <>
+                      {b.title && (
+                        <div className="bs-bar-divider" style={{ background: dividerColor }} />
+                      )}
+                      <div className="bs-bar-subtitle-block">
+                        <p className="bs-bar-subtitle" style={{ color: b.subtitleColor }}>
+                          {b.subtitle}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* CTA */}
+                  {b.cta && (
+                    <div
+                      className="bs-bar-cta-block"
+                      style={{ marginLeft: b.subtitle ? undefined : "auto" }}
+                    >
+                      <SlideLink
+                        href={b.link}
+                        className="bs-cta"
+                        style={{ color: b.ctaTextColor, borderColor: b.ctaBorderColor }}
+                      >
+                        {b.cta}
+                        <span className="bs-cta-arrow" />
+                      </SlideLink>
+                    </div>
+                  )}
+
+                </div>
+              )}
 
             </div>{/* /bs-slide */}
           </div>{/* /bs-track */}
@@ -820,7 +835,7 @@ export default function BannerSlider() {
                 onClick={() => goTo(i)}>
                 <div className="bs-thumb-bg" style={{ background: bn.bg }} />
                 <div className="bs-thumb-label" style={{ color: bn.textDark ? "#1a0d00" : "rgba(255,255,255,0.95)" }}>
-                  {bn.title.split("\n")[0]}
+                  {(bn.title || bn.tag || `Slide ${i + 1}`).split("\n")[0]}
                 </div>
               </div>
             ))}

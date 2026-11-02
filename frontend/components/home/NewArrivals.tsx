@@ -669,6 +669,37 @@ export default function NewArrivals() {
           .pc-swatch { width: 10px; height: 10px; }
         }
 
+        @keyframes naShimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .na-skeleton-card {
+          border-radius: 10px;
+          overflow: hidden;
+          background: #f7f2ea;
+          box-shadow: 0 1px 4px rgba(61,74,34,.08);
+        }
+        .na-skeleton-img {
+          width: 100%;
+          aspect-ratio: 4 / 5;
+          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
+          background-size: 200% 100%;
+          animation: naShimmer 1.5s infinite;
+        }
+        .na-skeleton-body {
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          flex: 1;
+        }
+        .na-skeleton-bar {
+          border-radius: 3px;
+          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
+          background-size: 200% 100%;
+          animation: naShimmer 1.5s infinite;
+        }
+
         @media (max-width: 374px) {
           .pc { flex: 0 0 150px; }
           .na-inner { padding: 0 14px; }
@@ -710,9 +741,22 @@ export default function NewArrivals() {
           {/* Scrollable Product Cards */}
           <div className="na-track-wrapper">
             <div className="na-track" ref={scrollRef}>
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="pc na-skeleton-card">
+                    <div className="na-skeleton-img" />
+                    <div className="na-skeleton-body">
+                      <div className="na-skeleton-bar" style={{ width: '80%', height: 14 }} />
+                      <div className="na-skeleton-bar" style={{ width: '45%', height: 12 }} />
+                      <div className="na-skeleton-bar" style={{ width: '100%', height: 32, marginTop: 'auto' }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))
+              )}
             </div>
           </div>
         </div>

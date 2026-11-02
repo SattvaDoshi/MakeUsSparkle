@@ -374,6 +374,7 @@ export default function ProductsPage({
   embedded = false,
   products,
   productLinkBase,
+  loading: propLoading,
 }: {
   type: string;
   subtype?: string;
@@ -381,13 +382,20 @@ export default function ProductsPage({
   embedded?: boolean;
   products?: Product[];
   productLinkBase?: string;
+  loading?: boolean;
 }) {
-    
   const [activeTag, setActiveTag] = useState('All');
   const [search, setSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
-const [sort, setSort] = useState<SortOption>('default');
+  const [sort, setSort] = useState<SortOption>('default');
+  const [internalLoading, setInternalLoading] = useState(products ? false : true);
+  const isLoading = propLoading !== undefined ? propLoading : internalLoading;
+
+  const [page, setPage] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(16);
+  const ITEMS_PER_PAGE = 16;
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -399,20 +407,24 @@ const [sort, setSort] = useState<SortOption>('default');
 
     if (products) {
       setDynamicProducts(products);
+      setInternalLoading(false);
       return () => {
         mounted = false;
       };
     }
 
+    setInternalLoading(true);
     fetchCatalogProducts()
       .then((products) => {
         if (mounted) {
           setDynamicProducts(products as Product[]);
+          setInternalLoading(false);
         }
       })
       .catch(() => {
         if (mounted) {
           setDynamicProducts([]);
+          setInternalLoading(false);
         }
       });
 
@@ -420,6 +432,11 @@ const [sort, setSort] = useState<SortOption>('default');
       mounted = false;
     };
   }, [products]);
+
+  useEffect(() => {
+    setPage(1);
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [type, subtype, gender, activeTag, search, sort]);
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
@@ -468,7 +485,32 @@ const [sort, setSort] = useState<SortOption>('default');
       list = list.filter((p) => p.badge === activeTag || (p as any).tags?.includes(activeTag));
     }
     return sortProducts(list, sort);  
-  }, [dynamicProducts, gender, activeTag, search, type, subtype, sort])
+  }, [dynamicProducts, gender, activeTag, search, type, subtype, sort]);
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+
+  const paginatedProducts = useMemo(() => {
+    if (visibleCount > ITEMS_PER_PAGE) {
+      return filtered.slice(0, visibleCount);
+    }
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, page, visibleCount]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    setVisibleCount(ITEMS_PER_PAGE);
+    const bodyEl = document.querySelector('.pp-toolbar') || document.querySelector('.pp-body');
+    if (bodyEl) {
+      bodyEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + ITEMS_PER_PAGE, totalItems));
+  };
 
   const displayType = type ? type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
   const displaySubtype = subtype
@@ -738,6 +780,133 @@ const [sort, setSort] = useState<SortOption>('default');
           }
         }
 
+        /* ── SKELETON LOADERS ── */
+        .pp-skeleton-card {
+          background: #ffffff;
+          border-radius: 4px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 1px 4px rgba(61,74,34,.08);
+        }
+        .pp-skeleton-img {
+          width: 100%;
+          aspect-ratio: 4 / 5;
+          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
+          background-size: 200% 100%;
+          animation: ppShimmer 1.5s infinite;
+        }
+        .pp-skeleton-body {
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          flex: 1;
+        }
+        .pp-skeleton-line {
+          border-radius: 3px;
+          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
+          background-size: 200% 100%;
+          animation: ppShimmer 1.5s infinite;
+        }
+        .pp-skeleton-title { width: 75%; height: 14px; }
+        .pp-skeleton-price { width: 45%; height: 12px; margin-top: 4px; }
+        .pp-skeleton-btn {
+          width: 100%;
+          height: 34px;
+          border-radius: 4px;
+          background: linear-gradient(90deg, #e4dcce 25%, #ede5d5 50%, #e4dcce 75%);
+          background-size: 200% 100%;
+          animation: ppShimmer 1.5s infinite;
+          margin-top: auto;
+        }
+        @keyframes ppShimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
+        /* ── PAGINATION ── */
+        .pp-pagination-container {
+          margin-top: 48px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(61,74,34,0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+        }
+        .pp-pagination-info {
+          font-size: 13px;
+          color: var(--pp-t3);
+          letter-spacing: .02em;
+        }
+        .pp-load-more-btn {
+          background: #253d18;
+          color: #f7f2ea;
+          border: none;
+          padding: 12px 28px;
+          border-radius: 4px;
+          font-family: 'Jost', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: background .2s, transform .2s;
+          box-shadow: 0 2px 8px rgba(37,61,24,0.2);
+        }
+        .pp-load-more-btn:hover {
+          background: #3d5a22;
+          transform: translateY(-1px);
+        }
+        .pp-load-more-btn:active {
+          transform: translateY(0);
+        }
+        .pp-pagination-pages {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 4px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .pp-page-btn, .pp-page-nav-btn {
+          min-width: 36px;
+          height: 36px;
+          padding: 0 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(61,74,34,0.18);
+          background: #ffffff;
+          color: #1e2310;
+          border-radius: 4px;
+          font-family: 'Jost', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all .2s;
+        }
+        .pp-page-btn:hover, .pp-page-nav-btn:not(:disabled):hover {
+          border-color: #253d18;
+          color: #253d18;
+          background: #f7f2ea;
+        }
+        .pp-page-btn--active {
+          background: #253d18 !important;
+          color: #ffffff !important;
+          border-color: #253d18 !important;
+          font-weight: 600;
+        }
+        .pp-page-nav-btn:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+        .pp-page-ellipsis {
+          padding: 0 4px;
+          color: #828278;
+        }
+
         /* ── SMALL MOBILE ≤ 380px ── */
         @media (max-width: 380px) {
           .pp-toolbar { padding: 8px 12px 6px; }
@@ -758,7 +927,7 @@ const [sort, setSort] = useState<SortOption>('default');
                 : <em>{pageTitle}</em>}
             </div>
             <div className="pp-page-subtitle">
-              Handcrafted · Ethically Made · {filtered.length} pieces
+              Handcrafted · Ethically Made · {isLoading ? 'Loading pieces…' : `${filtered.length} pieces`}
             </div>
           </div>
         )}
@@ -794,14 +963,27 @@ const [sort, setSort] = useState<SortOption>('default');
 
           <div className="pp-toolbar-right">
             <SortFilter value={sort} onChange={setSort} variant="olive" />
-            <span className="pp-count-chip">{filtered.length} pieces</span>
+            <span className="pp-count-chip">
+              {isLoading ? 'Loading…' : `${filtered.length} pieces`}
+            </span>
           </div>
         </div>
 
         {/* Grid */}
         <div className="pp-body">
           <div className="pp-grid">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 8 }).map((_, idx) => (
+                <div key={idx} className="pp-skeleton-card">
+                  <div className="pp-skeleton-img" />
+                  <div className="pp-skeleton-body">
+                    <div className="pp-skeleton-line pp-skeleton-title" />
+                    <div className="pp-skeleton-line pp-skeleton-price" />
+                    <div className="pp-skeleton-btn" />
+                  </div>
+                </div>
+              ))
+            ) : filtered.length === 0 ? (
               <div className="pp-empty">
                 <div className="pp-empty-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -813,20 +995,83 @@ const [sort, setSort] = useState<SortOption>('default');
                 <p>Try adjusting your filters or search</p>
               </div>
             ) : (
-              filtered.map((product, i) => (
+              paginatedProducts.map((product, i) => (
                 <div
                   key={product.id}
                   className="pp-item"
-                  style={{ animationDelay: `${Math.min(i * 0.04, 0.5)}s` }}
+                  style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s` }}
                 >
-                  <ProductCard product={product} productLinkBase={productLinkBase} 
-                  
-                  
-              />
+                  <ProductCard product={product} productLinkBase={productLinkBase} />
                 </div>
               ))
             )}
           </div>
+
+          {/* Pagination & Load More */}
+          {!isLoading && totalItems > ITEMS_PER_PAGE && (
+            <div className="pp-pagination-container">
+              <div className="pp-pagination-info">
+                Showing {visibleCount > ITEMS_PER_PAGE ? Math.min(visibleCount, totalItems) : Math.min(page * ITEMS_PER_PAGE, totalItems)} of {totalItems} pieces
+              </div>
+
+              {visibleCount < totalItems && (
+                <button
+                  type="button"
+                  className="pp-load-more-btn"
+                  onClick={handleLoadMore}
+                >
+                  Load More (+{Math.min(ITEMS_PER_PAGE, totalItems - visibleCount)} remaining)
+                </button>
+              )}
+
+              <div className="pp-pagination-pages">
+                <button
+                  type="button"
+                  className="pp-page-nav-btn"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                  aria-label="Previous page"
+                >
+                  ← Prev
+                </button>
+
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pageNum = idx + 1;
+                  if (
+                    totalPages > 7 &&
+                    pageNum !== 1 &&
+                    pageNum !== totalPages &&
+                    Math.abs(pageNum - page) > 2
+                  ) {
+                    if (pageNum === 2 || pageNum === totalPages - 1) {
+                      return <span key={pageNum} className="pp-page-ellipsis">…</span>;
+                    }
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pp-page-btn${page === pageNum && visibleCount <= ITEMS_PER_PAGE ? ' pp-page-btn--active' : ''}`}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className="pp-page-nav-btn"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                  aria-label="Next page"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

@@ -3,7 +3,7 @@ import Offer from "../models/offer.model.js";
 export const getPublicOffers = async (req, res) => {
 	try {
 		const offers = await Offer.find({
-			isActive: true,
+			isActive: { $ne: false },
 		}).sort({ createdAt: -1 });
 		res.json({ success: true, offers });
 	} catch (error) {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { getApiUrl } from "@/lib/api";
+import { fetchPromoBanners } from "@/lib/catalogApi";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -267,13 +268,8 @@ export default function BannerSlider() {
 
     const loadBanners = async () => {
       try {
-        const response = await fetch(getApiUrl("/banners"));
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as PublicBannersResponse;
-        const mapped = (data.banners || []).filter((entry) => entry?.isActive !== false).map(mapApiBanner);
+        const banners = await fetchPromoBanners();
+        const mapped = (banners || []).filter((entry: any) => entry?.isActive !== false).map(mapApiBanner);
 
         if (!ignore && mapped.length > 0) {
           setLiveBanners(mapped);

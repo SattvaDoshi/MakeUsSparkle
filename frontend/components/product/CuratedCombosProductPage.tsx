@@ -2714,7 +2714,26 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         </div>
 
         <div className="layout">
-          {mode === 'preset' ? (
+          {loading ? (
+            <div className="combo-grid" style={{ minHeight: '50vh', padding: '24px 16px' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="combo-card" style={{ background: '#faf6ee', border: '1px solid #ede5d5', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{ aspectRatio: '4/5', background: 'linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%)', backgroundSize: '200% 100%', animation: 'comboShimmer 1.5s infinite' }} />
+                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ height: '16px', width: '75%', background: '#ede5d5', borderRadius: '4px' }} />
+                    <div style={{ height: '14px', width: '45%', background: '#ede5d5', borderRadius: '4px' }} />
+                    <div style={{ height: '36px', width: '100%', background: '#ede5d5', borderRadius: '50px', marginTop: '8px' }} />
+                  </div>
+                </div>
+              ))}
+              <style>{`
+                @keyframes comboShimmer {
+                  0% { background-position: -200% 0; }
+                  100% { background-position: 200% 0; }
+                }
+              `}</style>
+            </div>
+          ) : mode === 'preset' ? (
             presetView === 'grid' ? (
               <PresetComboGrid
                 combos={presetCombos}

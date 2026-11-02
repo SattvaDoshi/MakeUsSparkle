@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
-import { fetchCatalogStyles, slugifyCatalog } from "@/lib/catalogApi";
+import { fetchCatalogStyles, fetchHomeContent, slugifyCatalog } from "@/lib/catalogApi";
 import { apiRequest } from "@/lib/api";
 
 // Swiper imports
@@ -42,13 +42,12 @@ export default function ShopByStyle() {
     
     Promise.all([
       fetchCatalogStyles(),
-      apiRequest<{ success: boolean; homeContent: any }>("/home-content").catch(() => null)
+      fetchHomeContent().catch(() => null)
     ])
-      .then(([api, homeContentResult]) => {
+      .then(([api, hc]) => {
         if (!alive) return;
         
-        if (homeContentResult?.success && homeContentResult.homeContent) {
-          const hc = homeContentResult.homeContent;
+        if (hc) {
           const heading = hc.genderContent?.[gender]?.styleHeading;
           if (heading) {
             setStyleHeading(heading);

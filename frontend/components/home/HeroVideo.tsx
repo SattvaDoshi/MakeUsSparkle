@@ -558,6 +558,7 @@ import { useGender } from "@/lib/genderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { fetchHomeContent, fetchCatalogCategories, fetchCatalogSubCategories } from "@/lib/catalogApi";
 
 type Category = "women" | "men" | "kids";
 
@@ -772,51 +773,43 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
 
     async function loadData() {
 
-      // 1. Fetch home content
-let hero: Record<string, HeroItem> = defaultHeroContent;
-try {
-  const homeData = await apiRequest<HomeContentResponse>("/home-content");
-  if (!isMounted) return;
-  if (homeData.success && homeData.homeContent) {
-    if (homeData.homeContent.marqueeItems?.length > 0) {
-      setMarqueeItems(homeData.homeContent.marqueeItems);
-    }
-    if (homeData.homeContent.heroContent) {
-      hero = { ...defaultHeroContent, ...homeData.homeContent.heroContent };
-    }
-  }
-} catch (err) {
-  console.error("Failed to load home content:", err);
-}
-if (isMounted) setHeroContent(hero); // only now do we show a hero
-
-      // 2. Fetch categories & subcategories from API to dynamically display Jewellery subcategories
+      // 1. Fetch home content (cached)
+      let hero: Record<string, HeroItem> = defaultHeroContent;
       try {
-        const [catData, subData] = await Promise.all([
-          apiRequest<{ success: boolean; categories?: BackendCategory[] }>("/categories").catch(() => null),
-          apiRequest<{ success: boolean; subcategories?: BackendSubCategory[] }>("/subcategories").catch(() => null),
+        const homeContent = await fetchHomeContent();
+        if (!isMounted) return;
+        if (homeContent) {
+          if (homeContent.marqueeItems?.length > 0) {
+            setMarqueeItems(homeContent.marqueeItems);
+          }
+          if (homeContent.heroContent) {
+            hero = { ...defaultHeroContent, ...homeContent.heroContent };
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load home content:", err);
+      }
+      if (isMounted) setHeroContent(hero);
+
+      // 2. Fetch categories & subcategories from cached catalogApi
+      try {
+        const [allCategories, allSubcategories] = await Promise.all([
+          fetchCatalogCategories().catch(() => []),
+          fetchCatalogSubCategories().catch(() => []),
         ]);
 
         if (!isMounted) return;
-
-        const allCategories = catData?.categories || [];
-        const allSubcategories = subData?.subcategories || [];
 
         // Identify Jewellery Category ID
         const jewelleryCat = allCategories.find(
           (c) => c.name?.trim().toLowerCase() === "jewellery"
         );
-        const jewelleryId = jewelleryCat?._id;
+        const jewelleryId = jewelleryCat?.id;
 
         // Filter subcategories that belong to "Jewellery"
         const jewellerySubs = allSubcategories.filter((sub) => {
-          if (sub.category && typeof sub.category === "object") {
-            const catName = sub.category.name?.trim().toLowerCase();
-            const catId = sub.category._id;
-            return catName === "jewellery" || (jewelleryId && catId === jewelleryId);
-          }
-          if (typeof sub.category === "string" && jewelleryId) {
-            return sub.category === jewelleryId;
+          if (sub.categoryId) {
+            return jewelleryId && sub.categoryId === jewelleryId;
           }
           return false;
         });

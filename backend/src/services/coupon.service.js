@@ -365,7 +365,7 @@ class CouponService {
 				discountValue: 10,
 				maxDiscount: 500,
 				expiryDate,
-				isActive: true,
+				isActive: { $ne: false },
 				usageLimit: 1,
 				usedCount: 0,
 				issuedForEmail: user.email,
@@ -394,8 +394,8 @@ class CouponService {
 		try {
 			const now = new Date();
 			const offers = await Coupon.find({
-				isActive: true,
-				isWelcomeOffer: false,
+				isActive: { $ne: false },
+				isWelcomeOffer: { $ne: true },
 				$or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }],
 				$and: [{ $or: [{ expiryDate: { $exists: false } }, { expiryDate: null }, { expiryDate: { $gte: now } }] }],
 			})

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { getApiUrl } from '@/lib/api';
+import { apiRequest } from '@/lib/api';
 
 interface Offer {
   id: string;
@@ -120,24 +120,18 @@ export default function OffersSection() {
     const loadOffers = async () => {
       try {
         const [couponsRes, offersRes] = await Promise.allSettled([
-          fetch(getApiUrl('/coupons/offers')),
-          fetch(getApiUrl('/offers/public'))
+          apiRequest<{ success: boolean; offers?: ApiOffer[] }>('/coupons/offers'),
+          apiRequest<{ success: boolean; offers?: ApiOffer[] }>('/offers/public')
         ]);
 
         let mappedCoupons: Offer[] = [];
         let mappedOffers: Offer[] = [];
 
-        if (couponsRes.status === 'fulfilled' && couponsRes.value.ok) {
-          const data = (await couponsRes.value.json()) as PublicOffersResponse;
-          if (data.offers) {
-            mappedCoupons = data.offers.filter(isNotExpired).map((o) => mapApiOffer(o, true));
-          }
+        if (couponsRes.status === 'fulfilled' && couponsRes.value?.offers) {
+          mappedCoupons = couponsRes.value.offers.filter(isNotExpired).map((o) => mapApiOffer(o, true));
         }
-        if (offersRes.status === 'fulfilled' && offersRes.value.ok) {
-          const data = (await offersRes.value.json()) as PublicOffersResponse;
-          if (data.offers) {
-            mappedOffers = data.offers.filter(isNotExpired).map((o) => mapApiOffer(o, false));
-          }
+        if (offersRes.status === 'fulfilled' && offersRes.value?.offers) {
+          mappedOffers = offersRes.value.offers.filter(isNotExpired).map((o) => mapApiOffer(o, false));
         }
 
         if (!ignore) {
@@ -158,7 +152,7 @@ export default function OffersSection() {
   const categoryOffers = useMemo(() => {
     return activeFilter === 'All'
       ? offers
-      : offers.filter((o) => o.category === categoryMap[activeFilter]);
+      : offers.filter((o) => o.category === categoryMap[activeFilter] || o.category === 'all');
   }, [activeFilter, offers]);
 
   // Tab counts based on currently selected category

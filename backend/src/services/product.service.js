@@ -44,6 +44,26 @@ const normalizeStringArray = (value) => {
 		.filter(Boolean);
 };
 
+let _cachedActiveOffers = null;
+let _cachedActiveCoupons = null;
+let _activeOffersCacheTime = 0;
+const OFFERS_CACHE_TTL_MS = 60000; // 60 seconds
+
+async function getCachedOffersAndCoupons() {
+	const now = Date.now();
+	if (_cachedActiveOffers && _cachedActiveCoupons && (now - _activeOffersCacheTime < OFFERS_CACHE_TTL_MS)) {
+		return { activeOffers: _cachedActiveOffers, activeCoupons: _cachedActiveCoupons };
+	}
+	const [activeOffers, activeCoupons] = await Promise.all([
+		Offer.find({ isActive: { $ne: false } }).lean(),
+		Coupon.find({ isActive: { $ne: false } }).lean(),
+	]);
+	_cachedActiveOffers = activeOffers;
+	_cachedActiveCoupons = activeCoupons;
+	_activeOffersCacheTime = now;
+	return { activeOffers, activeCoupons };
+}
+
 class ProductService {
 	async _normalizeProductGender(value) {
 		if (!value) return undefined;
@@ -91,26 +111,34 @@ class ProductService {
 
 		try {
 			const now = new Date();
-			const [activeOffers, activeCoupons] = await Promise.all([
-				Offer.find({ isActive: true }).lean(),
-				Coupon.find({ isActive: true }).lean(),
-			]);
+			const { activeOffers, activeCoupons } = await getCachedOffersAndCoupons();
 
 			const validOffers = activeOffers.filter(
-				(o) => o.isActive !== false && (!o.startsAt || new Date(o.startsAt) <= now)
+				(o) => o.isActive !== false &&
+					(!o.startsAt || new Date(o.startsAt) <= now) &&
+					(!o.expiryDate || new Date(o.expiryDate) >= now)
 			);
 			const validCoupons = activeCoupons.filter(
-				(c) => c.isActive !== false && (!c.startsAt || new Date(c.startsAt) <= now)
+				(c) => c.isActive !== false &&
+					(!c.startsAt || new Date(c.startsAt) <= now) &&
+					(!c.expiryDate || new Date(c.expiryDate) >= now)
+			);
+
+			// Sitewide offer fallback (active offer that has no specific product or category restrictions)
+			const sitewideOffer = validOffers.find(
+				(o) => (!Array.isArray(o.applicableProducts) || o.applicableProducts.length === 0) &&
+					(!Array.isArray(o.applicableCategories) || o.applicableCategories.length === 0)
 			);
 
 			for (const prod of productList) {
 				if (!prod) continue;
 				const prodIdStr = String(prod._id || prod.id || "");
 				const catIdStr = prod.category ? String(prod.category._id || prod.category) : "";
+				const subCatIdStr = prod.subCategory ? String(prod.subCategory._id || prod.subCategory) : "";
 
 				// 1. Direct product match on Offer
 				const matchedOfferProd = validOffers.find((o) =>
-					Array.isArray(o.applicableProducts) && o.applicableProducts.some((pId) => String(pId) === prodIdStr)
+					Array.isArray(o.applicableProducts) && o.applicableProducts.some((pId) => String(pId?._id || pId || "") === prodIdStr)
 				);
 				if (matchedOfferProd && matchedOfferProd.title) {
 					prod.offerTag = matchedOfferProd.title;
@@ -119,31 +147,59 @@ class ProductService {
 
 				// 2. Direct product match on Coupon
 				const matchedCouponProd = validCoupons.find((c) =>
-					Array.isArray(c.applicableProducts) && c.applicableProducts.some((pId) => String(pId) === prodIdStr)
+					Array.isArray(c.applicableProducts) && c.applicableProducts.some((pId) => String(pId?._id || pId || "") === prodIdStr)
 				);
 				if (matchedCouponProd && (matchedCouponProd.name || matchedCouponProd.code)) {
 					prod.offerTag = matchedCouponProd.name || matchedCouponProd.code;
 					continue;
 				}
 
-				// 3. Category match on Offer
+				// 3. SubCategory match on Coupon
+				if (subCatIdStr) {
+					const matchedCouponSubCat = validCoupons.find((c) =>
+						Array.isArray(c.applicableSubCategories) && c.applicableSubCategories.some((scId) => String(scId?._id || scId || "") === subCatIdStr)
+					);
+					if (matchedCouponSubCat && (matchedCouponSubCat.name || matchedCouponSubCat.code)) {
+						prod.offerTag = matchedCouponSubCat.name || matchedCouponSubCat.code;
+						continue;
+					}
+				}
+
+				// 4. Category match on Offer
 				if (catIdStr) {
 					const matchedOfferCat = validOffers.find((o) =>
-						Array.isArray(o.applicableCategories) && o.applicableCategories.some((cId) => String(cId) === catIdStr)
+						Array.isArray(o.applicableCategories) && o.applicableCategories.some((cId) => String(cId?._id || cId || "") === catIdStr)
 					);
 					if (matchedOfferCat && matchedOfferCat.title) {
 						prod.offerTag = matchedOfferCat.title;
 						continue;
 					}
 
-					// 4. Category match on Coupon
+					// 5. Category match on Coupon
 					const matchedCouponCat = validCoupons.find((c) =>
-						Array.isArray(c.applicableCategories) && c.applicableCategories.some((cId) => String(cId) === catIdStr)
+						Array.isArray(c.applicableCategories) && c.applicableCategories.some((cId) => String(cId?._id || cId || "") === catIdStr)
 					);
 					if (matchedCouponCat && (matchedCouponCat.name || matchedCouponCat.code)) {
 						prod.offerTag = matchedCouponCat.name || matchedCouponCat.code;
 						continue;
 					}
+				}
+
+				// 6. Name / keyword fallback match (e.g. "jhumkha combo deal" matching products containing "jhumk")
+				const prodText = `${prod.title || ""} ${prod.slug || ""}`.toLowerCase();
+				const matchedKeywordOffer = validOffers.find((o) => {
+					if (!o.title) return false;
+					const words = o.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3 && !["deal", "offer", "combo", "free", "sale", "save"].includes(w));
+					return words.length > 0 && words.some((w) => prodText.includes(w));
+				});
+				if (matchedKeywordOffer && matchedKeywordOffer.title) {
+					prod.offerTag = matchedKeywordOffer.title;
+					continue;
+				}
+
+				// 7. Sitewide offer fallback
+				if (sitewideOffer && sitewideOffer.title) {
+					prod.offerTag = sitewideOffer.title;
 				}
 			}
 		} catch (err) {
@@ -170,6 +226,26 @@ class ProductService {
 			} else {
 				// Default sort
 				productQuery = productQuery.sort({ displayOrder: -1, _id: -1 });
+			}
+
+			const page = Math.max(1, Number(queryParams.page) || 1);
+			const limit = queryParams.limit ? Math.max(1, Number(queryParams.limit)) : null;
+
+			if (limit) {
+				const total = await Product.countDocuments(query);
+				const products = await productQuery.skip((page - 1) * limit).limit(limit);
+				await this.attachOfferTags(products);
+				return {
+					success: true,
+					products,
+					pagination: {
+						page,
+						limit,
+						total,
+						totalPages: Math.ceil(total / limit),
+						hasMore: page * limit < total,
+					},
+				};
 			}
 
 			const products = await productQuery;

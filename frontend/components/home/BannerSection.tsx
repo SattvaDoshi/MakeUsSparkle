@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
+import { fetchHomeContent } from '@/lib/catalogApi';
 import { useGender } from '@/lib/genderContext';
 
 /*
@@ -44,16 +45,16 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   useEffect(() => {
     async function fetchBanners() {
       try {
-        const data = await apiRequest<{ success: boolean; homeContent: any }>('/home-content');
-        if (data.success) {
-          if (data.homeContent?.secondMarqueeItems && data.homeContent.secondMarqueeItems.length > 0) {
-            setMarqueeItems(data.homeContent.secondMarqueeItems);
-          } else if (data.homeContent?.marqueeItems && data.homeContent.marqueeItems.length > 0) {
-            setMarqueeItems(data.homeContent.marqueeItems);
+        const homeContent = await fetchHomeContent();
+        if (homeContent) {
+          if (homeContent.secondMarqueeItems && homeContent.secondMarqueeItems.length > 0) {
+            setMarqueeItems(homeContent.secondMarqueeItems);
+          } else if (homeContent.marqueeItems && homeContent.marqueeItems.length > 0) {
+            setMarqueeItems(homeContent.marqueeItems);
           }
         }
-        if (data.success && (data.homeContent?.genderContent?.[activeCategory]?.promoBanners || data.homeContent?.promoBanners)) {
-          const promoBanners = data.homeContent.genderContent?.[activeCategory]?.promoBanners || data.homeContent.promoBanners;
+        if (homeContent && (homeContent.genderContent?.[activeCategory]?.promoBanners || homeContent.promoBanners)) {
+          const promoBanners = homeContent.genderContent?.[activeCategory]?.promoBanners || homeContent.promoBanners;
           const formattedBanners: Banner[] = promoBanners.map((b: any, index: number) => ({
               id: b._id || String(index),
               tag: b.tag || '',

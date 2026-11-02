@@ -562,6 +562,20 @@ export async function fetchCatalogGenders(): Promise<CatalogGender[]> {
   });
 }
 
+export async function fetchHomeContent(): Promise<any> {
+  return withCatalogCache("home_content", async () => {
+    const data = await apiRequest<{ success: boolean; homeContent?: any }>("/home-content");
+    return data.homeContent || null;
+  }, 5 * 60 * 1000);
+}
+
+export async function fetchPromoBanners(): Promise<any[]> {
+  return withCatalogCache("promo_banners", async () => {
+    const data = await apiRequest<{ success: boolean; banners?: any[] }>("/banners");
+    return data.banners || [];
+  }, 5 * 60 * 1000);
+}
+
 export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {
   const key = `products_${filters.subCategorySlug || "all"}`;
   return withCatalogCache(key, async () => {
@@ -795,24 +809,27 @@ export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
  * Also fetches categories/subcategories/styles in parallel to resolve references.
  */
 export async function fetchProductById(productId: string): Promise<CatalogProduct | null> {
-  try {
-    const [categories, subCategories, styles, productResponse] = await Promise.all([
-      fetchCatalogCategories(),
-      fetchCatalogSubCategories(),
-      fetchCatalogStyles(),
-      apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${productId}`),
-    ]);
+  const key = `product_${productId}`;
+  return withCatalogCache(key, async () => {
+    try {
+      const [categories, subCategories, styles, productResponse] = await Promise.all([
+        fetchCatalogCategories(),
+        fetchCatalogSubCategories(),
+        fetchCatalogStyles(),
+        apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${productId}`),
+      ]);
 
-    if (!productResponse.product) return null;
+      if (!productResponse.product) return null;
 
-    const categoryMap = new Map(categories.map((item) => [item.id, item]));
-    const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
-    const styleMap = new Map(styles.map((item) => [item.id, item]));
+      const categoryMap = new Map(categories.map((item) => [item.id, item]));
+      const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+      const styleMap = new Map(styles.map((item) => [item.id, item]));
 
-    return normalizeProduct(productResponse.product, categoryMap, subCategoryMap, styleMap);
-  } catch {
-    return null;
-  }
+      return normalizeProduct(productResponse.product, categoryMap, subCategoryMap, styleMap);
+    } catch {
+      return null;
+    }
+  }, PRODUCT_CACHE_TTL);
 }
 
 /* ─── Charm Items ─── */

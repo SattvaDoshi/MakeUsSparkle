@@ -197,9 +197,12 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
   const [activeSubtype, setActiveSubtype] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => { setActiveSubtype(null); }, [resolvedType]);
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
 
     fetchCatalogProducts({ subCategorySlug: resolvedType })
       .then((products) => {
@@ -243,6 +246,11 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         if (mounted) {
           setDynamicItems([]);
           setScopedProducts([]);
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
         }
       });
 
@@ -611,12 +619,13 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
             subtype={activeSubtype ?? undefined}
             embedded
             products={scopedProducts}
-   productLinkBase={
-  resolvedType === 'charm-jewellery' || resolvedType === 'custom-charm-jewellery'
-    ? '/custom-charm'
-    : '/products'
-}
-  />
+            loading={loading}
+            productLinkBase={
+              resolvedType === 'charm-jewellery' || resolvedType === 'custom-charm-jewellery'
+                ? '/custom-charm'
+                : '/products'
+            }
+          />
         </div>
 
       </div>

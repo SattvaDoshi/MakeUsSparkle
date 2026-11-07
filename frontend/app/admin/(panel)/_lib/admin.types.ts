@@ -77,6 +77,7 @@ export type AdminProduct = {
 	charmPiecePricing?: Array<{ count: number; price: number }>;
 	charmStocks?: Array<{ charmNumber: number; stock: number }>;
 	displayOrder?: number;
+	crossProducts?: Array<{ _id: string; title?: string; price?: number; mainImage?: string; images?: string[] } | string>;
 };
 
 // ─── iThink Logistics shipping types ───────────────────────────────────────

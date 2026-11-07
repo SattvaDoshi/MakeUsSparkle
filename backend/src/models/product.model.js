@@ -150,6 +150,13 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["men", "women", "kids", "unisex"],
     },
+    // Cross selling / Complete the look products selected by admin
+    crossProducts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      }
+    ],
     stock: Number,
     tags: [String],
     seoTags: [String],

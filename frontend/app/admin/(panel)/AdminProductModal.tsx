@@ -137,6 +137,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		giftBoxPrice: initialData?.giftBox?.price?.toString() || "50",
 		giftBoxImage: initialData?.giftBox?.image || null,
 		paymentMode: (initialData as any)?.paymentMode || 'cod_allowed',
+		crossProducts: (initialData?.crossProducts || []).map((p: any) => (typeof p === 'object' && p ? p._id || p.id : p)).filter(Boolean) as string[],
 	});
 
 	type CharmStock = { charmNumber: number; stock: number };
@@ -289,22 +290,30 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 	const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
 	const [giftBoxImageFile, setGiftBoxImageFile] = useState<File | null>(null);
 
-	// Fetch taxonomy data
+	// Cross sell / Complete the look products state
+	const [availableProducts, setAvailableProducts] = useState<Array<{ _id: string; title: string; price?: number; mainImage?: string; category?: any }>>([]);
+	const [crossSearchQuery, setCrossSearchQuery] = useState("");
+
+	// Fetch taxonomy data and catalog products for cross-sell selector
 	useEffect(() => {
 		const fetchTaxonomy = async () => {
 			try {
-				const [cats, subs, stys, tRes, gendersResp] = await Promise.all([
+				const [cats, subs, stys, tRes, gendersResp, prodsResp] = await Promise.all([
 					apiRequest<{ success: boolean; categories: TaxonomyItem[] }>("/categories"),
 					apiRequest<{ success: boolean; subcategories: TaxonomyItem[] }>("/subcategories"),
 					apiRequest<{ success: boolean; styles: TaxonomyItem[] }>("/styles"),
 					apiRequest<{ success: boolean; tags: string[] }>("/products/tags"),
 					apiRequest<{ success: boolean; genders: TaxonomyItem[] }>("/genders"),
+					apiRequest<{ success: boolean; products: any[] }>("/admin/products?limit=500").catch(() => ({ success: false, products: [] })),
 				]);
 				setCategories(cats.categories || []);
 				setSubCategories(subs.subcategories || []);
 				setStyles(stys.styles || []);
 				setAllTags(tRes.tags || []);
 				setGenders(gendersResp.genders || []);
+				if (prodsResp?.products) {
+					setAvailableProducts(prodsResp.products);
+				}
 			} catch (err) {
 				console.error("Failed to load taxonomy", err);
 			}
@@ -613,6 +622,9 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 			
 			// Payment Mode
 			formData.append("paymentMode", form.paymentMode);
+
+			// Cross Products (Complete the look)
+			formData.append("crossProducts", JSON.stringify(form.crossProducts));
 			
 			if (giftBoxImageFile) {
 				formData.append("giftBoxImage", giftBoxImageFile);
@@ -641,7 +653,7 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		}
 	};
 
-	const steps = ["Basic Info", "Pricing", "Colors & Sizes", "Variants", "Media & Gift Box"];
+	const steps = ["Basic Info", "Pricing", "Colors & Sizes", "Variants", "Media & Gift Box", "Complete the Look"];
 
 	return (
 		<div
@@ -2648,6 +2660,176 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 									</div>
 								</div>
 
+							</div>
+						)}
+
+						{/* Step 6: Complete the Look (Cross Selling) */}
+						{step === 6 && (
+							<div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+								<div style={{ background: "#f8f9f4", padding: "1.2rem", borderRadius: "8px", border: "1px solid #dcdfd0" }}>
+									<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.8rem", marginBottom: "0.8rem" }}>
+										<div>
+											<h4 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#3d4a20", fontWeight: 600 }}>
+												Complete the Look (Cross-Selling Products)
+											</h4>
+											<p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>
+												Select products that will be featured in the &ldquo;Complete the Look&rdquo; section on this product&apos;s detail page.
+											</p>
+										</div>
+										<span style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", background: "#e8ede0", color: "#3d4a20", borderRadius: "20px", fontWeight: 600 }}>
+											{form.crossProducts.length} Selected
+										</span>
+									</div>
+
+									{/* Search bar */}
+									<div style={{ position: "relative", marginBottom: "1rem" }}>
+										<input
+											type="text"
+											value={crossSearchQuery}
+											onChange={(e) => setCrossSearchQuery(e.target.value)}
+											placeholder="Search products by title..."
+											style={{
+												width: "100%",
+												padding: "0.6rem 2.2rem 0.6rem 0.9rem",
+												borderRadius: "6px",
+												border: "1px solid #cbd5b5",
+												fontSize: "0.9rem",
+												outline: "none",
+												background: "#fff",
+											}}
+										/>
+										{crossSearchQuery && (
+											<button
+												type="button"
+												onClick={() => setCrossSearchQuery("")}
+												style={{
+													position: "absolute",
+													right: "0.6rem",
+													top: "50%",
+													transform: "translateY(-50%)",
+													background: "none",
+													border: "none",
+													cursor: "pointer",
+													fontSize: "0.9rem",
+													color: "#888",
+												}}
+											>
+												✕
+											</button>
+										)}
+									</div>
+
+									{/* Products Grid Picker */}
+									<div
+										style={{
+											display: "grid",
+											gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+											gap: "0.8rem",
+											maxHeight: "360px",
+											overflowY: "auto",
+											padding: "0.4rem",
+											border: "1px solid #e2e6d6",
+											borderRadius: "6px",
+											background: "#fff",
+										}}
+									>
+										{availableProducts
+											.filter((p) => {
+												// Filter out the current product itself in edit mode
+												if (productId && String(p._id) === String(productId)) return false;
+												if (!crossSearchQuery.trim()) return true;
+												return (p.title || "").toLowerCase().includes(crossSearchQuery.toLowerCase().trim());
+											})
+											.map((prod) => {
+												const isSelected = form.crossProducts.includes(prod._id);
+												const imgUrl = prod.mainImage || (Array.isArray((prod as any).images) ? (prod as any).images[0] : null) || "/images/hero.png";
+												return (
+													<div
+														key={prod._id}
+														onClick={() => {
+															setForm((prev) => {
+																const exists = prev.crossProducts.includes(prod._id);
+																const newCross = exists
+																	? prev.crossProducts.filter((id) => id !== prod._id)
+																	: [...prev.crossProducts, prod._id];
+																return { ...prev, crossProducts: newCross };
+															});
+														}}
+														style={{
+															border: `2px solid ${isSelected ? "#4a5c22" : "#e6e6dc"}`,
+															background: isSelected ? "#f4f8ed" : "#fff",
+															borderRadius: "6px",
+															padding: "0.6rem",
+															cursor: "pointer",
+															transition: "all 0.15s ease",
+															display: "flex",
+															flexDirection: "column",
+															gap: "0.4rem",
+															position: "relative",
+														}}
+													>
+														<div style={{ position: "relative", width: "100%", height: "100px", borderRadius: "4px", overflow: "hidden", background: "#f0ece1" }}>
+															{/* eslint-disable-next-line @next/next/no-img-element */}
+															<img
+																src={imgUrl}
+																alt={prod.title}
+																style={{ width: "100%", height: "100%", objectFit: "cover" }}
+															/>
+															<div
+																style={{
+																	position: "absolute",
+																	top: "4px",
+																	right: "4px",
+																	width: "20px",
+																	height: "20px",
+																	borderRadius: "50%",
+																	background: isSelected ? "#4a5c22" : "rgba(255,255,255,0.85)",
+																	color: isSelected ? "#fff" : "#999",
+																	display: "flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	fontSize: "12px",
+																	fontWeight: "bold",
+																	boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+																}}
+															>
+																{isSelected ? "✓" : "+"}
+															</div>
+														</div>
+														<div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+															<div
+																style={{
+																	fontSize: "0.82rem",
+																	fontWeight: 600,
+																	color: isSelected ? "#2d3815" : "#333",
+																	lineHeight: 1.25,
+																	overflow: "hidden",
+																	textOverflow: "ellipsis",
+																	display: "-webkit-box",
+																	WebkitLineClamp: 2,
+																	WebkitBoxOrient: "vertical",
+																}}
+																title={prod.title}
+															>
+																{prod.title}
+															</div>
+															{prod.price !== undefined && (
+																<div style={{ fontSize: "0.78rem", color: "#6b7c3a", fontWeight: 700, marginTop: "0.3rem" }}>
+																	₹{Number(prod.price).toLocaleString("en-IN")}
+																</div>
+															)}
+														</div>
+													</div>
+												);
+											})}
+
+										{availableProducts.length === 0 && (
+											<div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "2rem", color: "#888", fontSize: "0.85rem" }}>
+												Loading products...
+											</div>
+										)}
+									</div>
+								</div>
 							</div>
 						)}
 					</form>

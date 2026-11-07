@@ -828,7 +828,18 @@ function ReviewsSection({ productId, reviews, setReviews }: { productId: string;
 }
 
 /* ─── Complete the Look ─── */
-function CompleteTheLookStrip() {
+function CompleteTheLookStrip({ items }: { items?: Array<{ _id: string; title: string; price: number; discountedPrice?: number | null; mainImage?: string | null; images?: string[] }> }) {
+  const displayItems = (items && items.length > 0)
+    ? items.map(p => ({
+        id: p._id,
+        name: p.title,
+        price: p.discountedPrice && p.discountedPrice < p.price ? p.discountedPrice : p.price,
+        originalPrice: p.discountedPrice && p.discountedPrice < p.price ? p.price : Math.round(p.price * 1.25),
+        image: p.mainImage || (p.images && p.images[0]) || '/images/hero.png',
+        href: `/products/${p._id}`,
+      }))
+    : GOES_WELL_WITH;
+
   return (
     <div className="ctl-strip">
       <div className="ctl-strip-header">
@@ -836,20 +847,22 @@ function CompleteTheLookStrip() {
         <span className="ctl-strip-rule" />
       </div>
       <div className="ctl-strip-scroll">
-        {GOES_WELL_WITH.map((item, i) => {
-          const disc = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
+        {displayItems.map((item, i) => {
+          const disc = item.originalPrice > item.price ? Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
           return (
             <a key={item.id} href={item.href} className="ctl-card" style={{ animationDelay: `${i * 0.07}s` }}>
               <div className="ctl-img-wrap">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.image} alt={item.name} className="ctl-img" />
-                <span className="ctl-disc-badge">{disc}% off</span>
+                {disc > 0 && <span className="ctl-disc-badge">{disc}% off</span>}
               </div>
               <div className="ctl-card-info">
                 <p className="ctl-card-name">{item.name}</p>
                 <div className="ctl-card-price-row">
                   <span className="ctl-card-price">₹{item.price.toLocaleString('en-IN')}</span>
-                  <span className="ctl-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                  {item.originalPrice > item.price && (
+                    <span className="ctl-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
               </div>
             </a>
@@ -2344,7 +2357,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            <CompleteTheLookStrip />
+            <CompleteTheLookStrip items={product?.crossProducts} />
             <div className="pdp-divider" />
             <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
             <div className="pdp-divider" />

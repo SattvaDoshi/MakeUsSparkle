@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema(
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     referralCode: String,
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    affiliateClicks: { type: Number, default: 0 },
     rewardPoints: { type: Number, default: 0 },
   },
   { timestamps: true }

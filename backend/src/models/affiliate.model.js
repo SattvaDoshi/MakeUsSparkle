@@ -18,17 +18,33 @@ const affiliateCommissionSchema = new mongoose.Schema(
 			required: true,
 			index: true,
 		},
-		// The user who signed up via the affiliate link
+		// The user who signed up or ordered via the affiliate link (optional for guests)
 		referredUser: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
-			required: true,
+			default: null,
 		},
-		// The order placed by the referred user that triggered this commission.
-		// Null means the referred user has signed up but not yet ordered.
+		// The order placed that triggered this commission
 		order: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Order",
+			default: null,
+		},
+		// Specific product if generated via product affiliate link
+		product: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Product",
+			default: null,
+		},
+		// The affiliate link document if applicable
+		affiliateLink: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "AffiliateLink",
+			default: null,
+		},
+		// The coupon code if commission was driven by an affiliate coupon
+		couponCode: {
+			type: String,
 			default: null,
 		},
 		// Amount of the order (captured at commission creation time)
@@ -41,10 +57,10 @@ const affiliateCommissionSchema = new mongoose.Schema(
 			type: Number,
 			default: 0,
 		},
-		// pending → approved → paid
+		// pending (awaiting delivery) → delivered/approved (credited) → paid (transferred) | cancelled
 		status: {
 			type: String,
-			enum: ["pending", "approved", "paid"],
+			enum: ["pending", "delivered", "approved", "paid", "cancelled"],
 			default: "pending",
 		},
 	},

@@ -1,112 +1,76 @@
+/* Site footer — brand green, reassurance strip, link columns, contact. Responsive. */
 .footer {
-  background: #ffffff;
-  border-top: 1px solid rgba(42, 42, 39, 0.08);
+  --gold: #e3c473;
+  --edge: 40px;
+  background: #2a4736;
+  color: #fff;
+  font-family: 'Jost', sans-serif;
 }
 
-/* Main footer */
+/* Reassurance strip */
+.perks { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.perkList { list-style: none; margin: 0 auto; padding: 28px var(--edge); max-width: 1360px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.perk { display: flex; align-items: center; gap: 14px; }
+.perkIcon { width: 34px; height: 34px; flex-shrink: 0; color: var(--gold); }
+.perkText { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: rgba(255, 255, 255, 0.7); line-height: 1.35; }
+.perkText strong { font-size: 14.5px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+
+/* Main */
 .main {
-  display: grid;
-  grid-template-columns: 2fr repeat(2, 1fr);
-  gap: 3rem;
-  max-width: var(--container-max);
-  margin: 0 auto;
-  padding: clamp(3rem, 6vw, 5rem) clamp(1rem, 4vw, 4rem);
+  max-width: 1360px; margin: 0 auto; padding: 56px var(--edge) 48px;
+  display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 48px;
 }
+.brand { display: flex; flex-direction: column; gap: 12px; }
+.brandName { margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 2.3rem; font-weight: 500; color: #fff; letter-spacing: 0.01em; line-height: 1; }
+.brandName em { font-style: italic; color: var(--gold); }
+.brandTagline { margin: 0; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+.brandText { margin: 4px 0 8px; max-width: 38ch; font-size: 15px; line-height: 1.65; color: rgba(255, 255, 255, 0.72); }
 
-@media (max-width: 900px) {
-  .main { grid-template-columns: 1fr 1fr; }
+.contact { display: flex; flex-wrap: wrap; gap: 10px; }
+.contactBtn {
+  display: inline-flex; align-items: center; gap: 9px; padding: 12px 20px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; text-decoration: none;
+  font-size: 13px; font-weight: 500; letter-spacing: 0.04em; transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
+.contactBtn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.contactBtn:hover { background: #fff; color: #2a4736; border-color: #fff; }
+.contactWa { background: #25d366; border-color: #25d366; color: #fff; }
+.contactWa:hover { background: #1fbd5b; border-color: #1fbd5b; color: #fff; }
+.contactBtn:focus-visible, .link:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
 
-@media (max-width: 480px) {
-  .main { grid-template-columns: 1fr; }
-}
-
-/* Brand column */
-.brand { display: flex; flex-direction: column; gap: 0.6rem; }
-
-.brandName {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 400;
-  color: #1a1f0d;
-  letter-spacing: 0.02em;
-}
-
-.brandName em {
-  font-style: italic;
-  color: var(--gold);
-}
-
-.brandTagline {
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  color: rgba(26, 31, 13, 0.55);
-  letter-spacing: 0.1em;
-}
-
-/* Link groups */
-.linkGroup { display: flex; flex-direction: column; gap: 0; }
-
-.groupTitle {
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 1.25rem;
-}
-
-.linkList {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-}
-
-.link {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: rgba(26, 31, 13, 0.75);
-  text-decoration: none;
-  transition: color 0.2s ease;
-  letter-spacing: 0.02em;
-}
-
-.link:hover { color: var(--gold); }
+.linkGroup { display: flex; flex-direction: column; }
+.groupTitle { margin: 0 0 18px; font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); }
+.linkList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.link { display: inline-block; padding: 5px 0; font-size: 15px; color: rgba(255, 255, 255, 0.85); text-decoration: none; transition: color 0.2s, transform 0.2s; }
+.link:hover { color: var(--gold); transform: translateX(3px); }
 
 /* Bottom bar */
 .bottom {
-  border-top: 1px solid rgba(42, 42, 39, 0.08);
-  padding: 1.5rem clamp(1rem, 4vw, 4rem);
-  max-width: var(--container-max);
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  max-width: 1360px; margin: 0 auto; padding: 22px var(--edge);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
 }
+.copyright { margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+.payments { display: flex; gap: 8px; flex-wrap: wrap; }
+.payBadge { padding: 6px 12px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
 
-.copyright {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  color: rgba(26, 31, 13, 0.55);
+@media (max-width: 1100px) {
+  .footer { --edge: 32px; }
+  .perkList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main { grid-template-columns: 1fr 1fr 1fr; gap: 40px 32px; }
+  .brand { grid-column: 1 / -1; }
 }
-
-.payments {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+@media (max-width: 639px) {
+  .footer { --edge: 18px; }
+  .perkList { padding-top: 22px; padding-bottom: 22px; gap: 18px 14px; }
+  .perk { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .perkIcon { width: 28px; height: 28px; }
+  .perkText { font-size: 12px; }
+  .perkText strong { font-size: 13.5px; }
+  .main { grid-template-columns: 1fr 1fr; padding-top: 40px; padding-bottom: 32px; gap: 32px 20px; }
+  .brandName { font-size: 2rem; }
+  .contact { flex-direction: column; }
+  .contactBtn { justify-content: center; width: 100%; }
+  .bottom { flex-direction: column; align-items: flex-start; padding-top: 18px; padding-bottom: 22px; }
 }
-
-.payBadge {
-  padding: 0.3rem 0.75rem;
-  border: 1px solid rgba(42, 42, 39, 0.18);
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: rgba(26, 31, 13, 0.65);
-  text-transform: uppercase;
-}
+@media (prefers-reduced-motion: reduce) { .link, .contactBtn { transition: none; } .link:hover { transform: none; } }

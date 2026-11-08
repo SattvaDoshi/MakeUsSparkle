@@ -1,5 +1,4 @@
-import UpperNav from '@/components/ui/UpperNav';
-import Footer from '@/components/home/Footer';
+import Em from "@/components/ui/Em";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <UpperNav />
       <main style={{ minHeight: '80vh', background: '#faf9f5', color: '#1a1f0d', fontFamily: "'Jost', sans-serif" }}>
         {/* Hero */}
         <section
@@ -38,7 +36,7 @@ export default function ContactPage() {
             
             {/* WhatsApp */}
             <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid rgba(42,42,39,0.08)', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ fontSize: '28px' }}>💬</div>
+              <div style={{ fontSize: '28px' }}><Em c="💬" /></div>
               <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', margin: 0 }}>WhatsApp Support</h3>
               <p style={{ fontSize: '13px', color: '#666', margin: 0, lineHeight: 1.5 }}>
                 Fastest support for order tracking, customization requests, and questions.
@@ -68,7 +66,7 @@ export default function ContactPage() {
 
             {/* Email */}
             <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid rgba(42,42,39,0.08)', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ fontSize: '28px' }}>✉️</div>
+              <div style={{ fontSize: '28px' }}><Em c="✉" /></div>
               <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', margin: 0 }}>Email Us</h3>
               <p style={{ fontSize: '13px', color: '#666', margin: 0, lineHeight: 1.5 }}>
                 Send us detailed queries, partnership requests, or exchange videos.
@@ -96,7 +94,7 @@ export default function ContactPage() {
 
             {/* Hours */}
             <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid rgba(42,42,39,0.08)', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ fontSize: '28px' }}>⏱️</div>
+              <div style={{ fontSize: '28px' }}><Em c="⏱" /></div>
               <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', margin: 0 }}>Operating Hours</h3>
               <p style={{ fontSize: '13px', color: '#666', margin: 0, lineHeight: 1.5 }}>
                 Monday to Saturday<br />
@@ -110,7 +108,6 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

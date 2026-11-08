@@ -1,4 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Jost:wght@100;200;300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap');
+
+/* One vertical rhythm for every homepage section. Sections still own their
+   horizontal layout; only top/bottom padding is normalised here. */
+:root { --home-pad: clamp(24px, calc(2vw + 8px), 36px); } /* gap between sections = 2 × this: 48px mobile → ~57px at 1024 → 72px on wide desktop */
+
+.home-main > section:not(.hero-banner):not(.cat-strip) {
+  padding-top: var(--home-pad) !important;
+  padding-bottom: var(--home-pad) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+/* Cancel each section's built-in inner whitespace so the *visible* gap between
+   content is the same everywhere (measured in the browser). Selectors repeat the
+   :not() chain only to out-rank the general rule above. */
+.home-main > section.os-section:not(.hero-banner):not(.cat-strip),
+.home-main > section.na-section:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 12px) !important; } /* card text + track padding */
+.home-main > section.sbs:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 20px) !important; }       /* coverflow overhang */
+.home-main > section[data-home-section="hot"]:not(.hero-banner):not(.cat-strip) {                                      /* "What's Hot" block */
+  padding-bottom: calc(var(--home-pad) * 2) !important;   /* gap above the full-bleed marquee bar below it */
+}
+.home-main > .cat-strip { padding-bottom: var(--home-pad) !important; }              /* category tiles → next section */
+
+/* Banner carousel starts with a full-bleed marquee bar: keep it flush */
+.home-main > section:not(.hero-banner):not(.cat-strip):has(> .bs-marquee-wrap) { padding-top: 0 !important; }
 
 :root {
   /* Olive Green Luxury Palette */
@@ -19,7 +42,7 @@
   --gold-dark: #9a7a2e;
 
   /* Neutrals */
-  --white: #fafaf7;
+  --white: #ffffff;
   --off-white: #f5f4ef;
   --charcoal: #1c1c1a;
   --charcoal-light: #2e2e2b;
@@ -186,6 +209,10 @@ h1, h2, h3, h4, h5, h6 {
 .has-bottom-nav {
   padding-bottom: 80px;
 }
+
+/* Footer is brand green; the bottom-nav clearance lives inside it so no white strip shows below */
+.footer-wrap { background: #2a4736; padding-bottom: 64px; }
+@media (min-width: 1024px) { .footer-wrap { padding-bottom: 0; } }
 
 @media (min-width: 1024px) {
   .has-bottom-nav {

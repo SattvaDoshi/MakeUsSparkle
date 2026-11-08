@@ -1,0 +1,15 @@
+.wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(26, 26, 20, 0.2);
+  background: #fff;
+  color: #1a1a14;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s;
+}
+.btn:hover:not(:disabled) { background: #1a1a14; color: #fff; border-color: #1a1a14; transform: scale(1.04); }
+.btn:focus-visible { outline: 2px solid #c9a84c; outline-offset: 2px; }
+.btn:disabled { opacity: 0.3; cursor: default; }
+@media (max-width: 639px) { .btn { width: 36px; height: 36px; } .wrap { gap: 8px; } }

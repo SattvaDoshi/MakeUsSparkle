@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import ProductCard from '@/components/product/ProductCard';
 import type { CatalogProduct } from '@/lib/catalogApi';
 
@@ -45,7 +46,7 @@ export default function OfferProductsGrid({ products, loading, error }: OfferPro
         {/* Error state */}
         {!loading && error && (
           <div className="opg-state opg-error">
-            <span className="opg-state-icon">⚠️</span>
+            <span className="opg-state-icon"><Em c="⚠" /></span>
             <p className="opg-state-title">Could not load products</p>
             <p className="opg-state-sub">{error}</p>
           </div>
@@ -54,7 +55,7 @@ export default function OfferProductsGrid({ products, loading, error }: OfferPro
         {/* Empty state */}
         {!loading && !error && products.length === 0 && (
           <div className="opg-state opg-empty">
-            <span className="opg-state-icon">🛍️</span>
+            <span className="opg-state-icon"><Em c="🛍" /></span>
             <p className="opg-state-title">No eligible products</p>
             <p className="opg-state-sub">
               This offer doesn't have any specific products attached yet.
@@ -77,7 +78,6 @@ export default function OfferProductsGrid({ products, loading, error }: OfferPro
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap');
 
 .opg-section *, .opg-section *::before, .opg-section *::after { box-sizing: border-box; }
 

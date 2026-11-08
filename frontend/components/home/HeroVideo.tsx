@@ -162,13 +162,12 @@
 // }
 
 // export default function HeroVideoComponent() {
-//   const { gender: rawCategory, setGender: setActiveCategory, genders } = useGender();
+//   const { gender: rawCategory } = useGender();
 //   const activeCategory = rawCategory || "women";
 
 //   const router = useRouter();
 
-//   const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
-//   const [heroContent, setHeroContent] = useState<Record<string, HeroItem>>(defaultHeroContent);
+// //   const [heroContent, setHeroContent] = useState<Record<string, HeroItem>>(defaultHeroContent);
 //   const [categories, setCategories] = useState<CategoryItem[]>(defaultJewellerySubcategories);
 
 //   useEffect(() => {
@@ -255,8 +254,7 @@
 //   return (
 //     <>
 //       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
+//
 //         /* ─── Marquee ─── */
 //         .bs-marquee-wrap {
 //           width: 100%;
@@ -552,7 +550,9 @@
 
 "use client";
 
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
+import { cdnImage } from "@/lib/cdn";
+import { safeHref } from "@/lib/safeUrl";
 import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { useRouter } from "next/navigation";
@@ -698,7 +698,7 @@ function SubcategoryCard({
     >
       <div className="cat-img">
         <Image
-          src={imgSrc}
+          src={cdnImage(imgSrc, 240)}
           alt={item.name}
           fill
           unoptimized
@@ -717,56 +717,54 @@ function SubcategoryCard({
 }
 
 function HeroPic({
-  src,
+  mobileSrc,
+  desktopSrc,
   alt,
-  variant,
 }: {
-  src: string;
+  mobileSrc: string;
+  desktopSrc?: string;
   alt: string;
-  variant: "mobile" | "desktop";
 }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
-  }, [src]);
+  }, [mobileSrc, desktopSrc]);
+
+  /* One <picture> per layer: the browser downloads ONLY the image for the current screen
+     (before, phones also fetched the desktop hero and vice-versa), and the image is
+     eager + high priority so it's never held back by lazy-loading. */
+  const mobileFg = getImageProps({ src: mobileSrc, alt, fill: true, sizes: "100vw", priority: true });
+  const desktopFg = desktopSrc ? getImageProps({ src: desktopSrc, alt: "", fill: true, sizes: "100vw", priority: true }) : null;
+  // The blurred backdrop is blurred anyway, so a tiny rendition is enough.
+  const mobileBlur = getImageProps({ src: mobileSrc, alt: "", fill: true, sizes: "20vw", quality: 20 });
+  const desktopBlur = desktopSrc ? getImageProps({ src: desktopSrc, alt: "", fill: true, sizes: "20vw", quality: 20 }) : null;
 
   return (
-    <div className={`hero-pic hero-pic-${variant}`}>
-      {/* blurred backdrop fills any empty space */}
-      <Image
-        src={src}
-        alt=""
-        aria-hidden
-        fill
-        sizes="100vw"
-        quality={20}
-        className="hero-blur"
-      />
-      {/* full image, never cropped */}
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        priority
-        sizes="100vw"
-        className={`hero-fg${loaded ? " is-loaded" : ""}`}
-        onLoad={() => setLoaded(true)}
-      />
+    <div className="hero-pic">
+      <picture className="hero-layer" aria-hidden>
+        {desktopBlur && <source media="(min-width: 1100px)" srcSet={desktopBlur.props.srcSet} sizes="20vw" />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img {...mobileBlur.props} loading="eager" alt="" className="hero-blur" />
+      </picture>
+      <picture className="hero-layer">
+        {desktopFg && <source media="(min-width: 1100px)" srcSet={desktopFg.props.srcSet} sizes="100vw" />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img {...mobileFg.props} className={`hero-fg${loaded ? " is-loaded" : ""}`} onLoad={() => setLoaded(true)} ref={(el) => { if (el?.complete) setLoaded(true); }} />
+      </picture>
     </div>
   );
 }
 
 
-export default function HeroVideoComponent() {
-  const { gender: rawCategory, setGender: setActiveCategory, genders } = useGender();
+export default function HeroVideoComponent({ initialHero }: { initialHero?: Record<string, HeroItem> | null }) {
+  const { gender: rawCategory } = useGender();
   const activeCategory = rawCategory || "women";
 
   const router = useRouter();
 
-  const [marqueeItems, setMarqueeItems] = useState<string[]>(defaultMarqueeItems);
 // was: useState<Record<string, HeroItem>>(defaultHeroContent)
-const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(null);  const [categories, setCategories] = useState<CategoryItem[]>(defaultJewellerySubcategories);
+const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(initialHero ? { ...defaultHeroContent, ...initialHero } : null);  const [categories, setCategories] = useState<CategoryItem[]>(defaultJewellerySubcategories);
 
   useEffect(() => {
     let isMounted = true;
@@ -779,9 +777,6 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
         const homeContent = await fetchHomeContent();
         if (!isMounted) return;
         if (homeContent) {
-          if (homeContent.marqueeItems?.length > 0) {
-            setMarqueeItems(homeContent.marqueeItems);
-          }
           if (homeContent.heroContent) {
             hero = { ...defaultHeroContent, ...homeContent.heroContent };
           }
@@ -840,11 +835,11 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
 
 const content = heroContent ? heroContent[activeCategory] || defaultHeroContent.women : null;
 const hasDesktopImage = !!content?.desktopImage;
+const heroLink = safeHref(content?.link);
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
         /* ─── Marquee ─── */
         .bs-marquee-wrap {
@@ -951,7 +946,7 @@ const hasDesktopImage = !!content?.desktopImage;
 }
 
 .hero-pic { position: absolute; inset: 0; }
-.hero-pic-desktop { display: none; }
+.hero-layer { position: absolute; inset: 0; display: block; }
 
 .hero-blur {
   object-fit: cover;
@@ -985,8 +980,6 @@ const hasDesktopImage = !!content?.desktopImage;
     height: min(78vh, 760px);
     min-height: 520px;
   }
-  .hero-banner.has-desktop .hero-pic-mobile { display: none; }
-  .hero-banner.has-desktop .hero-pic-desktop { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1025,7 +1018,7 @@ const hasDesktopImage = !!content?.desktopImage;
         /* ── CATEGORY STRIP ── */
         .cat-strip {
           width: 100%;
-          background: #dcefd9;
+          background: #ffffff;
           padding: 18px 0 16px;
           box-sizing: border-box;
         }
@@ -1064,7 +1057,7 @@ const hasDesktopImage = !!content?.desktopImage;
           aspect-ratio: 1 / 1;
           border-radius: 20px;
           overflow: hidden;
-          background: #c5e0c1;
+          background: #f1f0eb;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
@@ -1120,54 +1113,22 @@ const hasDesktopImage = !!content?.desktopImage;
         }
       `}</style>
 
-      {/* ── STICKY GENDER TOGGLE BAR ── */}
-      <div className="gender-toggle-bar">
-        {genders.map((g) => (
-          <button
-            key={g.slug}
-            className={`gender-btn ${activeCategory === g.slug ? "active-btn" : "inactive"}`}
-            onClick={() => setActiveCategory(g.slug)}
-          >
-            {g.name}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Marquee ── */}
-      <div className="bs-marquee-wrap">
-        <div className="bs-marquee-track">
-          {Array.from({ length: 4 }).flatMap((_, i) =>
-            marqueeItems.map((t) => (
-              <span key={`${i}-${t}`} className="bs-marquee-item">{t}</span>
-            ))
-          )}
-        </div>
-      </div>
-
       {/* ── FULL-BLEED HERO ── */}
-      <section className={`hero-banner${hasDesktopImage ? " has-desktop" : ""}${content?.link ? " has-link" : ""}`}>
+      <section className={`hero-banner${hasDesktopImage ? " has-desktop" : ""}${heroLink ? " has-link" : ""}`}>
         {!content ? (
           <div className="hero-skeleton" aria-hidden />
         ) : (
           <>
             <HeroPic
-              key={`m-${content.image}`}
-              src={content.image}
+              key={`${content.image}|${content.desktopImage ?? ""}`}
+              mobileSrc={content.image}
+              desktopSrc={hasDesktopImage ? (content.desktopImage as string) : undefined}
               alt={`${activeCategory} jewellery model`}
-              variant="mobile"
             />
-            {hasDesktopImage && (
-              <HeroPic
-                key={`d-${content.desktopImage}`}
-                src={content.desktopImage as string}
-                alt={`${activeCategory} jewellery model`}
-                variant="desktop"
-              />
-            )}
-            {content.link ? (
-              content.link.startsWith("http://") || content.link.startsWith("https://") ? (
+            {heroLink ? (
+              heroLink.startsWith("http://") || heroLink.startsWith("https://") ? (
                 <a
-                  href={content.link}
+                  href={heroLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hero-click-overlay"
@@ -1176,7 +1137,7 @@ const hasDesktopImage = !!content?.desktopImage;
                 />
               ) : (
                 <Link
-                  href={content.link}
+                  href={heroLink}
                   className="hero-click-overlay"
                   style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "pointer" }}
                   aria-label={`${activeCategory} hero banner link`}

@@ -5,6 +5,7 @@ import Style from "../models/style.model.js";
 import Combo from "../models/combo.model.js";
 import Offer from "../models/offer.model.js";
 import Coupon from "../models/coupon.model.js";
+import Review from "../models/review.model.js";
 import imageService from "./image.service.js";
 import mongoose from "mongoose";
 
@@ -86,7 +87,13 @@ class ProductService {
 	}
 
 	buildProductQuery(queryParams) {
-		const { category, subCategory, style, gender, minPrice, maxPrice, rating } = queryParams;
+		// Only plain strings may reach the database filter (blocks ?category[$ne]=… style injection).
+		const str = (v) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+		const category = str(queryParams.category);
+		const subCategory = str(queryParams.subCategory);
+		const style = str(queryParams.style);
+		const gender = str(queryParams.gender);
+		const { minPrice, maxPrice, rating } = queryParams;
 		const query = {};
 
 		if (category) query.category = category;
@@ -103,11 +110,44 @@ class ProductService {
 		return query;
 	}
 
+	/**
+	 * Attach average rating + review count from the Review collection (customer
+	 * reviews live there, not on the product document). Products with no reviews
+	 * keep whatever rating the admin set.
+	 */
+	async attachReviewStats(productList) {
+		try {
+			const ids = productList
+				.map((p) => p && (p._id || p.id))
+				.filter(Boolean)
+				.map((id) => new mongoose.Types.ObjectId(String(id)));
+			if (ids.length === 0) return;
+			const stats = await Review.aggregate([
+				{ $match: { product: { $in: ids } } },
+				{ $group: { _id: "$product", avg: { $avg: "$rating" }, count: { $sum: 1 } } },
+			]);
+			const byId = new Map(stats.map((s) => [String(s._id), s]));
+			for (const prod of productList) {
+				if (!prod) continue;
+				const s = byId.get(String(prod._id || prod.id));
+				if (s) {
+					prod.rating = Math.round(s.avg * 10) / 10;
+					prod.reviewCount = s.count;
+				}
+			}
+		} catch (err) {
+			console.error("attachReviewStats failed:", err.message);
+		}
+	}
+
 	async attachOfferTags(products) {
 		if (!products) return products;
 		const isSingle = !Array.isArray(products);
 		const productList = isSingle ? [products] : products;
 		if (productList.length === 0) return products;
+
+		// Every product-returning path calls this, so review stats ride along here.
+		await this.attachReviewStats(productList);
 
 		try {
 			const now = new Date();
@@ -229,7 +269,7 @@ class ProductService {
 			}
 
 			const page = Math.max(1, Number(queryParams.page) || 1);
-			const limit = queryParams.limit ? Math.max(1, Number(queryParams.limit)) : null;
+			const limit = queryParams.limit ? Math.min(500, Math.max(1, Number(queryParams.limit) || 1)) : null;
 
 			if (limit) {
 				const total = await Product.countDocuments(query);
@@ -269,6 +309,7 @@ class ProductService {
 
 	async getProductById(productId) {
 		try {
+			if (!mongoose.isValidObjectId(productId)) throw new Error("Product not found");
 			const product = await Product.findById(productId).lean();
 			if (!product) {
 				throw new Error("Product not found");
@@ -283,8 +324,9 @@ class ProductService {
 
 	async searchProducts(searchQuery) {
 		try {
-			const q = searchQuery || "";
-			const regex = new RegExp(q, "i");
+			// Treat the search text literally: escape regex characters (stops ReDoS / regex injection) and cap the length.
+			const q = (typeof searchQuery === "string" ? searchQuery : "").slice(0, 60);
+			const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 			
 			const [products, categories, styles, combos] = await Promise.all([
 				Product.find({ title: regex }).limit(10).lean(),
@@ -1033,7 +1075,9 @@ class ProductService {
 
 	async getProductReviews(productId) {
 		try {
-			const product = await Product.findById(productId).populate("reviews.user");
+			if (!mongoose.isValidObjectId(productId)) throw new Error("Product not found");
+			// Public endpoint: expose only the reviewer's name, never their account record (email, password hash, addresses…).
+			const product = await Product.findById(productId).populate({ path: "reviews.user", select: "name" });
 			if (!product) {
 				throw new Error("Product not found");
 			}

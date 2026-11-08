@@ -24,14 +24,12 @@ type ApiRequestOptions = RequestInit & {
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
 	const { authToken, ...requestOptions } = options;
 	const token = authToken ?? getStoredAuthToken();
+	// Only declare a JSON body when there is one. A Content-Type header on a plain GET makes
+	// the browser send a separate CORS "preflight" request first — a wasted round trip per call.
 	const headers: Record<string, string> = {
-		"Content-Type": "application/json",
+		...(requestOptions.body && !(requestOptions.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
 		...(requestOptions.headers as Record<string, string> | undefined),
 	};
-
-	if (options.body instanceof FormData) {
-		delete headers["Content-Type"];
-	}
 
 	if (token) {
 		headers.Authorization = `Bearer ${token}`;

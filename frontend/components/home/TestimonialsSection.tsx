@@ -1,393 +1,158 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import CarouselArrows from '@/components/ui/CarouselArrows';
+import { cdnImage, fetchFeaturedReviews, type ReviewStats } from '@/lib/siteContentApi';
+import { useNearViewport } from './useNearViewport';
+import styles from './TestimonialsSection.module.css';
 
-interface Testimonial {
-  id: number;
+/**
+ * Customer reviews.
+ * Shows real, recent 4–5★ reviews from the store (with the product they bought and a
+ * "verified buyer" badge). If there aren't enough real reviews yet it falls back to the
+ * curated quotes below, so the section is never empty.
+ */
+
+interface Item {
+  id: string;
   name: string;
-  location: string;
   rating: number;
-  text: string;
-  product: string;
-  initials: string;
+  body: string;
+  verified: boolean;
+  meta: string;        // "Mumbai" / "Jun 2026"
+  productTitle: string;
+  productImage?: string;
+  productHref?: string;
+  photo?: string;
 }
 
-const testimonials: Testimonial[] = [
-  {
-    id: 1,
-    name: 'Priya Sharma',
-    location: 'Mumbai',
-    rating: 5,
-    text: 'The necklace I ordered was even more beautiful in person. The packaging was so luxurious — I gifted it to my sister and she absolutely loved it. Will definitely be ordering again!',
-    product: 'Bloom Necklace',
-    initials: 'PS',
-  },
-  {
-    id: 2,
-    name: 'Aanya Kapoor',
-    location: 'Delhi',
-    rating: 5,
-    text: 'I ordered a custom charm bracelet and the quality is exceptional. The charm selection process was fun and the photos on the website matched the real product perfectly.',
-    product: 'Custom Charm Bracelet',
-    initials: 'AK',
-  },
-  {
-    id: 3,
-    name: 'Sneha Raut',
-    location: 'Pune',
-    rating: 5,
-    text: "Fast delivery, gorgeous packaging, and the earrings are stunning. The gift box I ordered for my friend's birthday made her cry happy tears. 10/10 experience!",
-    product: 'Stellar Earrings Gift Set',
-    initials: 'SR',
-  },
-  {
-    id: 4,
-    name: 'Meera Iyer',
-    location: 'Bangalore',
-    rating: 5,
-    text: "The curated combo was worth every rupee. The pieces complement each other so well and the quality is fantastic. I've been getting compliments every day!",
-    product: 'Curated Jewellery Combo',
-    initials: 'MI',
-  },
+const MIN_REAL_REVIEWS = 3;
+
+const CURATED: Item[] = [
+  { id: 'c1', name: 'Priya Sharma', rating: 5, verified: false, meta: 'Mumbai', productTitle: 'Bloom Necklace',
+    body: 'The necklace I ordered was even more beautiful in person. The packaging was so luxurious — I gifted it to my sister and she absolutely loved it. Will definitely be ordering again!' },
+  { id: 'c2', name: 'Aanya Kapoor', rating: 5, verified: false, meta: 'Delhi', productTitle: 'Custom Charm Bracelet',
+    body: 'I ordered a custom charm bracelet and the quality is exceptional. The charm selection process was fun and the photos on the website matched the real product perfectly.' },
+  { id: 'c3', name: 'Sneha Raut', rating: 5, verified: false, meta: 'Pune', productTitle: 'Stellar Earrings Gift Set',
+    body: "Fast delivery, gorgeous packaging, and the earrings are stunning. The gift box I ordered for my friend's birthday made her cry happy tears. 10/10 experience!" },
+  { id: 'c4', name: 'Meera Iyer', rating: 5, verified: false, meta: 'Bangalore', productTitle: 'Curated Jewellery Combo',
+    body: "The curated combo was worth every rupee. The pieces complement each other so well and the quality is fantastic. I've been getting compliments every day!" },
 ];
 
-const styles = `
-  .ts-section {
-    background: #8bb87db5;
-    padding: var(--section-padding, 4rem) 0;
-    overflow: hidden;
-  }
-
-  .ts-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 clamp(1rem, 4vw, 4rem);
-  }
-
-  .ts-header {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: clamp(2rem, 5vw, 4rem);
-  }
-
-  .ts-eyebrow {
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.7rem;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: var(--olive-light, #6b7c4a);
-  }
-
-  .ts-title {
-    font-family: var(--font-display, Georgia, serif);
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 400;
-    color: var(--olive-darkest, #1e2d0e);
-  }
-
-  .ts-divider {
-    width: 40px;
-    height: 1px;
-    background: var(--gold, #b8960c);
-  }
-
-  /* Main testimonial box */
-  .ts-main {
-    background: var(--olive-fog, #f0f3ea);
-    border: 1.5px solid #1a4a1a;
-    border-left: 3px solid #1a4a1a;
-    padding: clamp(2rem, 5vw, 4rem);
-    position: relative;
-    margin-bottom: 2rem;
-    border-radius: 2px;
-    box-shadow: 0 2px 16px 0 rgba(26, 74, 26, 0.10);
-  }
-
-  .ts-quote-symbol {
-    position: absolute;
-    top: -0.5rem;
-    left: 2rem;
-    font-family: var(--font-display, Georgia, serif);
-    font-size: 8rem;
-    color: var(--gold, #b8960c);
-    opacity: 0.15;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  .ts-quote-text {
-    font-family: var(--font-display, Georgia, serif);
-    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-    font-weight: 400;
-    font-style: italic;
-    color: var(--olive-darkest, #1e2d0e);
-    line-height: 1.6;
-    margin-bottom: 2rem;
-    position: relative;
-    z-index: 1;
-  }
-
-  .ts-quote-footer {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-  }
-
-  .ts-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: #2d5a1b;
-    color: var(--gold-pale, #f5e9b8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    flex-shrink: 0;
-    border: 2px solid #1a4a1a;
-  }
-
-  .ts-quote-name {
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #1a4a1a;
-    background: #d4e8d0;
-    display: inline-block;
-    padding: 0.1rem 0.55rem;
-    border-radius: 3px;
-    letter-spacing: 0.02em;
-  }
-
-  .ts-quote-meta {
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.75rem;
-    color: var(--warm-gray, #7a7060);
-    margin-top: 0.3rem;
-  }
-
-  .ts-stars {
-    display: flex;
-    gap: 2px;
-    margin-top: 0.3rem;
-  }
-
-  .ts-star {
-    color: var(--gold, #b8960c);
-    font-size: 0.85rem;
-  }
-
-  /* Thumbnails */
-  .ts-thumbs {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.5rem;
-  }
-
-  .ts-thumb {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: transparent;
-    border: 1px solid #1a4a1a;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex: 1;
-    min-width: 150px;
-    border-radius: 2px;
-  }
-
-  .ts-thumb:hover,
-  .ts-thumb-active {
-    border-color: #1a4a1a;
-    background: var(--olive-fog, #f0f3ea);
-    box-shadow: 0 2px 8px rgba(26, 74, 26, 0.12);
-  }
-
-  .ts-thumb-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--olive-muted, #7a9c5a);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.7rem;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .ts-thumb-active .ts-thumb-avatar {
-    background: #2d5a1b;
-  }
-
-  .ts-thumb-info {
-    text-align: left;
-  }
-
-  .ts-thumb-name {
-    display: block;
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #1a4a1a;
-  }
-
-  .ts-thumb-loc {
-    font-family: var(--font-body, sans-serif);
-    font-size: 0.7rem;
-    color: var(--warm-gray, #7a7060);
-  }
-
-  /* Dots */
-  .ts-dots {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .ts-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--light-gray, #d0cfc8);
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    padding: 0;
-  }
-
-  .ts-dot-active {
-    background: #1a4a1a;
-    transform: scale(1.3);
-  }
-
-  /* Tablet */
-  @media (max-width: 768px) {
-    .ts-thumbs { gap: 0.75rem; }
-    .ts-thumb {
-      min-width: calc(50% - 0.75rem);
-      flex: 1 1 calc(50% - 0.75rem);
-    }
-  }
-
-  /* Mobile */
-  @media (max-width: 480px) {
-    .ts-thumbs {
-      gap: 0.5rem;
-    }
-    .ts-thumb {
-      min-width: calc(50% - 0.25rem);
-      flex: 1 1 calc(50% - 0.25rem);
-      padding: 0.5rem 0.6rem;
-      gap: 0.5rem;
-    }
-    .ts-thumb-avatar {
-      width: 28px;
-      height: 28px;
-      font-size: 0.6rem;
-    }
-    .ts-thumb-name {
-      font-size: 0.72rem;
-    }
-    .ts-thumb-loc {
-      font-size: 0.62rem;
-    }
-    .ts-quote-footer {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-    .ts-title { font-size: clamp(1.5rem, 8vw, 2.5rem); }
-  }
-`;
+const initials = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '★';
+const starsFor = (n: number) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
+const monthYear = (iso: string) => {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+};
 
 export default function TestimonialsSection() {
-  const [active, setActive] = useState<number>(0);
-  const current = testimonials[active];
+  const [ref, near] = useNearViewport<HTMLElement>();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<Item[] | null>(null); // null = not loaded yet
+  const [stats, setStats] = useState<ReviewStats | null>(null);
+
+  useEffect(() => {
+    if (!near) return;
+    let live = true;
+    fetchFeaturedReviews()
+      .then(({ reviews, stats: s }) => {
+        if (!live) return;
+        if (reviews.length >= MIN_REAL_REVIEWS) {
+          setStats(s.count > 0 ? s : null);
+          setItems(reviews.map((r) => ({
+            id: r.id, name: r.name, rating: r.rating, body: r.body, verified: r.verified,
+            meta: monthYear(r.date),
+            productTitle: r.product.title.trim(), productImage: r.product.image, productHref: `/products/${r.product.id}`,
+            photo: r.image || undefined,
+          })));
+        } else {
+          setItems(CURATED);
+        }
+      })
+      .catch(() => live && setItems(CURATED));
+    return () => { live = false; };
+  }, [near]);
+
+  const list = items ?? CURATED;
+  const loading = items === null; // placeholder cards until we know which set to show (no flash of curated quotes)
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: styles }} />
-
-      <section className="ts-section">
-        <div className="ts-inner">
-          {/* Header */}
-          <div className="ts-header">
-            <span className="ts-eyebrow">Real Stories</span>
-            <h2 className="ts-title">What Our Customers Say</h2>
-            <div className="ts-divider" />
+    <section ref={ref} className={styles.section} data-home-section="reviews" aria-label="Customer reviews">
+      <div className={styles.inner}>
+        <div className={styles.header}>
+          <div className={styles.titleGroup}>
+            <span className={styles.eyebrow}>Real stories</span>
+            <h2 className={styles.title}>Loved by <em>our customers</em></h2>
           </div>
-
-          {/* Main testimonial */}
-          <div className="ts-main">
-            <div className="ts-quote-symbol" aria-hidden="true">&ldquo;</div>
-            <p className="ts-quote-text">{current.text}</p>
-            <div className="ts-quote-footer">
-              <div className="ts-avatar" aria-label={`Avatar for ${current.name}`}>
-                {current.initials}
-              </div>
-              <div>
-                <div className="ts-quote-name">{current.name}</div>
-                <div className="ts-quote-meta">
-                  {current.location} &middot; {current.product}
-                </div>
-                <div className="ts-stars" aria-label={`${current.rating} out of 5 stars`}>
-                  {Array.from({ length: current.rating }).map((_, i) => (
-                    <span key={i} className="ts-star" aria-hidden="true">★</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Thumbnails */}
-          <div className="ts-thumbs" role="list">
-            {testimonials.map((t, i) => (
-              <button
-                key={t.id}
-                role="listitem"
-                className={`ts-thumb${i === active ? ' ts-thumb-active' : ''}`}
-                onClick={() => setActive(i)}
-                aria-pressed={i === active}
-                aria-label={`View testimonial from ${t.name}`}
-              >
-                <span className="ts-thumb-avatar" aria-hidden="true">
-                  {t.initials}
+          <div className={styles.right}>
+            {stats && (
+              <div className={styles.rating} aria-label={`Rated ${stats.average} out of 5 from ${stats.count} reviews`}>
+                <span className={styles.ratingNum}>{stats.average.toFixed(1)}</span>
+                <span className={styles.ratingMeta}>
+                  <span className={styles.stars} aria-hidden="true">{starsFor(stats.average)}</span>
+                  <span className={styles.ratingCount}>{stats.count} review{stats.count === 1 ? '' : 's'}</span>
                 </span>
-                <div className="ts-thumb-info">
-                  <span className="ts-thumb-name">{t.name}</span>
-                  <span className="ts-thumb-loc">{t.location}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Navigation dots */}
-          <div className="ts-dots" role="tablist" aria-label="Testimonial navigation">
-            {testimonials.map((_, i) => (
-              <button
-                key={i}
-                role="tab"
-                aria-selected={i === active}
-                className={`ts-dot${i === active ? ' ts-dot-active' : ''}`}
-                onClick={() => setActive(i)}
-                aria-label={`Testimonial ${i + 1}`}
-              />
-            ))}
+              </div>
+            )}
+            {list.length > 3 && <div className={styles.arrows}><CarouselArrows targetRef={trackRef} label="reviews" /></div>}
           </div>
         </div>
-      </section>
-    </>
+
+        <div className={styles.trackWrap}>
+          <div className={styles.track} ref={trackRef}>
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => <div key={i} className={styles.skel} aria-hidden="true" />)
+              : list.map((t) => (
+                  <article key={t.id} className={styles.card}>
+                    <div className={styles.cardTop}>
+                      <span className={styles.stars} role="img" aria-label={`${t.rating} out of 5 stars`}>{starsFor(t.rating)}</span>
+                      {t.verified && <span className={styles.verified}>✓ Verified buyer</span>}
+                    </div>
+
+                    <div className={styles.quoteMark} aria-hidden="true">&ldquo;</div>
+                    <div className={styles.bodyRow}>
+                      <p className={styles.body}>{t.body}</p>
+                      {t.photo && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className={styles.photo} src={cdnImage(t.photo, 240)} alt={`Photo from ${t.name}'s review`} loading="lazy" decoding="async" />
+                      )}
+                    </div>
+
+                    <div className={styles.foot}>
+                      <div className={styles.who}>
+                        <span className={styles.avatar} aria-hidden="true">{initials(t.name)}</span>
+                        <div>
+                          <div className={styles.name}>{t.name}</div>
+                          {t.meta && <div className={styles.meta}>{t.meta}</div>}
+                        </div>
+                      </div>
+
+                      {t.productTitle && (() => {
+                        const inner = (
+                          <>
+                            {t.productImage && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img className={styles.pImg} src={cdnImage(t.productImage, 120)} alt="" loading="lazy" decoding="async" />
+                            )}
+                            <span className={styles.pText}>
+                              <span className={styles.pLabel}>Purchased</span>
+                              <span className={styles.pTitle}>{t.productTitle}</span>
+                            </span>
+                          </>
+                        );
+                        return t.productHref
+                          ? <Link href={t.productHref} className={styles.product}>{inner}</Link>
+                          : <div className={styles.product}>{inner}</div>;
+                      })()}
+                    </div>
+                  </article>
+                ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

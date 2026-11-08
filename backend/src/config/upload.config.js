@@ -112,6 +112,20 @@ export const uploadOpenSectionImages = multer({
 	},
 }).any();
 
+// Founder banner images (desktop + mobile), capped at 8 MB each
+export const uploadFounderImages = multer({
+	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 2 },
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+		if (allowedMimes.includes(file.mimetype)) cb(null, true);
+		else cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
+	},
+}).fields([
+	{ name: "desktopImage", maxCount: 1 },
+	{ name: "mobileImage", maxCount: 1 },
+]);
+
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {
 	return new Promise((resolve, reject) => {

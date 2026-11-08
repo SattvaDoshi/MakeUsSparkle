@@ -1,11 +1,11 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
-import UpperNav from '@/components/ui/UpperNav';
 import CartBanner from '@/components/cart/CartBanner';
 
 // ─── Gift Box Options (Cart level) ──────────────────────────────────────────
@@ -125,10 +125,9 @@ export default function CartPage() {
   return (
     <>
       <style>{`
-       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Jost:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --beige: #fbf8f3; --beige-surface: #f5efe6; --beige-dk: #ede5d5; --beige-dkr: #dcd0bc;
+  --beige: #ffffff; --beige-surface: #f5efe6; --beige-dk: #ede5d5; --beige-dkr: #dcd0bc;
   --olive-900: #1a1f0d; --olive-800: #2a3315; --olive-700: #38451c; --olive-600: #4a5b25;
   --olive-500: #5c7030; --olive-400: #7a8e3c; --olive-200: #c4cc9a; --olive-50: #f2f5e8;
   --gold: #c9a84c; --gold-lt: #eedfa0; --gold-bg: rgba(201,168,76,.12);
@@ -139,7 +138,7 @@ export default function CartPage() {
 
 .cp-root {
   min-height: 100vh;
-  background: var(--beige);
+  background: #ffffff;
   font-family: 'Jost', sans-serif;
   color: var(--ink);
   overflow-x: clip;
@@ -437,10 +436,10 @@ export default function CartPage() {
       `}</style>
 
       <div className="cp-root">
-        <UpperNav />
 
         {/* Header Strip */}
         <div className="cp-header-wrap">
+          <Link href="/" style={{ display: 'inline-block', marginBottom: 10, fontSize: 13, color: '#6f6f64', textDecoration: 'none', letterSpacing: '.04em' }}>← Continue shopping</Link>
           {/* <div className="cp-breadcrumb">
             <Link href="/">Home</Link>
             <span>/</span>
@@ -492,7 +491,7 @@ export default function CartPage() {
 
                   {savings > 0 && (
                     <div className="cp-savings-strip">
-                      <span>🎉</span>
+                      <span><Em c="🎉" /></span>
                       <span>You are saving ₹{savings.toLocaleString('en-IN')} on this order!</span>
                     </div>
                   )}
@@ -543,7 +542,7 @@ export default function CartPage() {
 
                               {giftPrice > 0 && (
                                 <div className="cp-gift-math-badge">
-                                  🎁 ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
+                                  <Em c="🎁" /> ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
                                 </div>
                               )}
                             </div>
@@ -610,7 +609,7 @@ export default function CartPage() {
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 20 }}>
                                   {(item as any).band?.image ? (
                                     <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
-                                  ) : <span>🪡</span>}
+                                  ) : <span><Em c="🪡" /></span>}
                                   {(item as any).band.name}
                                 </span>
                               )}
@@ -694,12 +693,12 @@ export default function CartPage() {
                                 className="cp-giftbox-img"
                               />
                             ) : (
-                              <div className="cp-giftbox-icon-box">🎁</div>
+                              <div className="cp-giftbox-icon-box"><Em c="🎁" /></div>
                             )}
                             <div className="cp-giftbox-body">
                               <div className="cp-giftbox-top">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <span className="cp-giftbox-badge">🎁 Gift Packaging Added</span>
+                                  <span className="cp-giftbox-badge"><Em c="🎁" /> Gift Packaging Added</span>
                                   <span className="cp-giftbox-title">
                                     {item.giftBoxDetails?.heading || 'Premium Gift Box'}
                                   </span>
@@ -899,7 +898,7 @@ export default function CartPage() {
 
                   {activeGift && (
                     <div className="cp-summary-row">
-                      <span>🎁 {activeGift.title}</span>
+                      <span><Em c="🎁" /> {activeGift.title}</span>
                       <span>₹{activeGift.price}</span>
                     </div>
                   )}
@@ -923,19 +922,19 @@ export default function CartPage() {
                 {/* Trust and Assurance Strip */}
                 <div className="cp-trust-strip">
                   <div className="cp-trust-item">
-                    <span>💎</span>
+                    <span><Em c="💎" /></span>
                     <span>Certified Anti-Tarnish Finish</span>
                   </div>
                   <div className="cp-trust-item">
-                    <span>🚚</span>
+                    <span><Em c="🚚" /></span>
                     <span>Free Delivery on ₹999+</span>
                   </div>
                   <div className="cp-trust-item">
-                    <span>🔄</span>
+                    <span><Em c="🔄" /></span>
                     <span>Easy 7-Day Exchange</span>
                   </div>
                   <div className="cp-trust-item">
-                    <span>🔒</span>
+                    <span><Em c="🔒" /></span>
                     <span>100% Secure Checkout</span>
                   </div>
                 </div>

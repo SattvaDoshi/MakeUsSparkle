@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
-import UpperNav from '@/components/ui/UpperNav';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -114,10 +113,9 @@ export default function AffiliatePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
 
         :root {
-          --bg:       #f5f2eb;
+          --bg:       #ffffff;
           --surf:     #ffffff;
           --bdr:      #e0d8c8;
           --bdr2:     #c9bfa8;
@@ -345,7 +343,6 @@ export default function AffiliatePage() {
       `}</style>
 
       <div className="aff-page">
-        <UpperNav />
 
         {/* HERO */}
         <div className="aff-hero" style={{ marginTop: 45 }}>

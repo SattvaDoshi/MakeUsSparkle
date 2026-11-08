@@ -1,4 +1,6 @@
 'use client';
+import { BannerSkeleton } from './Skeletons';
+import { safeHref } from '@/lib/safeUrl';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -60,7 +62,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
               tag: b.tag || '',
               headline: b.headline || '',
               cta: b.cta || 'Shop Now',
-              href: b.link || '#',
+              href: safeHref(b.link) || '#',
               imgDesktop: b.image || '',
               imgAlt: b.headline || 'Promo Banner',
               textSide: (b.textSide as 'left' | 'right') || 'right',
@@ -116,7 +118,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   const trackShift = slideIndex * (50 + (10 / 100)); // approximate — refined via CSS var
 
   if (loading && banners.length === 0) {
-    return <div style={{ height: "400px", display: "flex", justifyContent: "center", alignItems: "center" }}>Loading...</div>;
+    return <BannerSkeleton />;
   }
 
   if (banners.length === 0) {
@@ -132,7 +134,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
           --gold-pale: #f5e6b8;
           --olive-dark: #1e2710;
           --white: #ffffff;
-          --bg: #fafaf7;
+          --bg: #ffffff;
           --card-gap: 1.25rem;
           --card-radius: 10px;
         }
@@ -518,13 +520,15 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
                   style={{ transitionDelay: `${idx * 0.1}s` }}
                   aria-label={`${b.tag} — ${b.cta}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    className="bs-card-img"
-                    src={b.imgDesktop}
-                    alt={b.imgAlt || "Promotional banner"}
-                    loading={idx === 0 ? 'eager' : 'lazy'}
-                  />
+                  {b.imgDesktop ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="bs-card-img"
+                      src={b.imgDesktop}
+                      alt={b.imgAlt || "Promotional banner"}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                    />
+                  ) : null}
 
                   <div className={`bs-card-scrim${b.textSide === 'left' ? ' left' : ''}`} />
 

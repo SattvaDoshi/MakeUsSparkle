@@ -1,0 +1,38 @@
+/* Shared loading skeletons. Same sizes as the real sections so nothing jumps when content arrives. */
+.sk {
+  background: linear-gradient(90deg, #eeede8 25%, #f8f7f3 50%, #eeede8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.section { --edge: 40px; background: #fff; overflow: hidden; }
+.inner { max-width: 1360px; margin: 0 auto; padding: 0 var(--edge); }
+.head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+.eyebrow { height: 11px; width: 120px; border-radius: 4px; }
+.title { height: clamp(30px, 4vw, 48px); width: min(380px, 70%); border-radius: 6px; }
+
+.row { display: flex; gap: 20px; overflow: hidden; }
+.card { flex: 0 0 248px; display: flex; flex-direction: column; gap: 10px; }
+.media { aspect-ratio: 4 / 5; border-radius: 10px; }
+.line { height: 13px; border-radius: 4px; }
+
+.wide { flex: 1 1 0; min-width: 0; aspect-ratio: 4 / 3; border-radius: 14px; }
+.tall { flex: 1 1 0; min-width: 0; aspect-ratio: 3 / 4; border-radius: 14px; }
+.band { width: 100%; height: clamp(300px, 36vw, 520px); }
+
+.circles { display: flex; gap: 28px; overflow: hidden; }
+.circle { flex: 0 0 auto; width: 120px; height: 120px; border-radius: 50%; }
+
+@media (max-width: 1023px) { .section { --edge: 28px; } .card { flex-basis: 224px; } }
+@media (max-width: 639px) {
+  .section { --edge: 18px; }
+  .row { gap: 14px; }
+  .card { flex-basis: 168px; }
+  .wide { flex-basis: 80%; aspect-ratio: 4 / 3; }
+  .tall { flex-basis: 62%; }
+  .band { height: clamp(320px, 95vw, 480px); }
+  .circles { gap: 16px; }
+  .circle { width: 92px; height: 92px; }
+}
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }

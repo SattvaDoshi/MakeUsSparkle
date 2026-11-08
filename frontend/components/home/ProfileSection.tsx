@@ -1,6 +1,7 @@
 
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -457,12 +458,12 @@ export function LegacyProfileSection() {
                   <span className="pf-reward-how-pts">+{POINTS_PER_REVIEW} pts</span>
                 </div>
                 <div className="pf-reward-how-row">
-                  <span className="pf-reward-how-icon">🛍</span>
+                  <span className="pf-reward-how-icon"><Em c="🛍" /></span>
                   <span>Every purchase</span>
                   <span className="pf-reward-how-pts">+10 pts</span>
                 </div>
                 <div className="pf-reward-how-row">
-                  <span className="pf-reward-how-icon">🎂</span>
+                  <span className="pf-reward-how-icon"><Em c="🎂" /></span>
                   <span>Birthday bonus</span>
                   <span className="pf-reward-how-pts">+100 pts</span>
                 </div>
@@ -1149,7 +1150,7 @@ export default function ProfileSection() {
                             </div>
                             {(item.giftBox || item.giftBoxDetails) && (
                               <div className="pf-order-item-gift">
-                                🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
+                                <Em c="🎁" /> {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
                               </div>
                             )}
                             {item.reviewed && (
@@ -1381,7 +1382,6 @@ export default function ProfileSection() {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
 

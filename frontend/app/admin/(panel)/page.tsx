@@ -19,6 +19,9 @@ import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
 import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
 import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
+import AdminWatchBuyTab from "./_components/tabs/AdminWatchBuyTab";
+import AdminFounderTab from "./_components/tabs/AdminFounderTab";
+import AdminFaqTab from "./_components/tabs/AdminFaqTab";
 import AdminCombosTab from "./_components/tabs/AdminCombosTab";
 import AdminExitSurveysTab from "./_components/tabs/AdminExitSurveysTab";
 import AdminShippingTab from "./_components/tabs/AdminShippingTab";
@@ -275,13 +278,16 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection" | "watchBuy" | "founder" | "faq";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "categories", label: "Categories" },
 	{ key: "newArrivals", label: "New Arrivals" },
 	{ key: "openSection", label: "Open Section" },
+	{ key: "watchBuy", label: "Watch & Buy" },
+	{ key: "founder", label: "Founder Message" },
+	{ key: "faq", label: "FAQs" },
 	{ key: "combos", label: "Combos" },
 	{ key: "users", label: "Users" },
 	{ key: "orders", label: "Orders" },
@@ -740,6 +746,7 @@ export default function AdminDashboardPage() {
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
 		if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
 		if (tab === "openSection") await Promise.all([loadProducts(), loadOpenSection()]);
+		if (tab === "watchBuy") await loadProducts();
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
 			if (tab === "surveys") await loadSurveys();
 		} catch (error) {
@@ -1468,6 +1475,9 @@ export default function AdminDashboardPage() {
 			setModalMode("edit");
 			setModalKind("charm");
 		}} onDelete={handleDeleteCharm} />;
+	if (activeTab === "founder") return <AdminFounderTab onError={setError} onNotice={setNotice} />;
+	if (activeTab === "faq") return <AdminFaqTab onError={setError} onNotice={setNotice} />;
+	if (activeTab === "watchBuy") return <AdminWatchBuyTab products={products} onError={setError} onNotice={setNotice} />;
 	if (activeTab === "newArrivals") return <AdminNewArrivalsTab
 		form={newArrivalsForm}
 		products={products}

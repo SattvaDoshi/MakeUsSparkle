@@ -1,5 +1,7 @@
 
 "use client";
+
+import { StyleSkeleton } from "./Skeletons";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -33,12 +35,21 @@ export default function ShopByStyle() {
   const [loading, setLoading] = useState(true);
   // show only backend-provided styles; do not fall back to local templates
   const styles: StyleItem[] = dynamicStyles;
+  // Swiper can only loop seamlessly when it has clearly more slides than fit on
+  // screen. With a handful of wide coverflow cards it silently disables loop, so
+  // repeat the list until there are enough.
+  const withImages = styles.filter((card) => Boolean(card.img));
+  const loopSlides: StyleItem[] = (() => {
+    if (withImages.length < 2) return withImages;
+    let out = withImages;
+    while (out.length < 10) out = [...out, ...withImages];
+    return out;
+  })();
 
   // Fetch catalog
   useEffect(() => {
     let alive = true;
     // eslint-disable-next-line no-console
-    console.log("StyleSection effect running, selected gender:", gender);
     
     Promise.all([
       fetchCatalogStyles(),
@@ -98,13 +109,9 @@ export default function ShopByStyle() {
         const filtered = mapped.filter((m) => genderMatches(m.gender, gender));
         // debug logs to help diagnose empty state
         // eslint-disable-next-line no-console
-        console.log("StyleSection — api:", api);
         // eslint-disable-next-line no-console
-        console.log("StyleSection — mapped:", mapped);
         // eslint-disable-next-line no-console
-        console.log("StyleSection — selected gender:", gender);
         // eslint-disable-next-line no-console
-        console.log("StyleSection — filtered:", filtered);
 
         // show only backend data (no local fallbacks)
         setDynamicStyles(filtered as StyleItem[]);
@@ -119,10 +126,10 @@ export default function ShopByStyle() {
   
   // If we've finished loading and there are no styles, hide the whole section
   if (!loading && styles.length === 0) return null;
+  if (loading && styles.length === 0) return <StyleSkeleton />;
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
 
         .sbs {
           background: #ffffff;
@@ -275,7 +282,8 @@ export default function ShopByStyle() {
             preventClicks={false}
             preventClicksPropagation={false}
             // enable loop only if there are at least 2 slides
-            loop={styles.length > 1}
+            loop={loopSlides.length > 1}
+            loopAdditionalSlides={2}
             coverflowEffect={{
               rotate: 15,
               stretch: 0,
@@ -294,9 +302,9 @@ export default function ShopByStyle() {
             modules={[EffectCoverflow, Navigation, Autoplay]}
             className="styleSwiper"
           >
-            {styles.filter(card => Boolean(card.img)).map((card) => (
+            {loopSlides.map((card, idx) => (
               <SwiperSlide
-                key={card.id}
+                key={`${card.id}-${idx}`}
                 className="swiper-slide-custom"
               >
                 <Link
@@ -316,16 +324,6 @@ export default function ShopByStyle() {
               </SwiperSlide>
             ))}
           </Swiper>
-
-          {/* Debug helper: show backend data when no styles render */}
-          {styles.length === 0 && (
-            <div style={{ padding: 16, textAlign: "center", color: "#666" }}>
-              <strong>No styles to show.</strong>
-              <div style={{ marginTop: 8, fontSize: 12, whiteSpace: "pre-wrap", textAlign: "left", maxWidth: 800, margin: "8px auto" }}>
-                {JSON.stringify(dynamicStyles, null, 2)}
-              </div>
-            </div>
-          )}
 
           {/* Custom Navigation Arrows */}
           <div className="custom-swiper-button-prev">❮</div>

@@ -33,7 +33,6 @@ export function GenderProvider({ children }: { children: ReactNode }) {
     const storedGender = window.localStorage.getItem("selectedGender");
     if (storedGender) {
       // eslint-disable-next-line no-console
-      console.log("GenderProvider: loaded selectedGender from localStorage:", storedGender);
       setGenderState(storedGender);
     }
   }, []);
@@ -78,13 +77,11 @@ export function GenderProvider({ children }: { children: ReactNode }) {
 
   const setGender = (nextGender: Gender) => {
     // eslint-disable-next-line no-console
-    console.log("GenderProvider.setGender ->", nextGender);
     setGenderState(nextGender);
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("selectedGender", nextGender);
       // eslint-disable-next-line no-console
-      console.log("GenderProvider: stored selectedGender:", nextGender);
     }
   };
 

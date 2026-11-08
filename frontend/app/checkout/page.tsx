@@ -1,11 +1,11 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart, GIFT_OPTIONS } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import ExitIntent from '@/components/cart/ExitIntent';
-import UpperNav from '@/components/ui/UpperNav';
 import { apiRequest } from '@/lib/api';
 
 const PAYMENT_METHODS = [
@@ -46,7 +46,11 @@ export default function CheckoutPage() {
   const [showExpressPopup, setShowExpressPopup] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'standard' | 'express'>('standard');
 
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
+  const needsLogin = !authLoading && !isAuthenticated;
+  useEffect(() => {
+    if (needsLogin) window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } }));
+  }, [needsLogin]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
@@ -171,7 +175,12 @@ export default function CheckoutPage() {
       const newAddresses = res?.addresses || [...(user?.addresses || []), payload];
       setSelectedAddressIndex(Math.max(0, newAddresses.length - 1));
       setAddressForm({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' });
-    } catch (err) { console.error(err); alert('Failed to save address.'); }
+    } catch (err) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : '';
+      if (/auth|token/i.test(msg)) { window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } })); setAddressError('Please sign in again to save your address.'); }
+      else alert('Failed to save address.');
+    }
     finally { setAddressBusy(false); }
   };
 
@@ -332,8 +341,7 @@ export default function CheckoutPage() {
     return (
       <>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Sans:wght@400;500;600;700&display=swap');
-          .ck-s{min-height:100vh;background:#f5f0e8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;font-family:'DM Sans',sans-serif;text-align:center}
+          .ck-s{min-height:100vh;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;font-family:'DM Sans',sans-serif;text-align:center}
           .ck-s-icon{font-size:64px;margin-bottom:20px;animation:pop .5s cubic-bezier(.34,1.56,.64,1)}
           @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
           .ck-s-title{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:#1a3a1a;margin-bottom:8px}
@@ -341,7 +349,7 @@ export default function CheckoutPage() {
           .ck-s-btn{padding:14px 40px;background:#2d5a27;color:white;border:none;border-radius:50px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
         `}</style>
         <div className="ck-s">
-          <div className="ck-s-icon">✅</div>
+          <div className="ck-s-icon"><Em c="✅" /></div>
           <h1 className="ck-s-title">Order Placed!</h1>
           <p className="ck-s-sub">Your order is confirmed. You&apos;ll receive a confirmation email shortly.</p>
           <Link href="/" className="ck-s-btn">Continue Shopping</Link>
@@ -365,13 +373,12 @@ export default function CheckoutPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .ck-root {
           min-height: 100vh;
-          background: #f5f0e8;
+          background: #ffffff;
           font-family: 'DM Sans', sans-serif;
           color: #0f1a0f;
           margin-top: 60px;
@@ -710,7 +717,7 @@ export default function CheckoutPage() {
       {showExpressPopup && (
         <div className="ck-popup-overlay" onClick={() => setShowExpressPopup(false)}>
           <div className="ck-popup" onClick={e => e.stopPropagation()}>
-            <div className="ck-popup-icon">⚡</div>
+            <div className="ck-popup-icon"><Em c="⚡" /></div>
             <h2 className="ck-popup-title">Express Delivery</h2>
             <p className="ck-popup-body">
               Delivered in <strong>2–3 days</strong> (Metro Cities) or <strong>3–4 days</strong> (Rest of India) at <strong>₹110</strong>.
@@ -736,15 +743,25 @@ export default function CheckoutPage() {
 
       <div className="ck-root">
         <ExitIntent />
-        <UpperNav />
 
         {savings > 0 && (
           <div className="ck-savings-strip">
-            🎉 You&apos;re saving <strong style={{ marginLeft: 3 }}>₹{savings.toLocaleString('en-IN')}</strong> on this order
+            <Em c="🎉" /> You&apos;re saving <strong style={{ marginLeft: 3 }}>₹{savings.toLocaleString('en-IN')}</strong> on this order
           </div>
         )}
 
-        <div className="ck-body">
+        {needsLogin && (
+          <div style={{ maxWidth: 440, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, margin: '0 0 8px' }}>Sign in to continue</h2>
+            <p style={{ color: '#6f6f64', margin: '0 0 20px' }}>We need your account to save your address and place the order. Your cart is safe.</p>
+            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } }))}
+              style={{ padding: '14px 28px', borderRadius: 999, border: 0, background: '#2a4736', color: '#fff', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', fontSize: 12, cursor: 'pointer' }}>
+              Sign in / Sign up
+            </button>
+          </div>
+        )}
+
+        <div className="ck-body" style={needsLogin ? { display: 'none' } : undefined}>
           <div className="ck-layout">
 
             {/* ── LEFT COLUMN ── */}
@@ -884,7 +901,7 @@ export default function CheckoutPage() {
                 {/* Cart-level payment constraint notice */}
                 {cartPaymentConstraint !== 'cod_allowed' && (
                   <div style={{ margin: '0 0 4px', padding: '10px 16px', background: '#fdf6e3', borderLeft: '3px solid #c9a84c', borderRadius: '0 6px 6px 0', fontSize: 12, color: '#7a5c10', lineHeight: 1.5 }}>
-                    <strong>⚠️ Payment restriction applies:</strong>{' '}
+                    <strong><Em c="⚠" /> Payment restriction applies:</strong>{' '}
                     {cartPaymentConstraint === 'prepaid_only'
                       ? <>Full online payment is required for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. COD &amp; Partial COD are disabled.</>  
                       : <>Partial COD is mandatory for <strong>{constraintProducts.slice(0, 2).join(', ')}{constraintProducts.length > 2 ? ` +${constraintProducts.length - 2} more` : ''}</strong>. Full COD is disabled.</> 
@@ -944,7 +961,7 @@ export default function CheckoutPage() {
                       tabIndex={0}
                       onKeyDown={e => e.key === 'Enter' && handleDeliveryTypeChange(opt.id)}
                     >
-                      <div className="ck-dc-icon">{opt.icon}</div>
+                      <div className="ck-dc-icon"><Em c={opt.icon} /></div>
                       <div className="ck-dc-label">{opt.label}</div>
 
                       {/* Metro block */}
@@ -968,7 +985,7 @@ export default function CheckoutPage() {
                 {deliveryType === 'express' && (
                   <div className="ck-express-schedule-note">
                     <div className="ck-es-header">
-                      <span className="ck-es-icon">⏰</span>
+                      <span className="ck-es-icon"><Em c="⏰" /></span>
                       <strong>Express Dispatch Schedule</strong>
                     </div>
                     <ul className="ck-es-list">
@@ -980,7 +997,7 @@ export default function CheckoutPage() {
 
                 {/* Free shipping banner — full width inside panel */}
                 <div className="ck-free-ship">
-                  <span className="ck-free-ship-icon">🎁</span>
+                  <span className="ck-free-ship-icon"><Em c="🎁" /></span>
                   <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
                 </div>
               </div>
@@ -1011,7 +1028,7 @@ export default function CheckoutPage() {
                           </span>
                           {(item as any).band?.name && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 6px', borderRadius: 12 }}>
-                              🪡 {(item as any).band.name}
+                              <Em c="🪡" /> {(item as any).band.name}
                             </span>
                           )}
                           {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
@@ -1047,7 +1064,7 @@ export default function CheckoutPage() {
                           color: 'var(--olive-900)',
                         }}
                       >
-                        <span>🎁</span>
+                        <span><Em c="🎁" /></span>
                         <span style={{ fontWeight: 600 }}>{item.giftBoxDetails?.heading || 'Premium Gift Box'}</span>
                         <span style={{ color: 'var(--olive-700)', marginLeft: 'auto', fontWeight: 600 }}>
                           +₹{item.giftBoxDetails?.price ?? 50}
@@ -1086,13 +1103,13 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <div className="ck-row">
-                    <div className="ck-row-label">⚡ Express Delivery</div>
+                    <div className="ck-row-label"><Em c="⚡" /> Express Delivery</div>
                     <span className="ck-row-value">₹110</span>
                   </div>
                 )}
                 {isGift && activeGift && (
                   <div className="ck-row">
-                    <div className="ck-row-label">🎁 {activeGift.title}</div>
+                    <div className="ck-row-label"><Em c="🎁" /> {activeGift.title}</div>
                     <span className="ck-row-value">₹{activeGift.price}</span>
                   </div>
                 )}

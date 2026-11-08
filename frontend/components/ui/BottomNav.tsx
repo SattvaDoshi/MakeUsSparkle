@@ -20,8 +20,8 @@
     return (
       <>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
 
+          @media (min-width: 1024px) { .bnav { display: none !important; } }
           .btab {
             display: flex;
             flex-direction: column;
@@ -79,7 +79,7 @@
           }
         `}</style>
 
-        <nav style={{
+        <nav className="bnav" aria-label="Bottom navigation" style={{
           position: "fixed",
           bottom: 0,
           left: 0,

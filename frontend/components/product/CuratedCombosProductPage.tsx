@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import {
   useState,
   useEffect,
@@ -9,7 +10,6 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
-import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
 import type { ReviewData } from '@/lib/catalogApi';
@@ -17,14 +17,14 @@ import { CharmSelector, ChainSelector, type ChainOption } from './CharmProductDe
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
-  { value: 'happy_mothers_day', label: '💐 Happy Mother\'s Day' },
-  { value: 'happy_birthday', label: '🎂 Happy Birthday' },
-  { value: 'i_am_sorry', label: '🙏 I\'m Sorry' },
-  { value: 'congratulations', label: '🎉 Congratulations' },
-  { value: 'thank_you', label: '🤍 Thank You' },
-  { value: 'i_love_you', label: '❤️ I Love You' },
-  { value: 'get_well_soon', label: '🌸 Get Well Soon' },
-  { value: 'merry_christmas', label: '🎄 Merry Christmas' },
+  { value: 'happy_mothers_day', label: 'Happy Mother\'s Day' },
+  { value: 'happy_birthday', label: 'Happy Birthday' },
+  { value: 'i_am_sorry', label: 'I\'m Sorry' },
+  { value: 'congratulations', label: 'Congratulations' },
+  { value: 'thank_you', label: 'Thank You' },
+  { value: 'i_love_you', label: 'I Love You' },
+  { value: 'get_well_soon', label: 'Get Well Soon' },
+  { value: 'merry_christmas', label: 'Merry Christmas' },
 ];
 
 /* ─────────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ function ComboAccordionItem({ emoji, label, children, open, onToggle }: { emoji:
   return (
     <div className={`combo-acc-item${open ? ' combo-acc-item--open' : ''}`}>
       <button className="combo-acc-head" onClick={onToggle} aria-expanded={open}>
-        <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
+        <span className="combo-acc-head-left"><span className="combo-acc-emoji"><Em c={emoji} /></span>{label}</span>
         <span className="combo-acc-chevron">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
         </span>
@@ -369,7 +369,7 @@ function ComboPolicySection({ description }: { description?: string }) {
       <ComboAccordionItem emoji="🚚" label="Shipping Policy" open={open === 'shipping'} onToggle={() => toggle('shipping')}>
         <div className="cpol">
           <div>
-            <p className="cpol-h">🌍 Where we ship</p>
+            <p className="cpol-h"><Em c="🌍" /> Where we ship</p>
             <p>
               We deliver across <strong>India</strong> through our website. For <strong>international orders</strong>,
               contact us on WhatsApp <a href="https://wa.me/918356939586">+91 8356939586</a> or{' '}
@@ -378,7 +378,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">📦 Rates and timelines</p>
+            <p className="cpol-h"><Em c="📦" /> Rates and timelines</p>
             <div className="cpol-table-wrap">
               <table className="cpol-table">
                 <thead>
@@ -391,14 +391,14 @@ function ComboPolicySection({ description }: { description?: string }) {
               </table>
             </div>
             <div className="cpol-note">
-              💝 <strong>Free Standard Shipping</strong> on orders above ₹999.<br />
-              💵 <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping).
+              <Em c="💝" /> <strong>Free Standard Shipping</strong> on orders above ₹999.<br />
+              <Em c="💵" /> <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping).
               Business days count from the day after you order.
             </div>
           </div>
 
           <div>
-            <p className="cpol-h">🚀 Dispatch</p>
+            <p className="cpol-h"><Em c="🚀" /> Dispatch</p>
             <ul>
               <li><span><strong>Standard:</strong> dispatched within 2 business days.</span></li>
               <li><span><strong>Express:</strong> orders placed before 11:00 PM are dispatched the same day.</span></li>
@@ -406,7 +406,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">📍 Tracking and changes</p>
+            <p className="cpol-h"><Em c="📍" /> Tracking and changes</p>
             <p>
               Get updates via <strong>WhatsApp, SMS and Email</strong>, or track under{' '}
               <strong>Profile → Track Order</strong>. Address or item changes are only possible{' '}
@@ -422,11 +422,11 @@ function ComboPolicySection({ description }: { description?: string }) {
       <ComboAccordionItem emoji="🔄" label="Returns, Refunds & Exchange" open={open === 'returns'} onToggle={() => toggle('returns')}>
         <div className="cpol">
           <div className="cpol-alert">
-            🔒 <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.
+            <Em c="🔒" /> <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.
           </div>
 
           <div>
-            <p className="cpol-h">💵 Cancellations and changes</p>
+            <p className="cpol-h"><Em c="💵" /> Cancellations and changes</p>
             <ul>
               <li><span><strong>COD orders</strong> can be cancelled only before our team processes them.</span></li>
               <li>
@@ -440,7 +440,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">🔄 Exchange for damaged or wrong items</p>
+            <p className="cpol-h"><Em c="🔄" /> Exchange for damaged or wrong items</p>
             <ul>
               <li><span>Report within <strong>2–3 days</strong> of delivery.</span></li>
               <li>
@@ -455,7 +455,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">💸 Refunds</p>
+            <p className="cpol-h"><Em c="💸" /> Refunds</p>
             <ul>
               <li><span><strong>Out of stock:</strong> if an approved exchange item is unavailable, you get a full refund to your original payment method.</span></li>
               <li><span><strong>Delayed delivery:</strong> refund if your order has not arrived within 30 days of dispatch due to courier issues.</span></li>
@@ -481,7 +481,7 @@ function ComboEstimatedDelivery() {
           { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
         ].map(opt => (
           <div key={opt.label} className="combo-delivery-card">
-            <div className="combo-delivery-icon">{opt.icon}</div>
+            <div className="combo-delivery-icon"><Em c={opt.icon} /></div>
             <div className="combo-delivery-opt-label">{opt.label}</div>
             <div className="combo-delivery-tier">
               <div className="combo-delivery-tier-label">Metro Cities</div>
@@ -496,7 +496,7 @@ function ComboEstimatedDelivery() {
         ))}
       </div>
       <div className="combo-delivery-freebar">
-        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
+        <span style={{ fontSize: 18, flexShrink: 0 }}><Em c="🎁" /></span>
         <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
       </div>
     </div>
@@ -2098,10 +2098,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
 
         :root {
-          --bg:       #f5f2eb;
+          --bg:       #ffffff;
           --surf:     #ffffff;
           --bdr:      #e0d8c8;
           --bdr2:     #c9bfa8;
@@ -2124,7 +2123,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           /* variables used by CharmSelector / ChainSelector (shared components) */
           --olive-900:#1a1f0d; --olive-600:#3d4a22; --olive-500:#5a6b2e;
           --olive-400:#7a8e3c; --olive-200:#c4cc9a; --olive-100:#e4e8cc; --olive-50:#f2f4e8;
-          --beige:#f5f0e8; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
+          --beige:#ffffff; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
           --mist:rgba(30,35,16,.45);
 
           --container: 1180px;
@@ -2685,7 +2684,6 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
       `}</style>
 
       <div className="page">
-        <UpperNav />
 
         <div className="hero">
           <div className="hero-eyebrow">

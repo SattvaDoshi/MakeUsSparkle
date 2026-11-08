@@ -129,8 +129,7 @@
 //   return (
 //     <>
 //       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Nunito:wght@300;400;500;600;700&display=swap');
-
+//
 //         :root {
 //           --ctc-cream:  #faf8f3;
 //           --ctc-white:  #ffffff;
@@ -419,7 +418,6 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
-import UpperNav from '@/components/ui/UpperNav';
 import { fetchCharmItems, type CharmItemData } from '@/lib/catalogApi';
 
 interface ProductColor {
@@ -764,10 +762,9 @@ const categoryLabel = (parentCategory ?? '')
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
 
         :root {
-          --beige:#f5f0e8; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
+          --beige:#ffffff; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
           --olive-900:#1a1f0d; --olive-800:#252d12; --olive-600:#3d4a22;
           --olive-500:#5a6b2e; --olive-400:#7a8e3c; --olive-200:#c4cc9a;
           --olive-100:#e4e8cc; --olive-50:#f2f4e8;
@@ -1012,7 +1009,6 @@ const categoryLabel = (parentCategory ?? '')
       `}</style>
 
       <div className="cpdp">
-        <UpperNav />
         <div className="cpdp-layout" style={{ paddingTop: '45px' }}>
 
           {/* ── Gallery ── */}

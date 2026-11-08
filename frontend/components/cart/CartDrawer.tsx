@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
@@ -42,10 +43,9 @@ export default function CartDrawer() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap');
 
         :root {
-          --beige:     #f5f0e8;
+          --beige:     #ffffff;
           --beige-dk:  #ede5d5;
           --beige-dkr: #d9cdb8;
           --olive-900: #1a1f0d;
@@ -336,7 +336,7 @@ export default function CartDrawer() {
 
                         {giftPrice > 0 && (
                           <div className="di-gift-pill">
-                            🎁 ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
+                            <Em c="🎁" /> ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
                           </div>
                         )}
 
@@ -378,7 +378,7 @@ export default function CartDrawer() {
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 12 }}>
                               {(item as any).band?.image ? (
                                 <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                              ) : <span>🪡</span>}
+                              ) : <span><Em c="🪡" /></span>}
                               {(item as any).band.name}
                             </span>
                           )}
@@ -501,13 +501,13 @@ export default function CartDrawer() {
                               flexShrink: 0,
                             }}
                           >
-                            🎁
+                            <Em c="🎁" />
                           </div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--olive-900)' }}>
-                              🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
+                              <Em c="🎁" /> {item.giftBoxDetails?.heading || 'Premium Gift Box'}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
                               +₹{giftPrice}

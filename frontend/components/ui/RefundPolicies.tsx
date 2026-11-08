@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useState } from 'react';
 
 interface PolicySection {
@@ -114,14 +115,14 @@ const refundSections: PolicySection[] = [
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--rp-green-600)', marginBottom: 6 }}>
-          📦 Approved Exchanges
+          <Em c="📦" /> Approved Exchanges
         </p>
         <p>For exchanges approved due to our error, make you sparkle will cover <strong>all shipping charges</strong>.</p>
       </div>
       <div style={{ height: 1, background: 'var(--rp-green-100)' }} />
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--rp-green-600)', marginBottom: 6 }}>
-          🔁 Prepaid Re-delivery
+          <Em c="🔁" /> Prepaid Re-delivery
         </p>
         <p>If a prepaid order is returned because the customer was unavailable or did not accept the package, a new delivery attempt can be made — however, the customer must <strong>pay the shipping charges again</strong>.</p>
       </div>
@@ -136,21 +137,21 @@ const refundSections: PolicySection[] = [
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--rp-green-600)', marginBottom: 6 }}>
-          📦 Out of Stock
+          <Em c="📦" /> Out of Stock
         </p>
         <p>If an exchange is approved but the item is no longer available, we will issue a <strong>full refund</strong> to your original payment method.</p>
       </div>
       <div style={{ height: 1, background: 'var(--rp-green-100)' }} />
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--rp-green-600)', marginBottom: 6 }}>
-          🕐 Extended Delivery Delay
+          <Em c="🕐" /> Extended Delivery Delay
         </p>
         <p>If your order has not arrived within <strong>30 days of dispatch</strong> due to courier issues, we will issue a refund.</p>
       </div>
       <div style={{ height: 1, background: 'var(--rp-green-100)' }} />
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--rp-green-600)', marginBottom: 6 }}>
-          ✨ Exceptional Cases
+          <Em c="✨" /> Exceptional Cases
         </p>
         <p>We may issue a refund sooner in exceptional cases, provided the customer <strong>reaches out to us directly</strong>.</p>
       </div>
@@ -164,7 +165,7 @@ function AccordionSection({ section, open, onToggle }: { section: PolicySection;
     <div className={`rp-acc-item${open ? ' rp-acc-item--open' : ''}`}>
       <button className="rp-acc-head" onClick={onToggle}>
         <span className="rp-acc-head-left">
-          <span className="rp-acc-icon">{section.icon}</span>
+          <span className="rp-acc-icon"><Em c={section.icon} /></span>
           <span className="rp-acc-label">{section.title}</span>
           {section.badge && <span className="rp-acc-badge">{section.badge}</span>}
         </span>
@@ -187,10 +188,9 @@ export default function RefundPolicies() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
 
         :root {
-          --rp-beige: #f5f0e8;
+          --rp-beige: #ffffff;
           --rp-beige-dk: #ede5d5;
           --rp-beige-dkr: #d9cdb8;
           --rp-green-50: #f0f5ec;
@@ -523,7 +523,7 @@ export default function RefundPolicies() {
         <div className="rp-content">
           {/* Summary banner */}
           <div className="rp-summary-banner">
-            <div className="rp-summary-banner-icon">📌</div>
+            <div className="rp-summary-banner-icon"><Em c="📌" /></div>
             <div>
               <div className="rp-summary-banner-title">Quick Summary</div>
               <div className="rp-summary-banner-body">

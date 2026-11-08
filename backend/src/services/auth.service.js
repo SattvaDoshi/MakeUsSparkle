@@ -5,6 +5,7 @@ import User from "../models/user.model.js";
 import emailService from "./email.service.js";
 import couponService from "./coupon.service.js";
 import affiliateService from "./affiliate.service.js";
+import { getJwtSecret } from "../config/jwt.js";
 
 class AuthService {
 	signToken(user) {
@@ -14,7 +15,7 @@ class AuthService {
 				role: user.role,
 				email: user.email,
 			},
-			process.env.JWT_SECRET || "dev-secret",
+			getJwtSecret(),
 			{ expiresIn: "7d" }
 		);
 	}
@@ -215,7 +216,7 @@ class AuthService {
 
 	async verifyEmail(token) {
 		try {
-			const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+			const decoded = jwt.verify(token, getJwtSecret());
 			const user = await User.findByIdAndUpdate(decoded.sub, { emailVerified: true }, { returnDocument: "after" });
 
 			return {

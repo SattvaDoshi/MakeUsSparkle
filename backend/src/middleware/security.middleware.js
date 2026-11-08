@@ -28,6 +28,25 @@ export function rejectOperatorQuery(req, res, next) {
 	next();
 }
 
+/**
+ * Request bodies must not carry Mongo operators ({"email": {"$ne": null}}) or dotted/$ keys. This is how a
+ * login/reset lookup gets turned into "match any user". Checked recursively, on every route.
+ */
+export function rejectOperatorBody(req, res, next) {
+	const bad = (v, depth = 0) => {
+		if (depth > 8) return true;
+		if (Array.isArray(v)) return v.some((x) => bad(x, depth + 1));
+		if (v && typeof v === "object") {
+			return Object.keys(v).some((k) => k.startsWith("$") || k.includes(".") || bad(v[k], depth + 1));
+		}
+		return false;
+	};
+	if (req.body && bad(req.body)) {
+		return res.status(400).json({ success: false, message: "Invalid request body" });
+	}
+	next();
+}
+
 const PRIVATE_KEYS = new Set(["costPrice"]);
 const stripPrivate = (key, value) => (PRIVATE_KEYS.has(key) ? undefined : value);
 

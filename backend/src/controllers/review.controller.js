@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Review from "../models/review.model.js";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
@@ -149,6 +150,16 @@ export const addComboReview = async (req, res) => {
 
 		if (!rating || !body) {
 			return res.status(400).json({ success: false, message: "Missing required fields" });
+		}
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({ success: false, message: "Invalid combo" });
+		}
+		const ratingNum = Number(rating);
+		if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+			return res.status(400).json({ success: false, message: "Rating must be 1 to 5" });
+		}
+		if (typeof body !== "string" || body.trim().length === 0 || body.length > 2000) {
+			return res.status(400).json({ success: false, message: "Review must be 1 to 2000 characters" });
 		}
 
 		const existingReview = await Review.findOne({ user: userId, combo: id });

@@ -40,14 +40,14 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
 	return (
 		<>
-			<div className={hideChrome ? undefined : "has-bottom-nav"}>
+			<div className={hideChrome || pathname.startsWith("/products/") ? undefined : "has-bottom-nav"}>
 				{!hideChrome && <UpperNav />}
 				{children}
 				{!hideChrome && <div className="footer-wrap"><Footer /></div>}
 			</div>
-			{!hideChrome && <BottomNav />}
+			{!hideChrome && !pathname.startsWith("/products/") && <BottomNav />}
 			{!hideChrome && <WhatsAppButton />}
-			<LoginPopup />
+			<LoginPopup autoOpen={!hideChrome} />
 			<CartDrawer />
 			<ConfettiManager />
 		</>

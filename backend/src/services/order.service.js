@@ -5,6 +5,8 @@ import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
 import inventoryService from "./inventory.service.js";
+import Coupon from "../models/coupon.model.js";
+import { priceOrder } from "./pricing.service.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {
@@ -102,16 +104,21 @@ class OrderService {
 				}
 			}
 
+			// Every amount comes from the server's own pricing, never from the request body.
+			const priced = await priceOrder(userId, orderData);
 			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
-			// Handle reward points redemption
-			const rewardPointsToRedeem = Number(orderData.rewardPointsRedeemed || 0);
+			// Handle reward points redemption (atomic: only deducts if the balance still covers it)
+			const rewardPointsToRedeem = priced.rewardPointsRedeemed;
 			if (rewardPointsToRedeem > 0) {
-				const userDoc = await User.findById(userId).select("rewardPoints");
-				if (!userDoc || (userDoc.rewardPoints || 0) < rewardPointsToRedeem) {
-					throw new Error("Insufficient reward points");
-				}
-				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
+				const deducted = await User.findOneAndUpdate(
+					{ _id: userId, rewardPoints: { $gte: rewardPointsToRedeem } },
+					{ $inc: { rewardPoints: -rewardPointsToRedeem } }
+				);
+				if (!deducted) throw new Error("Insufficient reward points");
+			}
+			if (priced.discountCode) {
+				await Coupon.updateOne({ code: priced.discountCode }, { $inc: { usedCount: 1 } });
 			}
 
 			const userDoc = await User.findById(userId);
@@ -125,10 +132,10 @@ class OrderService {
 			const order = await Order.create({
 				user: userId,
 				items: orderItems,
-				totalAmount: orderData.totalAmount,
-				advanceAmount: Number(orderData.advanceAmount || 0),
-				balanceAmount: Number(orderData.balanceAmount || 0),
-				paidAmount: Number(orderData.paidAmount || 0),
+				totalAmount: priced.totalAmount,
+				advanceAmount: priced.advanceAmount,
+				balanceAmount: priced.balanceAmount,
+				paidAmount: 0,
 				shippingAddress,
 				billingAddress,
 				address: shippingAddress,
@@ -136,27 +143,27 @@ class OrderService {
 				giftMessage: orderData.giftMessage,
 				status: "placed",
 				paymentStatus: "pending",
-				paymentMode: orderData.paymentMode || "COD",
-				deliveryType: orderData.deliveryType || "standard",
-				discountAmount: orderData.discountAmount || 0,
-				discountCode: orderData.discountCode,
-				autoDiscountAmount: orderData.autoDiscountAmount || 0,
+				paymentMode: priced.paymentMode,
+				deliveryType: priced.deliveryType,
+				discountAmount: priced.discountAmount,
+				discountCode: priced.discountCode || undefined,
+				autoDiscountAmount: priced.autoDiscountAmount,
 				rewardPointsRedeemed: rewardPointsToRedeem,
-				appliedOffers: orderData.appliedOffers || [],
+				appliedOffers: priced.appliedOffers,
 			});
 
 			// Deduct inventory for all items in the order
 			await inventoryService.deductOrderInventory(order);
 
-			if (orderData.appliedOffers && orderData.appliedOffers.length > 0) {
-				const offerIds = orderData.appliedOffers.map((o) => o.id);
+			if (priced.appliedOffers.length > 0) {
+				const offerIds = priced.appliedOffers.map((o) => o.id);
 				await Offer.updateMany(
 					{ _id: { $in: offerIds } },
 					{ $inc: { usedCount: 1 } }
 				);
 			}
 
-			if (orderData.paymentMode === 'COD') {
+			if (priced.paymentMode === 'COD') {
 				const populatedOrder = await order.populate([
 					{ path: "user" },
 					{ path: "items.product", select: "title" },

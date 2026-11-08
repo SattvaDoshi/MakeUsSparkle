@@ -148,55 +148,6 @@
   60% { transform: scale(0.92); } 100% { transform: scale(1); }
 }
 
-/* Add to cart: bar slides up on hover-capable devices, "+" button on touch */
-.quick {
-  position: absolute;
-  z-index: 4;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.96);
-  transition: transform 0.3s var(--ease), background 0.2s, color 0.2s, opacity 0.2s;
-}
-.quick:hover:not(:disabled) { background: var(--forest); color: #fff; }
-.quick:disabled { cursor: not-allowed; opacity: 0.6; }
-.quickAdded { background: var(--forest); color: #fff; }
-
-.quickBar {
-  display: none;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  height: 42px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  transform: translateY(calc(100% + 14px));
-}
-.quickPlus {
-  right: 2px;
-  bottom: 2px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 1px solid #d9d6c9;
-}
-.quickPlus.quickAdded { background: var(--forest); border-color: var(--forest); }
-.quickPlus:hover:not(:disabled) { border-color: var(--forest); }
-@media (hover: hover) and (min-width: 1024px) {
-  .quickBar { display: block; }
-  .quickPlus { display: none; }
-  .card:hover .quickBar, .card:focus-within .quickBar { transform: translateY(0); }
-  /* the add-to-cart bar takes over the bottom of the image, so the rating steps aside */
-  .card:hover .ratingBadge, .card:focus-within .ratingBadge { opacity: 0; transform: translateY(4px); }
-}
 
 /* ───────── Body ───────── */
 .body {
@@ -275,6 +226,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chipRotate { animation: none; }
-  .img, .quick, .wish { transition: none; }
+  .img, .wish { transition: none; }
   .wishPop { animation: none; }
 }

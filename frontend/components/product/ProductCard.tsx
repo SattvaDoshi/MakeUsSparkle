@@ -2,9 +2,7 @@
 
 import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/lib/wishlistContext';
-import { useCart } from '@/lib/cartContext';
 import { cdnImage } from '@/lib/cdn';
 import styles from './ProductCard.module.css';
 
@@ -12,8 +10,7 @@ import styles from './ProductCard.module.css';
  * ProductCard — the single product card used across the site
  * (homepage carousels, listing grids, offers, related products).
  *
- * White, image-led, 4:5 media. Second image on hover, add-to-cart bar on
- * desktop hover / "+" button on touch, wishlist, discount + label chips,
+ * White, image-led, 4:5 media. Second image on hover, wishlist, label chips,
  * rating. The whole card is one stretched link, so it is
  * keyboard/screen-reader friendly and middle-click works.
  *
@@ -77,10 +74,7 @@ export default function ProductCard({
     name, price, originalPrice, badge, images, colors, perCharmPrice, charmPieceOptions,
   } = product;
 
-  const router = useRouter();
   const { toggleItem, isWished } = useWishlist();
-  const { addItem } = useCart();
-  const [added, setAdded] = useState(false);
   const [wishPop, setWishPop] = useState(false);
 
   const wished = isWished(product.id);
@@ -103,11 +97,6 @@ export default function ProductCard({
   const shownPrice = isFromPrice
     ? price + (charmPieceOptions?.[0] ?? 1) * (perCharmPrice as number)
     : price;
-
-  /* Products that need a choice (size / customisation) go to the product page
-     instead of being added blindly. */
-  const needsOptions =
-    isFromPrice || Boolean(product.allowCustomization) || (product.sizes?.length ?? 0) > 0;
 
   const slug = (product.href ?? '').split('/').pop() || String(product.id);
   const target = productLinkBase ? `${productLinkBase}/${slug}` : product.href || `/products/${slug}`;
@@ -132,41 +121,6 @@ export default function ProductCard({
     setWishPop(true);
     setTimeout(() => setWishPop(false), 500);
   };
-
-  const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
-    stop(e);
-    if (isOutOfStock) return;
-    if (needsOptions) { router.push(target); return; }
-    addItem(
-      {
-        id: String(product.id),
-        sourceId: product.sourceId ?? String(product.id),
-        name,
-        price,
-        originalPrice: originalPrice ?? null,
-        image: primary ?? '',
-        color: colors?.[0]?.label ?? 'Default',
-        colorHex: colors?.[0]?.hex ?? '#000000',
-        sku: product.sku ?? `SKU-${product.id}`,
-        href: product.href ?? '',
-        category: product.category,
-        categoryId: product.categoryId,
-        subCategoryId: product.subCategoryId,
-        styleId: product.styleId,
-      },
-      true,
-    );
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
-
-  const ctaLabel = isOutOfStock
-    ? 'Sold Out'
-    : added
-      ? 'Added ✓'
-      : needsOptions
-        ? 'Select Options'
-        : 'Add to Cart';
 
   /* One rotating chip on the image cycles through every tag that applies:
      product label, offer, low stock, free shipping, new arrival. */
@@ -221,7 +175,6 @@ export default function ProductCard({
             <span className={`${styles.chip} ${styles.chipSale}`}>Sold out</span>
           ) : (
             <>
-              {discount ? <span className={`${styles.chip} ${styles.chipSale}`}>−{discount}%</span> : null}
               {activeTag && (
                 <span
                   key={activeTag.key}
@@ -258,17 +211,6 @@ export default function ProductCard({
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </button>
-
-        {/* Desktop: bar slides up on hover */}
-        <button
-          type="button"
-          className={`${styles.quick} ${styles.quickBar}${added ? ` ${styles.quickAdded}` : ''}`}
-          onClick={handleAdd}
-          disabled={isOutOfStock}
-          aria-label={`${ctaLabel}: ${name}`}
-        >
-          {ctaLabel}
-        </button>
       </div>
 
       <div className={styles.body}>
@@ -283,21 +225,6 @@ export default function ProductCard({
           {discount && originalPrice ? <span className={styles.was}>{formatINR(originalPrice)}</span> : null}
           {discount ? <span className={styles.off}>{discount}% off</span> : null}
         </div>
-
-        {/* Touch: always-visible round button, beside the price */}
-        <button
-          type="button"
-          className={`${styles.quick} ${styles.quickPlus}${added ? ` ${styles.quickAdded}` : ''}`}
-          onClick={handleAdd}
-          disabled={isOutOfStock}
-          aria-label={`${ctaLabel}: ${name}`}
-        >
-          {added ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-          )}
-        </button>
       </div>
     </article>
   );

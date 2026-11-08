@@ -1,6 +1,6 @@
 import express from "express";
 import morgan from "morgan";
-import { securityHeaders, rejectOperatorQuery, hidePrivateFields } from "./middleware/security.middleware.js";
+import { securityHeaders, rejectOperatorQuery, rejectOperatorBody, hidePrivateFields } from "./middleware/security.middleware.js";
 import { globalLimiter } from "./middleware/rateLimit.js";
 
 import authRoutes from "./routes/auth.routes.js";
@@ -117,6 +117,7 @@ app.use((req, res, next) => {
 
 app.use(globalLimiter);
 app.use(rejectOperatorQuery);
+app.use(rejectOperatorBody);
 app.use(hidePrivateFields);
 
 app.get("/", (req, res) => {

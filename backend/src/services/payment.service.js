@@ -7,6 +7,8 @@ import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId } from "./orderItemSelection.service.js";
 import affiliateService from "./affiliate.service.js";
 import inventoryService from "./inventory.service.js";
+import Coupon from "../models/coupon.model.js";
+import { priceOrder } from "./pricing.service.js";
 
 class PaymentService {
 	async resolveProductId(item = {}) {
@@ -19,18 +21,17 @@ class PaymentService {
 	 */
 	async createPaymentOrder(userId, orderData) {
 		try {
-			if (!orderData.amount || orderData.amount <= 0) {
-				throw new Error("Invalid amount");
-			}
-
 			if (!phonePeClient) {
 				throw new Error("PhonePe credentials are not configured");
 			}
 
-			const paymentMode = orderData.paymentMode || "ONLINE";
-			const totalAmount = Number(orderData.totalAmount || orderData.amount || 0);
-			const advanceAmount = Number(orderData.amount || 0);
-			const balanceAmount = Math.max(totalAmount - advanceAmount, 0);
+			// What the shopper owes is decided here, from the catalog — never from the request body.
+			const priced = await priceOrder(userId, orderData);
+			if (priced.paymentMode === "COD") throw new Error("Use the cash-on-delivery order flow for COD.");
+			const paymentMode = priced.paymentMode;
+			const totalAmount = priced.totalAmount;
+			const advanceAmount = priced.advanceAmount;
+			const balanceAmount = priced.balanceAmount;
 
 			// Unique per-transaction merchant order ID
 			const merchantOrderId = `MUS_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
@@ -67,13 +68,16 @@ class PaymentService {
 			);
 
 			// Handle reward points redemption
-			const rewardPointsToRedeem = Number(orderData.rewardPointsRedeemed || 0);
+			const rewardPointsToRedeem = priced.rewardPointsRedeemed;
 			if (rewardPointsToRedeem > 0) {
-				const userDoc = await User.findById(userId).select("rewardPoints");
-				if (!userDoc || (userDoc.rewardPoints || 0) < rewardPointsToRedeem) {
-					throw new Error("Insufficient reward points");
-				}
-				await User.findByIdAndUpdate(userId, { $inc: { rewardPoints: -rewardPointsToRedeem } });
+				const deducted = await User.findOneAndUpdate(
+					{ _id: userId, rewardPoints: { $gte: rewardPointsToRedeem } },
+					{ $inc: { rewardPoints: -rewardPointsToRedeem } }
+				);
+				if (!deducted) throw new Error("Insufficient reward points");
+			}
+			if (priced.discountCode) {
+				await Coupon.updateOne({ code: priced.discountCode }, { $inc: { usedCount: 1 } });
 			}
 
 			const userDoc = await User.findById(userId);
@@ -100,6 +104,11 @@ class PaymentService {
 				status: "placed",
 				paymentStatus: "pending",
 				paymentMode,
+				deliveryType: priced.deliveryType,
+				discountAmount: priced.discountAmount,
+				discountCode: priced.discountCode || undefined,
+				autoDiscountAmount: priced.autoDiscountAmount,
+				appliedOffers: priced.appliedOffers,
 				rewardPointsRedeemed: rewardPointsToRedeem,
 			});
 
@@ -123,9 +132,22 @@ class PaymentService {
 	 * Called after the user returns from PhonePe's checkout page.
 	 * Verifies payment status with PhonePe and updates the order.
 	 */
-	async verifyPayment(paymentData) {
+	async verifyPayment(paymentData, userId) {
 		try {
-			const { orderId, merchantOrderId } = paymentData;
+			const { orderId, merchantOrderId } = paymentData || {};
+			if (typeof orderId !== "string" || typeof merchantOrderId !== "string") {
+				throw new Error("Invalid payment reference");
+			}
+
+			// The PhonePe transaction must belong to THIS order, and the order to THIS user. Otherwise a ₹1
+			// payment could be replayed against any other unpaid order.
+			const target = await Order.findById(orderId);
+			if (!target || String(target.user) !== String(userId) || target.phonePeOrderId !== merchantOrderId) {
+				throw new Error("Order not found");
+			}
+			if (target.paymentStatus === "paid" || target.paymentStatus === "partial_paid") {
+				return { success: true, message: "Payment already verified", order: target };
+			}
 
 			if (!phonePeClient) {
 				throw new Error("PhonePe credentials are not configured");
@@ -147,9 +169,13 @@ class PaymentService {
 				throw new Error(`Payment not completed. Current state: ${paymentState || "UNKNOWN"}`);
 			}
 
-			const existingOrder = await Order.findById(orderId);
-			if (!existingOrder) {
-				throw new Error("Order not found");
+			const existingOrder = target;
+
+			// PhonePe reports the amount actually collected (paise); it must cover what this order asked for.
+			const expectedPaise = Math.round(Number(existingOrder.advanceAmount || existingOrder.totalAmount || 0) * 100);
+			const paidPaise = Number(statusResponse?.amount);
+			if (Number.isFinite(paidPaise) && paidPaise < expectedPaise) {
+				throw new Error("Paid amount does not match the order amount");
 			}
 
 			const isPartialCod = existingOrder.paymentMode === "PARTIAL_COD";

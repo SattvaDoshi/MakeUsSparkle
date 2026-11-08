@@ -36,6 +36,11 @@ const P: Record<string, ReactNode> = {
   star: <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z" />,
   needle: <><path d="m19 5-14 14" /><path d="M17 3c2 0 4 2 4 4l-3 1-2-2z" /></>,
   flower: <><circle cx="12" cy="12" r="3" /><path d="M12 9V3M12 15v6M9 12H3M15 12h6M9.9 9.9 5.6 5.6M14.1 14.1l4.3 4.3M14.1 9.9l4.3-4.3M9.9 14.1l-4.3 4.3" /></>,
+  doc: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>,
+  ruler: <><path d="m3 17 14-14 4 4L7 21z" /><path d="m7 13 2 2M10 10l2 2M13 7l2 2" /></>,
+  help: <><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" /></>,
+  tag: <><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
+  plane: <path d="M17.8 19.2 16 11l3.5-3.5a2.1 2.1 0 0 0-3-3L13 8 4.8 6.2l-1.4 1.4 6.4 3.4-3.5 3.5-2.9-.5L2 15.4l3.6 1 1 3.6 1.5-1.4-.5-2.9 3.5-3.5 3.4 6.4z" />,
   tree: <><path d="m12 3-6 8h3l-5 7h16l-5-7h3z" /><path d="M12 18v3" /></>,
 };
 
@@ -45,7 +50,7 @@ const KEY: Record<string, string> = {
   "💬": "message", "✉": "mail", "📬": "mail", "💍": "ring", "📿": "necklace", "🛍": "bag", "🎂": "cake",
   "🔍": "search", "🗓": "calendar", "🛒": "cart", "🎭": "smile", "🌍": "globe", "📦": "box", "💵": "cash",
   "💸": "cash", "🚀": "rocket", "📍": "pin", "📌": "pin", "✏": "pencil", "⭐": "star", "🪡": "needle",
-  "💐": "flower", "🌸": "flower", "🎄": "tree", "💝": "heart", "🤍": "heart", "❤": "heart", "🙏": "heart",
+  "💐": "flower", "🌸": "flower", "🎄": "tree", "📄": "doc", "📏": "ruler", "❓": "help", "🏷": "tag", "✈": "plane", "💝": "heart", "🤍": "heart", "❤": "heart", "🙏": "heart",
 };
 
 export function hasEm(c: string) { return !!KEY[c.replace(/️/g, "")]; }

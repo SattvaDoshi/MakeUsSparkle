@@ -23,3 +23,6 @@
 }
 @media print { .wa { display: none; } }
 @media (prefers-reduced-motion: reduce) { .wa { animation: none; transition: none; } }
+
+/* Product page: lift above the sticky add-to-cart bar */
+@media (max-width: 1023px) { :global(body.has-sticky-atc) .wa { bottom: 92px; } }

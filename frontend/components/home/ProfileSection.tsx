@@ -1,6 +1,7 @@
 
 'use client';
 
+import { INDIAN_STATES } from '@/lib/indianStates';
 import Em from "@/components/ui/Em";
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1277,12 +1278,15 @@ export default function ProfileSection() {
                     />
                   </label>
                   <label className="pf-label">State *
-                    <input
+                    <select
                       className="pf-input"
                       value={addressForm.state}
                       onChange={(event) => setAddressForm((prev) => ({ ...prev, state: event.target.value }))}
-                      placeholder="State"
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {addressForm.state && !(INDIAN_STATES as readonly string[]).includes(addressForm.state) && <option value={addressForm.state}>{addressForm.state}</option>}
+                      {INDIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+                    </select>
                   </label>
                   {error && (
                     <div id="pf-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', fontWeight: 600 }}>

@@ -1,4 +1,6 @@
 'use client';
+import SafeHtml from '@/components/ui/SafeHtml';
+import { PdpSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -8,17 +10,15 @@ import { useWishlist } from '@/lib/wishlistContext';
 import Link from 'next/link';
 import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
 import { useAuth } from '@/lib/authContext';
+import { PDP_THEME_CSS } from './pdp/pdpTheme';
+import PdpGallery from './pdp/PdpGallery';
+import PdpReviews from './pdp/PdpReviews';
+import PdpStickyBar from './pdp/PdpStickyBar';
+import pdpStyles from './pdp/pdp.module.css';
+import { useStickyColumns } from './pdp/useStickyColumns';
+import { GiftBoxUpsell, CompleteTheLookStrip, AccordionItem, EstimatedDeliveryBlock, type AccordionData } from './ProductDetailPage';
 
 /* ─── Types ─── */
-interface AccordionData {
-  id: string;
-  emoji: string;
-  label: string;
-  content: string;
-  isHtml?: boolean;
-  linkHref?: string;
-  linkLabel?: string;
-}
 
 interface ProductColor {
   label: string;
@@ -141,94 +141,6 @@ function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClo
 }
 
 /* ─── Premium Gift Box Upsell ─── */
-function GiftBoxUpsell({
-  added, onToggle, image, heading, description, price,
-}: {
-  added: boolean;
-  onToggle: () => void;
-  image: string;
-  heading: string;
-  description: string;
-  price: number;
-}) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'stretch',
-      border: `1.5px solid ${added ? 'rgba(201,168,76,.55)' : 'rgba(61,74,34,.13)'}`,
-      borderRadius: 14, overflow: 'hidden',
-      background: added ? 'linear-gradient(135deg,rgba(201,168,76,.07),rgba(245,240,232,.8))' : 'white',
-      transition: 'border-color .25s, background .25s',
-      marginBottom: 0,
-    }}>
-      {/* Square image, left side */}
-      <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={heading}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(160deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 60%)',
-          pointerEvents: 'none',
-        }} />
-      </div>
-
-      {/* Text content, right side */}
-      <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minWidth: 0 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          background: 'rgba(201,168,76,.13)', border: '1px solid rgba(201,168,76,.3)',
-          borderRadius: 50, padding: '2px 9px', width: 'fit-content',
-          fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
-          color: '#8c6b20',
-        }}>
-          7 in 10 gifters choose this
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', letterSpacing: '.01em', lineHeight: 1.2 }}>
-            {heading}
-          </p>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹{price}</span>
-        </div>
-
-        <p style={{ fontSize: 10, fontWeight: 400, color: '#101010', lineHeight: 1.5, letterSpacing: '.02em' }}>
-          {description}
-        </p>
-
-        <button
-          onClick={onToggle}
-          style={{
-            marginTop: 6,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            alignSelf: 'flex-start',
-            fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
-            color: added ? 'var(--beige)' : 'var(--olive-600)',
-            background: added ? 'var(--olive-600)' : 'transparent',
-            border: `1.5px solid ${added ? 'var(--olive-600)' : 'rgba(61,74,34,.25)'}`,
-            borderRadius: 50, padding: '6px 14px',
-            cursor: 'pointer', transition: 'all .22s',
-            fontFamily: 'Jost, sans-serif',
-          }}
-        >
-          {added ? (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
-              Added
-            </>
-          ) : (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Add to order
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Trust badges ─── */
 const TRUST_BADGES = [
@@ -672,269 +584,12 @@ export function CharmSelector({
 }
 
 /* ─── Reviews ─── */
-function ReviewsSection({ productId, reviews, setReviews }: { productId: string; reviews: ReviewData[]; setReviews: React.Dispatch<React.SetStateAction<ReviewData[]>> }) {
-  const [visibleCount, setVisibleCount] = useState(3);
-  const [filterStar, setFilterStar] = useState<number | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [formState, setFormState] = useState<{ rating: number; body: string; images: File[] }>({ rating: 5, body: '', images: [] });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const { token } = useAuth();
-
-  const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) { setErrorMsg('You must be logged in to review.'); return; }
-    setIsSubmitting(true);
-    setErrorMsg('');
-    const res = await submitProductReview({ productId, ...formState }, token);
-    setIsSubmitting(false);
-    if (res.success && res.review) {
-      setReviews([res.review, ...reviews]);
-      setShowForm(false);
-      setFormState({ rating: 5, body: '', images: [] });
-    } else {
-      setErrorMsg(res.message || 'Failed to submit review.');
-    }
-  };
-
-  const totalReviews = reviews.length;
-  const avgRating = totalReviews ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
-  const ratingDist = [5, 4, 3, 2, 1].map(stars => {
-    const count = reviews.filter(r => r.rating === stars).length;
-    const pct = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
-    return { stars, count, pct };
-  });
-
-  return (
-    <div className="rev-section">
-      <div className="rev-header">
-        <div className="rev-header-line" />
-        <div className="rev-header-text">
-          <span className="rev-eyebrow">Customer Stories</span>
-          <h2 className="rev-title">What people are saying</h2>
-        </div>
-        <div className="rev-header-line" />
-      </div>
-
-      <div className="rev-summary">
-        <div className="rev-summary-score">
-          <span className="rev-big-num">{avgRating}</span>
-          <div className="rev-big-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
-          <span className="rev-total-cnt">Based on {totalReviews} reviews</span>
-        </div>
-        <div className="rev-bars">
-          {ratingDist.map(d => (
-            <button key={d.stars} className={`rev-bar-row${filterStar === d.stars ? ' rev-bar-row--active' : ''}`} onClick={() => setFilterStar(filterStar === d.stars ? null : d.stars)}>
-              <span className="rev-bar-label">{d.stars}★</span>
-              <div className="rev-bar-track"><div className="rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
-              <span className="rev-bar-count">{d.count}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rev-controls" style={{ justifyContent: 'space-between' }}>
-        <div>
-          {filterStar !== null && <button className="rev-clear-filter" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only &nbsp;×</button>}
-        </div>
-        {!showForm && (
-          <button className="rev-helpful-btn" style={{ background: 'var(--olive-600)', color: 'white' }} onClick={() => setShowForm(true)}>
-            Write a Review
-          </button>
-        )}
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} style={{ background: 'white', padding: 24, borderRadius: 18, border: '1px solid rgba(61,74,34,.07)', marginBottom: 20, animation: 'fadeUp .3s ease both' }}>
-          <h3 style={{ fontSize: 16, color: 'var(--olive-900)', marginBottom: 16 }}>Write a Review</h3>
-          {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-            {[1, 2, 3, 4, 5].map(star => (
-              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
-            ))}
-          </div>
-          <textarea required placeholder="Write your comments..." value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={4} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--beige-dkr)', borderRadius: 8, marginBottom: 16, fontSize: 16, outline: 'none', resize: 'vertical' }} />
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive-600)', fontWeight: 600, border: '1px solid var(--olive-600)', padding: '6px 12px', borderRadius: 4 }}>
-              <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
-                if (e.target.files) setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
-              }} />
-              + Add Photos
-            </label>
-            {formState.images.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                {formState.images.map((file, idx) => (
-                  <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
-                    <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="submit" disabled={isSubmitting} style={{ background: 'var(--olive-600)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{isSubmitting ? 'Submitting...' : 'Submit Review'}</button>
-            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'transparent', color: 'var(--mist)', border: 'none', padding: '10px 24px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-          </div>
-        </form>
-      )}
-
-      {visible.length === 0 && !showForm && (
-        <p className="rev-empty">
-          {totalReviews === 0 ? 'No reviews yet — be the first to share your experience.' : <>No reviews match this filter. <button className="rev-clear-link" onClick={() => setFilterStar(null)}>Clear filter</button></>}
-        </p>
-      )}
-
-      <div className="rev-list">
-        {visible.map((r, i) => (
-          <div key={r._id} className="rev-card" style={{ animationDelay: `${i * 0.07}s` }}>
-            <div className="rev-card-top">
-              <div className="rev-avatar" style={{ background: '#c9a84c22', color: '#c9a84c' }}>{r.user?.firstName?.[0] || 'A'}</div>
-              <div className="rev-meta">
-                <div className="rev-meta-row">
-                  <span className="rev-name">{r.user?.firstName} {r.user?.lastName}</span>
-                  {r.isVerifiedPurchase && <span className="rev-verified"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
-                </div>
-                <div className="rev-meta-row" style={{ marginTop: 3 }}>
-                  <span className="rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                  <span className="rev-date">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                </div>
-              </div>
-            </div>
-            <p className="rev-card-body">{r.body}</p>
-            {r.images && r.images.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                {r.images.map((imgUrl, idx) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={idx} src={imgUrl} alt="Review attachment" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      {hasMore && <div className="rev-load-wrap"><button className="rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>Show more reviews</button></div>}
-    </div>
-  );
-}
 
 /* ─── Complete the Look ─── */
-function CompleteTheLookStrip() {
-  return (
-    <div className="ctl-strip">
-      <div className="ctl-strip-header">
-        <span className="ctl-strip-eyebrow">Complete the Look</span>
-        <span className="ctl-strip-rule" />
-      </div>
-      <div className="ctl-strip-scroll">
-        {GOES_WELL_WITH.map((item, i) => {
-          const disc = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
-          return (
-            <a key={item.id} href={item.href} className="ctl-card" style={{ animationDelay: `${i * 0.07}s` }}>
-              <div className="ctl-img-wrap">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.image} alt={item.name} className="ctl-img" />
-                <span className="ctl-disc-badge">{disc}% off</span>
-              </div>
-              <div className="ctl-card-info">
-                <p className="ctl-card-name">{item.name}</p>
-                <div className="ctl-card-price-row">
-                  <span className="ctl-card-price">₹{item.price.toLocaleString('en-IN')}</span>
-                  <span className="ctl-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Accordion (grid-rows animation: never clips when width/content changes) ─── */
-function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
-  return (
-    <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
-      <button className="acc-head" onClick={onToggle}>
-        <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
-      </button>
-      <div className="acc-body-wrap" style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 0.38s cubic-bezier(.4,0,.2,1)' }}>
-        <div style={{ overflow: 'hidden' }}>
-          <div className="acc-body">
-            {item.isHtml
-              ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
-              : item.content.split('\n').map((line, i) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
-            }
-            {item.linkHref && item.linkLabel && (
-              <Link href={item.linkHref} className="acc-policy-link">
-                {item.linkLabel}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Estimated Delivery ─── */
-function EstimatedDeliveryBlock() {
-  return (
-    <div style={{ marginTop: 16 }}>
-      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--olive-600)', marginBottom: 10 }}>
-        Estimated Delivery
-      </p>
-
-      <div className="est-grid">
-        {[
-          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
-          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
-        ].map(opt => (
-          <div key={opt.label} style={{
-            border: '1.5px solid rgba(61,74,34,.15)', borderRadius: 14,
-            padding: '14px 12px', background: 'white',
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--ink)', marginBottom: 10 }}>{opt.label}</div>
-
-            <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Metro Cities</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.metro}</div>
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Rest of India</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.rest}</div>
-            </div>
-
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)' }}>{opt.rate}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{
-        marginTop: 10, padding: '11px 14px',
-        background: 'linear-gradient(135deg, #e6f4e7, #f0faf0)',
-        border: '1.5px solid rgba(45,90,39,.22)', borderRadius: 10,
-        display: 'flex', alignItems: 'center', gap: 9,
-        fontSize: 12, fontWeight: 700, color: '#0a2e12', lineHeight: 1.4,
-      }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
-        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Sparkles ─── */
 function Sparkles({ active }: { active: boolean }) {
@@ -1145,6 +800,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [giftBoxAdded, setGiftBoxAdded] = useState(false);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
+  const galleryColRef = useRef<HTMLDivElement | null>(null);
+  const infoColRef = useRef<HTMLDivElement | null>(null);
+  const [showSticky, setShowSticky] = useState(false);
 
   const [charmData, setCharmData] = useState<{ count: number; charms: string[] }>({ count: 1, charms: [''] });
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null; uploads: string[]; globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
@@ -1434,15 +1093,16 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedColors, variants, sizeOptions, currentImages]);
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #d9cdb8', borderTopColor: '#3d4a22', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-        <p style={{ color: 'rgba(30,35,16,.5)', fontSize: 13, letterSpacing: '.08em' }}>Loading product…</p>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    </div>
-  );
+  useStickyColumns([galleryColRef, infoColRef], [product?.id]);
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setShowSticky(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [product?.id]);
+
+  if (loading) return <PdpSkeleton />;
 
   if (!product) return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16, padding: 20, textAlign: 'center' }}>
@@ -2122,68 +1782,52 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           .rev-big-num{font-size:2.6rem}
           .rev-card{padding:14px 12px}
         }
+        ${PDP_THEME_CSS}
       `}</style>
 
       <div className="pdp">
-        <div className="pdp-layout" style={{ paddingTop: '45px' }}>
+        <nav className="pdp-crumbs" aria-label="Breadcrumb">
+          <Link href="/">Home</Link><span>/</span>
+          <Link href="/categories">Shop</Link>
+          {category && <><span>/</span><span>{category}</span></>}
+          <span>/</span><span className="pdp-crumb-cur">{productName}</span>
+        </nav>
+        <div className="pdp-layout" style={{ paddingTop: 0 }}>
 
           {/* ── Gallery ── */}
-          <div className="pdp-gallery">
-            <div className="pdp-main-img-wrap">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={displayImg}
-                className="pdp-main-img"
-                src={displayImg}
-                alt={productName}
-                onError={(e) => { if (!e.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) e.currentTarget.src = FALLBACK_PRODUCT_IMAGE; }}
-              />
-              <span className="pdp-badge">{Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}</span>
-              <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-              </button>
-            </div>
-
-            {currentImages.length > 0 && (
-              <div className="pdp-thumb-row">
-                {currentImages.map((img, i) => (
-                  <button
-                    key={img}
-                    type="button"
-                    aria-label={`View image ${i + 1}`}
-                    className={`pdp-thumb${activeImg === i ? ' active' : ''}`}
-                    onClick={(e) => {
-                      setActiveImg(i);
-                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img}
-                      alt={`View ${i + 1}`}
-                      loading="lazy"
-                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="pdp-gallery" ref={galleryColRef}>
+            <PdpGallery
+              images={currentImages}
+              active={activeImg}
+              onChange={setActiveImg}
+              alt={productName}
+              soldOut={Number(currentStock) <= 0}
+              chip={discount > 0 ? `${discount}% off` : product.badge || undefined}
+              fallback={FALLBACK_PRODUCT_IMAGE}
+              wish={
+                <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                </button>
+              }
+            />
           </div>
 
           {/* ── Info ── */}
-          <div className="pdp-info">
+          <div className="pdp-info" ref={infoColRef}>
             <h1 className="pdp-name">
               {productName.split(' ').map((w, i) => i === 1 ? <em key={i}>{w} </em> : w + ' ')}
             </h1>
 
+            {(dynamicReviewCount > 0 || gender) && (
             <div className="pdp-rating">
-              <span className="pdp-stars">{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</span>
-              <span className="pdp-rating-num">{dynamicRating > 0 ? dynamicRating : 'New'}</span>
-              <span className="pdp-review-cnt">({dynamicReviewCount} reviews)</span>
+              {dynamicReviewCount > 0 && (<>
+                <span className="pdp-stars">{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</span>
+                <span className="pdp-rating-num">{dynamicRating}</span>
+                <span className="pdp-review-cnt">({dynamicReviewCount} reviews)</span>
+              </>)}
               {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: 6 }}>{gender}</span>}
             </div>
+            )}
 
             <div className="pdp-price-row">
               <span className="pdp-price">₹{totalCharmPrice.toLocaleString('en-IN')}</span>
@@ -2312,19 +1956,6 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            {/* Quantity */}
-            <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
-            <div className="pdp-qty-row">
-              <div className="pdp-qty">
-                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
-                <span className="pdp-qty-val">{qty}</span>
-                <button className="pdp-qty-btn" onClick={() => setQty(q => Math.min(stock || 99, q + 1))} aria-label="Increase quantity">+</button>
-              </div>
-              {currentStock > 0 && <span className="pdp-stock">Only {currentStock} left in stock!</span>}
-            </div>
-
-            <div className="pdp-divider" />
-
             {/* Premium Gift Box upsell — show only if giftBox is enabled in the product data */}
             {product?.giftBox?.enabled && (
               <>
@@ -2347,19 +1978,18 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             <div className="pdp-divider" />
 
             {/* CTA */}
-            <div className="pdp-cta-row">
+            <div className="pdp-cta-row" ref={ctaRef}>
               {Number(currentStock) <= 0 && (
                 <div style={{ gridColumn: '1 / -1', padding: '6px 12px', background: 'rgba(211,47,47,.08)', color: 'var(--red)', fontSize: 11, fontWeight: 700, borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                   Out of stock
                 </div>
               )}
-              <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle}>
-                <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                {wished ? 'Wished' : 'Wishlist'}
-              </button>
+              <div className="pdp-qty pdp-qty--cta" role="group" aria-label="Quantity">
+                <button type="button" className="pdp-qty-btn" aria-label="Decrease quantity" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
+                <span className="pdp-qty-val" aria-live="polite">{qty}</span>
+                <button type="button" className="pdp-qty-btn" aria-label="Increase quantity" onClick={() => setQty(q => Math.min(stock || 99, q + 1))} disabled={qty >= (stock || 99)}>+</button>
+              </div>
               <div className="pdp-btn-cart-wrap">
                 <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
                   style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
@@ -2376,6 +2006,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 {Number(currentStock) <= 0 ? 'Currently Unavailable' : 'Buy It Now'}
               </button>
             </div>
+
+            {Number(currentStock) > 0 && Number(currentStock) <= 5 && <p className="pdp-stock" style={{ marginTop: -10, marginBottom: 14 }}>Only {currentStock} left in stock!</p>}
 
             {/* Trust badges */}
             <div className="pdp-trust">
@@ -2404,7 +2036,20 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           </div>
         </div>
 
-        <ReviewsSection productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
+        <PdpReviews productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
+
+        <PdpStickyBar
+          show={showSticky}
+          image={currentImages[0] || displayImg}
+          name={productName}
+          price={totalWithGiftBox}
+          original={discount > 0 ? totalCharmOriginalPrice : null}
+          soldOut={Number(currentStock) <= 0}
+          onAdd={handleAddToCart}
+          qty={qty}
+          maxQty={stock || 99}
+          onQty={(d) => setQty(q => Math.max(1, Math.min(stock || 99, q + d)))}
+        />
       </div>
 
       {/* Error Toast */}

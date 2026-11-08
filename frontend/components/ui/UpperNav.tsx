@@ -143,7 +143,7 @@ function Results({
 
 export default function TopNav() {
   const pathname = usePathname();
-  const { itemCount } = useCart();
+  const { itemCount, openDrawer } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { gender, setGender, genders } = useGender();
 
@@ -328,10 +328,10 @@ export default function TopNav() {
             <Link href="/profile" className={`${styles.iconBtn} ${styles.desktopOnly}`} aria-label="Account">
               <UserIcon />
             </Link>
-            <Link href="/cart" className={styles.iconBtn} aria-label={`Cart${itemCount ? `, ${itemCount} items` : ""}`}>
+            <button type="button" className={styles.iconBtn} onClick={openDrawer} aria-label={`Open cart${itemCount ? `, ${itemCount} items` : ""}`}>
               <BagIcon />
               {itemCount > 0 && <span className={styles.badge}>{itemCount > 99 ? "99+" : itemCount}</span>}
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -393,9 +393,9 @@ export default function TopNav() {
                 Wishlist {wishlistCount > 0 && <span className={styles.pill}>{wishlistCount}</span>}
               </Link>
               <Link className={styles.drawerLink} href="/profile" onClick={() => setMenuOpen(false)}>Profile &amp; Orders</Link>
-              <Link className={styles.drawerLink} href="/cart" onClick={() => setMenuOpen(false)}>
+              <button type="button" className={styles.drawerLink} onClick={() => { setMenuOpen(false); openDrawer(); }}>
                 Cart {itemCount > 0 && <span className={styles.pill}>{itemCount}</span>}
-              </Link>
+              </button>
 
               <div className={styles.drawerGroupTitle}>Help</div>
               <Link className={`${styles.drawerLink} ${styles.drawerLinkSmall}`} href="/shipping-policy" onClick={() => setMenuOpen(false)}>Shipping Policy</Link>

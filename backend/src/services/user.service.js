@@ -16,10 +16,13 @@ class UserService {
 
 	async updateUserProfile(userId, updateData) {
 		try {
-			// Don't allow updating password through this endpoint
-			delete updateData.password;
+			// Whitelist: a profile edit can never touch role, rewardPoints, password, email verification, etc.
+			const allowed = {};
+			for (const key of ["name", "phone", "dob", "gender"]) {
+				if (typeof updateData?.[key] === "string") allowed[key] = updateData[key].trim();
+			}
 
-			const user = await User.findByIdAndUpdate(userId, updateData, { returnDocument: "after" }).select("-password");
+			const user = await User.findByIdAndUpdate(userId, { $set: allowed }, { returnDocument: "after", runValidators: true }).select("-password");
 
 			if (!user) {
 				throw new Error("User not found");

@@ -110,15 +110,16 @@ export default function CategorySection() {
         </div>
 
         {/* Categories */}
-        <div className={styles.tabsWrap}>
-          <div className={styles.tabs} role="tablist" aria-label="Categories">
+        <div className={`${styles.inner} ${styles.shell}`}>
+        <aside className={styles.rail}>
+          <div className={styles.tabs} role="tablist" aria-label="Categories" aria-orientation="vertical">
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <span key={i} className={`${styles.skel} ${styles.skelTab}`} aria-hidden="true" />)
               : categories.map((c, i) => {
                   const inner = (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img className={styles.thumb} src={cdnImage(c.img, 96)} alt="" width={44} height={44} loading="lazy" />
+                      <img className={styles.thumb} src={cdnImage(c.img, 160)} alt="" width={56} height={56} loading="lazy" />
                       <span>{c.name}</span>
                       {c.sub.length > 0 && <span className={styles.count}>{c.sub.length}</span>}
                     </>
@@ -134,10 +135,10 @@ export default function CategorySection() {
                   );
                 })}
           </div>
-        </div>
+        </aside>
 
         {/* Active category */}
-        <div className={styles.inner}>
+        <div className={styles.content}>
           {loading ? (
             <div className={styles.grid} style={{ paddingTop: 36 }} aria-hidden="true">
               {Array.from({ length: 8 }).map((_, i) => <div key={i} className={`${styles.skel} ${styles.skelCard}`} />)}
@@ -179,6 +180,7 @@ export default function CategorySection() {
               </div>
             </>
           )}
+        </div>
         </div>
       </section>
     </>

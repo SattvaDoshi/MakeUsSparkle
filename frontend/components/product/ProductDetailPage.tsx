@@ -1,4 +1,6 @@
 'use client';
+import SafeHtml from '@/components/ui/SafeHtml';
+import { PdpSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchProductById, fetchProductReviews, submitProductReview, type CatalogProduct, type ReviewData } from '@/lib/catalogApi';
@@ -7,9 +9,19 @@ import { useCart } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
 import { useWishlist } from '@/lib/wishlistContext';
 import Link from 'next/link';
+import { PDP_THEME_CSS } from './pdp/pdpTheme';
+import PdpGallery from './pdp/PdpGallery';
+import PdpReviews from './pdp/PdpReviews';
+import PdpShelves from './pdp/PdpShelves';
+import PdpStickyBar from './pdp/PdpStickyBar';
+import pdpStyles from './pdp/pdp.module.css';
+import Em from '@/components/ui/Em';
+
+const EMOJI_RE = /(?:[\u{1F000}-\u{1FAFF}]|[\u2705\u274C\u26A0\u2B50\u2764\u270F\u26A1\u2728\u2709\u23F1\u23F0\u2708])\uFE0F?\s?/gu;
+const stripEmoji = (html: string) => html.replace(EMOJI_RE, '');
 
 
-interface AccordionData {
+export interface AccordionData {
   id: string;
   emoji: string;
   label: string;
@@ -80,20 +92,20 @@ const TRUST_BADGES = [
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
-  { value: 'happy_mothers_day', label: '💐 Happy Mother\'s Day' },
-  { value: 'happy_birthday', label: '🎂 Happy Birthday' },
-  { value: 'i_am_sorry', label: '🙏 I\'m Sorry' },
-  { value: 'congratulations', label: '🎉 Congratulations' },
-  { value: 'thank_you', label: '🤍 Thank You' },
-  { value: 'i_love_you', label: '❤️ I Love You' },
-  { value: 'get_well_soon', label: '🌸 Get Well Soon' },
-  { value: 'merry_christmas', label: '🎄 Merry Christmas' },
-  { value: 'happy_anniversary', label: '💍 Happy Anniversary' },
-  { value: 'just_because', label: '✨ Just Because' },
+  { value: 'happy_mothers_day', label: 'Happy Mother\'s Day' },
+  { value: 'happy_birthday', label: 'Happy Birthday' },
+  { value: 'i_am_sorry', label: 'I\'m Sorry' },
+  { value: 'congratulations', label: 'Congratulations' },
+  { value: 'thank_you', label: 'Thank You' },
+  { value: 'i_love_you', label: 'I Love You' },
+  { value: 'get_well_soon', label: 'Get Well Soon' },
+  { value: 'merry_christmas', label: 'Merry Christmas' },
+  { value: 'happy_anniversary', label: 'Happy Anniversary' },
+  { value: 'just_because', label: 'Just Because' },
 ];
 
 // ─── Premium Gift Box Upsell ──────────────────────────────────────────────────
-function GiftBoxUpsell({
+export function GiftBoxUpsell({
   added, onToggle, image, heading, description, price,
 }: {
   added: boolean;
@@ -103,82 +115,36 @@ function GiftBoxUpsell({
   description: string;
   price: number;
 }) {
+  const perks = description.split(/[·•|]/).map((t) => t.trim()).filter(Boolean).slice(0, 4);
   return (
-    <div style={{
-      display: 'flex', alignItems: 'stretch',
-      border: `1.5px solid ${added ? 'rgba(201,168,76,.55)' : 'rgba(61,74,34,.13)'}`,
-      borderRadius: 14, overflow: 'hidden',
-      background: added ? 'linear-gradient(135deg,rgba(201,168,76,.07),rgba(245,240,232,.8))' : 'white',
-      transition: 'border-color .25s, background .25s',
-      marginBottom: 20,
-    }}>
-      {/* Square image, left side */}
-      <div style={{ width: '38%', aspectRatio: '1', flexShrink: 0, position: 'relative', overflow: 'hidden', background: 'var(--beige-dk)' }}>
+    <button type="button" role="checkbox" aria-checked={added} onClick={onToggle} className={`gift-card${added ? ' is-on' : ''}`}>
+      <span className="gift-img">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={heading}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(160deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 60%)',
-          pointerEvents: 'none',
-        }} />
-      </div>
-
-      {/* Text content, right side */}
-      <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minWidth: 0 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          background: 'rgba(201,168,76,.13)', border: '1px solid rgba(201,168,76,.3)',
-          borderRadius: 50, padding: '2px 9px', width: 'fit-content',
-          fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
-          color: '#8c6b20',
-        }}>
-          7 in 10 gifters choose this
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--olive-900)', letterSpacing: '.01em', lineHeight: 1.2 }}>
-            {heading}
-          </p>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)', flexShrink: 0 }}>+₹{price}</span>
-        </div>
-
-        <p style={{ fontSize: 10, fontWeight: 400, color: '#101010', lineHeight: 1.5, letterSpacing: '.02em' }}>
-          {description}
-        </p>
-
-        <button
-          onClick={onToggle}
-          style={{
-            marginTop: 6,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            alignSelf: 'flex-start',
-            fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
-            color: added ? 'var(--beige)' : 'var(--olive-600)',
-            background: added ? 'var(--olive-600)' : 'transparent',
-            border: `1.5px solid ${added ? 'var(--olive-600)' : 'rgba(61,74,34,.25)'}`,
-            borderRadius: 50, padding: '6px 14px',
-            cursor: 'pointer', transition: 'all .22s',
-            fontFamily: 'Jost, sans-serif',
-          }}
-        >
-          {added ? (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12" /></svg>
-              Added
-            </>
-          ) : (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Add to order
-            </>
-          )}
-        </button>
-      </div>
-    </div>
+        <img src={image} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+      </span>
+      <span className="gift-main">
+        <span className="gift-tag">7 in 10 gifters choose this</span>
+        <span className="gift-title-row">
+          <span className="gift-title">{heading}</span>
+          <span className="gift-price">+₹{price}</span>
+        </span>
+        {perks.length > 0 && (
+          <span className="gift-perks">
+            {perks.map((t) => (
+              <span key={t} className="gift-perk">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                {t}
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+      <span className="gift-check" aria-hidden="true">
+        {added
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+          : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>}
+      </span>
+    </button>
   );
 }
 // ─── Reviews Section ──────────────────────────────────────────────────────────
@@ -347,21 +313,29 @@ const GOES_WELL_WITH = [
   { id: 4, name: 'Charm Anklet', price: 649, originalPrice: 849, image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=400&q=80', href: '/products/charm-anklet' },
 ];
 
-function CompleteTheLookStrip() {
+export function CompleteTheLookStrip() {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const nudge = (dir: number) => scrollRef.current?.scrollBy({ left: dir * 400, behavior: 'smooth' });
   return (
-    <div className="ctl-strip">
+    <section className="ctl-strip" aria-label="Complete the look">
       <div className="ctl-strip-header">
-        <span className="ctl-strip-eyebrow">Complete the Look</span>
-        <span className="ctl-strip-rule" />
+        <div>
+          <span className="ctl-strip-eyebrow">Complete the Look</span>
+          <p className="ctl-strip-sub">Pieces that pair beautifully with this</p>
+        </div>
+        <div className="ctl-arrows">
+          <button type="button" aria-label="Scroll left" onClick={() => nudge(-1)}>‹</button>
+          <button type="button" aria-label="Scroll right" onClick={() => nudge(1)}>›</button>
+        </div>
       </div>
-      <div className="ctl-strip-scroll">
-        {GOES_WELL_WITH.map((item, i) => {
+      <div className="ctl-strip-scroll" ref={scrollRef}>
+        {GOES_WELL_WITH.map((item) => {
           const disc = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
           return (
-            <a key={item.id} href={item.href} className="ctl-card" style={{ animationDelay: `${i * 0.07}s` }}>
+            <a key={item.id} href={item.href} className="ctl-card">
               <div className="ctl-img-wrap">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.image} alt={item.name} className="ctl-img" />
+                <img src={item.image} alt={item.name} className="ctl-img" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
                 <span className="ctl-disc-badge">{disc}% off</span>
               </div>
               <div className="ctl-card-info">
@@ -375,17 +349,17 @@ function CompleteTheLookStrip() {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 
 // ─── Accordion item ───────────────────────────────────────────────────────────
-function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
+export function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: boolean; onToggle: () => void }) {
   return (
     <div className={`acc-item${open ? ' acc-item--open' : ''}`}>
-      <button className="acc-head" onClick={onToggle}>
-        <span className="acc-head-left"><span className="acc-emoji">{item.emoji}</span>{item.label}</span>
-        <span className="acc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg></span>
+      <button className="acc-head" onClick={onToggle} aria-expanded={open}>
+        <span className="acc-head-left"><span className="acc-emoji"><Em c={item.emoji} size="1em" /></span>{item.label}</span>
+        <span className="acc-chevron" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /><line className="acc-v" x1="12" y1="5" x2="12" y2="19" /></svg></span>
       </button>
       <div className="acc-body-wrap" style={{
         display: 'grid',
@@ -395,7 +369,7 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
         <div style={{ overflow: 'hidden' }}>
           <div className="acc-body">
             {item.isHtml
-              ? <div dangerouslySetInnerHTML={{ __html: item.content }} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
+              ? <SafeHtml html={item.content} style={{ lineHeight: 1.85, fontSize: 12, fontWeight: 300, color: 'var(--mist)', letterSpacing: '.03em' }} />
               : item.content.split('\n').map((line: string, i: number) => <p key={i} style={{ marginBottom: line === '' ? 8 : 0 }}>{line || '\u00A0'}</p>)
             }
             {item.linkHref && item.linkLabel && (
@@ -412,51 +386,32 @@ function AccordionItem({ item, open, onToggle }: { item: AccordionData; open: bo
 }
 
 // ─── Estimated Delivery Block ─────────────────────────────────────────────────
-function EstimatedDeliveryBlock() {
+export function EstimatedDeliveryBlock() {
+  const opts = [
+    { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 days', rest: '4–7 days' },
+    { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 days', rest: '3–4 days' },
+  ];
   return (
-    <div style={{ marginTop: 16 }}>
-      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--olive-600)', marginBottom: 10 }}>
-        Estimated Delivery
-      </p>
-
-      <div className="est-grid">
-        {[
-          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
-          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
-        ].map(opt => (
-          <div key={opt.label} style={{
-            border: '1.5px solid rgba(61,74,34,.15)', borderRadius: 14,
-            padding: '14px 12px', background: 'white',
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--ink)', marginBottom: 10 }}>{opt.label}</div>
-
-            <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Metro Cities</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.metro}</div>
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--olive-500)', marginBottom: 1 }}>Rest of India</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{opt.rest}</div>
-            </div>
-
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--olive-600)' }}>{opt.rate}</div>
+    <section className="dlv" aria-label="Estimated delivery">
+      <h3 className="dlv-title">Estimated delivery</h3>
+      <div className="dlv-table">
+        <div className="dlv-row dlv-head">
+          <span />
+          <span>Metro cities</span>
+          <span>Rest of India</span>
+          <span>Charge</span>
+        </div>
+        {opts.map((o) => (
+          <div key={o.label} className="dlv-row">
+            <span className="dlv-name"><span className="est-ico"><Em c={o.icon} size="1.1em" /></span>{o.label}</span>
+            <span className="dlv-cell" data-l="Metro cities">{o.metro}</span>
+            <span className="dlv-cell" data-l="Rest of India">{o.rest}</span>
+            <span className="dlv-rate">{o.rate}</span>
           </div>
         ))}
       </div>
-
-      <div style={{
-        marginTop: 10, padding: '11px 14px',
-        background: 'linear-gradient(135deg, #e6f4e7, #f0faf0)',
-        border: '1.5px solid rgba(45,90,39,.22)', borderRadius: 10,
-        display: 'flex', alignItems: 'center', gap: 9,
-        fontSize: 12, fontWeight: 700, color: '#0a2e12', lineHeight: 1.4,
-      }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
-        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
-      </div>
-    </div>
+      <p className="dlv-free"><Em c="🎁" size="1.1em" /><span>Free Standard shipping on orders above <strong>₹999</strong></span></p>
+    </section>
   );
 }
 
@@ -641,6 +596,30 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [errorToast, setErrorToast] = useState('');
   const [productReviews, setProductReviews] = useState<ReviewData[]>([]);
   const cartBtnRef = useRef<HTMLButtonElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  const galleryColRef = useRef<HTMLDivElement | null>(null);
+  const infoColRef = useRef<HTMLDivElement | null>(null);
+
+  // Whichever column is shorter stays pinned while the taller one scrolls. A column taller than the
+  // screen sticks by its bottom edge (negative top), so all of it can still be reached.
+  useEffect(() => {
+    const cols = [galleryColRef.current, infoColRef.current].filter(Boolean) as HTMLDivElement[];
+    if (cols.length === 0) return;
+    const apply = () => {
+      cols.forEach((el) => {
+        if (window.innerWidth < 1024) { el.style.position = ''; el.style.top = ''; return; }
+        const top = Math.min(96, window.innerHeight - el.offsetHeight - 24);
+        el.style.position = 'sticky';
+        el.style.top = `${top}px`;
+      });
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    cols.forEach((el) => ro.observe(el));
+    window.addEventListener('resize', apply);
+    return () => { ro.disconnect(); window.removeEventListener('resize', apply); };
+  }, [product?.sourceId, loading]);
 
   const [customData, setCustomData] = useState<{ wantCustom: boolean | null, uploads: string[], globalNote: string }>({ wantCustom: null, uploads: [], globalNote: '' });
   const [giftMessage, setGiftMessage] = useState<{ preset: string; customMessage: string }>({ preset: '', customMessage: '' });
@@ -936,20 +915,21 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     setActiveImg(0);
   }, []);
 
+  // Slide the sticky add-to-cart bar in once the main buttons have scrolled off the top of the screen.
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el) { setShowSticky(false); return; }
+    const io = new IntersectionObserver(([e]) => setShowSticky(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [product?.sourceId, loading, isFromCombo]);
+
   useEffect(() => { if (shipping === 'express') { /* payment locked to prepaid */ } }, [shipping, payment]);
   useEffect(() => {
     setQty(q => Math.min(q, maxSelectable));
   }, [maxSelectable]);
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #d9cdb8', borderTopColor: '#3d4a22', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-        <p style={{ color: 'rgba(30,35,16,.5)', fontSize: 13, letterSpacing: '.08em' }}>Loading product…</p>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    </div>
-  );
+  if (loading) return <PdpSkeleton />;
 
   if (!product) return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f0e8', fontFamily: 'Jost, sans-serif', gap: 16, padding: 20, textAlign: 'center' }}>
@@ -962,10 +942,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const productName = product.name || '';
   const description = product.description || '';
 
-  const dynamicAccordionItems: AccordionData[] = [
-    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: `<div style="text-align: justify; font-weight: 600; color: var(--ink);">${about.replace(/\n/g, '<br/>')}</div>`, isHtml: true }] : []),
+  const dynamicAccordionItemsRaw: AccordionData[] = [
+    ...(about ? [{ id: 'about', emoji: '💎', label: 'About the Product', content: `<div style="color: var(--ink);">${about.replace(/\n/g, '<br/>')}</div>`, isHtml: true }] : []),
     ...(description ? [{ id: 'desc', emoji: '📄', label: 'Product Description', content: description }] : []),
-    ...(product?.sizeChartImage ? [{ id: 'sizechart', emoji: '📏', label: 'Size Chart', content: `<img src="${product.sizeChartImage}" alt="Size Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="padding: 16px 0; font-size: 14px; color: var(--ink); line-height: 1.6; text-align: left; white-space: pre-wrap;">${product.sizeChartSteps ? product.sizeChartSteps : '📏 &nbsp;Tip: Measure your wrist/finger with a soft tape for the best fit.'}</div>`, isHtml: true }] : []),
+    ...(product?.sizeChartImage ? [{ id: 'sizechart', emoji: '📏', label: 'Size Chart', content: `<img src="${product.sizeChartImage}" alt="Size Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="padding: 16px 0; font-size: 14px; color: var(--ink); line-height: 1.6; text-align: left; white-space: pre-wrap;">${product.sizeChartSteps ? product.sizeChartSteps : 'Tip: Measure your wrist/finger with a soft tape for the best fit.'}</div>`, isHtml: true }] : []),
     ...(faqs.length > 0 ? [{ id: 'faq', emoji: '❓', label: 'FAQs', content: faqs.map((f: { question: string; answer: string }) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') }] : []),
     {
       id: 'shipping',
@@ -1052,6 +1032,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       linkLabel: 'Read full returns policy',
     },
   ];
+  const dynamicAccordionItems = dynamicAccordionItemsRaw.map((it) => (it.isHtml ? { ...it, content: stripEmoji(it.content) } : it));
 
   return (
     <>
@@ -1419,90 +1400,53 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           .rev-big-num{font-size:2.6rem}
           .rev-card{padding:14px 12px}
         }
+
+        ${PDP_THEME_CSS}
       `}</style>
 
       <div className="pdp">
-        <div className="pdp-layout" style={{ paddingTop: '45px' }}>
+        <nav className="pdp-crumbs" aria-label="Breadcrumb">
+          <Link href="/">Home</Link><span>/</span>
+          <Link href="/categories">Shop</Link>
+          {category && <><span>/</span><span>{category}</span></>}
+          <span>/</span><span className="pdp-crumb-cur">{productName}</span>
+        </nav>
+        <div className="pdp-layout" style={{ paddingTop: 0 }}>
 
           {/* ── Gallery ─────────────────────────────────────────────────────── */}
-          <div className="pdp-gallery">
-            <div className="pdp-main-img-wrap">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={displayImg}
-                className="pdp-main-img"
-                src={displayImg}
-                alt={productName}
-                onError={(e) => { if (!e.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) e.currentTarget.src = FALLBACK_PRODUCT_IMAGE; }}
-              />
-              {Number(currentStock) <= 0 && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(245,240,232,0.55)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backdropFilter: 'blur(1px)',
-                  zIndex: 2,
-                }}>
-                  <span style={{
-                    fontSize: 13, fontWeight: 700, letterSpacing: '.22em',
-                    textTransform: 'uppercase', color: 'var(--beige)',
-                    background: 'rgba(30,35,16,0.75)', padding: '10px 24px',
-                    borderRadius: 50,
-                  }}>
-                    Sold Out
-                  </span>
-                </div>
-              )}
-              <span className="pdp-badge">
-                {Number(currentStock) <= 0 ? 'Sold Out' : 'Best Seller'}
-              </span>
-              {!isFromCombo && (
-                <button className={`pdp-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'var(--olive-600)'} strokeWidth="1.8">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                  </svg>
+          <div className="pdp-gallery" ref={galleryColRef}>
+            <PdpGallery
+              images={currentImages}
+              active={activeImg}
+              onChange={setActiveImg}
+              alt={productName}
+              soldOut={Number(currentStock) <= 0}
+              chip={discount > 0 ? `${discount}% off` : product.badge || undefined}
+              fallback={FALLBACK_PRODUCT_IMAGE}
+              wish={!isFromCombo ? (
+                <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
                 </button>
-              )}
-            </div>
-
-            {currentImages.length > 0 && (
-              <div className="pdp-thumb-row">
-                {currentImages.map((img, i) => (
-                  <button
-                    key={img}
-                    type="button"
-                    aria-label={`View image ${i + 1}`}
-                    className={`pdp-thumb${activeImg === i ? ' active' : ''}`}
-                    onClick={(e) => {
-                      setActiveImg(i);
-                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img}
-                      alt={`View ${i + 1}`}
-                      loading="lazy"
-                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+              ) : null}
+            />
           </div>
 
           {/* ── Info ────────────────────────────────────────────────────────── */}
-          <div className="pdp-info">
-            <h1 className="pdp-name">
-              {productName.split(' ').map((w, i) => i === 1 ? <em key={i}>{w} </em> : w + ' ')}
-            </h1>
+          <div className="pdp-info" ref={infoColRef}>
+            {(dynamicReviewCount > 0 || gender) && (
+              <div className="pdp-rating" style={{ marginBottom: 8 }}>
+                {dynamicReviewCount > 0 && (
+                  <>
+                    <a href="#reviews" className="pdp-stars" style={{ textDecoration: 'none' }} aria-label={`${dynamicRating} out of 5 stars`}>{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</a>
+                    <span className="pdp-rating-num">{dynamicRating}</span>
+                    <a href="#reviews" className="pdp-review-cnt" style={{ textDecoration: 'underline' }}>({dynamicReviewCount} {dynamicReviewCount === 1 ? 'review' : 'reviews'})</a>
+                  </>
+                )}
+                {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: dynamicReviewCount > 0 ? 6 : 0 }}>{gender}</span>}
+              </div>
+            )}
 
-            <div className="pdp-rating">
-              <span className="pdp-stars">{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</span>
-              <span className="pdp-rating-num">{dynamicRating > 0 ? dynamicRating : 'New'}</span>
-              <span className="pdp-review-cnt">({dynamicReviewCount} reviews)</span>
-              {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: 6 }}>{gender}</span>}
-            </div>
+            <h1 className="pdp-name">{productName}</h1>
 
             <div className="pdp-info-top">
               <div className="pdp-price-row">
@@ -1514,9 +1458,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   </>
                 )}
               </div>
+              <p className="pdp-tax">
+                Inclusive of all taxes{computedOriginalPrice > computedPrice ? ` · You save ₹${Math.round(computedOriginalPrice - computedPrice).toLocaleString('en-IN')}` : ''}
+              </p>
               {discountTag && (
                 <div className="pdp-offer">
-                  <span className="pdp-offer-icon">🏷️</span>
+                  <span className="pdp-offer-icon"><Em c="🏷" size="1.05em" /></span>
                   <span className="pdp-offer-text">{discountTag}</span>
                 </div>
               )}
@@ -1556,33 +1503,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Quantity — hidden when viewing from a combo */}
-            {!isFromCombo && (
+            {/* Stock / limit note (the quantity stepper now lives next to Add to Cart) */}
+            {!isFromCombo && (currentStock === 0 || product?.maxQuantity || currentStock <= 10) && (
               <>
-                <p className="pdp-section-label" style={{ marginBottom: 10 }}>Quantity</p>
-                <div className="pdp-qty-row">
-                  <div className="pdp-qty">
-                    <button className="pdp-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-                    <span className="pdp-qty-val">{qty}</span>
-                    <button
-                      className="pdp-qty-btn"
-                      onClick={() => setQty(q => Math.min(maxSelectable, q + 1))}
-                      disabled={qty >= maxSelectable}
-                      style={{ opacity: qty >= maxSelectable ? 0.4 : 1, cursor: qty >= maxSelectable ? 'not-allowed' : 'pointer' }}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <span className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined }}>
-                    {currentStock === 0
-                      ? '❌ Out of Stock'
-                      : product?.maxQuantity
-                        ? `Limit: ${product.maxQuantity} per order`
-                        : currentStock <= 10
-                          ? `Only ${currentStock} left in stock!`
-                          : ''}
-                  </span>
-                </div>
+                <p className="pdp-stock" style={{ color: currentStock === 0 ? 'var(--red)' : undefined, margin: 0 }}>
+                  {currentStock === 0
+                    ? 'Out of stock'
+                    : product?.maxQuantity
+                      ? `Limit: ${product.maxQuantity} per order`
+                      : `Only ${currentStock} left in stock!`}
+                </p>
                 <div className="pdp-divider" />
               </>
             )}
@@ -1682,26 +1612,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            {/* Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
-            {!isFromCombo && product?.giftBox?.enabled && (
-              <>
-                <p className="pdp-section-label" style={{ marginBottom: 12 }}>
-                  Make it a Gift
-                </p>
-                <GiftBoxUpsell
-                  added={giftBoxAdded}
-                  onToggle={() => setGiftBoxAdded(v => !v)}
-                  image={product.giftBox?.image || GIFT_BOX_IMAGE}
-                  heading={product.giftBox?.heading || 'Premium Gift Box'}
-                  description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
-                  price={product.giftBox?.price ? Number(product.giftBox.price) : 50}
-                />
-              </>
-            )}
-
             {!isFromCombo && (
               <>
-                <CompleteTheLookStrip />
                 {allowCustomization && (
                   <>
                     <div className="pdp-divider" />
@@ -1714,7 +1626,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {isFromCombo ? (
               <div className="pdp-combo-banner">
-                <span className="pdp-combo-banner-icon">🛍️</span>
+                <span className="pdp-combo-banner-icon"><Em c="🛍" size="1.2em" /></span>
                 <div>
                   <div className="pdp-combo-banner-title">Part of your hamper</div>
                   <p className="pdp-combo-banner-text">
@@ -1729,13 +1641,13 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </div>
               </div>
             ) : (
-              <div className="pdp-cta-row">
-                <button className={`pdp-btn-wish${wished ? ' on' : ''}`} onClick={handleWishToggle} aria-label="Wishlist">
-                  <svg viewBox="0 0 24 24" fill={wished ? 'var(--beige)' : 'none'} stroke={wished ? 'none' : 'currentColor'} strokeWidth="1.8" width="16" height="16">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                  </svg>
-                  {wished ? 'Wished' : 'Wishlist'}
-                </button>
+              <div className="pdp-cta-row" ref={ctaRef}>
+                <div className="pdp-qty pdp-qty--cta" role="group" aria-label="Quantity">
+                  <button type="button" className="pdp-qty-btn" aria-label="Decrease quantity" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
+                  <span className="pdp-qty-val" aria-live="polite">{qty}</span>
+                  <button type="button" className="pdp-qty-btn" aria-label="Increase quantity" onClick={() => setQty(q => Math.min(maxSelectable, q + 1))} disabled={qty >= maxSelectable}
+                    style={{ opacity: qty >= maxSelectable ? 0.4 : 1, cursor: qty >= maxSelectable ? 'not-allowed' : 'pointer' }}>+</button>
+                </div>
                 <div className="pdp-btn-cart-wrap">
                   <button ref={cartBtnRef} className={`pdp-btn-cart${cartAnim ? ' bounce' : ''}`} onClick={handleAddToCart} disabled={Number(currentStock) <= 0}
                     style={{ opacity: Number(currentStock) <= 0 ? 0.5 : 1, cursor: Number(currentStock) <= 0 ? 'not-allowed' : 'pointer' }}
@@ -1763,6 +1675,29 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </div>
               ))}
             </div>
+
+            {/* Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
+            {!isFromCombo && product?.giftBox?.enabled && (
+              <>
+                <p className="pdp-section-label" style={{ margin: '18px 0 12px' }}>
+                  Make it a Gift
+                </p>
+                <GiftBoxUpsell
+                  added={giftBoxAdded}
+                  onToggle={() => setGiftBoxAdded(v => !v)}
+                  image={product.giftBox?.image || GIFT_BOX_IMAGE}
+                  heading={product.giftBox?.heading || 'Premium Gift Box'}
+                  description={product.giftBox?.description || 'Rigid magnetic-close box · satin ribbon · message card'}
+                  price={product.giftBox?.price ? Number(product.giftBox.price) : 50}
+                />
+              </>
+            )}
+            {!isFromCombo && (
+              <>
+                <div className="pdp-divider" />
+                <CompleteTheLookStrip />
+              </>
+            )}
             <div className="pdp-divider" />
 
             <div className="pdp-accordion">
@@ -1779,7 +1714,23 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           </div>
         </div>
 
-        <ReviewsSection productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
+        <PdpReviews productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
+        <PdpShelves product={product} />
+        <div style={{ height: 56 }} />
+        {!isFromCombo && (
+          <PdpStickyBar
+            show={showSticky}
+            image={displayImg}
+            name={productName}
+            price={totalWithGiftBox}
+            original={computedOriginalPrice}
+            soldOut={Number(currentStock) <= 0}
+            onAdd={handleAddToCart}
+            qty={qty}
+            maxQty={maxSelectable}
+            onQty={(d) => setQty((q) => Math.max(1, Math.min(maxSelectable, q + d)))}
+          />
+        )}
       </div>
     </>
   );

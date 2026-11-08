@@ -7,6 +7,9 @@ import couponService from "./coupon.service.js";
 import affiliateService from "./affiliate.service.js";
 import { getJwtSecret } from "../config/jwt.js";
 
+/** Accept only real strings; anything else (objects, arrays, numbers) becomes undefined. */
+const str = (v) => (typeof v === "string" ? v.trim() : undefined);
+
 class AuthService {
 	signToken(user) {
 		return jwt.sign(
@@ -26,8 +29,22 @@ class AuthService {
 				throw new Error("Password is required");
 			}
 
-			// Separate the referral code (from URL) from the user data before saving
-			const { refCode, ...userFields } = userData;
+			// Only these fields may come from the client. Never role, rewardPoints, emailVerified, OTP fields, etc.
+			const { refCode } = userData;
+			const userFields = {
+				name: str(userData.name),
+				email: str(userData.email)?.toLowerCase(),
+				phone: str(userData.phone),
+				gender: str(userData.gender) || undefined,
+				dob: userData.dob || undefined,
+				password: str(userData.password),
+			};
+			if (!userFields.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userFields.email)) {
+				throw new Error("A valid email is required");
+			}
+			if (!userFields.password || userFields.password.length < 6) {
+				throw new Error("Password must be at least 6 characters");
+			}
 
 			// Check if user already exists
 			const existingUser = await User.findOne({ email: userFields.email });
@@ -61,8 +78,13 @@ class AuthService {
 				await affiliateService.recordReferral(user._id, refCode);
 			}
 
-			const welcomeCouponResult = await couponService.createWelcomeCoupon(user);
-			const welcomeCoupon = welcomeCouponResult.coupon;
+			// A failed welcome coupon must never break signup: the account already exists at this point.
+			let welcomeCoupon = null;
+			try {
+				welcomeCoupon = (await couponService.createWelcomeCoupon(user)).coupon;
+			} catch (couponError) {
+				console.warn("Welcome coupon could not be created:", couponError.message);
+			}
 
 			// Generate token
 			const token = this.signToken(user);
@@ -79,8 +101,8 @@ class AuthService {
 					user.email,
 					user.name || "User",
 					verificationLink,
-					welcomeCoupon.code,
-					welcomeCoupon.discountValue
+					welcomeCoupon?.code,
+					welcomeCoupon?.discountValue
 				);
 			} catch (emailError) {
 				welcomeEmailSent = false;
@@ -97,12 +119,14 @@ class AuthService {
 				},
 				token,
 				welcomeEmailSent,
-				welcomeCoupon: {
-					code: welcomeCoupon.code,
-					discountType: welcomeCoupon.discountType,
-					discountValue: welcomeCoupon.discountValue,
-					expiryDate: welcomeCoupon.expiryDate,
-				},
+				welcomeCoupon: welcomeCoupon
+					? {
+						code: welcomeCoupon.code,
+						discountType: welcomeCoupon.discountType,
+						discountValue: welcomeCoupon.discountValue,
+						expiryDate: welcomeCoupon.expiryDate,
+					}
+					: null,
 			};
 		} catch (error) {
 			console.error("Registration error:", error);
@@ -112,8 +136,9 @@ class AuthService {
 
 	async login(email, password) {
 		try {
+			if (typeof email !== "string" || typeof password !== "string") throw new Error("Invalid credentials");
 			// Find user
-			const user = await User.findOne({ email });
+			const user = await User.findOne({ email: email.trim().toLowerCase() });
 			if (!user) {
 				throw new Error("Invalid credentials");
 			}
@@ -155,7 +180,8 @@ class AuthService {
 
 	async requestPasswordReset(email) {
 		try {
-			const user = await User.findOne({ email });
+			if (typeof email !== "string") throw new Error("A valid email is required");
+			const user = await User.findOne({ email: email.trim().toLowerCase() });
 			if (!user) {
 				// Don't reveal if email exists
 				return {
@@ -165,8 +191,9 @@ class AuthService {
 			}
 
 			// Generate 6 digit OTP
-			const otp = Math.floor(100000 + Math.random() * 900000).toString();
+			const otp = crypto.randomInt(100000, 1000000).toString(); // cryptographically random
 			user.resetPasswordOtp = otp;
+			user.resetPasswordOtpAttempts = 0;
 			user.resetPasswordOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 			await user.save();
 
@@ -185,13 +212,30 @@ class AuthService {
 
 	async resetPassword(email, otp, newPassword) {
 		try {
+			if (typeof email !== "string" || typeof otp !== "string" || typeof newPassword !== "string") {
+				throw new Error("Invalid or expired OTP");
+			}
+			if (newPassword.length < 6) throw new Error("Password must be at least 6 characters");
 			// Find user
-			const user = await User.findOne({ email });
-			if (!user) {
+			const user = await User.findOne({ email: email.trim().toLowerCase() });
+			if (!user || !user.resetPasswordOtp) {
 				throw new Error("Invalid or expired OTP");
 			}
 
-			if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp || user.resetPasswordOtpExpiry < new Date()) {
+			// A 6-digit code must not be guessable: 5 wrong tries burns it.
+			if ((user.resetPasswordOtpAttempts || 0) >= 5 || user.resetPasswordOtpExpiry < new Date()) {
+				user.resetPasswordOtp = undefined;
+				user.resetPasswordOtpExpiry = undefined;
+				user.resetPasswordOtpAttempts = 0;
+				await user.save();
+				throw new Error("Invalid or expired OTP");
+			}
+			const a = Buffer.from(user.resetPasswordOtp);
+			const b = Buffer.from(otp.trim());
+			const match = a.length === b.length && crypto.timingSafeEqual(a, b);
+			if (!match) {
+				user.resetPasswordOtpAttempts = (user.resetPasswordOtpAttempts || 0) + 1;
+				await user.save();
 				throw new Error("Invalid or expired OTP");
 			}
 
@@ -202,6 +246,7 @@ class AuthService {
 			user.password = hashedPassword;
 			user.resetPasswordOtp = undefined;
 			user.resetPasswordOtpExpiry = undefined;
+			user.resetPasswordOtpAttempts = 0;
 			await user.save();
 
 			return {

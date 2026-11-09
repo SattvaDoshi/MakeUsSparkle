@@ -489,6 +489,25 @@ class ProductService {
 		return [];
 	}
 
+	/**
+	 * Parse crossProducts (array of product IDs, or JSON string, or comma-separated string)
+	 */
+	_parseCrossProducts(productData) {
+		try {
+			if (typeof productData.crossProducts === "string") {
+				const trimmed = productData.crossProducts.trim();
+				if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+					return JSON.parse(trimmed).filter(Boolean);
+				}
+				return trimmed.split(",").map(id => id.trim()).filter(Boolean);
+			}
+			if (Array.isArray(productData.crossProducts)) {
+				return productData.crossProducts.map(p => (typeof p === "object" && p ? p._id || p.id : p)).filter(Boolean);
+			}
+		} catch (_) {}
+		return [];
+	}
+
 	async createProduct(productData, filesMap = {}) {
 		try {
 			const gender = await this._normalizeProductGender(productData.gender);
@@ -685,6 +704,7 @@ class ProductService {
 					enabled: productData.partialCODEnabled !== undefined ? parseBoolean(productData.partialCODEnabled) : false,
 					percentage: productData.partialCODPercentage ? Number(productData.partialCODPercentage) : 0,
 				},
+				crossProducts: this._parseCrossProducts(productData),
 				paymentMode: productData.paymentMode || 'cod_allowed',
 			});
 
@@ -993,6 +1013,7 @@ class ProductService {
 						enabled: updateData.partialCODEnabled !== undefined ? parseBoolean(updateData.partialCODEnabled) : (product.partialCOD?.enabled ?? false),
 						percentage: updateData.partialCODPercentage !== undefined ? Number(updateData.partialCODPercentage) : (product.partialCOD?.percentage ?? 0),
 					},
+					crossProducts: updateData.crossProducts !== undefined ? this._parseCrossProducts(updateData) : product.crossProducts,
 					paymentMode: updateData.paymentMode || product.paymentMode || 'cod_allowed',
 				},
 				{ new: true }

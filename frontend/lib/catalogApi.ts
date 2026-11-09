@@ -119,6 +119,14 @@ export interface CatalogProduct {
     percentage: number;
   };
   paymentMode?: 'cod_allowed' | 'prepaid_only' | 'partial_cod';
+  crossProducts?: Array<{
+    _id: string;
+    title: string;
+    price: number;
+    discountedPrice?: number | null;
+    mainImage?: string | null;
+    images?: string[];
+  }>;
 }
 
 type BackendMaybeRef = string | { _id?: string; id?: string; name?: string } | null | undefined;
@@ -218,6 +226,7 @@ interface BackendProduct {
     enabled?: boolean;
     percentage?: number;
   };
+  crossProducts?: any[];
 }
 
 interface BackendHomeSection {
@@ -454,6 +463,16 @@ function normalizeProduct(
     perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,
     sizeChartSteps: item.sizeChartSteps || "",
+    crossProducts: Array.isArray((item as any).crossProducts)
+      ? (item as any).crossProducts.map((cp: any) => ({
+          _id: cp._id ? String(cp._id) : String(cp),
+          title: cp.title || "Product",
+          price: Number(cp.price ?? 0),
+          discountedPrice: cp.discountedPrice !== undefined && cp.discountedPrice !== null ? Number(cp.discountedPrice) : null,
+          mainImage: cp.mainImage || (Array.isArray(cp.images) ? cp.images[0] : null) || null,
+          images: Array.isArray(cp.images) ? cp.images : [],
+        }))
+      : [],
     giftBox: item.giftBox
       ? {
           enabled:     item.giftBox.enabled !== false,

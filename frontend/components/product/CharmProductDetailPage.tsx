@@ -1972,7 +1972,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </>
             )}
 
-            <CompleteTheLookStrip />
+            <CompleteTheLookStrip items={product?.crossProducts} />
             <div className="pdp-divider" />
             <GiftMessagePanel value={giftMessage} onChange={setGiftMessage} />
             <div className="pdp-divider" />

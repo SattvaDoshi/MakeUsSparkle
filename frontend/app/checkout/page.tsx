@@ -258,10 +258,23 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
+      const affiliateRef = typeof window !== 'undefined' ? localStorage.getItem('sparkle_affiliate') : null;
+      let affiliateData: { code?: string; linkCode?: string; productId?: string } | null = null;
+      if (affiliateRef) {
+        try {
+          affiliateData = JSON.parse(affiliateRef);
+        } catch {
+          affiliateData = { code: affiliateRef };
+        }
+      }
+
       const orderPayload = {
         amount: amountToPayNow, totalAmount: finalTotal, advanceAmount: amountToPayNow,
         balanceAmount: Math.max(finalTotal - amountToPayNow, 0), paymentMode: selectedMethod,
         discountCode, discountAmount, autoDiscountAmount, appliedOffers, deliveryType,
+        affiliateCode: affiliateData?.code || undefined,
+        affiliateLinkCode: affiliateData?.linkCode || undefined,
+        affiliateProductId: affiliateData?.productId || undefined,
         items: items.map(item => {
           const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
           const mappedProduct = (!item.id.startsWith('custom-') && isValidObjectId) ? item.id : undefined;
@@ -358,6 +371,7 @@ export default function CheckoutPage() {
         window.location.href = ppOrder.redirectUrl;
       } else {
         await apiRequest('/orders/create', { method: 'POST', body: JSON.stringify(orderPayload) });
+        if (typeof window !== 'undefined') localStorage.removeItem('sparkle_affiliate');
         clearCart(); setOrderPlaced(true);
       }
     } catch (err) {

@@ -9,6 +9,7 @@
 import Order from "../models/order.model.js";
 import itl from "../services/ithinkLogistics.service.js";
 import { resolveStatus } from "../services/ithinkStatusMap.service.js";
+import affiliateService from "../services/affiliate.service.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,11 @@ export async function trackShipment(req, res) {
 		order.shipping.lastSyncedAt      = new Date();
 		if (internalStatus !== order.status) {
 			order.status = internalStatus;
+			if (internalStatus === "delivered") {
+				await affiliateService.onOrderDelivered(order);
+			} else if (internalStatus === "cancelled" || internalStatus === "rto") {
+				await affiliateService.onOrderCancelled(order);
+			}
 		}
 		await order.save();
 

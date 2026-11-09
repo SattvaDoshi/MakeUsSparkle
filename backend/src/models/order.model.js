@@ -84,6 +84,10 @@ const orderSchema = new mongoose.Schema(
     discountCode: String,
     autoDiscountAmount: { type: Number, default: 0 },
     rewardPointsRedeemed: { type: Number, default: 0 },
+    affiliateUser: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    affiliateCode: { type: String, default: null },
+    affiliateLink: { type: mongoose.Schema.Types.ObjectId, ref: "AffiliateLink", default: null },
+    affiliateProduct: { type: mongoose.Schema.Types.ObjectId, ref: "Product", default: null },
     appliedOffers: [
       {
         id: String,

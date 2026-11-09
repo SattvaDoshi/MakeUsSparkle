@@ -100,6 +100,9 @@ class PaymentService {
 				address: shippingAddress,
 				isGift: orderData.isGift,
 				giftMessage: orderData.giftMessage,
+				discountCode: orderData.discountCode,
+				discountAmount: orderData.discountAmount || 0,
+				autoDiscountAmount: orderData.autoDiscountAmount || 0,
 				phonePeOrderId: merchantOrderId,
 				status: "placed",
 				paymentStatus: "pending",
@@ -111,6 +114,9 @@ class PaymentService {
 				appliedOffers: priced.appliedOffers,
 				rewardPointsRedeemed: rewardPointsToRedeem,
 			});
+
+			// Record affiliate attribution (pending commission awaiting delivery)
+			await affiliateService.onOrderCreated(order, orderData);
 
 			// Build final redirect URL including orderId so status page can verify without sessionStorage
 			const finalRedirectUrl = phonePeResponse.redirectUrl;

@@ -37,6 +37,8 @@ const couponSchema = new mongoose.Schema(
 
     issuedForEmail: String,
     issuedForUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    isAffiliateCoupon: { type: Boolean, default: false },
+    affiliateUser: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     isWelcomeOffer: { type: Boolean, default: false },
   },
   {

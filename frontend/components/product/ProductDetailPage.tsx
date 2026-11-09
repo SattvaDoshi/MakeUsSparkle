@@ -342,7 +342,9 @@ export function CompleteTheLookStrip() {
                 <p className="ctl-card-name">{item.name}</p>
                 <div className="ctl-card-price-row">
                   <span className="ctl-card-price">₹{item.price.toLocaleString('en-IN')}</span>
-                  <span className="ctl-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                  {item.originalPrice > item.price && (
+                    <span className="ctl-card-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
               </div>
             </a>

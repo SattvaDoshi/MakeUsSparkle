@@ -5,8 +5,7 @@ import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
 import inventoryService from "./inventory.service.js";
-import Coupon from "../models/coupon.model.js";
-import { priceOrder } from "./pricing.service.js";
+import affiliateService from "./affiliate.service.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {
@@ -173,6 +172,9 @@ class OrderService {
 				await emailService.sendOrderConfirmationEmail(populatedOrder.user.email, populatedOrder._id, populatedOrder.items, populatedOrder.totalAmount);
 			}
 
+			// Record affiliate attribution (pending commission awaiting delivery)
+			await affiliateService.onOrderCreated(order, orderData);
+
 			return { success: true, order };
 		} catch (error) {
 			console.error("Error creating order:", error);
@@ -207,6 +209,13 @@ class OrderService {
 				await inventoryService.restoreOrderInventory(order);
 			}
 
+			// When admin marks order delivered, reflect commission in affiliate dashboard!
+			if (status === "delivered" || status === "completed") {
+				await affiliateService.onOrderDelivered(order);
+			} else if (status === "cancelled" || status === "rto") {
+				await affiliateService.onOrderCancelled(order);
+			}
+
 			return { success: true, order };
 		} catch (error) {
 			console.error("Error updating order status:", error);
@@ -230,6 +239,7 @@ class OrderService {
 			await order.save();
 
 			await inventoryService.restoreOrderInventory(order);
+			await affiliateService.onOrderCancelled(order);
 
 			return { success: true, message: "Order cancelled successfully", order };
 		} catch (error) {

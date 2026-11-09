@@ -16,7 +16,7 @@ export async function getAffiliateLink(req, res) {
 
 /**
  * GET /affiliate/dashboard
- * Returns commission rows and summary stats for the logged-in affiliate.
+ * Returns commission rows, generated links, coupons, and summary stats.
  */
 export async function getAffiliateDashboard(req, res) {
 	try {
@@ -24,6 +24,66 @@ export async function getAffiliateDashboard(req, res) {
 		res.json(result);
 	} catch (error) {
 		console.error("getAffiliateDashboard error:", error);
+		res.status(500).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * GET /affiliate/products
+ * Returns products for affiliate link generation (10 by default, with search).
+ */
+export async function getAffiliateProducts(req, res) {
+	try {
+		const { search, page, limit } = req.query;
+		const result = await affiliateService.getProducts({ search, page, limit });
+		res.json(result);
+	} catch (error) {
+		console.error("getAffiliateProducts error:", error);
+		res.status(500).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * POST /affiliate/generate-link
+ * Generates an affiliate tracking link for a given product.
+ */
+export async function generateAffiliateLink(req, res) {
+	try {
+		const { productId } = req.body;
+		const result = await affiliateService.generateProductLink(req.user._id, productId);
+		res.json(result);
+	} catch (error) {
+		console.error("generateAffiliateLink error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * POST /affiliate/create-coupon
+ * Creates a 10% affiliate coupon code for the user.
+ */
+export async function createAffiliateCoupon(req, res) {
+	try {
+		const { code } = req.body;
+		const result = await affiliateService.createAffiliateCoupon(req.user._id, code);
+		res.json(result);
+	} catch (error) {
+		console.error("createAffiliateCoupon error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * POST /affiliate/track-click
+ * Public endpoint to track clicks on an affiliate link.
+ */
+export async function trackAffiliateClick(req, res) {
+	try {
+		const { affiliateCode, productId, linkCode } = req.body;
+		const result = await affiliateService.trackClick({ affiliateCode, productId, linkCode });
+		res.json(result);
+	} catch (error) {
+		console.error("trackAffiliateClick error:", error);
 		res.status(500).json({ success: false, message: error.message });
 	}
 }

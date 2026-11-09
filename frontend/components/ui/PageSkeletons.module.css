@@ -1,0 +1,58 @@
+/* Page-level loading skeletons (PDP, cart, checkout, lists). Same grid/sizes as the real pages so nothing jumps. */
+.sk { background: linear-gradient(90deg, #eeede8 25%, #f8f7f3 50%, #eeede8 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 6px; display: block; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+.page { background: #fff; min-height: 100vh; }
+.bar { height: 64px; border-bottom: 1px solid #ecebe4; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+.crumb { height: 12px; width: 240px; max-width: 70%; margin-bottom: 22px; }
+
+/* PDP */
+.pdp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.gal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.galTile { aspect-ratio: 4 / 5; border-radius: 12px; }
+.galMore { display: none; }
+.info { display: flex; flex-direction: column; gap: 16px; }
+.line { height: 14px; }
+.h1 { height: 34px; width: 80%; }
+.price { height: 28px; width: 140px; }
+.chips { display: flex; gap: 10px; }
+.chip { width: 44px; height: 44px; border-radius: 50%; }
+.pill { height: 40px; width: 72px; border-radius: 999px; }
+.cta { display: flex; gap: 12px; margin-top: 6px; }
+.ctaQty { height: 54px; width: 120px; border-radius: 999px; }
+.ctaBtn { height: 54px; flex: 1; border-radius: 999px; }
+.acc { height: 52px; border-radius: 10px; }
+@media (min-width: 900px) {
+  .pdp { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 56px; }
+  .gal { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .galMore { display: block; }
+  .info { padding-top: 8px; }
+}
+
+/* Cart / checkout */
+.cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.item { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 16px; padding: 16px; border: 1px solid #ecebe4; border-radius: 18px; }
+.itemImg { aspect-ratio: 4 / 5; border-radius: 12px; }
+.itemBody { display: flex; flex-direction: column; gap: 10px; }
+.card { border: 1px solid #ecebe4; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; justify-content: space-between; gap: 16px; }
+.field { height: 48px; border-radius: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.steps { display: flex; gap: 18px; margin-bottom: 22px; }
+.step { height: 26px; width: 120px; border-radius: 999px; }
+.btn { height: 54px; border-radius: 999px; }
+.title { height: 30px; width: 220px; margin-bottom: 14px; }
+@media (min-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr) 400px; gap: 40px; }
+  .item { grid-template-columns: 132px minmax(0, 1fr); }
+}
+@media (max-width: 639px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Generic list/grid */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.gcard { display: flex; flex-direction: column; gap: 10px; }
+.gimg { aspect-ratio: 4 / 5; border-radius: 12px; }
+@media (min-width: 900px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; } }

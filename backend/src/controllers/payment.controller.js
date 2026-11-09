@@ -7,13 +7,13 @@ export async function createPaymentOrder(req, res) {
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create payment order error:", error);
-		res.status(400).json({ success: false, message: error.message });
+		res.status(400).json({ success: false, message: error.message, code: error.code, ...(error.extra || {}) });
 	}
 }
 
 export async function verifyPayment(req, res) {
 	try {
-		const result = await paymentService.verifyPayment(req.body);
+		const result = await paymentService.verifyPayment(req.body, req.user._id);
 		res.json(result);
 	} catch (error) {
 		console.error("Verify payment error:", error);

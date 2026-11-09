@@ -86,6 +86,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { BandSkeleton } from "./Skeletons";
+import { safeHref } from "@/lib/safeUrl";
 
 type MainBannerResponse = {
   success: boolean;
@@ -99,6 +101,7 @@ type MainBannerResponse = {
 
 export default function Home() {
   const [mainBanner, setMainBanner] = useState<MainBannerResponse["banner"] | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -108,12 +111,15 @@ export default function Home() {
         if (active) setMainBanner(result.banner || null);
       } catch {
         if (active) setMainBanner(null);
+      } finally {
+        if (active) setLoaded(true);
       }
     };
     void load();
     return () => { active = false; };
   }, []);
 
+  if (!loaded) return <BandSkeleton />;
   if (!mainBanner || mainBanner.isActive === false || !mainBanner.image) return null;
 
   return (
@@ -146,7 +152,7 @@ export default function Home() {
         }
       `}</style>
 
-      <a href={mainBanner.link || "#"} className="hero-wrap">
+      <a href={safeHref(mainBanner.link) || "#"} className="hero-wrap">
         <Image
           src={mainBanner.image}
           alt="Main Banner"

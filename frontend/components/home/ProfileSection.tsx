@@ -1,6 +1,8 @@
 
 'use client';
 
+import { INDIAN_STATES } from '@/lib/indianStates';
+import Em from "@/components/ui/Em";
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -457,12 +459,12 @@ export function LegacyProfileSection() {
                   <span className="pf-reward-how-pts">+{POINTS_PER_REVIEW} pts</span>
                 </div>
                 <div className="pf-reward-how-row">
-                  <span className="pf-reward-how-icon">🛍</span>
+                  <span className="pf-reward-how-icon"><Em c="🛍" /></span>
                   <span>Every purchase</span>
                   <span className="pf-reward-how-pts">+10 pts</span>
                 </div>
                 <div className="pf-reward-how-row">
-                  <span className="pf-reward-how-icon">🎂</span>
+                  <span className="pf-reward-how-icon"><Em c="🎂" /></span>
                   <span>Birthday bonus</span>
                   <span className="pf-reward-how-pts">+100 pts</span>
                 </div>
@@ -1149,7 +1151,7 @@ export default function ProfileSection() {
                             </div>
                             {(item.giftBox || item.giftBoxDetails) && (
                               <div className="pf-order-item-gift">
-                                🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
+                                <Em c="🎁" /> {item.giftBoxDetails?.heading || 'Premium Gift Box'} (+₹{item.giftBoxDetails?.price ?? 99})
                               </div>
                             )}
                             {item.reviewed && (
@@ -1276,12 +1278,15 @@ export default function ProfileSection() {
                     />
                   </label>
                   <label className="pf-label">State *
-                    <input
+                    <select
                       className="pf-input"
                       value={addressForm.state}
                       onChange={(event) => setAddressForm((prev) => ({ ...prev, state: event.target.value }))}
-                      placeholder="State"
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {addressForm.state && !(INDIAN_STATES as readonly string[]).includes(addressForm.state) && <option value={addressForm.state}>{addressForm.state}</option>}
+                      {INDIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+                    </select>
                   </label>
                   {error && (
                     <div id="pf-pincode-error-banner" style={{ color: 'var(--red, #d32f2f)', fontSize: 13, padding: '8px 12px', background: 'rgba(211,47,47,0.1)', borderRadius: 6, marginBottom: 4, textAlign: 'center', fontWeight: 600 }}>
@@ -1381,7 +1386,6 @@ export default function ProfileSection() {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
 

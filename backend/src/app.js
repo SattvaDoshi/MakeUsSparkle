@@ -1,5 +1,7 @@
 import express from "express";
 import morgan from "morgan";
+import { securityHeaders, rejectOperatorQuery, rejectOperatorBody, hidePrivateFields } from "./middleware/security.middleware.js";
+import { globalLimiter } from "./middleware/rateLimit.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -14,6 +16,10 @@ import paymentRoutes from "./routes/payment.routes.js";
 import couponRoutes from "./routes/coupon.routes.js";
 import offerRoutes from "./routes/offer.routes.js";
 import bannerRoutes from "./routes/banner.routes.js";
+import watchBuyRoutes from "./routes/watchBuy.routes.js";
+import siteContentRoutes from "./routes/siteContent.routes.js";
+import adminSiteContentRoutes from "./routes/admin/adminSiteContent.routes.js";
+import adminWatchBuyRoutes from "./routes/admin/adminWatchBuy.routes.js";
 import homeSectionRoutes from "./routes/homeSection.routes.js";
 import abandonedRoutes from "./routes/abandoned.routes.js";
 import charmItemRoutes from "./routes/charmItem.routes.js";
@@ -41,6 +47,11 @@ import affiliateRoutes from "./routes/affiliate.routes.js";
 import shippingRoutes from "./routes/shipping.routes.js";
 
 const app = express();
+
+// Behind Render's proxy: trust one hop so req.ip (rate limiting) is the real client, and hide the framework banner.
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(securityHeaders);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -104,6 +115,11 @@ app.use((req, res, next) => {
 	});
 });
 
+app.use(globalLimiter);
+app.use(rejectOperatorQuery);
+app.use(rejectOperatorBody);
+app.use(hidePrivateFields);
+
 app.get("/", (req, res) => {
 	res.json({
 		message: "MakeUsSparkle backend is running",
@@ -123,6 +139,8 @@ app.use("/payment", paymentRoutes);
 app.use("/coupons", couponRoutes);
 app.use("/offers", offerRoutes);
 app.use("/banners", bannerRoutes);
+app.use("/watch-buy", watchBuyRoutes);
+app.use("/site", siteContentRoutes);
 app.use("/home-sections", homeSectionRoutes);
 app.use("/charm-items", charmItemRoutes);
 app.use("/admin", adminRoutes);
@@ -134,6 +152,8 @@ app.use("/admin/combos", adminComboRoutes);
 app.use("/admin/orders", adminOrderRoutes);
 app.use("/admin/coupons", adminCouponRoutes);
 app.use("/admin/banners", adminBannerRoutes);
+app.use("/admin/watch-buy", adminWatchBuyRoutes);
+app.use("/admin/site", adminSiteContentRoutes);
 app.use("/admin/home-sections", adminHomeSectionRoutes);
 app.use("/admin/charm-items", adminCharmItemRoutes);
 app.use("/admin/offers", adminOfferRoutes);

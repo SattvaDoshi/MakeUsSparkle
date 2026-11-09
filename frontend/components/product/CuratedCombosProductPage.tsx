@@ -1,30 +1,35 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import {
   useState,
   useEffect,
   useMemo,
+  useRef,
   type ChangeEvent,
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
-import UpperNav from '@/components/ui/UpperNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
 import type { ReviewData } from '@/lib/catalogApi';
 import { CharmSelector, ChainSelector, type ChainOption } from './CharmProductDetailPage';
+import PdpGallery from './pdp/PdpGallery';
+import PdpReviews from './pdp/PdpReviews';
+import PdpStickyBar from './pdp/PdpStickyBar';
+import { useStickyColumns } from './pdp/useStickyColumns';
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
-  { value: 'happy_mothers_day', label: '💐 Happy Mother\'s Day' },
-  { value: 'happy_birthday', label: '🎂 Happy Birthday' },
-  { value: 'i_am_sorry', label: '🙏 I\'m Sorry' },
-  { value: 'congratulations', label: '🎉 Congratulations' },
-  { value: 'thank_you', label: '🤍 Thank You' },
-  { value: 'i_love_you', label: '❤️ I Love You' },
-  { value: 'get_well_soon', label: '🌸 Get Well Soon' },
-  { value: 'merry_christmas', label: '🎄 Merry Christmas' },
+  { value: 'happy_mothers_day', label: 'Happy Mother\'s Day' },
+  { value: 'happy_birthday', label: 'Happy Birthday' },
+  { value: 'i_am_sorry', label: 'I\'m Sorry' },
+  { value: 'congratulations', label: 'Congratulations' },
+  { value: 'thank_you', label: 'Thank You' },
+  { value: 'i_love_you', label: 'I Love You' },
+  { value: 'get_well_soon', label: 'Get Well Soon' },
+  { value: 'merry_christmas', label: 'Merry Christmas' },
 ];
 
 /* ─────────────────────────────────────────────────────────────
@@ -341,9 +346,9 @@ function ComboAccordionItem({ emoji, label, children, open, onToggle }: { emoji:
   return (
     <div className={`combo-acc-item${open ? ' combo-acc-item--open' : ''}`}>
       <button className="combo-acc-head" onClick={onToggle} aria-expanded={open}>
-        <span className="combo-acc-head-left"><span className="combo-acc-emoji">{emoji}</span>{label}</span>
+        <span className="combo-acc-head-left"><span className="combo-acc-emoji"><Em c={emoji} /></span>{label}</span>
         <span className="combo-acc-chevron">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /><line className="acc-v" x1="12" y1="5" x2="12" y2="19" /></svg>
         </span>
       </button>
       <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows .38s cubic-bezier(.4,0,.2,1)' }}>
@@ -369,7 +374,7 @@ function ComboPolicySection({ description }: { description?: string }) {
       <ComboAccordionItem emoji="🚚" label="Shipping Policy" open={open === 'shipping'} onToggle={() => toggle('shipping')}>
         <div className="cpol">
           <div>
-            <p className="cpol-h">🌍 Where we ship</p>
+            <p className="cpol-h"><Em c="🌍" /> Where we ship</p>
             <p>
               We deliver across <strong>India</strong> through our website. For <strong>international orders</strong>,
               contact us on WhatsApp <a href="https://wa.me/918356939586">+91 8356939586</a> or{' '}
@@ -378,7 +383,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">📦 Rates and timelines</p>
+            <p className="cpol-h"><Em c="📦" /> Rates and timelines</p>
             <div className="cpol-table-wrap">
               <table className="cpol-table">
                 <thead>
@@ -391,14 +396,14 @@ function ComboPolicySection({ description }: { description?: string }) {
               </table>
             </div>
             <div className="cpol-note">
-              💝 <strong>Free Standard Shipping</strong> on orders above ₹999.<br />
-              💵 <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping).
+              <Em c="💝" /> <strong>Free Standard Shipping</strong> on orders above ₹999.<br />
+              <Em c="💵" /> <strong>COD</strong> available for an extra ₹70 fee (₹130 total shipping).
               Business days count from the day after you order.
             </div>
           </div>
 
           <div>
-            <p className="cpol-h">🚀 Dispatch</p>
+            <p className="cpol-h"><Em c="🚀" /> Dispatch</p>
             <ul>
               <li><span><strong>Standard:</strong> dispatched within 2 business days.</span></li>
               <li><span><strong>Express:</strong> orders placed before 11:00 PM are dispatched the same day.</span></li>
@@ -406,7 +411,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">📍 Tracking and changes</p>
+            <p className="cpol-h"><Em c="📍" /> Tracking and changes</p>
             <p>
               Get updates via <strong>WhatsApp, SMS and Email</strong>, or track under{' '}
               <strong>Profile → Track Order</strong>. Address or item changes are only possible{' '}
@@ -422,11 +427,11 @@ function ComboPolicySection({ description }: { description?: string }) {
       <ComboAccordionItem emoji="🔄" label="Returns, Refunds & Exchange" open={open === 'returns'} onToggle={() => toggle('returns')}>
         <div className="cpol">
           <div className="cpol-alert">
-            🔒 <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.
+            <Em c="🔒" /> <strong>Prepaid orders are final sale.</strong> No returns, cancellations or cash refunds for change of mind.
           </div>
 
           <div>
-            <p className="cpol-h">💵 Cancellations and changes</p>
+            <p className="cpol-h"><Em c="💵" /> Cancellations and changes</p>
             <ul>
               <li><span><strong>COD orders</strong> can be cancelled only before our team processes them.</span></li>
               <li>
@@ -440,7 +445,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">🔄 Exchange for damaged or wrong items</p>
+            <p className="cpol-h"><Em c="🔄" /> Exchange for damaged or wrong items</p>
             <ul>
               <li><span>Report within <strong>2–3 days</strong> of delivery.</span></li>
               <li>
@@ -455,7 +460,7 @@ function ComboPolicySection({ description }: { description?: string }) {
           </div>
 
           <div>
-            <p className="cpol-h">💸 Refunds</p>
+            <p className="cpol-h"><Em c="💸" /> Refunds</p>
             <ul>
               <li><span><strong>Out of stock:</strong> if an approved exchange item is unavailable, you get a full refund to your original payment method.</span></li>
               <li><span><strong>Delayed delivery:</strong> refund if your order has not arrived within 30 days of dispatch due to courier issues.</span></li>
@@ -472,34 +477,26 @@ function ComboPolicySection({ description }: { description?: string }) {
 
 /* ── ESTIMATED DELIVERY ── */
 function ComboEstimatedDelivery() {
+  const opts = [
+    { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 days', rest: '4–7 days' },
+    { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 days', rest: '3–4 days' },
+  ];
   return (
-    <div className="combo-delivery">
-      <p className="combo-delivery-label">Estimated Delivery</p>
-      <div className="combo-delivery-grid">
-        {[
-          { icon: '🚚', label: 'Standard', rate: '₹60', metro: '3–5 business days', rest: '4–7 business days' },
-          { icon: '✈️', label: 'Express', rate: '₹110', metro: '2–3 business days', rest: '3–4 business days' },
-        ].map(opt => (
-          <div key={opt.label} className="combo-delivery-card">
-            <div className="combo-delivery-icon">{opt.icon}</div>
-            <div className="combo-delivery-opt-label">{opt.label}</div>
-            <div className="combo-delivery-tier">
-              <div className="combo-delivery-tier-label">Metro Cities</div>
-              <div className="combo-delivery-tier-val">{opt.metro}</div>
-            </div>
-            <div className="combo-delivery-tier">
-              <div className="combo-delivery-tier-label">Rest of India</div>
-              <div className="combo-delivery-tier-val">{opt.rest}</div>
-            </div>
-            <div className="combo-delivery-rate">{opt.rate}</div>
+    <section className="dlv" aria-label="Estimated delivery">
+      <h3 className="dlv-title">Estimated delivery</h3>
+      <div className="dlv-table">
+        <div className="dlv-row dlv-head"><span /><span>Metro cities</span><span>Rest of India</span><span>Charge</span></div>
+        {opts.map((o) => (
+          <div key={o.label} className="dlv-row">
+            <span className="dlv-name"><span className="est-ico"><Em c={o.icon} size="1.1em" /></span>{o.label}</span>
+            <span className="dlv-cell" data-l="Metro cities">{o.metro}</span>
+            <span className="dlv-cell" data-l="Rest of India">{o.rest}</span>
+            <span className="dlv-rate">{o.rate}</span>
           </div>
         ))}
       </div>
-      <div className="combo-delivery-freebar">
-        <span style={{ fontSize: 18, flexShrink: 0 }}>🎁</span>
-        <span>Free Standard Shipping on orders above <strong>₹999</strong></span>
-      </div>
-    </div>
+      <p className="dlv-free"><Em c="🎁" size="1.1em" /><span>Free Standard shipping on orders above <strong>₹999</strong></span></p>
+    </section>
   );
 }
 
@@ -516,178 +513,28 @@ function ComboExtras({ description }: { description?: string }) {
   );
 }
 
-/* ── REVIEWS ── */
-function ComboReviewsSection({ comboId }: { comboId: string }) {
-  const { token } = useAuth();
+/** Combo reviews: same UI as product reviews, but reads/writes the combo review endpoints. */
+function ComboReviews({ comboId }: { comboId: string }) {
   const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(3);
-  const [filterStar, setFilterStar] = useState<number | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [formState, setFormState] = useState<{ rating: number; body: string; images: File[] }>({ rating: 5, body: '', images: [] });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
   useEffect(() => {
-    let mounted = true;
+    let live = true;
     apiRequest<{ success: boolean; reviews: ReviewData[] }>(`/combos/${comboId}/reviews`)
-      .then(data => { if (mounted && data.success) setReviews(data.reviews || []); })
-      .catch(() => {})
-      .finally(() => { if (mounted) setLoaded(true); });
-    return () => { mounted = false; };
+      .then((d) => { if (live && d.success) setReviews(d.reviews || []); })
+      .catch(() => {});
+    return () => { live = false; };
   }, [comboId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) { setErrorMsg('You must be logged in to review.'); return; }
-    setIsSubmitting(true); setErrorMsg('');
+  const submit = async (p: { rating: number; body: string; images: File[] }, token: string) => {
     try {
-      const formData = new FormData();
-      formData.append('rating', String(formState.rating));
-      formData.append('body', formState.body);
-      if (formState.images && formState.images.length > 0) {
-        formState.images.forEach((file) => {
-          formData.append('images', file);
-        });
-      }
-
-      const res = await apiRequest<{ success: boolean; review?: ReviewData; message?: string }>(`/combos/${comboId}/reviews`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData as any,
+      const fd = new FormData();
+      fd.append('rating', String(p.rating));
+      fd.append('body', p.body);
+      p.images.forEach((f) => fd.append('images', f));
+      return await apiRequest<{ success: boolean; review?: ReviewData; message?: string }>(`/combos/${comboId}/reviews`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd as any,
       });
-      if (res.success && res.review) {
-        setReviews(prev => [res.review!, ...prev]);
-        setShowForm(false);
-        setFormState({ rating: 5, body: '', images: [] });
-      } else {
-        setErrorMsg(res.message || 'Failed to submit review.');
-      }
-    } catch {
-      setErrorMsg('Failed to submit review.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch { return { success: false, message: 'Failed to submit review.' }; }
   };
-
-  const filtered = reviews.filter(r => filterStar === null || r.rating === filterStar);
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
-  const totalReviews = reviews.length;
-  const avgRating = totalReviews ? (reviews.reduce((a, r) => a + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
-  const getBar = (stars: number) => {
-    const count = reviews.filter(r => r.rating === stars).length;
-    return { stars, count, pct: totalReviews ? Math.round((count / totalReviews) * 100) : 0 };
-  };
-  const bars = [5, 4, 3, 2, 1].map(getBar);
-
-  return (
-    <div className="combo-rev-wrapper">
-      <div className="combo-rev-header">
-        <span className="combo-rev-eyebrow">Customer Stories</span>
-        <h2 className="combo-rev-title">What people are saying</h2>
-      </div>
-
-      {loaded && totalReviews > 0 && (
-        <div className="combo-rev-summary">
-          <div className="combo-rev-avg-box">
-            <span className="combo-rev-avg-num">{avgRating}</span>
-            <div className="combo-rev-stars">{'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}</div>
-            <span className="combo-rev-total">Based on {totalReviews} reviews</span>
-          </div>
-          <div className="combo-rev-bars">
-            {bars.map(d => (
-              <button key={d.stars} className={`combo-rev-bar-row ${filterStar === d.stars ? 'active' : ''}`} onClick={() => setFilterStar(f => f === d.stars ? null : d.stars)}>
-                <span className="combo-rev-bar-label">{d.stars}★</span>
-                <div className="combo-rev-bar-track"><div className="combo-rev-bar-fill" style={{ width: `${d.pct}%` }} /></div>
-                <span className="combo-rev-bar-count">{d.count}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="combo-rev-controls">
-        {filterStar !== null && (
-          <button className="combo-rev-clear" onClick={() => setFilterStar(null)}>Showing {filterStar}★ only ×</button>
-        )}
-        {!showForm && <button className="combo-rev-write-btn" onClick={() => setShowForm(true)}>Write a Review</button>}
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="combo-rev-card" style={{ marginBottom: 16 }}>
-          {errorMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            {[1, 2, 3, 4, 5].map(star => (
-              <span key={star} onClick={() => setFormState(s => ({ ...s, rating: star }))} style={{ fontSize: 24, cursor: 'pointer', color: star <= formState.rating ? 'var(--gold)' : '#ccc' }}>★</span>
-            ))}
-          </div>
-          <textarea required placeholder="Share your experience with this set…" value={formState.body} onChange={e => setFormState(s => ({ ...s, body: e.target.value }))} rows={3} className="modal-textarea" style={{ marginBottom: 14 }} />
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'inline-block', cursor: 'pointer', fontSize: 13, color: 'var(--olive)', fontWeight: 600, border: '1px solid var(--olive)', padding: '6px 12px', borderRadius: 4 }}>
-              <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => {
-                if (e.target.files) {
-                  setFormState(s => ({ ...s, images: [...s.images, ...Array.from(e.target.files as FileList)] }));
-                }
-              }} />
-              + Add Photos
-            </label>
-            {formState.images.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                {formState.images.map((file, idx) => (
-                  <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
-                    <img src={URL.createObjectURL(file)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
-                    <button type="button" onClick={() => setFormState(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--red)', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button type="submit" disabled={isSubmitting} className="combo-rev-write-btn">{isSubmitting ? 'Submitting…' : 'Submit Review'}</button>
-            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--ink4)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-          </div>
-        </form>
-      )}
-
-      {loaded && visible.length === 0 && !showForm && (
-        <p className="combo-rev-empty">
-          {totalReviews === 0 ? 'No reviews yet for this set — be the first to share your experience.' : (
-            <>No reviews match this filter. <button className="combo-rev-clear" style={{ display: 'inline' }} onClick={() => setFilterStar(null)}>Clear filter</button></>
-          )}
-        </p>
-      )}
-
-      <div className="combo-rev-list">
-        {visible.map(r => (
-          <div key={r._id} className="combo-rev-card">
-            <div className="combo-rev-card-top">
-              <div className="combo-rev-avatar">{r.user?.firstName?.[0] || 'A'}</div>
-              <div>
-                <div className="combo-rev-meta-row">
-                  <span className="combo-rev-name">{r.user?.firstName} {r.user?.lastName}</span>
-                  {r.isVerifiedPurchase && <span className="combo-rev-verified"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Verified purchase</span>}
-                </div>
-                <div className="combo-rev-meta-row" style={{ marginTop: 2 }}>
-                  <span className="combo-rev-stars-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                  <span className="combo-rev-date">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                </div>
-              </div>
-            </div>
-            <p className="combo-rev-body">{r.body}</p>
-            {r.images && r.images.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                {r.images.map((imgUrl, idx) => (
-                  <img key={idx} src={imgUrl} alt="Review photo" style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid #eaeaea' }} />
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      {hasMore && <div className="combo-rev-load"><button className="combo-rev-load-btn" onClick={() => setVisibleCount(v => v + 3)}>Show more reviews</button></div>}
-    </div>
-  );
+  return <PdpReviews productId={comboId} reviews={reviews} setReviews={setReviews} submitReview={submit} />;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1048,6 +895,24 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
     setActiveComboImgIdx(0);
   }, [combo?.id]);
 
+  const galRef = useRef<HTMLDivElement | null>(null);
+  const infoRef = useRef<HTMLDivElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  useStickyColumns([galRef, infoRef], [combo?.id]);
+  // Product-page mode: the bottom tab bar steps aside for the sticky add-to-cart bar (same as /products/*).
+  useEffect(() => {
+    document.body.classList.add('hide-bnav');
+    return () => document.body.classList.remove('hide-bnav');
+  }, []);
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setShowSticky(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [combo?.id]);
+
   if (!combo) return null;
 
   const removeFileFor = (pid: string, index: number) => {
@@ -1105,38 +970,25 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
   return (
     <div className="hamper-page">
-      <button className="hamper-back-btn" onClick={onBack}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        Back to all sets
-      </button>
+      <nav className="hp-crumbs" aria-label="Breadcrumb">
+        <Link href="/">Home</Link><span>/</span>
+        <button type="button" onClick={onBack}>Combos</button><span>/</span>
+        <span className="hp-crumb-cur">{combo.name}</span>
+      </nav>
 
       <div className="hamper-main-block">
-        <div className="hamper-gallery">
-          <div className="hamper-main-img-wrap" onClick={() => setLightboxImg(allComboImages[activeComboImgIdx] || safeImageSrc(combo.image))}>
-            <img src={allComboImages[activeComboImgIdx] || safeImageSrc(combo.image)} alt={combo.name} />
-            {pct > 0 && <span className="hamper-pct-badge">{pct}% off</span>}
-            {combo.badge && <span className="hamper-label-badge">{combo.badge}</span>}
-          </div>
-          {allComboImages.length > 1 && (
-            <div className="hamper-thumbs">
-              {allComboImages.map((imgUrl: string, i: number) => (
-                <button
-                  key={`${imgUrl}-${i}`}
-                  type="button"
-                  className={`hamper-thumb${activeComboImgIdx === i ? ' on' : ''}`}
-                  onClick={() => setActiveComboImgIdx(i)}
-                  aria-label={`View image ${i + 1}`}
-                >
-                  <img src={imgUrl} alt={`${combo.name} ${i + 1}`} />
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="hamper-gallery" ref={galRef}>
+          <PdpGallery
+            images={allComboImages as string[]}
+            active={activeComboImgIdx}
+            onChange={setActiveComboImgIdx}
+            alt={combo.name}
+            chip={combo.badge || undefined}
+            fallback={safeImageSrc(combo.image) || ''}
+          />
         </div>
 
-        <div className="hamper-main-info">
+        <div className="hamper-main-info" ref={infoRef}>
           <span className="hamper-eyebrow">{combo.badge || 'Curated Set'}</span>
           <h1 className="hamper-title">{combo.name}</h1>
           <p className="hamper-tagline">{combo.tagline}</p>
@@ -1155,13 +1007,10 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             />
           )}
           {combo.description && <p className="hamper-description">{combo.description}</p>}
-        </div>
-      </div>
 
+          <div className="hp-block">
       {products.length > 0 && (
         <>
-          <div className="hamper-divider" />
-
           <div className="hamper-section-label-row">
             <p className="hamper-section-label">Pieces in this set</p>
             <span className="hamper-cust-progress">{customisedCount}/{products.length} customised</span>
@@ -1343,7 +1192,6 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
       {(combo.allowComboTextCustomization || combo.allowComboImageCustomization) && (
         <>
-          <div className="hamper-divider" />
           <div className="hamper-piece hamper-box">
             <span className="hamper-piece-index">{TAG_ICON}</span>
             <div className="hamper-piece-head">
@@ -1438,27 +1286,32 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
         </div>
       )}
 
-      <div className="hamper-divider" />
-      <ComboExtras description={combo.description} />
-      <ComboReviewsSection comboId={combo.id} />
-
-      <div className="hamper-sticky-bar">
-        <div className="sticky-inner">
-          <div className="hamper-sticky-info">
-            <span className="hamper-sticky-label">Set Total</span>
-            <div className="hamper-sticky-price">
-              <span className="hamper-sticky-price-val">₹{currentPrice.toLocaleString('en-IN')}</span>
-              {pct > 0 && <span className="hamper-sticky-price-orig">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
-            </div>
           </div>
-          <button className={`hamper-sticky-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hamper-sticky-btn-disabled' : ''}`} onClick={handleAddToCartClick}>
-            {cartAdded
-              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added</>
-              : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart</>
-            }
-          </button>
+
+          <div className="hp-cta" ref={ctaRef}>
+            <button className={`hp-cta-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hp-cta-btn-off' : ''}`} onClick={handleAddToCartClick}>
+              {cartAdded
+                ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added to cart</>
+                : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart · ₹{currentPrice.toLocaleString('en-IN')}</>}
+            </button>
+            {!canAddToCart && <p className="hp-cta-hint">Choose options for every piece to continue</p>}
+          </div>
+
+          <ComboExtras description={combo.description} />
         </div>
       </div>
+
+      <ComboReviews comboId={combo.id} />
+
+      <PdpStickyBar
+        show={showSticky}
+        image={allComboImages[0] || safeImageSrc(combo.image) || ''}
+        name={combo.name}
+        price={currentPrice}
+        original={pct > 0 ? currentOriginalPrice : null}
+        soldOut={false}
+        onAdd={handleAddToCartClick}
+      />
       {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
   );
@@ -1542,12 +1395,11 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 
   return (
     <div className="builder-page">
-      <button className="hamper-back-btn" onClick={onBack}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        Back to bundle options
-      </button>
+      <nav className="hp-crumbs" aria-label="Breadcrumb">
+        <Link href="/">Home</Link><span>/</span>
+        <button type="button" onClick={onBack}>Build your own</button><span>/</span>
+        <span className="hp-crumb-cur">{slot.name}</span>
+      </nav>
 
       <div className="builder-header-row">
         {allSlotImages.length > 0 && (
@@ -1729,7 +1581,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 
       <div className="hamper-divider" style={{ marginTop: 24 }} />
       <ComboExtras description={slot.description} />
-      <ComboReviewsSection comboId={slot.id} />
+      <ComboReviews comboId={slot.id} />
 
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
@@ -2095,13 +1947,14 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     setTimeout(() => setCustomCartAdded(prev => ({ ...prev, [slot.id]: false })), 1800);
   }
 
+  const inDetail = !loading && (mode === 'preset' ? presetView === 'detail' : customView === 'detail');
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
 
         :root {
-          --bg:       #f5f2eb;
+          --bg:       #ffffff;
           --surf:     #ffffff;
           --bdr:      #e0d8c8;
           --bdr2:     #c9bfa8;
@@ -2124,7 +1977,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           /* variables used by CharmSelector / ChainSelector (shared components) */
           --olive-900:#1a1f0d; --olive-600:#3d4a22; --olive-500:#5a6b2e;
           --olive-400:#7a8e3c; --olive-200:#c4cc9a; --olive-100:#e4e8cc; --olive-50:#f2f4e8;
-          --beige:#f5f0e8; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
+          --beige:#ffffff; --beige-dk:#ede5d5; --beige-dkr:#d9cdb8;
           --mist:rgba(30,35,16,.45);
 
           --container: 1180px;
@@ -2682,11 +2535,127 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           .combo-grid { max-width:1440px; }
           .hamper-main-block { gap:72px; }
         }
+
+        /* ═════ PDP redesign (matches the product page) ═════ */
+        .hamper-page, .builder-page { max-width:1480px; padding:8px 16px 0; }
+        .hp-crumbs { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#8b8b80; padding:10px 0 12px; overflow:hidden; white-space:nowrap; }
+        .hp-crumbs a, .hp-crumbs button { color:#6f6f64; text-decoration:none; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
+        .hp-crumbs a:hover, .hp-crumbs button:hover { color:#1a1a14; }
+        .hp-crumb-cur { color:#1a1a14; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+        .hamper-main-block { display:flex; flex-direction:column; gap:20px; }
+        .hamper-main-info { min-width:0; }
+        .hamper-eyebrow { display:inline-block; font-size:10px; font-weight:600; letter-spacing:.16em; color:#9a7a2e; background:rgba(201,168,76,.14); padding:4px 10px; border-radius:6px; margin-bottom:10px; }
+        .hamper-title { font-family:'Cormorant Garamond',serif; font-size:clamp(2rem,5vw,3rem); font-weight:600; line-height:1.05; color:#1a1a14; margin:0 0 8px; }
+        .hamper-tagline { color:#6f6f64; font-size:14.5px; }
+        .hamper-price { font-size:2rem; font-weight:700; color:#1a1a14; }
+        .hamper-save-tag { color:#2a4736; background:#eaf2ec; }
+        .hamper-description { font-size:14.5px; color:#3a3a32; line-height:1.7; }
+        .hp-block { margin-top:22px; padding-top:22px; border-top:1px solid #ecebe4; display:flex; flex-direction:column; gap:16px; }
+        .hp-block .hamper-section-label-row { margin:0; }
+        .hp-block .hamper-section-label { font-size:11px; letter-spacing:.16em; color:#1a1a14; font-weight:600; }
+        .hp-block .hamper-cust-progress { color:#2a4736; background:#eaf2ec; font-size:11px; padding:4px 10px; }
+        .hamper-piece-list { gap:12px; }
+        @media (min-width:640px) { .hamper-page .hamper-piece-list { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; } }
+        .hamper-piece { border:1px solid #e6e4da; border-radius:16px; background:#fff; padding:16px; box-shadow:none; }
+        .hamper-piece-index { position:static; align-self:flex-start; width:26px; height:26px; min-width:26px; border-radius:50%; background:#1a1a14; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; margin:0 0 -2px; }
+        .hamper-piece-name { font-size:15px; font-weight:600; }
+        .hamper-piece-price { color:#2a4736; }
+        .hamper-piece.hamper-piece-error { border-color:#c0392b; box-shadow:0 0 0 3px rgba(192,57,43,.08); }
+        .hamper-colour-swatch.on .hamper-colour-swatch-btn { background:#f1f5f1; box-shadow:inset 0 0 0 1.5px #2a4736; }
+        .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:#2a4736; box-shadow:0 0 0 2px rgba(42,71,54,.15); }
+        .hamper-colour-swatch.on .hamper-colour-swatch-label { color:#2a4736; }
+        .hamper-piece-field-label em { color:#2a4736; }
+        .hp-cta { margin-top:22px; }
+        .hp-cta-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:17px; border:0; border-radius:999px; background:#2a4736; color:#fff; font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:background .2s, transform .15s; }
+        .hp-cta-btn:hover { background:#1f3a2a; }
+        .hp-cta-btn:active { transform:scale(.99); }
+        .hp-cta-btn.done { background:#1a1a14; }
+        .hp-cta-btn-off { background:#1a1a14; }
+        .hp-cta-hint { margin:8px 0 0; text-align:center; font-size:12px; color:#8b8b80; }
+        .combo-extras { margin-top:22px; }
+        .combo-extras-grid { display:flex; flex-direction:column; gap:0; }
+        .combo-trust { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid #ecebe4; border-radius:14px; overflow:hidden; background:#fafaf6; margin:0 0 20px; }
+        .combo-trust-item { display:grid; grid-template-columns:28px 1fr; column-gap:10px; align-items:center; text-align:left; padding:14px; border:0; border-right:1px solid #ecebe4; background:none; border-radius:0; box-shadow:none; }
+        .combo-trust-item:last-child { border-right:0; }
+        .combo-trust-icon { grid-row:1 / span 2; width:28px; height:28px; margin:0; color:#2a4736; }
+        .combo-trust-title { font-size:11px; letter-spacing:.06em; margin:0; color:#1a1a14; }
+        .combo-trust-sub { font-size:11.5px; color:#6f6f64; }
+        .combo-accordion { display:flex; flex-direction:column; gap:10px; }
+        .combo-acc-item { border:1px solid #ecebe4; border-radius:14px; background:#fff; overflow:hidden; transition:border-color .2s, box-shadow .2s; }
+        .combo-acc-item--open { border-color:#cfd8cf; box-shadow:0 6px 22px rgba(26,26,20,.05); }
+        .combo-acc-head { padding:14px 16px; background:none; }
+        .combo-acc-head:hover { background:#fafaf6; }
+        .combo-acc-head-left { font-size:15px; font-weight:500; gap:14px; color:#1a1a14; }
+        .combo-acc-emoji { width:36px; height:36px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .combo-acc-item--open .combo-acc-emoji { background:#2a4736; color:#fff; }
+        .combo-acc-chevron { width:28px; height:28px; border-radius:50%; background:#f4f3ee; color:#1a1a14; display:flex; align-items:center; justify-content:center; transform:none !important; }
+        .combo-acc-item--open .combo-acc-chevron { background:#1a1a14; color:#fff; }
+        .combo-acc-chevron .acc-v { transition:opacity .25s, transform .25s; transform-origin:center; }
+        .combo-acc-item--open .combo-acc-chevron .acc-v { opacity:0; transform:scaleY(0); }
+        .combo-acc-body { padding:2px 18px 20px 66px; font-size:14px; line-height:1.75; color:#3a3a32; }
+        .dlv { margin-top:22px; }
+        .dlv-title { margin:0 0 12px; font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:#1a1a14; }
+        .dlv-table { border:1px solid #ecebe4; border-radius:14px; overflow:hidden; background:#fff; }
+        .dlv-row { display:grid; grid-template-columns:1.25fr 1fr 1fr .7fr; align-items:center; gap:8px; padding:14px 16px; border-top:1px solid #ecebe4; font-size:14px; color:#1a1a14; }
+        .dlv-row:first-child { border-top:0; }
+        .dlv-head { background:#fafaf6; padding:10px 16px; font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#6f6f64; }
+        .dlv-name { display:flex; align-items:center; gap:10px; font-weight:600; }
+        .est-ico { width:32px; height:32px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .dlv-rate { font-weight:600; color:#2a4736; text-align:right; }
+        .dlv-head span:last-child { text-align:right; }
+        .dlv-free { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:12px 14px; border-radius:12px; background:#f1f5f1; color:#1f3a2a; font-size:13.5px; }
+        body.hide-bnav .bnav { display:none !important; }
+        body.hide-bnav .has-bottom-nav { padding-bottom:0 !important; }
+        .hamper-page .modal-textarea, .hamper-page select.modal-textarea { width:100% !important; max-width:none !important; }
+        .combo-extras-grid { align-items:stretch; }
+        .combo-extras-grid > * { width:100%; max-width:none; }
+        .dlv { width:100%; max-width:none; }
+        .hamper-box { border:1px solid #e6e4da !important; background:#fff !important; border-radius:16px; }
+        .hamper-box .hamper-piece-index { background:#2a4736; }
+        .hamper-page .hamper-box-body { display:flex !important; flex-direction:column; align-items:stretch !important; grid-template-columns:none !important; gap:14px; }
+        .hamper-page .modal-textarea { width:100%; box-sizing:border-box; border:1px solid #dcdacf; border-radius:12px; padding:12px 14px; font-family:inherit; font-size:14px; background:#fff; color:#1a1a14; }
+        .hamper-page .modal-textarea:focus { outline:2px solid #2a4736; outline-offset:1px; border-color:#2a4736; }
+        /* Build-your-own page */
+        .builder-header-row { gap:22px; margin-bottom:22px; padding-bottom:22px; border-bottom:1px solid #ecebe4; }
+        .builder-header-img { border:0; border-radius:16px; background:#f4f3ee; }
+        .builder-header-title { font-family:'Cormorant Garamond',serif; font-size:clamp(2rem,5vw,3rem); font-weight:600; color:#1a1a14; line-height:1.05; margin:0 0 6px; }
+        .builder-header-tagline { color:#6f6f64; font-size:14.5px; }
+        .builder-progress-wrap { margin:0 0 20px; padding:16px 18px; border:1px solid #ecebe4; border-radius:16px; background:#fafaf6; }
+        .builder-progress-track { height:8px; background:#e7e5da; border-radius:99px; }
+        .builder-progress-fill { background:linear-gradient(90deg,#3d6b4f,#2a4736); border-radius:99px; }
+        .builder-hint { font-size:13.5px; color:#4a4a40; }
+        .builder-hint.done { color:#2a4736; font-weight:600; }
+        .builder-grid { gap:16px; }
+        .builder-card { border:1px solid #e6e4da; border-radius:16px; background:#fff; }
+        .builder-card:hover:not(.disabled) { border-color:#cfcbb8; box-shadow:0 10px 28px rgba(26,26,20,.08); transform:translateY(-2px); }
+        .builder-card.chosen { border-color:#2a4736; box-shadow:0 0 0 3px rgba(42,71,54,.1); }
+        .builder-card-check { background:#2a4736; }
+        .builder-card-name { font-weight:500; }
+        .hamper-sticky-bar, .builder-sticky-bar { left:50%; right:auto; transform:translateX(-50%); bottom:18px; width:min(860px, calc(100% - 32px)); border:1px solid #ecebe4; border-radius:18px; box-shadow:0 16px 44px rgba(26,26,20,.18); padding:10px 14px; }
+        .builder-sticky-cart { background:#2a4736; border-radius:999px; }
+        .builder-sticky-cart:disabled { background:#b8c6bd; }
+        @media (min-width:1024px) { .builder-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+        @media (max-width:639px) { .hamper-sticky-bar, .builder-sticky-bar { bottom:0; width:100%; border-radius:18px 18px 0 0; } }
+        @media (min-width:1024px) {
+          .hamper-page, .builder-page { padding:8px 40px 0; }
+          .hamper-main-block { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:48px; align-items:start; }
+        }
+        @media (max-width:639px) {
+          .dlv-head { display:none; }
+          .dlv-row { grid-template-columns:1fr auto; grid-template-areas:"name rate" "m m" "r r"; row-gap:4px; }
+          .dlv-name { grid-area:name; } .dlv-rate { grid-area:rate; }
+          .dlv-cell:nth-of-type(1) { grid-area:m; } .dlv-cell:nth-of-type(2) { grid-area:r; }
+          .dlv-cell::before { content:attr(data-l) ": "; color:#6f6f64; }
+          .combo-acc-body { padding-left:18px; }
+          .combo-trust { grid-template-columns:1fr; }
+          .combo-trust-item { border-right:0; border-bottom:1px solid #ecebe4; }
+          .combo-trust-item:last-child { border-bottom:0; }
+        }
       `}</style>
 
       <div className="page">
-        <UpperNav />
 
+        {inDetail ? null : (<>
         <div className="hero">
           <div className="hero-eyebrow">
             <span className="hero-line" />
@@ -2712,10 +2681,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   : 'Tap "Add To Box" on each piece to customise it, then check out.')}
           </p>
         </div>
+        </>)}
 
         <div className="layout">
           {loading ? (
-            <div className="combo-grid" style={{ minHeight: '50vh', padding: '24px 16px' }}>
+            <div className="combo-grid" style={{ minHeight: '50vh', padding: '24px 16px' }} aria-busy="true" role="status" aria-label="Loading combos">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="combo-card" style={{ background: '#faf6ee', border: '1px solid #ede5d5', borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ aspectRatio: '4/5', background: 'linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%)', backgroundSize: '200% 100%', animation: 'comboShimmer 1.5s infinite' }} />
@@ -2726,12 +2696,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
                   </div>
                 </div>
               ))}
-              <style>{`
-                @keyframes comboShimmer {
-                  0% { background-position: -200% 0; }
-                  100% { background-position: 200% 0; }
-                }
-              `}</style>
+              <style>{`@keyframes comboShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
             </div>
           ) : mode === 'preset' ? (
             presetView === 'grid' ? (

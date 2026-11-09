@@ -1,5 +1,4 @@
-import UpperNav from '@/components/ui/UpperNav';
-import Footer from '@/components/home/Footer';
+import Em from "@/components/ui/Em";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
 export default function SizeGuidePage() {
   return (
     <>
-      <UpperNav />
       <main style={{ minHeight: '80vh', background: '#faf9f5', color: '#1a1f0d', fontFamily: "'Jost', sans-serif" }}>
         {/* Hero */}
         <section
@@ -39,7 +37,7 @@ export default function SizeGuidePage() {
             {/* Rings */}
             <section>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', marginBottom: '8px' }}>
-                💍 Ring Sizing
+                <Em c="💍" /> Ring Sizing
               </h2>
               <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.6 }}>
                 Most of our rings are <strong>adjustable</strong> to comfortably fit Indian standard sizes 10 through 18. For non-adjustable rings, measure the internal diameter of a ring that fits you:
@@ -66,7 +64,7 @@ export default function SizeGuidePage() {
             {/* Necklaces */}
             <section>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', marginBottom: '8px' }}>
-                📿 Necklace Lengths
+                <Em c="📿" /> Necklace Lengths
               </h2>
               <ul style={{ fontSize: '14px', lineHeight: 1.8, color: '#555', paddingLeft: '20px', margin: 0 }}>
                 <li><strong>Choker (14–16 inches / 35–40 cm):</strong> Fits snugly around the base of the neck.</li>
@@ -79,7 +77,7 @@ export default function SizeGuidePage() {
             {/* Bracelets & Charms */}
             <section>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#2a4d1c', marginBottom: '8px' }}>
-                ✨ Bracelets &amp; Custom Charms
+                <Em c="✨" /> Bracelets &amp; Custom Charms
               </h2>
               <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.6 }}>
                 Our charm chains and link bracelets standard length is <strong>16 cm + 4 cm adjustable extender</strong>, designed to fit wrists from 5.5 inches to 7.5 inches snugly or loose.
@@ -92,7 +90,6 @@ export default function SizeGuidePage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

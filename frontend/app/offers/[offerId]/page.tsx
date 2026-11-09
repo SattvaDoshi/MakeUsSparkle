@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import UpperNav from '@/components/ui/UpperNav';
 import OfferDetailsPage from '@/components/offers/OfferDetailsPage';
 import { fetchOfferById } from '@/lib/catalogApi';
 
@@ -39,7 +38,6 @@ export default async function OfferDetailRoute({
 
   return (
     <>
-      <UpperNav />
       <OfferDetailsPage offerId={offerId} />
     </>
   );

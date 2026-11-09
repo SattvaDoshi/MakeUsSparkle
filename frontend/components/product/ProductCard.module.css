@@ -1,0 +1,231 @@
+/* Shared product card — white, image-led, minimal chrome.
+   Sizing is the parent's job (grid cell or carousel slot); the card fills it. */
+
+.card {
+  --ink: #1a1a17;
+  --muted: #7b7b72;
+  --gold: #9a7a2e;
+  --forest: #2a4736;
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  font-family: 'Jost', sans-serif;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ───────── Media ───────── */
+.media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f4f3ee;
+  flex-shrink: 0;
+}
+.img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  transition: opacity 0.45s var(--ease), transform 0.7s var(--ease);
+}
+.imgAlt { opacity: 0; }
+.card:hover .imgAlt, .card:focus-within .imgAlt { opacity: 1; }
+.card:hover .img { transform: scale(1.04); }
+.soldOut .img { filter: grayscale(0.85); opacity: 0.7; }
+.soldOut .imgAlt { display: none; }
+
+.placeholder {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; color: #d9d6c9;
+  background: linear-gradient(160deg, #f7f6f1, #efede5);
+}
+
+/* Chips */
+.chips {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+.chip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  backdrop-filter: blur(4px);
+}
+.chipSale { background: var(--forest); color: #fff; }
+.chipRotate { transition: opacity 0.45s ease, transform 0.45s ease; animation: chipIn 0.45s ease; }
+.chipFading { opacity: 0; transform: translateY(-3px); }
+.chipWarn { background: #fdf0ea; color: #a2461f; border: 1px solid rgba(162, 70, 31, 0.25); }
+.chipGood { background: #eef6f0; color: #2f6b49; border: 1px solid rgba(47, 107, 73, 0.25); }
+@keyframes chipIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.chipOffer {
+  background: #fff8e6;
+  color: #7a5c14;
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Rating — white pill, bottom-right of the image */
+.ratingBadge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.ratingBadge .star { font-size: 11.5px; }
+.ratingCount {
+  margin-left: 3px;
+  padding-left: 6px;
+  border-left: 1px solid #d9d6c9;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Icon buttons over the image */
+.wish {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s var(--ease), background 0.2s, color 0.2s;
+}
+.wish:hover { transform: scale(1.08); }
+.wishOn { background: var(--forest); color: #fff; }
+.wishPop { animation: pop 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes pop {
+  0% { transform: scale(1); } 30% { transform: scale(1.25); }
+  60% { transform: scale(0.92); } 100% { transform: scale(1); }
+}
+
+
+/* ───────── Body ───────── */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 2px 4px;
+  flex: 1 1 auto;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.name {
+  margin: 0;
+  font-family: 'Jost', sans-serif;
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Stretched link: whole card is clickable, buttons sit above it */
+.link { color: inherit; text-decoration: none; }
+.link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.link:focus-visible { outline: none; }
+.link:focus-visible::after { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 10px; }
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1;
+}
+.star { color: #c9a84c; }
+.ratingVal { color: var(--ink); font-weight: 500; }
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding-top: 2px;
+}
+.price { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.was { font-size: 12.5px; color: var(--muted); text-decoration: line-through; }
+.off { font-size: 12px; font-weight: 600; color: #2f7a4d; letter-spacing: 0.02em; }
+
+/* ───────── Small screens ───────── */
+@media (max-width: 639px) {
+  .media { border-radius: 8px; }
+  .chips { top: 8px; left: 8px; gap: 5px; }
+  .chip { font-size: 9px; padding: 5px 8px; letter-spacing: 0.08em; }
+  .wish { width: 32px; height: 32px; top: 6px; right: 6px; }
+  .ratingBadge { right: 8px; bottom: 8px; padding: 5px 8px; font-size: 11.5px; }
+  .priceRow { padding-right: 40px; }
+  .body { padding-top: 10px; gap: 4px; }
+  .eyebrow { font-size: 9px; letter-spacing: 0.14em; }
+  .name { font-size: 13px; }
+  .price { font-size: 14.5px; }
+  .was { font-size: 11.5px; }
+  .off { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chipRotate { animation: none; }
+  .img, .wish { transition: none; }
+  .wishPop { animation: none; }
+}

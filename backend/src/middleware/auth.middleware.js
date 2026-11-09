@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../config/jwt.js";
 
 export function requireAuth(req, res, next) {
 	const authHeader = req.headers.authorization || "";
@@ -9,7 +10,7 @@ export function requireAuth(req, res, next) {
 	}
 
 	try {
-		const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+		const payload = jwt.verify(token, getJwtSecret());
 		const userId = payload.sub || payload.id || payload._id || payload.userId;
 
 		if (!userId) {

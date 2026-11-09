@@ -1,0 +1,28 @@
+.wa {
+  position: fixed; right: 24px; bottom: 24px; z-index: 90;
+  width: 60px; height: 60px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #25d366; color: #fff; text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.2s;
+  animation: pulse 2.6s ease-out 1.5s 3;
+}
+.wa:hover { transform: translateY(-3px) scale(1.04); background: #1fbd5b; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.wa:active { transform: scale(0.97); }
+.wa:focus-visible { outline: 3px solid #1a1a14; outline-offset: 3px; }
+.icon { width: 34px; height: 34px; display: block; }
+@keyframes pulse {
+  0% { box-shadow: 0 8px 24px rgba(0,0,0,0.2), 0 0 0 0 rgba(37,211,102,0.55); }
+  70%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.2), 0 0 0 18px rgba(37,211,102,0); }
+}
+
+/* Phones & tablets: a touch smaller, lifted above the bottom navigation bar */
+@media (max-width: 1023px) {
+  .wa { right: 16px; bottom: 82px; width: 54px; height: 54px; }
+  .icon { width: 30px; height: 30px; }
+}
+@media print { .wa { display: none; } }
+@media (prefers-reduced-motion: reduce) { .wa { animation: none; transition: none; } }
+
+/* Product page: lift above the sticky add-to-cart bar */
+@media (max-width: 1023px) { :global(body.has-sticky-atc) .wa { bottom: 92px; } }

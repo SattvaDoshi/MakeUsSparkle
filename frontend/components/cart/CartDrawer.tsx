@@ -1,9 +1,12 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import Em from "@/components/ui/Em";
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
-import CartBanner from '@/components/cart/CartBanner';
+import { cdnImage } from '@/lib/cdn';
+import CartUpsell from '@/components/cart/CartUpsell';
+import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 
 /** Chosen options (colour, size, etc.) saved on a hamper piece, as readable text lines */
 function getOptionLines(customData: any): Array<[string, string]> {
@@ -24,6 +27,18 @@ export default function CartDrawer() {
   const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut } = useCart();
   const { isDrawerOpen, items } = state;
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const FREE_SHIP = 999;
+  const toFree = Math.max(0, FREE_SHIP - subtotal);
+  const shipPct = Math.min(100, Math.round((subtotal / FREE_SHIP) * 100));
+
+  // Load the catalogue once, the first time the drawer opens (it is cached after that)
+  useEffect(() => {
+    if (!isDrawerOpen || catalog.length) return;
+    let live = true;
+    fetchCatalogProducts().then((p) => live && setCatalog(p)).catch(() => {});
+    return () => { live = false; };
+  }, [isDrawerOpen, catalog.length]);
 
   // Close on Esc
   useEffect(() => {
@@ -42,10 +57,9 @@ export default function CartDrawer() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap');
 
         :root {
-          --beige:     #f5f0e8;
+          --beige:     #ffffff;
           --beige-dk:  #ede5d5;
           --beige-dkr: #d9cdb8;
           --olive-900: #1a1f0d;
@@ -264,6 +278,130 @@ export default function CartDrawer() {
           .drawer-items { padding: 12px 14px; }
           .drawer-foot  { padding: 14px 16px 20px; }
         }
+
+        /* ── Redesign ── */
+        .dp-section { padding: 12px 20px 14px; background: #fafaf6; }
+        .ship-msg { margin: 0 0 8px; font-size: 13px; color: #4a4a40; }
+        .ship-msg b { color: #1a1a14; font-weight: 600; }
+        .ship-track { height: 7px; border-radius: 99px; background: #e7e5da; overflow: hidden; }
+        .ship-fill { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg,#3d6b4f,#2a4736); transition: width .5s ease; }
+        .drawer-items { gap: 14px; padding: 16px 20px 24px; }
+        .di-card { border: 1px solid #ecebe4; box-shadow: none; border-radius: 16px; }
+        .di-card:hover { border-color: #dcdacf; }
+        .di-img { width: 84px; height: 84px; }
+        .di-name { font-size: 14.5px; }
+        .di-low { margin-top: 5px; font-size: 11.5px; font-weight: 600; color: #b4491f; }
+        .di-qty { border-color: #dcdacf; background: #fff; }
+        .drawer-empty { padding: 36px 16px 8px; gap: 8px; }
+        .drawer-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: #f1f5f1; color: #2a4736; display: flex; align-items: center; justify-content: center; font-size: 28px; font-style: normal; margin-bottom: 6px; }
+        .drawer-empty-title { margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; color: #1a1a14; }
+        .drawer-empty-text { margin: 0 0 12px; }
+        .drawer-foot { padding: 12px 20px 16px; box-shadow: 0 -10px 30px rgba(26,26,20,.06); border-top: 1px solid #ecebe4; }
+        .foot-save { margin: 0 0 12px; font-size: 12.5px; color: #2a4736; background: #f1f5f1; padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 7px; }
+        .foot-save b { font-weight: 700; }
+        .foot-note { margin: 8px 0 0; text-align: center; font-size: 11.5px; color: #8b8b80; }
+        .drawer-btn-cart { padding: 15px; font-size: 12px; background: #1a1a14; }
+        .drawer-btn-cart:hover { background: #2a4736; }
+        .cu { margin-top: 8px; padding-top: 20px; border-top: 1px solid #ecebe4; }
+        .cu-title { margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #1a1a14; }
+        .cu-title em { font-style: italic; color: #3d6b4f; }
+        .cu-sub { margin: 3px 0 12px; font-size: 12.5px; color: #6f6f64; }
+        .cu-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-left: 20px; margin: 0 -20px; padding: 2px 20px 8px; scrollbar-width: none; }
+        .cu-row::-webkit-scrollbar { display: none; }
+        .cu-card { flex: 0 0 132px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; }
+        .cu-img { position: relative; display: block; aspect-ratio: 4/5; border-radius: 12px; overflow: hidden; background: #f4f3ee; }
+        .cu-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .cu-off { position: absolute; top: 6px; left: 6px; font-size: 9.5px; font-weight: 600; background: #fff; color: #2a4736; padding: 3px 7px; border-radius: 99px; }
+        .cu-name { margin-top: 4px; font-size: 12.5px; color: #1a1a14; text-decoration: none; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 32px; }
+        .cu-price { display: flex; align-items: baseline; gap: 6px; font-size: 13px; }
+        .cu-price b { font-weight: 600; } .cu-price s { font-size: 11px; color: #8b8b80; }
+        .cu-low { font-size: 11px; font-weight: 600; color: #b4491f; }
+        .cu-btn { margin-top: 4px; display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 99px; border: 1px solid #1a1a14; background: #fff; color: #1a1a14; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; cursor: pointer; transition: background .2s, color .2s; }
+        .cu-btn:hover:not(:disabled) { background: #1a1a14; color: #fff; }
+        .cu-btn.is-on { background: #2a4736; border-color: #2a4736; color: #fff; cursor: default; }
+        @media (max-width: 480px) { .dp-section { padding: 12px 16px 14px; } .drawer-items { padding: 14px 14px 20px; } .cu-row { margin: 0 -14px; padding: 2px 14px 8px; scroll-padding-left: 14px; } }
+
+        /* ── Mini cart v3: compact rows, slim footer ── */
+        .drawer-items { gap: 0; padding: 4px 20px 24px; }
+        .ci { padding: 16px 0; border-bottom: 1px solid #ecebe4; display: flex; flex-direction: column; gap: 10px; }
+        .ci-main { display: flex; gap: 14px; }
+        .ci-imgwrap { flex: 0 0 68px; width: 68px; height: 84px; border-radius: 10px; overflow: hidden; background: #f4f3ee; display: block; }
+        .ci-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ci-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .ci-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .ci-name { font-size: 14px; font-weight: 500; color: #1a1a14; text-decoration: none; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .ci-price { font-size: 14px; font-weight: 600; color: #1a1a14; flex-shrink: 0; }
+        .ci-meta { font-size: 12px; color: #6f6f64; }
+        .ci-was { font-size: 11.5px; color: #8b8b80; text-decoration: line-through; align-self: flex-end; margin-top: -2px; }
+        .ci-low { font-size: 11.5px; font-weight: 600; color: #b4491f; }
+        .ci-bottom { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; }
+        .ci-qty { display: inline-flex; align-items: center; border: 1px solid #dcdacf; border-radius: 99px; height: 30px; }
+        .ci-qty button { width: 28px; height: 28px; border: 0; background: none; font-size: 15px; cursor: pointer; color: #1a1a14; border-radius: 99px; }
+        .ci-qty button:hover { background: #f4f3ee; }
+        .ci-qty span { min-width: 20px; text-align: center; font-size: 13px; font-weight: 600; }
+        .ci-qtyfixed { font-size: 12.5px; color: #6f6f64; }
+        .ci-remove { width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: #8b8b80; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s; }
+        .ci-remove:hover { background: #fbeeea; color: #c0392b; }
+        .ci-gift { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5c4a14; background: #faf5e6; border-radius: 8px; padding: 7px 10px; }
+        .ci-gift span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ci-gift b { font-weight: 600; }
+        .ci-details { font-size: 12px; color: #4a4a40; background: #fafaf6; border-radius: 8px; }
+        .ci-details summary { cursor: pointer; padding: 8px 10px; list-style: none; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+        .ci-details summary::-webkit-details-marker { display: none; }
+        .ci-details summary::after { content: '+'; font-size: 15px; color: #6f6f64; }
+        .ci-details[open] summary::after { content: '−'; }
+        .ci-details ul { list-style: none; margin: 0; padding: 0 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+        .ci-details li { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .ci-details li span { display: flex; flex-direction: column; gap: 1px; color: #1a1a14; }
+        .ci-details li em { font-style: normal; font-size: 11.5px; color: #6f6f64; }
+        .ci-details li i { font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #8b8b80; flex-shrink: 0; }
+        .offers { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+        .offers-h { font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #6f6f64; }
+        .offer { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #ecebe4; border-radius: 10px; cursor: pointer; font-size: 13px; }
+        .offer.on { background: #f1f5f1; border-color: #cfdccf; }
+        .offer input { accent-color: #2a4736; width: 15px; height: 15px; flex-shrink: 0; }
+        .offer-t { flex: 1; min-width: 0; }
+        .offer-a { font-weight: 600; color: #6f6f64; }
+        .offer.on .offer-a { color: #2a4736; }
+        .sum { margin-top: 16px; padding: 14px 0 0; border-top: 1px dashed #dcdacf; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; color: #4a4a40; }
+        .sum > div { display: flex; justify-content: space-between; }
+        .sum-save { color: #2a4736; font-weight: 600; }
+        .drawer-foot { padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+        .foot-row { display: flex; align-items: baseline; justify-content: space-between; }
+        .foot-label { font-size: 13px; color: #6f6f64; }
+        .foot-total { font-size: 20px; font-weight: 600; color: #1a1a14; }
+        .cu { margin-top: 24px; }
+        @media (max-width: 480px) { .drawer-items { padding: 2px 14px 20px; } .drawer-foot { padding-left: 14px; padding-right: 14px; } }
+
+        /* ── You may also like: uniform cards ── */
+        .cu-row { align-items: stretch; gap: 12px; }
+        .cu-card { flex: 0 0 148px; display: flex; flex-direction: column; gap: 10px; padding: 0; background: none; }
+        .cu-img { aspect-ratio: 1 / 1; border-radius: 14px; }
+        .cu-info { display: flex; flex-direction: column; gap: 4px; }
+        .cu-name { margin: 0; min-height: 36px; font-size: 13px; line-height: 1.4; font-weight: 500; -webkit-line-clamp: 2; }
+        .cu-price { height: 18px; align-items: baseline; }
+        .cu-price b { font-size: 14px; }
+        .cu-btn { margin-top: auto; height: 36px; padding: 0; font-size: 11px; }
+
+        /* ── Cart item card v4 ── */
+        .drawer-items { padding: 14px 20px 24px; gap: 0; }
+        .ci { padding: 14px; margin-bottom: 12px; border: 1px solid #ecebe4; border-radius: 16px; background: #fff; box-shadow: 0 1px 2px rgba(26,26,20,.03); gap: 12px; }
+        .ci-main { gap: 14px; }
+        .ci-imgwrap { flex: 0 0 84px; width: 84px; height: 104px; border-radius: 12px; }
+        .ci-body { gap: 8px; }
+        .ci-top { align-items: flex-start; gap: 8px; }
+        .ci-name { font-size: 15px; font-weight: 500; line-height: 1.3; }
+        .ci-remove { margin: -6px -6px 0 0; width: 30px; height: 30px; flex-shrink: 0; }
+        .ci-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ci-chip { font-size: 11.5px; color: #4a4a40; background: #f4f3ee; padding: 3px 9px; border-radius: 99px; text-transform: capitalize; }
+        .ci-bottom { margin-top: auto; padding-top: 0; align-items: flex-end; }
+        .ci-qty { height: 34px; background: #f7f6f1; border-color: #e6e4da; }
+        .ci-qty button { width: 32px; height: 32px; font-size: 16px; }
+        .ci-qty span { min-width: 22px; font-size: 13.5px; }
+        .ci-pricebox { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+        .ci-pricebox b { font-size: 16px; font-weight: 600; color: #1a1a14; }
+        .ci-pricebox s { font-size: 12px; color: #8b8b80; }
+        @media (max-width: 480px) { .drawer-items { padding: 12px 14px 20px; } .ci-imgwrap { flex-basis: 76px; width: 76px; height: 96px; } }
       `}</style>
 
       <div
@@ -288,21 +426,32 @@ export default function CartDrawer() {
             </button>
           </div>
 
-          {/* ── CartBanner ── */}
+          {/* ── Free-shipping progress ── */}
           {items.length > 0 && (
             <div className="dp-section">
-              <CartBanner />
+              <p className="ship-msg">
+                {toFree > 0
+                  ? <>You&apos;re <b>₹{toFree.toLocaleString('en-IN')}</b> away from <b>free shipping</b></>
+                  : <>🎉 You&apos;ve unlocked <b>free shipping</b></>}
+              </p>
+              <div className="ship-track" role="progressbar" aria-valuenow={shipPct} aria-valuemin={0} aria-valuemax={100}>
+                <span className="ship-fill" style={{ width: `${shipPct}%` }} />
+              </div>
             </div>
           )}
 
           {/* ── Items ── */}
           {items.length === 0 ? (
-            <div className="drawer-empty">
-              <div className="drawer-empty-icon">◇</div>
-              <p className="drawer-empty-text">Your cart is empty</p>
-              <Link href="/categories" className="drawer-empty-link" onClick={closeDrawer}>
-                Start Shopping
-              </Link>
+            <div className="drawer-items">
+              <div className="drawer-empty">
+                <div className="drawer-empty-icon"><Em c="🛍" size="1em" /></div>
+                <p className="drawer-empty-title">Your cart is empty</p>
+                <p className="drawer-empty-text">Find something you&apos;ll love.</p>
+                <Link href="/categories" className="drawer-btn-cart" style={{ width: 'auto', padding: '13px 28px' }} onClick={closeDrawer}>
+                  Start shopping
+                </Link>
+              </div>
+              <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
             </div>
           ) : (
             <div className="drawer-items">
@@ -311,289 +460,119 @@ export default function CartDrawer() {
                 const basePrice = item.basePrice ?? Math.max(0, item.price - giftPrice);
                 const itemTotal = item.price * item.qty;
                 const hasStrikethrough = Boolean(item.originalPrice && item.originalPrice > item.price);
+                const href = item.href || `/products/${item.id}`;
+                const hasGroups = Boolean(item.selectionGroups?.length);
+                const hasCharms = Boolean(item.selectedCharms?.length);
+                const meta: string[] = [];
+                if (item.size) meta.push(item.size);
+                if (item.color && item.color !== 'Default') meta.push(item.color);
+                if (item.variantLabel) meta.push(item.variantLabel);
+                if (item.chain) meta.push(`Chain: ${item.chainLabel || item.chain}`);
+                const groupItems = hasGroups ? item.selectionGroups!.flatMap((g) => g.items.map((sel) => ({ g, sel }))) : [];
+                // Only show the "included" list when there is something worth listing: several pieces, or a piece with its own options.
+                const detailCount = hasCharms ? item.selectedCharms!.length : groupItems.length;
+                const optLines = (sel: any) => {
+                  const l = getOptionLines(sel.customData).map(([k, v]) => `${k}: ${v}`);
+                  if (sel.customData?.presetMessage) l.push(`Card: ${String(sel.customData.presetMessage)}`);
+                  if (sel.customData?.personalMessage) l.push(`Msg: “${String(sel.customData.personalMessage)}”`);
+                  return l;
+                };
+                const singleLines = !hasCharms && groupItems.length === 1 ? optLines(groupItems[0].sel) : [];
+                if (singleLines.length) meta.push(...singleLines.filter((l) => { const v = l.split(': ').slice(1).join(': ').toLowerCase(); return !meta.some((m) => m.toLowerCase() === l.toLowerCase() || m.toLowerCase() === v); }));
+                const showDetails = hasCharms ? detailCount > 1 : detailCount > 1;
 
                 return (
-                  <div
-                    className="di-card"
-                    key={item.cartItemId ?? `${item.id}-${item.colorHex}`}
-                    style={(item.selectedCharms?.length || item.selectionGroups?.length) ? { flexDirection: 'column', gap: 10 } : undefined}
-                  >
-                    <div style={{ display: 'flex', gap: 14 }}>
-                      <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ flexShrink: 0 }}>
-                        <img className="di-img" src={item.image} alt={item.name} />
+                  <div className="ci" key={item.cartItemId ?? `${item.id}-${item.colorHex}`}>
+                    <div className="ci-main">
+                      <Link href={href} onClick={closeDrawer} className="ci-imgwrap">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img className="ci-img" src={cdnImage(item.image, 240)} alt={item.name} decoding="async" />
                       </Link>
-                      <div className="di-body">
-                        <Link href={item.href || `/products/${item.id}`} onClick={closeDrawer} style={{ textDecoration: 'none' }}>
-                          <div className="di-name">{item.name}</div>
-                        </Link>
-
-                        <div className="di-price-row">
-                          <span className="di-price">₹{itemTotal.toLocaleString('en-IN')}</span>
-                          {hasStrikethrough && (
-                            <span className="di-original">₹{(item.originalPrice! * item.qty).toLocaleString('en-IN')}</span>
-                          )}
+                      <div className="ci-body">
+                        <div className="ci-top">
+                          <Link href={href} onClick={closeDrawer} className="ci-name">{item.name}</Link>
+                          <button type="button" className="ci-remove" onClick={() => removeItem(item.id, item.colorHex)} aria-label={`Remove ${item.name}`} title="Remove">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+                          </button>
                         </div>
-
-                        {giftPrice > 0 && (
-                          <div className="di-gift-pill">
-                            🎁 ₹{(basePrice * item.qty).toLocaleString('en-IN')} + ₹{(giftPrice * item.qty).toLocaleString('en-IN')} Gift box added
+                        {meta.length > 0 && <div className="ci-chips">{meta.map((m) => <span key={m} className="ci-chip">{m}</span>)}</div>}
+                        <div className="ci-bottom">
+                          <div className="ci-qty">
+                            <button type="button" aria-label="Decrease quantity" onClick={() => item.qty <= 1 ? removeItem(item.id, item.colorHex) : updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
+                            <span>{item.qty}</span>
+                            <button type="button" aria-label="Increase quantity" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
                           </div>
-                        )}
-
-                        {(item as any).priceBreakdown && (
-                          <div style={{ fontSize: 10.5, color: 'var(--mist)', marginTop: 4 }}>
-                            {(item as any).priceBreakdown}
+                          <div className="ci-pricebox">
+                            {hasStrikethrough && <s>₹{(item.originalPrice! * item.qty).toLocaleString('en-IN')}</s>}
+                            <b>₹{itemTotal.toLocaleString('en-IN')}</b>
                           </div>
-                        )}
-                      </div>
-                      <div className="di-actions">
-                        <button
-                          className="di-remove"
-                          onClick={() => removeItem(item.id, item.colorHex)}
-                          aria-label={`Remove ${item.name}`}
-                        >×</button>
-                        {(!item.selectedCharms?.length && !item.selectionGroups?.length) && (
-                          <div className="di-qty">
-                            <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
-                            <span className="di-qty-val">{item.qty}</span>
-                            <button className="di-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    {item.chain && (
-                      <div style={{ fontSize: 11.5, color: 'var(--olive-600)', marginTop: 4, padding: '0 4px' }}>
-                        Chain: <strong>{item.chainLabel || item.chain}</strong>
-                      </div>
-                    )}
-
-                    {item.selectedCharms && item.selectedCharms.length > 0 && (
-                      <div style={{ background: 'var(--beige)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                          <span style={{ fontSize: 9.5, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600 }}>
-                            {item.selectedCharms.length} Pieces
-                          </span>
-                          {(item as any).band?.name && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--olive-600)', background: 'rgba(74,92,34,.08)', padding: '2px 8px', borderRadius: 12 }}>
-                              {(item as any).band?.image ? (
-                                <img src={(item as any).band.image} alt={(item as any).band.name} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                              ) : <span>🪡</span>}
-                              {(item as any).band.name}
-                            </span>
-                          )}
-                          {(item as any).selectionGroups?.[0]?.metadata?.packAddOn > 0 && (
-                            <span style={{ fontSize: 9.5, color: 'var(--mist)', fontStyle: 'italic' }}>
-                              +₹{(item as any).selectionGroups[0].metadata.packAddOn} add-on
-                            </span>
-                          )}
-                        </div>
-                        {item.selectedCharms.map((selection, idx: number) => {
-                          const charm = typeof selection === 'string' ? { id: selection, name: selection } : selection;
-                          return (
-                            <div key={(charm as any).id || (charm as any)._id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
-                              <span style={{ color: 'var(--olive-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 13 }}>{(charm as any).emoji || '◈'}</span>
-                                {(charm as any).name || 'Charm'}
-                              </span>
-                              {(charm as any).price ? <span style={{ fontWeight: 600, color: 'var(--olive-600)', fontSize: 11 }}>₹{(charm as any).price.toLocaleString('en-IN')}</span> : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {!item.selectedCharms?.length && item.selectionGroups && item.selectionGroups.length > 0 && (
-                      <div style={{ background: 'var(--beige)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ fontSize: 9.5, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--mist)', fontWeight: 600, marginBottom: 2 }}>
-                          Included Items
-                        </div>
-                        {Boolean(item.customData) && (Boolean(item.customData?.comboPresetMessage) || Boolean(item.customData?.comboPersonalMessage)) && (
-                          <div style={{ padding: '6px 8px', background: 'rgba(201,168,76,0.12)', borderRadius: 6, fontSize: 11, color: 'var(--olive-700)', marginBottom: 4 }}>
-                            <div style={{ fontWeight: 600, fontSize: 10, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Box Customisation</div>
-                            {Boolean(item.customData?.comboPresetMessage) && <div>Card: <em>{String(item.customData?.comboPresetMessage)}</em></div>}
-                            {Boolean(item.customData?.comboPersonalMessage) && <div>Message: &ldquo;{String(item.customData?.comboPersonalMessage)}&rdquo;</div>}
-                          </div>
-                        )}
-                        {item.selectionGroups.flatMap((group) =>
-                          group.items.map((selection, idx) => {
-                            const optionLines = getOptionLines(selection.customData);
-                            const hasExtra =
-                              Boolean(selection.customData?.presetMessage) ||
-                              Boolean(selection.customData?.personalMessage) ||
-                              Boolean(selection.customData?.chain) ||
-                              (Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0);
-
-                            return (
-                              <div key={selection.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(61,74,34,.06)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  {/* Photo only when this selection actually has one */}
-                                  {selection.image && <img src={selection.image} alt={selection.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />}
-                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: 10, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{group.label || group.category}</span>
-                                    <span style={{ fontSize: 13.5, color: 'var(--olive-900)', fontWeight: 500 }}>{selection.name}</span>
-
-                                    {/* Chosen colour / size / other options — as text */}
-                                    {optionLines.length > 0 && (
-                                      <div className="di-opt-lines">
-                                        {optionLines.map(([k, v]) => (
-                                          <div key={k}>{k}: <strong>{v}</strong></div>
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {hasExtra && (
-                                      <div style={{ fontSize: 11.5, color: 'var(--olive-600)', marginTop: 2 }}>
-                                        {Boolean(selection.customData?.presetMessage) && <div>Card: <em>{String(selection.customData?.presetMessage)}</em></div>}
-                                        {Boolean(selection.customData?.personalMessage) && <div>Msg: &ldquo;{String(selection.customData?.personalMessage)}&rdquo;</div>}
-                                        {Boolean(selection.customData?.chain) && <div>Chain: <strong>{String(selection.customData?.chain)}</strong></div>}
-                                        {Boolean(selection.customData?.charmCount) && Number(selection.customData?.charmCount) > 0 && (
-                                          <div>Charms: {Array.isArray(selection.customData?.selectedCharms) ? selection.customData.selectedCharms.filter(Boolean).join(', ') : ''}</div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-
                     {item.giftBox && (
-                      <div
-                        style={{
-                          marginTop: 8,
-                          background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(61,80,22,0.06))',
-                          border: '1px solid rgba(201,168,76,0.3)',
-                          borderRadius: 12,
-                          padding: '10px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                        }}
-                      >
-                        {item.giftBoxDetails?.image ? (
-                          <img
-                            src={item.giftBoxDetails.image}
-                            alt={item.giftBoxDetails.heading || 'Gift Box'}
-                            style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 8,
-                              objectFit: 'cover',
-                              flexShrink: 0,
-                              border: '1px solid rgba(201,168,76,0.3)',
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 8,
-                              background: 'rgba(201,168,76,0.18)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 20,
-                              flexShrink: 0,
-                            }}
-                          >
-                            🎁
-                          </div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--olive-900)' }}>
-                              🎁 {item.giftBoxDetails?.heading || 'Premium Gift Box'}
-                            </span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--olive-700)', flexShrink: 0 }}>
-                              +₹{giftPrice}
-                            </span>
-                          </div>
-                          {item.giftBoxDetails?.description && (
-                            <div style={{ fontSize: 11, color: 'var(--mist)', lineHeight: 1.35, marginTop: 3 }}>
-                              {item.giftBoxDetails.description}
-                            </div>
-                          )}
-                          {item.giftMessage && (
-                            <div style={{ fontSize: 10.5, color: 'var(--olive-600)', fontStyle: 'italic', marginTop: 3 }}>
-                              &ldquo;{item.giftMessage}&rdquo;
-                            </div>
-                          )}
-                        </div>
+                      <div className="ci-gift">
+                        <Em c="🎁" size="1em" />
+                        <span>{item.giftBoxDetails?.heading || 'Premium Gift Box'}{item.giftMessage ? ' + message' : ''}</span>
+                        <b>+₹{(giftPrice * item.qty).toLocaleString('en-IN')}</b>
                       </div>
+                    )}
+
+                    {showDetails && (
+                      <details className="ci-details">
+                        <summary>{hasCharms ? `${detailCount} piece${detailCount !== 1 ? 's' : ''} included` : `${detailCount} item${detailCount !== 1 ? 's' : ''} included`}</summary>
+                        <ul>
+                          {hasCharms && item.selectedCharms!.map((sel, idx) => {
+                            const c = (typeof sel === 'string' ? { name: sel } : sel) as any;
+                            return <li key={c.id || c._id || idx}><span>{c.name || 'Charm'}</span>{c.price ? <b>₹{Number(c.price).toLocaleString('en-IN')}</b> : null}</li>;
+                          })}
+                          {!hasCharms && groupItems.map(({ g, sel }, idx) => {
+                            const lines = optLines(sel);
+                            return (
+                              <li key={sel.id || idx}>
+                                <span>{sel.name}{lines.length > 0 && <em>{lines.join(' · ')}</em>}</span>
+                                <i>{g.label || g.category}</i>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </details>
                     )}
                   </div>
                 );
               })}
+
+              {/* Store offers */}
+              {applicableOffers.length > 0 && (
+                <div className="offers">
+                  <span className="offers-h">Store offers</span>
+                  {applicableOffers.map((o) => (
+                    <label key={o.id} className={`offer${o.applied ? ' on' : ''}`}>
+                      <input type="checkbox" checked={o.applied} onChange={() => toggleOfferOptOut(o.id)} />
+                      <span className="offer-t">{o.title}</span>
+                      <span className="offer-a">{o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
             </div>
           )}
 
           {/* ── Footer ── */}
           {items.length > 0 && (
             <div className="drawer-foot">
-              <div className="drawer-subtotal-row">
-                <span>Subtotal ({itemCount} item{itemCount !== 1 ? 's' : ''})</span>
-                <strong>₹{subtotal.toLocaleString('en-IN')}</strong>
+              <div className="foot-row">
+                <span className="foot-label">Total</span>
+                <span className="foot-total">₹{total.toLocaleString('en-IN')}</span>
               </div>
-
-              {/* Auto-applied store offers */}
-              {applicableOffers.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 0', borderTop: '1px solid rgba(61,74,34,.08)' }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--mist)' }}>Store Offers</span>
-                  {applicableOffers.map((o) => (
-                    <div key={o.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: o.applied ? 'rgba(46,125,50,.07)' : 'rgba(0,0,0,.03)',
-                      border: `1px solid ${o.applied ? 'rgba(46,125,50,.2)' : 'rgba(0,0,0,.07)'}`,
-                      borderRadius: 8, padding: '7px 10px',
-                    }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: 1 }}>
-                        <input
-                          type="checkbox"
-                          checked={o.applied}
-                          onChange={() => toggleOfferOptOut(o.id)}
-                          style={{ cursor: 'pointer', accentColor: 'var(--olive-600)', width: 14, height: 14, flexShrink: 0 }}
-                        />
-                        <span style={{ fontSize: 12, fontWeight: 500, color: o.applied ? 'var(--olive-700)' : 'var(--mist)', lineHeight: 1.3 }}>{o.title}</span>
-                      </label>
-                      <span style={{
-                        fontSize: 12, fontWeight: 800, color: o.applied ? 'var(--green)' : 'var(--mist)',
-                        flexShrink: 0, marginLeft: 8,
-                      }}>
-                        {o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}
-                      </span>
-                    </div>
-                  ))}
-                  {autoDiscountAmount > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 2px' }}>
-                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', flexShrink: 0, animation: 'drawerPulse 1.8s infinite' }} />
-                      <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>
-                        Saving ₹{autoDiscountAmount.toLocaleString('en-IN')} with store offer{appliedOffers.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="drawer-subtotal-row" style={{ borderTop: '1px solid rgba(61,74,34,.1)', paddingTop: 10, marginTop: 4 }}>
-                <span style={{ fontWeight: 700 }}>Total</span>
-                <strong style={{ fontSize: 16 }}>₹{total.toLocaleString('en-IN')}</strong>
-              </div>
-              <div className="drawer-cta">
-                <Link href="/cart" className="drawer-btn-cart" onClick={closeDrawer}>
-                  View Cart &amp; Checkout
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </Link>
-                <button className="drawer-btn-shop" onClick={closeDrawer}>
-                  Continue Shopping
-                </button>
-              </div>
+              <Link href="/cart" className="drawer-btn-cart" onClick={closeDrawer}>
+                Checkout
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           )}
 

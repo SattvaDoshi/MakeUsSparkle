@@ -14,6 +14,7 @@ export const uploadStorage = multer.memoryStorage();
 // Multer middleware for single file
 export const uploadSingle = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -27,6 +28,7 @@ export const uploadSingle = multer({
 // Multer middleware for multiple files
 export const uploadMultiple = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -40,6 +42,7 @@ export const uploadMultiple = multer({
 // Product-specific multer: handles mainImage + images[] + variantImages[n] dynamically
 export const uploadProductImages = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -64,6 +67,7 @@ export const uploadProductImages = multer({
 // Home Content multer
 export const uploadHomeContentImages = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -89,6 +93,7 @@ export const uploadHomeContentImages = multer({
 // Combo images multer
 export const uploadComboImages = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -102,6 +107,7 @@ export const uploadComboImages = multer({
 // Open Section images multer — dynamic categoryImage_N fields
 export const uploadOpenSectionImages = multer({
 	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -111,6 +117,20 @@ export const uploadOpenSectionImages = multer({
 		}
 	},
 }).any();
+
+// Founder banner images (desktop + mobile), capped at 8 MB each
+export const uploadFounderImages = multer({
+	storage: uploadStorage,
+	limits: { fileSize: 8 * 1024 * 1024, files: 2 },
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+		if (allowedMimes.includes(file.mimetype)) cb(null, true);
+		else cb(new Error("Only JPEG, PNG, WebP, and AVIF images are allowed"));
+	},
+}).fields([
+	{ name: "desktopImage", maxCount: 1 },
+	{ name: "mobileImage", maxCount: 1 },
+]);
 
 // Cloudinary upload helper
 export const uploadToCloudinary = async (fileBuffer, folder) => {

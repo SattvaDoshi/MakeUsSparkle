@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 
@@ -16,8 +17,11 @@ type AuthResponse = {
   };
 };
 
-export default function LoginPopup() {
+export default function LoginPopup({ autoOpen = true }: { autoOpen?: boolean }) {
   const { signIn, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+  // Where to go once the shopper is signed in (e.g. checkout, when they opened this from the cart)
+  const nextRef = useRef<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [closed, setClosed] = useState(false);
   const [tab, setTab] = useState<'login' | 'register'>('register');
@@ -29,15 +33,17 @@ export default function LoginPopup() {
   });
 
   useEffect(() => {
-    if (loading || isAuthenticated || sessionStorage.getItem('loginPopupDismissed')) return;
+    if (!autoOpen || loading || isAuthenticated || sessionStorage.getItem('loginPopupDismissed')) return;
     const timer = setTimeout(() => { if (!closed) setVisible(true); }, 15000);
     return () => clearTimeout(timer);
-  }, [closed, isAuthenticated, loading]);
+  }, [closed, isAuthenticated, loading, autoOpen]);
 
   useEffect(() => {
     const open = (e: Event) => {
       if (isAuthenticated) return;
-      const ev = e as CustomEvent<{ tab?: 'login' | 'register' }>;
+      const ev = e as CustomEvent<{ tab?: 'login' | 'register'; next?: string }>;
+      // Only same-site paths are accepted as a destination
+      nextRef.current = typeof ev.detail?.next === 'string' && /^\/(?!\/)/.test(ev.detail.next) ? ev.detail.next : null;
       setTab(ev.detail?.tab || 'register');
       setVisible(true);
       setClosed(false);
@@ -56,6 +62,12 @@ export default function LoginPopup() {
     const { day, month, year } = form;
     if (!day || !month || !year) return undefined;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  };
+
+  const goNext = () => {
+    const next = nextRef.current;
+    nextRef.current = null;
+    if (next) router.push(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,6 +100,7 @@ export default function LoginPopup() {
           ? ` Your 5% code is ${result.welcomeCoupon.code}.` : '';
         setFeedback(`Signup successful.${couponText} Check your email.`);
         handleClose();
+        goNext();
         return;
       }
       const result = await apiRequest<AuthResponse>('/auth/login', {
@@ -97,6 +110,7 @@ export default function LoginPopup() {
       if (result.token) await signIn(result.token, result.user ?? null);
       setFeedback(result.message || 'Login successful.');
       handleClose();
+      goNext();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {

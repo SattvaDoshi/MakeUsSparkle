@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useState } from 'react';
 
 interface PolicySection {
@@ -67,11 +68,11 @@ const shippingSections: PolicySection[] = [
           </table>
         </div>
         <div className="sp-note-chip">
-          <span>💝</span>
+          <span><Em c="💝" /></span>
           <p><strong>Free Standard Shipping</strong> on all domestic orders above ₹999.</p>
         </div>
         <div className="sp-note-chip" style={{ marginTop: 8 }}>
-          <span>💵</span>
+          <span><Em c="💵" /></span>
           <p><strong>Cash on Delivery (COD)</strong> available for an additional convenience fee of ₹70 (Total shipping for COD: ₹130).</p>
         </div>
       </>
@@ -133,7 +134,7 @@ function AccordionSection({ section, open, onToggle }: { section: PolicySection;
     <div className={`sp-acc-item${open ? ' sp-acc-item--open' : ''}`}>
       <button className="sp-acc-head" onClick={onToggle}>
         <span className="sp-acc-head-left">
-          <span className="sp-acc-icon">{section.icon}</span>
+          <span className="sp-acc-icon"><Em c={section.icon} /></span>
           <span className="sp-acc-label">{section.title}</span>
         </span>
         <span className="sp-acc-chevron">
@@ -156,10 +157,9 @@ export default function ShippingPolicyPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
 
         :root {
-          --sp-beige: #f5f0e8;
+          --sp-beige: #ffffff;
           --sp-beige-dk: #ede5d5;
           --sp-beige-dkr: #d9cdb8;
           --sp-green-50: #f0f5ec;
@@ -493,17 +493,17 @@ export default function ShippingPolicyPage() {
           {/* Layout Row - Locked into 1 Row */}
           <div className="sp-quick-grid">
             <div className="sp-quick-card">
-              <div className="sp-quick-icon">🚚</div>
+              <div className="sp-quick-icon"><Em c="🚚" /></div>
               <div className="sp-quick-title">Standard</div>
               <div className="sp-quick-val">3–7 days · ₹60</div>
             </div>
             <div className="sp-quick-card">
-              <div className="sp-quick-icon">⚡</div>
+              <div className="sp-quick-icon"><Em c="⚡" /></div>
               <div className="sp-quick-title">Express</div>
               <div className="sp-quick-val">2–4 days · ₹110</div>
             </div>
             <div className="sp-quick-card">
-              <div className="sp-quick-icon">🎁</div>
+              <div className="sp-quick-icon"><Em c="🎁" /></div>
               <div className="sp-quick-title">Free Shipping</div>
               <div className="sp-quick-val">Above ₹999</div>
             </div>

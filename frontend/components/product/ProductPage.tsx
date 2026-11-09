@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import ProductCard from '@/components/product/ProductCard';
-import UpperNav from '@/components/ui/UpperNav';
 import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
+import styles from './ProductListing.module.css';
 export const ALL_PRODUCTS = [
   {
     id: 1,
@@ -385,22 +385,15 @@ export default function ProductsPage({
   loading?: boolean;
 }) {
   const [activeTag, setActiveTag] = useState('All');
-  const [search, setSearch] = useState('');
-  const [scrolled, setScrolled] = useState(false);
   const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
   const [sort, setSort] = useState<SortOption>('default');
   const [internalLoading, setInternalLoading] = useState(products ? false : true);
   const isLoading = propLoading !== undefined ? propLoading : internalLoading;
 
-  const [page, setPage] = useState(1);
-  const [visibleCount, setVisibleCount] = useState(16);
+  // First screen shows 16 pieces; after that more load automatically as the shopper nears the bottom.
   const ITEMS_PER_PAGE = 16;
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -434,9 +427,8 @@ export default function ProductsPage({
   }, [products]);
 
   useEffect(() => {
-    setPage(1);
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [type, subtype, gender, activeTag, search, sort]);
+  }, [type, subtype, gender, activeTag, sort]);
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
@@ -475,42 +467,28 @@ export default function ProductsPage({
         list = refined;
       }
     }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
-      );
-    }
     if (activeTag !== 'All') {
       list = list.filter((p) => p.badge === activeTag || (p as any).tags?.includes(activeTag));
     }
     return sortProducts(list, sort);  
-  }, [dynamicProducts, gender, activeTag, search, type, subtype, sort]);
+  }, [dynamicProducts, gender, activeTag, type, subtype, sort]);
 
   const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const shown = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMore = visibleCount < totalItems;
 
-  const paginatedProducts = useMemo(() => {
-    if (visibleCount > ITEMS_PER_PAGE) {
-      return filtered.slice(0, visibleCount);
-    }
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filtered.slice(start, start + ITEMS_PER_PAGE);
-  }, [filtered, page, visibleCount]);
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setPage(newPage);
-    setVisibleCount(ITEMS_PER_PAGE);
-    const bodyEl = document.querySelector('.pp-toolbar') || document.querySelector('.pp-body');
-    if (bodyEl) {
-      bodyEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const handleLoadMore = () => {
-    setVisibleCount((prev) => Math.min(prev + ITEMS_PER_PAGE, totalItems));
-  };
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, totalItems));
+      },
+      { rootMargin: '900px 0px' }, // start loading well before the shopper reaches the end
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, totalItems, visibleCount]);
 
   const displayType = type ? type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
   const displaySubtype = subtype
@@ -519,562 +497,77 @@ export default function ProductsPage({
   const pageTitle = displaySubtype ? `${displaySubtype} ${displayType}` : displayType || 'All Products';
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600;700&display=swap');
+    <div className={`${styles.root}${embedded ? ` ${styles.embedded}` : ''}`}>
+      {!embedded && (
+        <header className={styles.pageHeader}>
+          <span className={styles.eyebrow}>Handcrafted · Ethically Made</span>
+          <h1 className={styles.pageTitle}>{displaySubtype ? <><em>{displaySubtype}</em> {displayType}</> : <em>{pageTitle}</em>}</h1>
+        </header>
+      )}
 
-        :root {
-          --pp-cream:   #faf8f3;
-          --pp-cream2:  #f3ede1;
-          --pp-white:   #ffffff;
-          --pp-gd:      #253d18;
-          --pp-gs:      #527a3e;
-          --pp-gp:      #ddecd1;
-          --pp-gt:      #eff6ea;
-          --pp-gold:    #a07820;
-          --pp-t1:      #1c1c17;
-          --pp-t3:      #828278;
-          --pp-t4:      #b4b4a4;
-          --pp-bs:      rgba(60,90,35,0.09);
-          --pp-bm:      rgba(60,90,35,0.18);
-        }
-
-        *, *::before, *::after { box-sizing: border-box; }
-
-        .pp-root {
-          min-height: 100vh;
-          background: var(--pp-cream);
-          font-family: 'Jost', sans-serif;
-          color: var(--pp-t1);
-          
-        }
-        .pp-root--embedded {
-          padding-top: 0
-          min-height: unset;
-          background: transparent;
-        }
-
-        /* ── TOOLBAR ── */
-        .pp-toolbar {
-          position: sticky; top: 0; z-index: 50;
-          background: var(--pp-white);
-          border-bottom: 1px solid var(--pp-bs);
-          padding: 12px 40px;
-          display: flex; align-items: center; gap: 10px;
-          flex-wrap: wrap;
-          transition: box-shadow .3s;
-        }
-        .pp-toolbar--scrolled { box-shadow: 0 4px 20px rgba(26,36,27,.09); }
-        .pp-root--embedded .pp-toolbar {
-          padding: 12px 40px;
-        }
-
-        /* search */
-        .pp-search { position: relative; flex-shrink: 0; }
-        .pp-search svg {
-          position: absolute; left: 12px; top: 50%;
-          transform: translateY(-50%);
-          width: 13px; height: 13px;
-          stroke: var(--pp-t3); pointer-events: none;
-        }
-        .pp-search input {
-          font-family: 'Jost', sans-serif;
-          font-size: 12px; color: var(--pp-t1);
-          background: var(--pp-cream);
-          border: 1.5px solid var(--pp-bs);
-          border-radius: 3px;
-          padding: 8px 14px 8px 32px;
-          outline: none; width: 200px;
-          transition: all .18s;
-        }
-        .pp-search input:focus {
-          background: var(--pp-white);
-          border-color: var(--pp-gs);
-          box-shadow: 0 0 0 3px rgba(82,122,62,.1);
-        }
-        .pp-search input::placeholder { color: var(--pp-t4); font-size: 11px; }
-
-        .pp-divider {
-          width: 1px; height: 22px;
-          background: var(--pp-bs); flex-shrink: 0;
-        }
-
-        /* pills */
-        .pp-pills { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .pp-pill {
-          font-family: 'Jost', sans-serif;
-          font-size: 10px; font-weight: 600;
-          letter-spacing: .08em; text-transform: uppercase;
-          color: var(--pp-t3); padding: 6px 14px;
-          border: 1.5px solid var(--pp-bs);
-          border-radius: 3px;
-          background: transparent; cursor: pointer;
-          transition: all .17s ease; white-space: nowrap;
-        }
-        .pp-pill:hover {
-          color: var(--pp-gd); border-color: var(--pp-bm);
-          background: var(--pp-gt);
-        }
-        .pp-pill--active {
-          color: #fff !important;
-          background: var(--pp-gd) !important;
-          border-color: var(--pp-gd) !important;
-          box-shadow: 0 2px 8px rgba(37,61,24,.22);
-        }
-
-        .pp-toolbar-right {
-          margin-left: auto;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .pp-count-chip {
-          font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-          color: var(--pp-t4); white-space: nowrap;
-          font-family: 'Jost', sans-serif;
-        }
-
-        /* ── PAGE TITLE (non-embedded) ── */
-        .pp-page-header {
-          padding: 40px 40px 8px;
-          border-bottom: 1px solid var(--pp-bs);
-          
-        }
-        .pp-page-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(1.6rem, 3vw, 2.2rem);
-          font-weight: 400;
-          color: var(--pp-t1);
-          letter-spacing: -.01em;
-          line-height: 1.1;
-        }
-        .pp-page-title em { font-style: italic; color:#1a2e0f; font-weight: 200; font-size: clamp(2rem, 4vw, 2.8rem); }
-        .pp-page-subtitle {
-          margin-top: 6px;
-          font-size: 11px; color: var(--pp-t3); letter-spacing: .06em;
-          text-transform: uppercase; font-family: 'Jost', sans-serif;
-        }
-
-        /* ── PAGE BODY ── */
-        .pp-body {
-          padding: 24px 40px 80px;
-        }
-        .pp-root--embedded .pp-body {
-          padding: 24px 40px 60px;
-        }
-
-        /* ── PRODUCT GRID ── */
-        .pp-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
-        }
-        .pp-root--embedded .pp-grid {
-          grid-template-columns: repeat(4, 1fr);
-        }
-
-        .pp-item {
-          opacity: 0;
-          transform: translateY(8px);
-          animation: ppItemIn .38s ease forwards;
-        }
-        @keyframes ppItemIn {
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── EMPTY STATE ── */
-        .pp-empty {
-          grid-column: 1 / -1;
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: 80px 20px; gap: 12px;
-        }
-        .pp-empty-icon {
-          width: 52px; height: 52px; border-radius: 50%;
-          border: 1.5px dashed var(--pp-bs);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .pp-empty-icon svg { width: 20px; height: 20px; stroke: var(--pp-t4); }
-        .pp-empty h3 {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem; font-weight: 400; color: var(--pp-t3); margin: 0;
-        }
-        .pp-empty p { font-size: 11px; color: var(--pp-t4); margin: 0; }
-
-        /* ── TABLET 769–1024px ── */
-        @media (max-width: 1024px) {
-          .pp-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
-          .pp-toolbar, .pp-body, .pp-page-header { padding-left: 28px; padding-right: 28px; }
-          .pp-root--embedded .pp-toolbar,
-          .pp-root--embedded .pp-body { padding-left: 28px; padding-right: 28px; }
-        }
-
-        /* ── TABLET SMALL 601–768px ── */
-        @media (max-width: 768px) {
-          .pp-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-          .pp-toolbar, .pp-body, .pp-page-header { padding-left: 20px; padding-right: 20px; }
-          .pp-root--embedded .pp-toolbar,
-          .pp-root--embedded .pp-body { padding-left: 20px; padding-right: 20px; }
-        }
-
-        /* ── MOBILE ≤ 600px ── */
-        @media (max-width: 600px) {
-          /* toolbar */
-          .pp-toolbar {
-            padding: 10px 14px 8px;
-            gap: 0;
-            row-gap: 8px;
-            flex-wrap: wrap;
-          }
-          .pp-root--embedded .pp-toolbar {
-            padding: 10px 14px 8px;
-          }
-            /* ADD this inside the mobile media query */
-.pp-root--embedded .pp-toolbar {
-  padding-top: 6px;
-}
-
-          .pp-search { order: 1; flex: 1; min-width: 0; }
-          .pp-search input { width: 100%; min-width: 0; border-radius: 3px; }
-
-          .pp-toolbar-right { order: 2; margin-left: 10px; flex-shrink: 0; }
-
-          .pp-pills {
-            order: 3;
-            flex: 0 0 100%;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            scrollbar-width: none;
-            gap: 6px;
-            padding-bottom: 2px;
-          }
-          .pp-pills::-webkit-scrollbar { display: none; }
-          .pp-pill { font-size: 9px; padding: 5px 12px; flex-shrink: 0; }
-
-          .pp-divider { display: none; }
-
-          /* page header */
-          .pp-page-header { padding: 20px 14px 16px;}
-          .pp-page-title { font-size: 1.4rem; }
-          .pp-page-subtitle { font-size: 10px; }
-
-          /* body — proper horizontal padding on mobile */
-          .pp-body {
-            padding: 16px 14px 60px;
-          }
-          .pp-root--embedded .pp-body {
-            padding: 16px 14px 48px;
-          }
-
-          /* grid — consistent gap, proper sizing */
-          .pp-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-          }
-          .pp-root--embedded .pp-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-          }
-
-          /* ensure cards fill their cells */
-          .pp-item {
-            min-width: 0;
-          }
-        }
-
-        /* ── SKELETON LOADERS ── */
-        .pp-skeleton-card {
-          background: #ffffff;
-          border-radius: 4px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          box-shadow: 0 1px 4px rgba(61,74,34,.08);
-        }
-        .pp-skeleton-img {
-          width: 100%;
-          aspect-ratio: 4 / 5;
-          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
-          background-size: 200% 100%;
-          animation: ppShimmer 1.5s infinite;
-        }
-        .pp-skeleton-body {
-          padding: 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          flex: 1;
-        }
-        .pp-skeleton-line {
-          border-radius: 3px;
-          background: linear-gradient(90deg, #ede5d5 25%, #f7f2ea 50%, #ede5d5 75%);
-          background-size: 200% 100%;
-          animation: ppShimmer 1.5s infinite;
-        }
-        .pp-skeleton-title { width: 75%; height: 14px; }
-        .pp-skeleton-price { width: 45%; height: 12px; margin-top: 4px; }
-        .pp-skeleton-btn {
-          width: 100%;
-          height: 34px;
-          border-radius: 4px;
-          background: linear-gradient(90deg, #e4dcce 25%, #ede5d5 50%, #e4dcce 75%);
-          background-size: 200% 100%;
-          animation: ppShimmer 1.5s infinite;
-          margin-top: auto;
-        }
-        @keyframes ppShimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-
-        /* ── PAGINATION ── */
-        .pp-pagination-container {
-          margin-top: 48px;
-          padding-top: 24px;
-          border-top: 1px solid rgba(61,74,34,0.1);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-        }
-        .pp-pagination-info {
-          font-size: 13px;
-          color: var(--pp-t3);
-          letter-spacing: .02em;
-        }
-        .pp-load-more-btn {
-          background: #253d18;
-          color: #f7f2ea;
-          border: none;
-          padding: 12px 28px;
-          border-radius: 4px;
-          font-family: 'Jost', sans-serif;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: .08em;
-          text-transform: uppercase;
-          cursor: pointer;
-          transition: background .2s, transform .2s;
-          box-shadow: 0 2px 8px rgba(37,61,24,0.2);
-        }
-        .pp-load-more-btn:hover {
-          background: #3d5a22;
-          transform: translateY(-1px);
-        }
-        .pp-load-more-btn:active {
-          transform: translateY(0);
-        }
-        .pp-pagination-pages {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 4px;
-          flex-wrap: wrap;
-          justify-content: center;
-        }
-        .pp-page-btn, .pp-page-nav-btn {
-          min-width: 36px;
-          height: 36px;
-          padding: 0 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid rgba(61,74,34,0.18);
-          background: #ffffff;
-          color: #1e2310;
-          border-radius: 4px;
-          font-family: 'Jost', sans-serif;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all .2s;
-        }
-        .pp-page-btn:hover, .pp-page-nav-btn:not(:disabled):hover {
-          border-color: #253d18;
-          color: #253d18;
-          background: #f7f2ea;
-        }
-        .pp-page-btn--active {
-          background: #253d18 !important;
-          color: #ffffff !important;
-          border-color: #253d18 !important;
-          font-weight: 600;
-        }
-        .pp-page-nav-btn:disabled {
-          opacity: 0.35;
-          cursor: not-allowed;
-        }
-        .pp-page-ellipsis {
-          padding: 0 4px;
-          color: #828278;
-        }
-
-        /* ── SMALL MOBILE ≤ 380px ── */
-        @media (max-width: 380px) {
-          .pp-toolbar { padding: 8px 12px 6px; }
-          .pp-page-header { padding: 16px 12px 14px; }
-          .pp-body, .pp-root--embedded .pp-body { padding-left: 12px; padding-right: 12px; }
-          .pp-grid { gap: 8px; }
-          .pp-page-title { font-size: 1.25rem; }
-        }
-      `}</style>
-
-      <div className={`pp-root${embedded ? ' pp-root--embedded' : ''}`}>
-         {!embedded && <UpperNav />}
-        {!embedded && (
-          <div className="pp-page-header">
-            <div className="pp-page-title">
-              {displaySubtype
-                ? <><em>{displaySubtype}</em> {displayType}</>
-                : <em>{pageTitle}</em>}
-            </div>
-            <div className="pp-page-subtitle">
-              Handcrafted · Ethically Made · {isLoading ? 'Loading pieces…' : `${filtered.length} pieces`}
-            </div>
-          </div>
-        )}
-
-        {/* Toolbar */}
-        <div className={`pp-toolbar${scrolled ? ' pp-toolbar--scrolled' : ''}`}>
-          <div className="pp-search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            <input 
-              type="text"
-              placeholder="Search pieces…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="pp-divider" />
-
-          <div className="pp-pills">
-            {FILTER_TAGS.map((tag) => (
-              <button
-                key={tag}
-                className={`pp-pill${activeTag === tag ? ' pp-pill--active' : ''}`}
-                onClick={() => setActiveTag(tag)}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          <div className="pp-toolbar-right">
-            <SortFilter value={sort} onChange={setSort} variant="olive" />
-            <span className="pp-count-chip">
-              {isLoading ? 'Loading…' : `${filtered.length} pieces`}
-            </span>
-          </div>
+      {/* Filter bar */}
+      <div className={styles.toolbar}>
+        <div className={styles.pills} role="tablist" aria-label="Filter pieces">
+          {FILTER_TAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              role="tab"
+              aria-selected={activeTag === tag}
+              className={`${styles.pill}${activeTag === tag ? ` ${styles.pillOn}` : ''}`}
+              onClick={() => setActiveTag(tag)}
+            >
+              {tag}
+            </button>
+          ))}
         </div>
+        <div className={styles.toolbarRight}>
+          <span className={styles.count} aria-live="polite">{isLoading ? 'Loading…' : `${totalItems} ${totalItems === 1 ? 'piece' : 'pieces'}`}</span>
+          <SortFilter value={sort} onChange={setSort} variant="olive" />
+        </div>
+      </div>
 
-        {/* Grid */}
-        <div className="pp-body">
-          <div className="pp-grid">
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, idx) => (
-                <div key={idx} className="pp-skeleton-card">
-                  <div className="pp-skeleton-img" />
-                  <div className="pp-skeleton-body">
-                    <div className="pp-skeleton-line pp-skeleton-title" />
-                    <div className="pp-skeleton-line pp-skeleton-price" />
-                    <div className="pp-skeleton-btn" />
-                  </div>
-                </div>
-              ))
-            ) : filtered.length === 0 ? (
-              <div className="pp-empty">
-                <div className="pp-empty-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
-                </div>
-                <h3>Nothing found</h3>
-                <p>Try adjusting your filters or search</p>
+      {/* Grid */}
+      <div className={styles.body}>
+        <div className={styles.grid}>
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className={styles.skel} aria-hidden="true">
+                <div className={styles.skelImg} />
+                <div className={styles.skelLine} style={{ width: '40%' }} />
+                <div className={styles.skelLine} style={{ width: '85%' }} />
+                <div className={styles.skelLine} style={{ width: '30%' }} />
               </div>
-            ) : (
-              paginatedProducts.map((product, i) => (
-                <div
-                  key={product.id}
-                  className="pp-item"
-                  style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s` }}
-                >
-                  <ProductCard product={product} productLinkBase={productLinkBase} />
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Pagination & Load More */}
-          {!isLoading && totalItems > ITEMS_PER_PAGE && (
-            <div className="pp-pagination-container">
-              <div className="pp-pagination-info">
-                Showing {visibleCount > ITEMS_PER_PAGE ? Math.min(visibleCount, totalItems) : Math.min(page * ITEMS_PER_PAGE, totalItems)} of {totalItems} pieces
-              </div>
-
-              {visibleCount < totalItems && (
-                <button
-                  type="button"
-                  className="pp-load-more-btn"
-                  onClick={handleLoadMore}
-                >
-                  Load More (+{Math.min(ITEMS_PER_PAGE, totalItems - visibleCount)} remaining)
-                </button>
+            ))
+          ) : totalItems === 0 ? (
+            <div className={styles.empty}>
+              <h3>Nothing here yet</h3>
+              <p>{activeTag !== 'All' ? 'No pieces match this filter.' : 'New pieces are on the way.'}</p>
+              {activeTag !== 'All' && (
+                <button type="button" className={styles.emptyBtn} onClick={() => setActiveTag('All')}>Show all pieces</button>
               )}
-
-              <div className="pp-pagination-pages">
-                <button
-                  type="button"
-                  className="pp-page-nav-btn"
-                  disabled={page <= 1}
-                  onClick={() => handlePageChange(page - 1)}
-                  aria-label="Previous page"
-                >
-                  ← Prev
-                </button>
-
-                {Array.from({ length: totalPages }).map((_, idx) => {
-                  const pageNum = idx + 1;
-                  if (
-                    totalPages > 7 &&
-                    pageNum !== 1 &&
-                    pageNum !== totalPages &&
-                    Math.abs(pageNum - page) > 2
-                  ) {
-                    if (pageNum === 2 || pageNum === totalPages - 1) {
-                      return <span key={pageNum} className="pp-page-ellipsis">…</span>;
-                    }
-                    return null;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      type="button"
-                      className={`pp-page-btn${page === pageNum && visibleCount <= ITEMS_PER_PAGE ? ' pp-page-btn--active' : ''}`}
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  className="pp-page-nav-btn"
-                  disabled={page >= totalPages}
-                  onClick={() => handlePageChange(page + 1)}
-                  aria-label="Next page"
-                >
-                  Next →
-                </button>
-              </div>
             </div>
+          ) : (
+            shown.map((product, i) => (
+              <div key={product.id} className={styles.item} style={{ animationDelay: `${Math.min((i % ITEMS_PER_PAGE) * 0.035, 0.4)}s` }}>
+                <ProductCard product={product} productLinkBase={productLinkBase} />
+              </div>
+            ))
           )}
         </div>
 
+        {/* Infinite scroll */}
+        {!isLoading && hasMore && (
+          <div ref={sentinelRef} className={styles.more} aria-hidden="true">
+            <span className={styles.spinner} />
+          </div>
+        )}
+        {!isLoading && !hasMore && totalItems > ITEMS_PER_PAGE && (
+          <p className={styles.end}>You&apos;ve seen all {totalItems} pieces</p>
+        )}
       </div>
-    </>
+
+    </div>
   );
+
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import Em from "@/components/ui/Em";
+import ProductCard from "@/components/product/ProductCard";
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -60,71 +62,13 @@ function getProductBadge(offer: OfferDetail): string {
 // Mini product card with offer context
 // ──────────────────────────────────────────────
 function OfferProductCard({ product, offer }: { product: CatalogProduct; offer: OfferDetail }) {
-  const router = useRouter();
-  const { addItem } = useCart();
-  const [added, setAdded] = useState(false);
-
-  const img = product.mainImage || product.images?.[0] || '/images/hero.png';
+  // Same card as everywhere else; the price shown is the price after this offer.
   const base = product.discountedPrice ?? product.price;
   const afterOfferPrice = getDiscountedPrice(product, offer);
-  const badgeLabel = getProductBadge(offer);
-  const isOutOfStock = (product.stock ?? Infinity) <= 0;
-
-  const handleAdd = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isOutOfStock) return;
-    addItem({
-      id: product.sourceId,
-      name: product.name,
-      price: afterOfferPrice ?? base,
-      originalPrice: product.originalPrice ?? product.price,
-      image: img,
-      color: '',
-      colorHex: '',
-      href: product.href,
-      sku: product.sku,
-    });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
-  };
-
-  return (
-    <div className="odpc-card" onClick={() => router.push(product.href)} style={{ cursor: 'pointer' }}>
-      <div className="odpc-img-wrap">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="odpc-img" src={img} alt={product.name} />
-        <span className="odpc-badge">{badgeLabel}</span>
-        {isOutOfStock && <span className="odpc-oos">Out of Stock</span>}
-      </div>
-      <div className="odpc-body">
-        <p className="odpc-category">{product.subCategory || product.category}</p>
-        <p className="odpc-name">{product.name}</p>
-        <div className="odpc-price-row">
-          {afterOfferPrice !== null ? (
-            <>
-              <span className="odpc-price-now">₹{afterOfferPrice.toLocaleString('en-IN')}</span>
-              <span className="odpc-price-was">₹{base.toLocaleString('en-IN')}</span>
-              <span className="odpc-saved">Save ₹{(base - afterOfferPrice).toLocaleString('en-IN')}</span>
-            </>
-          ) : (offer.offerType === 'bogo' || offer.offerType === 'buy_x_for_y') ? (
-            <>
-              <span className="odpc-price-now">₹{base.toLocaleString('en-IN')}</span>
-              <span className="odpc-deal-badge">{offer.badgeLabel}</span>
-            </>
-          ) : (
-            <span className="odpc-price-now">₹{base.toLocaleString('en-IN')}</span>
-          )}
-        </div>
-        <button
-          className={`odpc-btn${added ? ' added' : ''}${isOutOfStock ? ' oos' : ''}`}
-          onClick={handleAdd}
-          disabled={isOutOfStock}
-        >
-          {isOutOfStock ? 'Out of Stock' : added ? '✓ Added!' : 'Add to Cart'}
-        </button>
-      </div>
-    </div>
-  );
+  const shown = afterOfferPrice !== null
+    ? { ...product, price: afterOfferPrice, originalPrice: base }
+    : { ...product, price: base };
+  return <ProductCard product={{ ...shown, badge: getProductBadge(offer) }} />;
 }
 
 function SkeletonCard() {
@@ -219,7 +163,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
         {/* Not found */}
         {pageState === 'not-found' && (
           <div className="odp-state">
-            <span className="odp-state-icon">🔍</span>
+            <span className="odp-state-icon"><Em c="🔍" /></span>
             <h1 className="odp-state-title">Offer Not Found</h1>
             <p className="odp-state-sub">This offer may have expired or no longer exists.</p>
             <Link href="/offers" className="odp-cta">Browse All Offers</Link>
@@ -229,7 +173,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
         {/* Error */}
         {pageState === 'error' && (
           <div className="odp-state">
-            <span className="odp-state-icon">⚠️</span>
+            <span className="odp-state-icon"><Em c="⚠" /></span>
             <h1 className="odp-state-title">Something Went Wrong</h1>
             <p className="odp-state-sub">We couldn't load this offer. Please try again.</p>
             <button className="odp-cta" onClick={() => void load()}>Retry</button>
@@ -246,7 +190,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
                 <img className="odp-hero-img" src={offer.image} alt={offer.title} />
                 <div className="odp-hero-overlay" />
                 {offer.isFeatured && (
-                  <span className="odp-featured-ribbon">⭐ Featured</span>
+                  <span className="odp-featured-ribbon"><Em c="⭐" /> Featured</span>
                 )}
               </div>
               <div className="odp-hero-body">
@@ -262,7 +206,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
                 <div className="odp-terms-row">
                   {(offer.startsAtFormatted || offer.expiryFormatted !== 'No expiry') && (
                     <div className="odp-term-chip">
-                      <span className="odp-term-icon">🗓️</span>
+                      <span className="odp-term-icon"><Em c="🗓" /></span>
                       <span className="odp-term-text">
                         {offer.startsAtFormatted
                           ? `${offer.startsAtFormatted} → ${offer.expiryFormatted}`
@@ -272,7 +216,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
                   )}
                   {offer.minOrderValue > 0 && (
                     <div className="odp-term-chip">
-                      <span className="odp-term-icon">🛒</span>
+                      <span className="odp-term-icon"><Em c="🛒" /></span>
                       <span className="odp-term-text">Min. ₹{offer.minOrderValue.toLocaleString('en-IN')} order</span>
                     </div>
                   )}
@@ -299,7 +243,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
               )}
               {!productsLoading && products.length === 0 && (
                 <div className="odp-state odp-products-empty">
-                  <span className="odp-state-icon">🛍️</span>
+                  <span className="odp-state-icon"><Em c="🛍" /></span>
                   <p className="odp-state-title">No specific products attached</p>
                   <p className="odp-state-sub">This offer applies sitewide. Browse our catalogue to shop eligible items.</p>
                   <Link href="/categories" className="odp-cta">Shop Now</Link>
@@ -321,7 +265,6 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700;800&display=swap');
 
 .odp-root *, .odp-root *::before, .odp-root *::after { box-sizing: border-box; }
 

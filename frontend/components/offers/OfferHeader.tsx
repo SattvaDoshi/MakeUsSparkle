@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import type { OfferDetail } from '@/lib/offerTypes';
 
 interface OfferHeaderProps {
@@ -51,7 +52,7 @@ export default function OfferHeader({ offer }: OfferHeaderProps) {
               {typeLabel(offer.offerType)}
             </span>
             {offer.isFeatured && (
-              <span className="oh-featured-pill">⭐ Featured</span>
+              <span className="oh-featured-pill"><Em c="⭐" /> Featured</span>
             )}
           </div>
 
@@ -60,7 +61,7 @@ export default function OfferHeader({ offer }: OfferHeaderProps) {
 
           {/* Validity */}
           <div className="oh-validity">
-            <span className="oh-validity-icon">🗓️</span>
+            <span className="oh-validity-icon"><Em c="🗓" /></span>
             <div className="oh-validity-text">
               {offer.startsAtFormatted ? (
                 <span>
@@ -117,7 +118,6 @@ function typeLabel(type: OfferDetail['offerType']): string {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap');
 
 .oh-root *, .oh-root *::before, .oh-root *::after { box-sizing: border-box; }
 

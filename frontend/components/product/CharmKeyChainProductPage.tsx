@@ -1,10 +1,10 @@
 
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useState, useEffect, useRef, type ChangeEvent, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
-import UpperNav from '@/components/ui/UpperNav';
 import { fetchCharmItems, type CharmItemData } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 
@@ -287,11 +287,10 @@ const sortedCharms = useMemo(
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
 
         /* ── TOKENS ── */
         :root {
-          --bg:        #f4f0e6;
+          --bg:        #ffffff;
           --bg-2:      #ebe4d4;
           --bg-3:      #ddd4bc;
           --ol9:       #1a1f0d;
@@ -768,7 +767,6 @@ const sortedCharms = useMemo(
       <div className="pg">
 
         {/* ── NAV ── */}
-         <UpperNav />
 
         {/* ── HERO ── */}
         <div className="hero">
@@ -804,7 +802,7 @@ const sortedCharms = useMemo(
                   className={`cat-tab${activeCategory === cat.id ? ' on' : ''}`}
                   onClick={() => setActiveCategory(cat.id)}
                 > 
-                  <span>{cat.icon}</span>
+                  <span><Em c={cat.icon} /></span>
                   {cat.label}
                 </button>
               ))}

@@ -1,5 +1,6 @@
 'use client';
 
+import Em from "@/components/ui/Em";
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -58,8 +59,7 @@ function PaymentStatusContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Sans:wght@400;500;600;700&display=swap');
-        .ps-root { min-height: 100vh; background: #f5f0e8; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; font-family: 'DM Sans', sans-serif; text-align: center; }
+        .ps-root { min-height: 100vh; background: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; font-family: 'DM Sans', sans-serif; text-align: center; }
         .ps-card { background: white; border-radius: 20px; padding: 48px 36px; max-width: 440px; width: 100%; box-shadow: 0 8px 40px rgba(0,0,0,.08); }
         .ps-icon { font-size: 64px; margin-bottom: 20px; }
         .ps-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: #1a3a1a; margin-bottom: 10px; }
@@ -84,7 +84,7 @@ function PaymentStatusContent() {
 
           {status === 'success' && (
             <>
-              <div className="ps-icon">✅</div>
+              <div className="ps-icon"><Em c="✅" /></div>
               <h1 className="ps-title">Order Placed!</h1>
               <p className="ps-sub">Your payment was successful and your order is confirmed. You&apos;ll receive a confirmation email shortly.</p>
               <Link href="/" className="ps-btn">Continue Shopping</Link>
@@ -93,7 +93,7 @@ function PaymentStatusContent() {
 
           {(status === 'failed' || status === 'error') && (
             <>
-              <div className="ps-icon">❌</div>
+              <div className="ps-icon"><Em c="❌" /></div>
               <h1 className="ps-title">Payment {status === 'failed' ? 'Failed' : 'Error'}</h1>
               {message && <div className="ps-error-msg">{message}</div>}
               <p className="ps-sub">

@@ -26,7 +26,7 @@ export async function createOrder(req, res) {
 		res.status(201).json(result);
 	} catch (error) {
 		console.error("Create order error:", error);
-		res.status(400).json({ success: false, message: error.message });
+		res.status(400).json({ success: false, message: error.message, code: error.code, ...(error.extra || {}) });
 	}
 }
 

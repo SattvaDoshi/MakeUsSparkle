@@ -1,0 +1,15 @@
+/* Full-bleed founder banner: edge to edge, natural aspect ratio (never cropped). */
+.section { background: #fff; padding: 0; }
+.link { display: block; color: inherit; }
+.pic { display: block; width: 100%; }
+.img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--ar-d, 16 / 6);
+  object-fit: cover;
+  background: #f1f0eb;
+}
+@media (max-width: 767px) {
+  .img { aspect-ratio: var(--ar-m, var(--ar-d, 16 / 6)); }
+}

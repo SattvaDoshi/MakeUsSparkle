@@ -1,6 +1,7 @@
 'use client';
 
 import { useWishlist } from '@/lib/wishlistContext';
+import ProductCard from '@/components/product/ProductCard';
 import { useCart } from '@/lib/cartContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,10 +15,9 @@ export default function WishlistPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
 
         :root {
-          --beige:    #f5f0e8;
+          --beige:    #ffffff;
           --beige-dk: #ede5d5;
           --olive:    #3d4a22;
           --olive-md: #5a6b2e;
@@ -29,7 +29,7 @@ export default function WishlistPage() {
 
         .wl-page {
           min-height: 100vh;
-          background: var(--beige);
+          background: #ffffff;
           font-family: 'Jost', sans-serif;
           color: var(--ink);
           padding-bottom: 80px;
@@ -149,68 +149,25 @@ export default function WishlistPage() {
           </div>
         ) : (
           <div className="wl-grid">
-            {items.map(item => {
-              const discount = item.originalPrice
-                ? Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)
-                : null;
-
-              return (
-                <div
-                  key={item.id}
-                  className="wl-card"
-                  onClick={() => router.push(item.href)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(item.href); }}
-                  aria-label={`View ${item.name}`}
-                >
-                  <div className="wl-img-wrap">
-                    <img src={item.image} alt={item.name} className="wl-img" />
-                    {item.badge && <span className="wl-badge">{item.badge}</span>}
-                    <button
-                      className="wl-remove"
-                      onClick={(e: MouseEvent) => { e.stopPropagation(); removeItem(item.id); }}
-                      aria-label="Remove from wishlist"
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="wl-body">
-                    <div className="wl-name">{item.name}</div>
-
-                    <div className="wl-price-row">
-                      <span className="wl-price">₹{item.price.toLocaleString('en-IN')}</span>
-                      {item.originalPrice && item.originalPrice > item.price && (
-                        <span className="wl-original">₹{item.originalPrice.toLocaleString('en-IN')}</span>
-                      )}
-                      {discount && discount > 0 && <span className="wl-saving">{discount}% off</span>}
-                    </div>
-
-                    <button
-                      className="wl-btn-cart"
-                      onClick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        addItem({
-                          id: String(item.id),
-                          name: item.name,
-                          price: item.price,
-                          originalPrice: item.originalPrice ?? null,
-                          image: item.image,
-                          color: item.colors?.[0]?.label ?? 'Default',
-                          colorHex: item.colors?.[0]?.hex ?? '#000000',
-                          sku: `SKU-${item.id}`,
-                          href: item.href,
-                        });
-                      }}
-                      aria-label={`Add ${item.name} to cart`}
-                    >
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {items.map(item => (
+              <ProductCard
+                key={item.id}
+                product={{
+                  id: item.id,
+                  name: item.name,
+                  category: item.category,
+                  price: item.price,
+                  originalPrice: item.originalPrice ?? null,
+                  badge: item.badge ?? null,
+                  images: [item.image],
+                  mainImage: item.image,
+                  colors: item.colors ?? [],
+                  href: item.href,
+                  rating: item.rating,
+                  reviewCount: item.reviewCount,
+                }}
+              />
+            ))}
           </div>
         )}
       </div>

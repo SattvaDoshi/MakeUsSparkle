@@ -365,7 +365,7 @@ class CouponService {
 				discountValue: 10,
 				maxDiscount: 500,
 				expiryDate,
-				isActive: { $ne: false },
+				isActive: true,
 				usageLimit: 1,
 				usedCount: 0,
 				issuedForEmail: user.email,

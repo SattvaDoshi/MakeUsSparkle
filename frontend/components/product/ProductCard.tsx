@@ -1,18 +1,20 @@
 'use client';
 
-import {
-  useState,
-  type CSSProperties,
-  type MouseEvent,
-} from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
+import Link from 'next/link';
 import { useWishlist } from '@/lib/wishlistContext';
-import { useCart } from '@/lib/cartContext';
+import { cdnImage } from '@/lib/cdn';
+import styles from './ProductCard.module.css';
 
 /**
- * ProductCard — Rectangular, fully clickable card
- * Image ratio: 4:5 — portrait
- * Equal-height layout: name reserves 2 lines, price + button pinned to bottom.
+ * ProductCard — the single product card used across the site
+ * (homepage carousels, listing grids, offers, related products).
+ *
+ * White, image-led, 4:5 media. Second image on hover, wishlist, label chips,
+ * rating. The whole card is one stretched link, so it is
+ * keyboard/screen-reader friendly and middle-click works.
+ *
+ * Sizing is the parent's job — the card fills its container.
  */
 
 interface ProductColor {
@@ -21,7 +23,7 @@ interface ProductColor {
   images?: string[];
 }
 
-interface ProductCardProduct {
+export interface ProductCardProduct {
   id: number;
   name: string;
   category: string;
@@ -45,7 +47,17 @@ interface ProductCardProduct {
   perCharmPrice?: number;
   charmPieceOptions?: number[];
   stock?: number;
+  sizes?: string[];
+  allowCustomization?: boolean;
+  createdAt?: string;
 }
+
+const FREE_SHIPPING_MIN = 999; // matches the "Free Shipping above ₹999" announcement
+const NEW_WINDOW_DAYS = 30;
+const TAG_ROTATE_MS = 3000; // how often the chip on the image changes tag
+const TAG_FADE_MS = 450;    // fade-out before the swap
+
+const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export default function ProductCard({
   product,
@@ -58,512 +70,162 @@ export default function ProductCard({
   className?: string;
   productLinkBase?: string;
 }) {
-  const { name, price, originalPrice, badge, images, colors, href = '#', perCharmPrice, charmPieceOptions } = product;
-  const isOutOfStock = (product.stock ?? Infinity) <= 0;
-  const offerTitle = product.offerTag || product.offer;
-  const router = useRouter();
+  const {
+    name, price, originalPrice, badge, images, colors, perCharmPrice, charmPieceOptions,
+  } = product;
+
   const { toggleItem, isWished } = useWishlist();
-  const { addItem } = useCart();
-  const [added, setAdded] = useState(false);
-  const [activeColor] = useState(0);
-  const [activeImage, setActiveImage] = useState(0);
-  const [wishAnim, setWishAnim] = useState(false);
+  const [wishPop, setWishPop] = useState(false);
 
   const wished = isWished(product.id);
+  const isOutOfStock = (product.stock ?? Infinity) <= 0;
+  const offerTitle = product.offerTag || product.offer;
 
-  const baseImages = [product.mainImage, ...(images ?? [])].filter(
-    (image): image is string => Boolean(image),
+  /* Images: main first, de-duplicated. The second one is shown on hover. */
+  const gallery = Array.from(
+    new Set([product.mainImage, ...(images ?? [])].filter((i): i is string => Boolean(i))),
   );
+  const primary = gallery[0];
+  const secondary = gallery[1];
 
-  const currentImages =
-    colors?.[activeColor]?.images?.length
-      ? colors[activeColor].images!
-      : baseImages;
+  const discount =
+    originalPrice && originalPrice > price
+      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+      : null;
 
-  const displayImage = currentImages[activeImage] ?? currentImages[0];
+  const isFromPrice = Boolean(perCharmPrice && perCharmPrice > 0);
+  const shownPrice = isFromPrice
+    ? price + (charmPieceOptions?.[0] ?? 1) * (perCharmPrice as number)
+    : price;
 
-  const discount = originalPrice
-    ? Math.round(((originalPrice - price) / originalPrice) * 100)
-    : null;
+  const slug = (product.href ?? '').split('/').pop() || String(product.id);
+  const target = productLinkBase ? `${productLinkBase}/${slug}` : product.href || `/products/${slug}`;
 
-  const wishlistItem = {
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    originalPrice: product.originalPrice ?? null,
-    image: product.mainImage ?? images?.[0] ?? '',
-    category: product.category,
-    href: product.href ?? '',
-    colors: product.colors,
-    badge: product.badge ?? null,
-    rating: product.rating,
-    reviewCount: product.reviewCount,
-  };
-
-  function handleCardClick(e: MouseEvent<HTMLDivElement>) {
-    if (
-      (e.target as HTMLElement).closest('.pc-wish') ||
-      (e.target as HTMLElement).closest('.pc-dots') ||
-      (e.target as HTMLElement).closest('.pc-cart-btn')
-    ) return;
-
-    const slug = (product.href ?? '').split('/').pop()
-      ?? product.id?.toString()
-      ?? 'product';
-
-    if (productLinkBase) {
-      router.push(`${productLinkBase}/${slug}`);
-      return;
-    }
-    router.push(product.href ?? `/products/${slug}`);
-  }
+  const stop = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
   const handleWish = (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleItem(wishlistItem);
-    setWishAnim(true);
-    setTimeout(() => setWishAnim(false), 600);
+    stop(e);
+    toggleItem({
+      id: product.id,
+      name,
+      price,
+      originalPrice: originalPrice ?? null,
+      image: primary ?? '',
+      category: product.category,
+      href: product.href ?? '',
+      colors,
+      badge: badge ?? null,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+    });
+    setWishPop(true);
+    setTimeout(() => setWishPop(false), 500);
   };
 
-  const handleAdd = (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isOutOfStock) return;
-    addItem(
-      {
-        id: String(product.id),
-        sourceId: product.sourceId ?? String(product.id),
-        name: product.name,
-        price: product.price,
-        originalPrice: product.originalPrice ?? null,
-        image: product.mainImage ?? images?.[0] ?? '',
-        color: product.colors?.[0]?.label ?? 'Default',
-        colorHex: product.colors?.[0]?.hex ?? '#000000',
-        sku: product.sku ?? `SKU-${product.id}`,
-        href: product.href ?? '',
-        category: product.category,
-        categoryId: product.categoryId,
-        subCategoryId: product.subCategoryId,
-        styleId: product.styleId,
-      },
-      true,
-    );
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
+  /* One rotating chip on the image cycles through every tag that applies:
+     product label, offer, low stock, free shipping, new arrival. */
+  const tagList: { key: string; text: string; kind: 'plain' | 'offer' | 'warn' | 'good' }[] = [];
+  if (!isOutOfStock) {
+    if (badge) tagList.push({ key: 'badge', text: badge, kind: 'plain' });
+    if (offerTitle) tagList.push({ key: 'offer', text: offerTitle, kind: 'offer' });
+    const stock = product.stock ?? Infinity;
+    if (stock > 0 && stock <= 5) tagList.push({ key: 'low', text: `Only ${stock} left`, kind: 'warn' });
+    if (price >= FREE_SHIPPING_MIN) tagList.push({ key: 'ship', text: 'Free Shipping', kind: 'good' });
+    const ageDays = product.createdAt ? (Date.now() - new Date(product.createdAt).getTime()) / 86_400_000 : Infinity;
+    if (ageDays <= NEW_WINDOW_DAYS) tagList.push({ key: 'new', text: 'New Arrival', kind: 'plain' });
+  }
+  const [tagIdx, setTagIdx] = useState(0);
+  const [tagFading, setTagFading] = useState(false);
+  const tagCount = tagList.length;
+  useEffect(() => {
+    if (tagCount < 2) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let swap: ReturnType<typeof setTimeout>;
+    const id = setInterval(() => {
+      setTagFading(true);                 // fade out…
+      swap = setTimeout(() => {           // …swap text, fade back in
+        setTagIdx((i) => i + 1);
+        setTagFading(false);
+      }, TAG_FADE_MS);
+    }, TAG_ROTATE_MS);
+    return () => { clearInterval(id); clearTimeout(swap); };
+  }, [tagCount]);
+  const activeTag = tagCount > 0 ? tagList[tagIdx % tagCount] : null;
+
+  const hasRating = (product.rating ?? 0) > 0;
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap');
+    <article
+      className={`${styles.card}${isOutOfStock ? ` ${styles.soldOut}` : ''} ${className}`}
+      style={style}
+    >
+      <div className={styles.media}>
+        {!primary && <div className={styles.placeholder} aria-hidden="true">✦</div>}
+        {primary && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className={styles.img} src={cdnImage(primary, 640)} alt={name} loading="lazy" width={400} height={500} />
+        )}
+        {secondary && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className={`${styles.img} ${styles.imgAlt}`} src={cdnImage(secondary, 640)} alt="" aria-hidden loading="lazy" width={400} height={500} />
+        )}
 
-        .pc {
-          --beige:      #f7f2ea;
-          --beige-dk:   #ede5d5;
-          --olive:      #3d4a22;
-          --olive-md:   #5a6b2e;
-          --ink:        #1e2310;
-          --mist:       rgba(30,35,16,.42);
-          --t: .24s cubic-bezier(.4,0,.2,1);
-
-          font-family: 'Jost', sans-serif;
-          background: var(--beige);
-          border-radius: 4px;
-          overflow: hidden;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-          height: 100%;               /* FIX: fill the grid cell so all cards in a row match */
-
-          box-shadow: 0 1px 4px rgba(61,74,34,.08);
-          transition: box-shadow var(--t), transform var(--t);
-          cursor: pointer;
-          user-select: none;
-        }
-
-        .pc:hover {
-          box-shadow: 0 6px 24px rgba(61,74,34,.14), 0 2px 6px rgba(61,74,34,.08);
-          transform: translateY(-2px);
-        }
-
-        .pc:active {
-          transform: translateY(0);
-          box-shadow: 0 1px 4px rgba(61,74,34,.08);
-        }
-
-        /* ─── portrait image zone ─── */
-        .pc-img-zone {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 4 / 5;
-          background: var(--beige-dk);
-          overflow: hidden;
-          flex-shrink: 0;
-        }
-
-        .pc-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center top;
-          display: block;
-          transition: transform .5s cubic-bezier(.25,.46,.45,.94);
-        }
-        .pc:hover .pc-img { transform: scale(1.05); }
-
-        .pc-overlay {
-          position: absolute; inset: 0;
-          background: rgba(20,26,10,.1);
-          opacity: 0;
-          transition: opacity var(--t);
-          pointer-events: none;
-        }
-        .pc:hover .pc-overlay { opacity: 1; }
-
-        /* ─── Badge ─── */
-        .pc-badge {
-          position: absolute; top: 10px; left: 10px; z-index: 2;
-          font-size: 8px; font-weight: 600; letter-spacing: .08em;
-          text-transform: uppercase;
-          color: var(--ink); background: var(--beige);
-          padding: 3px 9px 2px;
-          border-radius: 2px;
-          box-shadow: 0 1px 4px rgba(0,0,0,.10);
-        }
-        .pc-badge--sale { background: var(--olive); color: var(--beige); }
-
-        .pc-discount {
-          position: absolute; top: 10px; left: 10px; z-index: 2;
-          font-size: 8px; font-weight: 700; letter-spacing: .06em;
-          color: var(--beige); background: var(--olive-md);
-          padding: 3px 9px 2px;
-          border-radius: 2px;
-        }
-
-        /* ─── Wishlist ─── */
-        .pc-wish {
-          position: absolute; top: 8px; right: 8px; z-index: 3;
-          width: 30px; height: 30px; border-radius: 2px;
-          background: rgba(247,242,234,.88);
-          border: none; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 1px 4px rgba(0,0,0,.10);
-          transition: transform .18s, background .18s;
-          backdrop-filter: blur(4px);
-        }
-        .pc-wish:hover { transform: scale(1.12); background: var(--beige); }
-        .pc-wish.active { background: var(--olive); }
-        .pc-wish.anim { animation: wishPop .4s cubic-bezier(.36,.07,.19,.97); }
-        @keyframes wishPop {
-          0%   { transform: scale(1); }
-          30%  { transform: scale(1.28); }
-          60%  { transform: scale(.92); }
-          100% { transform: scale(1); }
-        }
-        .pc-wish svg { width: 14px; height: 14px; }
-
-        /* ─── Offer / Coupon Tag (top right below wishlist) ─── */
-        .pc-offer-tag {
-          position: absolute; top: 44px; right: 8px; z-index: 2;
-          font-size: 8px; font-weight: 700; letter-spacing: .06em;
-          text-transform: uppercase;
-          color: #f7f2ea;
-          background: #253d18;
-          border: 1px solid rgba(212, 175, 55, 0.4);
-          padding: 3px 8px 2px;
-          border-radius: 2px;
-          box-shadow: 0 1px 4px rgba(0,0,0,.15);
-          max-width: calc(100% - 20px);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          pointer-events: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 3.5px;
-        }
-        .pc-offer-tag svg {
-          flex-shrink: 0;
-        }
-
-        /* image dot nav */
-        .pc-dots {
-          position: absolute; bottom: 10px; left: 50%;
-          transform: translateX(-50%);
-          display: flex; gap: 5px;
-          z-index: 2;
-          opacity: 0;
-          transition: opacity var(--t);
-        }
-        .pc:hover .pc-dots { opacity: 1; }
-        .pc-dot {
-          width: 5px; height: 5px; border-radius: 50%;
-          background: rgba(247,242,234,.5);
-          border: none; cursor: pointer; padding: 0;
-          transition: background .18s, width .18s;
-        }
-        .pc-dot.active {
-          background: #f7f2ea;
-          width: 14px; border-radius: 2px;
-        }
-
-        /* ─── Info strip ─── */
-        .pc-info {
-          padding: 10px 12px 12px;
-          background: var(--beige);
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          flex: 1 1 auto;             /* FIX: grow to fill remaining card height */
-          border-top: 1px solid rgba(61,74,34,.06);
-        }
-
-        .pc-name {
-          font-size: 13px; font-weight: 500;
-          color: var(--ink);
-          line-height: 1.3;
-          letter-spacing: -.01em;
-          margin: 0;
-          white-space: normal;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          // min-height: 2.6em;          /* FIX: always reserve 2 lines (2 × 1.3 line-height) */
-        }
-
-        /* FIX: price + button pinned to the bottom, so they align across cards */
-        .pc-footer {
-          margin-top: auto;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .pc-price-row {
-          display: flex;
-          align-items: baseline;
-          flex-wrap: wrap;
-          gap: 2px 7px;
-          min-height: 1.5em;          /* keeps row height steady with/without original price */
-        }
-
-        .pc-price {
-          font-size: 13px; font-weight: 600;
-          color: var(--ink); letter-spacing: -.01em;
-          white-space: nowrap;
-        }
-        .pc-original {
-          font-size: 10px; font-weight: 400;
-          color: var(--mist); text-decoration: line-through;
-          white-space: nowrap;
-        }
-        .pc-saving {
-          font-size: 9px; font-weight: 600;
-          color: var(--olive-md);
-          letter-spacing: .04em;
-        }
-
-        .pc-cart-btn {
-          display: block;
-          width: 100%;
-          margin-top: 10px;
-          padding: 10px 0;
-          border: 1.5px solid var(--olive);
-          background: transparent;
-          color: var(--olive);
-          font-family: 'Jost', sans-serif;
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background .22s, color .22s;
-          text-align: center;
-          white-space: nowrap;
-        }
-        .pc-cart-btn:hover  { background: var(--olive); color: var(--beige); }
-        .pc-cart-btn--added { background: var(--olive); color: var(--beige); }
-        .pc-cart-btn:disabled:hover { background: transparent; color: var(--olive); }
-
-        /* Tablet */
-        @media (min-width: 480px) and (max-width: 1023px) {
-          .pc-cart-btn { font-size: 9.5px; padding: 9px 0; margin-top: 9px; }
-        }
-
-        /* Mobile */
-        @media (max-width: 479px) {
-          .pc-cart-btn { font-size: 8.5px; padding: 8px 0; margin-top: 7px; letter-spacing: .10em; }
-        }
-
-        /* Desktop */
-        @media (min-width: 1024px) {
-          .pc-cart-btn { font-size: 10.5px; padding: 11px 0; margin-top: 11px; }
-        }
-
-        /* ─── Responsive ─── */
-
-        /* Mobile: ≤ 479px */
-        @media (max-width: 479px) {
-          .pc { border-radius: 3px; }
-          .pc-info {
-            padding: 8px 10px 10px;
-            gap: 3px;
-          }
-          .pc-name    { font-size: 13px; }
-          .pc-price   { font-size: 12px; }
-          .pc-original { font-size: 8px; }
-          .pc-saving  { font-size: 8px; }
-          .pc-badge, .pc-discount {
-            font-size: 7px; top: 7px; left: 7px;
-            padding: 2px 6px;
-          }
-          .pc-wish { width: 26px; height: 26px; top: 6px; right: 6px; }
-          .pc-wish svg { width: 12px; height: 12px; }
-          .pc-offer-tag {
-            top: 38px; right: 6px;
-            font-size: 7px;
-            padding: 2px 6px;
-          }
-          .pc-dot { width: 4px; height: 4px; }
-          .pc-dot.active { width: 12px; }
-        }
-
-        /* Tablet: 480px – 1023px */
-        @media (min-width: 480px) and (max-width: 1023px) {
-          .pc-info { padding: 10px 11px 12px; }
-          .pc-name  { font-size: 12.5px; }
-          .pc-price { font-size: 12.5px; }
-        }
-
-        /* Desktop: ≥ 1024px */
-        @media (min-width: 1024px) {
-          .pc-info { padding: 13px 14px 14px; }
-          .pc-name  { font-size: 14px; }
-          .pc-price { font-size: 14px; }
-          .pc-original { font-size: 10.5px; }
-          .pc-saving { font-size: 9.5px; }
-        }
-      `}</style>
-
-      <div
-        className={`pc ${className}`}
-        style={style}
-        onClick={handleCardClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') handleCardClick(e as any);
-        }}
-        aria-label={`View ${name}`}
-      >
-
-        {/* ── IMAGE ZONE ── */}
-        <div className="pc-img-zone">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="pc-img"
-            src={displayImage}
-            alt={name}
-            loading="lazy"
-            width={400}
-            height={500}
-          />
-
-          <div className="pc-overlay" />
-
+        <div className={styles.chips}>
           {isOutOfStock ? (
-            <span className="pc-badge pc-badge--sale">Sold Out</span>
-          ) : badge && (
-            <span className={`pc-badge${badge === 'Sale' ? ' pc-badge--sale' : ''}`}>
-              {badge}
-            </span>
-          )}
-
-          <button
-            className={`pc-wish${wished ? ' active' : ''}${wishAnim ? ' anim' : ''}`}
-            onClick={handleWish}
-            aria-label="Toggle wishlist"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill={wished ? '#f7f2ea' : 'none'}
-              stroke={wished ? 'none' : 'var(--olive)'}
-              strokeWidth="2"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-
-          {offerTitle && (
-            <span className="pc-offer-tag" title={offerTitle}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                <line x1="7" y1="7" x2="7.01" y2="7"/>
-              </svg>
-              {offerTitle}
-            </span>
-          )}
-
-          {currentImages.length > 1 && (
-            <div className="pc-dots">
-              {currentImages.map((_: string, i: number) => (
-                <button
-                  key={i}
-                  className={`pc-dot${activeImage === i ? ' active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setActiveImage(i);
-                  }}
-                  aria-label={`Image ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── INFO STRIP ── */}
-        <div className="pc-info">
-          <p className="pc-name">{name}</p>
-
-          <div className="pc-footer">
-            <div className="pc-price-row">
-              <span className="pc-price">
-                {perCharmPrice && perCharmPrice > 0 ? (
-                  `From ₹${(price + (charmPieceOptions?.[0] ?? 1) * perCharmPrice).toLocaleString('en-IN')}`
-                ) : (
-                  `₹${price.toLocaleString('en-IN')}`
-                )}
-              </span>
-              {originalPrice && (
-                <span className="pc-original">
-                  ₹{originalPrice.toLocaleString('en-IN')}
+            <span className={`${styles.chip} ${styles.chipSale}`}>Sold out</span>
+          ) : (
+            <>
+              {activeTag && (
+                <span
+                  key={activeTag.key}
+                  className={`${styles.chip} ${styles.chipRotate}${tagFading ? ` ${styles.chipFading}` : ''} ${
+                    activeTag.kind === 'offer' ? styles.chipOffer
+                    : activeTag.kind === 'warn' ? styles.chipWarn
+                    : activeTag.kind === 'good' ? styles.chipGood : ''
+                  }`}
+                  title={activeTag.text}
+                >
+                  {activeTag.text}
                 </span>
               )}
-              {discount && (
-                <span className="pc-saving">{discount}% off</span>
-              )}
-            </div>
-
-            <button
-              className={`pc-cart-btn${added ? ' pc-cart-btn--added' : ''}`}
-              onClick={handleAdd}
-              disabled={isOutOfStock}
-              aria-label={isOutOfStock ? `${name} is sold out` : `Add ${name} to cart`}
-              style={{
-                opacity: isOutOfStock ? 0.5 : 1,
-                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {isOutOfStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
-            </button>
-          </div>
+            </>
+          )}
         </div>
 
+        {hasRating && !isOutOfStock && (
+          <div className={styles.ratingBadge} aria-label={`Rated ${(product.rating as number).toFixed(1)} out of 5${(product.reviewCount ?? 0) > 0 ? ` from ${product.reviewCount} reviews` : ''}`}>
+            <span>{(product.rating as number).toFixed(1)}</span>
+            <span className={styles.star} aria-hidden="true">★</span>
+            {(product.reviewCount ?? 0) > 0 && <span className={styles.ratingCount}>{product.reviewCount}</span>}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className={`${styles.wish}${wished ? ` ${styles.wishOn}` : ''}${wishPop ? ` ${styles.wishPop}` : ''}`}
+          onClick={handleWish}
+          aria-pressed={wished}
+          aria-label={wished ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
       </div>
-    </>
+
+      <div className={styles.body}>
+        {product.category && <span className={styles.eyebrow}>{product.category}</span>}
+
+        <h3 className={styles.name}>
+          <Link href={target} className={styles.link}>{name}</Link>
+        </h3>
+
+        <div className={styles.priceRow}>
+          <span className={styles.price}>{isFromPrice ? `From ${formatINR(shownPrice)}` : formatINR(price)}</span>
+          {discount && originalPrice ? <span className={styles.was}>{formatINR(originalPrice)}</span> : null}
+          {discount ? <span className={styles.off}>{discount}% off</span> : null}
+        </div>
+      </div>
+    </article>
   );
 }

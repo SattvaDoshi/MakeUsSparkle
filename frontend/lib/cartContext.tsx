@@ -296,6 +296,8 @@ interface CartContextValue {
   setRewardPointsRedeemed: (points: number) => void;
   total:      number;
   itemCount:  number;
+  /** false until the saved cart has been read from this browser (avoids a flash of an empty cart). */
+  hydrated:   boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -306,6 +308,7 @@ const STORAGE_KEY = 'maison_cart_v1';
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const pathname = usePathname();
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate from localStorage once on mount
   useEffect(() => {
@@ -313,9 +316,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as CartState;
-        dispatch({ type: 'HYDRATE', payload: parsed });
+        // The cart lives in the browser, so never trust its shape: drop malformed lines, clamp quantities, start closed.
+        const items = (Array.isArray(parsed?.items) ? parsed.items : []).filter((i) =>
+          i && typeof i.id === 'string' && typeof i.name === 'string' && Number.isFinite(i.price) && i.price >= 0 && Number.isFinite(i.qty),
+        ).map((i) => ({
+          ...i,
+          qty: Math.min(99, Math.max(1, Math.floor(i.qty))),
+          // Links and images come from storage too: only same-site paths and http(s) images are allowed through.
+          href: typeof i.href === 'string' && /^\/(?!\/)/.test(i.href) ? i.href : '',
+          image: typeof i.image === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(i.image) ? i.image : '',
+        }));
+        dispatch({ type: 'HYDRATE', payload: { ...parsed, items, isDrawerOpen: false } });
       }
     } catch {}
+    setHydrated(true);
 
     const handleClearCart = () => dispatch({ type: 'CLEAR_CART' });
     window.addEventListener('makeussparkle:clear-cart', handleClearCart);
@@ -585,6 +599,7 @@ const addItem = useCallback(
     applicableOffers,
     total:     finalTotal,
     itemCount: cartItemCount(state.items),
+    hydrated,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

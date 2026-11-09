@@ -1,5 +1,3 @@
-import UpperNav from '@/components/ui/UpperNav';
-import Footer from '@/components/home/Footer';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,7 +8,6 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <>
-      <UpperNav />
       <main style={{ minHeight: '80vh', background: '#faf9f5', color: '#1a1f0d', fontFamily: "'Jost', sans-serif" }}>
         {/* Hero */}
         <section
@@ -103,7 +100,6 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

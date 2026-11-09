@@ -1,3 +1,4 @@
+import { DEMO_ENABLED, DEMO_CLIPS } from "@/lib/demoContent";
 import { apiRequest } from "@/lib/api";
 
 export interface CatalogCategory {
@@ -57,6 +58,7 @@ export interface CatalogProduct {
   originalPrice: number | null;
   rating: number;
   reviewCount: number;
+  createdAt?: string;
   images: string[];
   mainImage?: string | null;
   category: string;
@@ -162,6 +164,7 @@ interface BackendGender {
 interface BackendReview {
   rating?: number;
 }
+
 
 interface BackendProduct {
   _id: string;
@@ -393,7 +396,7 @@ function normalizeProduct(
   ]);
 
   const rating = Number(item.rating ?? 0);
-  const reviewCount = Array.isArray(item.reviews) ? item.reviews.length : 0;
+  const reviewCount = Math.max(Array.isArray(item.reviews) ? item.reviews.length : 0, Number((item as any).reviewCount ?? 0));
   const dbPrice = Number(item.price ?? 0);
   const discountedPrice = item.discountedPrice ? Number(item.discountedPrice) : null;
   const originalPrice = discountedPrice ? dbPrice : null;
@@ -419,6 +422,7 @@ function normalizeProduct(
     originalPrice,
     rating,
     reviewCount,
+    createdAt: (item as any).createdAt,
     category: categoryName,
     categoryId,
     categorySlug,
@@ -723,7 +727,7 @@ export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
         const originalPrice = discountedPrice ? dbPrice : null;
         const price = discountedPrice || dbPrice;
         const rating = Number(p.rating ?? 0);
-        const reviewCount = Array.isArray(p.reviews) ? p.reviews.length : 0;
+        const reviewCount = Math.max(Array.isArray(p.reviews) ? p.reviews.length : 0, Number((p as any).reviewCount ?? 0));
         const slug = p._id;
         const catId = getRefId(p.category);
         const subCatId = getRefId(p.subCategory);
@@ -744,6 +748,7 @@ export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
           originalPrice,
           rating,
           reviewCount,
+          createdAt: (p as any).createdAt,
           category: "Jewellery",
           categoryId: catId,
           categorySlug: "",
@@ -1194,4 +1199,52 @@ export async function fetchProductsByCategoryId(categoryId: string): Promise<Cat
   } catch {
     return [];
   }
+}
+
+/* ───────── Watch & Buy (short product videos) ───────── */
+export interface CatalogWatchBuyVideo {
+  id: string;
+  title: string;
+  /** Optimised mp4 (Cloudinary, ≤540px wide). Only fetched when a shopper opens/hovers the card. */
+  src: string;
+  /** Lightweight poster image, used for the grid. */
+  poster: string;
+  duration: number;
+  product: CatalogProduct;
+}
+
+export async function fetchWatchAndBuy(): Promise<CatalogWatchBuyVideo[]> {
+  const [categories, subCategories, styles, res] = await Promise.all([
+    fetchCatalogCategories(),
+    fetchCatalogSubCategories(),
+    fetchCatalogStyles(),
+    apiRequest<{ success: boolean; videos?: any[] }>("/watch-buy"),
+  ]);
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
+  const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+  const styleMap = new Map(styles.map((item) => [item.id, item]));
+
+  const real = (res.videos || []).filter((v) => v && v.product && v.src);
+  if (real.length === 0 && DEMO_ENABLED) {
+    // Placeholder clips paired with real catalogue products, so the section can be shown before videos are uploaded.
+    const products = (await fetchCatalogProducts()).filter((p) => p.images?.[0]).slice(0, DEMO_CLIPS.length);
+    return products.map((product, i) => ({
+      id: `demo-${product.id}`,
+      title: DEMO_CLIPS[i].title,
+      src: DEMO_CLIPS[i].src,
+      poster: product.mainImage || product.images[0],
+      duration: 15,
+      product,
+    }));
+  }
+
+  return real
+    .map((v) => ({
+      id: String(v._id),
+      title: v.title || "",
+      src: v.src,
+      poster: v.poster || "",
+      duration: Number(v.duration) || 0,
+      product: normalizeProduct(v.product, categoryMap, subCategoryMap, styleMap),
+    }));
 }

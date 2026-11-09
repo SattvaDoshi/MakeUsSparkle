@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
-import UpperNav from '@/components/ui/UpperNav';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -315,35 +314,37 @@ export default function AffiliatePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
         :root {
-          --bg:         #f8f6f0;
-          --surf:       #ffffff;
-          --surf-subtle:#faf8f3;
-          --bdr:        #e6dfd1;
-          --bdr-strong: #c8bda7;
-          --olive:      #304318;
-          --olive-dark: #202e0f;
-          --olive-soft: #4b6228;
-          --olive-light:#ebf0de;
-          --gold:       #b38b22;
-          --gold-light: #fef9e8;
-          --ink:        #181a11;
-          --ink-muted:  rgba(24,26,17,0.65);
-          --ink-faint:  rgba(24,26,17,0.40);
-          --green:      #1f6634;
-          --green-bg:   #eaf5ed;
-          --amber:      #b8740c;
-          --amber-bg:   #fdf4e4;
-          --red:        #b82e2e;
-          --red-bg:     #fdeeed;
-          --shadow-sm:  0 2px 10px rgba(48,67,24,0.06);
-          --shadow-md:  0 6px 24px rgba(48,67,24,0.09);
+          --bg:       #ffffff;
+          --surf:     #ffffff;
+          --bdr:      #e0d8c8;
+          --bdr2:     #c9bfa8;
+          --olive:    #3d5016;
+          --olive2:   #5a6e2b;
+          --olivedim: #eef1e3;
+          --gold:     #b8982a;
+          --golddim:  #fdf8e8;
+          --ink:      #1a1d0d;
+          --ink7:     rgba(26,29,13,.7);
+          --ink4:     rgba(26,29,13,.4);
+          --green:    #2a6030;
+          --greendim: rgba(42,96,48,.07);
+          --sage:     #8a9e6a;
+          --red:      #c0392b;
+          --ffd:      'Cormorant Garamond', Georgia, serif;
+          --ffb:      'DM Sans', system-ui, sans-serif;
+          --shadow:   0 4px 24px rgba(26,29,13,.10);
+          --shadow-lg:0 8px 40px rgba(26,29,13,.16);
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-        .aff-wrapper { min-height: 100vh; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--ink); padding-bottom: 80px; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--ffb); background: var(--bg); color: var(--ink); }
+        button { font-family: var(--ffb); cursor: pointer; background: transparent; border: none; }
+        img { display: block; max-width: 100%; }
+
+        /* ── PAGE ── */
+        .aff-page { min-height: 100dvh; background: var(--bg); }
 
         /* ── HERO ── */
         .aff-hero {
@@ -556,8 +557,7 @@ export default function AffiliatePage() {
         .aff-empty-sub { font-size: 12.5px; color: var(--ink-faint); max-width: 400px; margin: 0 auto; line-height: 1.6; }
       `}</style>
 
-      <div className="aff-wrapper">
-        <UpperNav />
+      <div className="aff-page">
 
         {/* ── HERO ── */}
         <section className="aff-hero">

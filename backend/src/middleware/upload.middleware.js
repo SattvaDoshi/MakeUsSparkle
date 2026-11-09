@@ -1,4 +1,4 @@
-import { uploadSingle, uploadMultiple, uploadProductImages, uploadHomeContentImages, uploadComboImages, uploadOpenSectionImages } from "../config/upload.config.js";
+import { uploadSingle, uploadMultiple, uploadProductImages, uploadHomeContentImages, uploadComboImages, uploadOpenSectionImages, uploadFounderImages } from "../config/upload.config.js";
 
 // Middleware for single file upload
 export const uploadSingleImage = (req, res, next) => {
@@ -52,6 +52,16 @@ export const uploadOpenSection = (req, res, next) => {
 	uploadOpenSectionImages(req, res, (err) => {
 		if (err) {
 			return res.status(400).json({ success: false, message: err.message });
+		}
+		next();
+	});
+};
+
+export const uploadFounder = (req, res, next) => {
+	uploadFounderImages(req, res, (err) => {
+		if (err) {
+			const message = err.code === "LIMIT_FILE_SIZE" ? "Each image must be under 8 MB" : err.message;
+			return res.status(400).json({ success: false, message });
 		}
 		next();
 	});

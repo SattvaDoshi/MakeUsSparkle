@@ -313,7 +313,29 @@ const GOES_WELL_WITH = [
   { id: 4, name: 'Charm Anklet', price: 649, originalPrice: 849, image: 'https://images.unsplash.com/photo-1573408301185-9519f94e84dd?w=400&q=80', href: '/products/charm-anklet' },
 ];
 
-export function CompleteTheLookStrip() {
+type CrossProductItem = {
+  _id: string;
+  title: string;
+  price: number;
+  discountedPrice?: number | null;
+  mainImage?: string | null;
+  images?: string[];
+};
+
+export function CompleteTheLookStrip({ items }: { items?: CrossProductItem[] }) {
+  const goesWellWith = items && items.length > 0
+    ? items.map((p) => {
+        const sale = p.discountedPrice && p.discountedPrice > 0 && p.discountedPrice < p.price ? p.discountedPrice : p.price;
+        return {
+          id: p._id,
+          name: p.title,
+          price: sale,
+          originalPrice: p.price,
+          image: p.mainImage || p.images?.[0] || '',
+          href: `/products/${p._id}`,
+        };
+      })
+    : GOES_WELL_WITH;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const nudge = (dir: number) => scrollRef.current?.scrollBy({ left: dir * 400, behavior: 'smooth' });
   return (
@@ -329,7 +351,7 @@ export function CompleteTheLookStrip() {
         </div>
       </div>
       <div className="ctl-strip-scroll" ref={scrollRef}>
-        {GOES_WELL_WITH.map((item) => {
+        {goesWellWith.map((item) => {
           const disc = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
           return (
             <a key={item.id} href={item.href} className="ctl-card">

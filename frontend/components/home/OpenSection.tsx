@@ -62,8 +62,8 @@ export default function OpenSection() {
     return () => { alive = false; };
   }, [gender]);
 
-  if (!loading && (!section || !section.isActive || section.items.length === 0)) return null;
   if (loading && (!section || section.items.length === 0)) return <ProductRowSkeleton />;
+  if (!section || !section.isActive || section.items.length === 0) return null;
 
   const allCategories = section.items.every((i) => i.type === "category");
 

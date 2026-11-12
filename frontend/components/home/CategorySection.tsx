@@ -14,6 +14,17 @@ const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1599643478518-a784e5dc
 // These categories open their own product page instead of a list of sub-collections.
 const DIRECT_SLUGS = new Set(['keychains', 'charm-jewellery', 'custom-charm-jewellery']);
 
+/** Desired display order for sub-collection cards (matched loosely: case, spaces, hyphens, plurals ignored). */
+const SUB_ORDER = ['rings', 'earrings', 'necklace', 'bracelets', 'jhumka', 'hand chain'];
+
+const normalizeName = (s: string) => s.toLowerCase().replace(/[\s_-]+/g, '').replace(/s$/, '');
+const SUB_RANK = new Map(SUB_ORDER.map((s, i) => [normalizeName(s), i]));
+const subRank = (name: string) => SUB_RANK.get(normalizeName(name)) ?? SUB_ORDER.length; // unlisted go last
+
+/** Orders cards by SUB_ORDER; anything not listed keeps its original (API) order after them. */
+const sortSubs = (list: SubCategoryItem[]) =>
+  [...list].sort((a, b) => subRank(a.name) - subRank(b.name));
+
 const Arrow = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M5 12h14M12 5l7 7-7 7" />
@@ -78,7 +89,7 @@ export default function CategorySection() {
           name: c.name,
           img: c.image || FALLBACK_IMAGE,
           href: DIRECT_SLUGS.has(c.slug) ? `/subcategory/${c.slug}` : `/categories/${tab}/${c.slug}`,
-          sub: byCat.get(c.id) || [],
+          sub: sortSubs(byCat.get(c.id) || []),
         })));
         setActiveIdx(0);
       })

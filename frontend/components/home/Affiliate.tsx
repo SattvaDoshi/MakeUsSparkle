@@ -336,6 +336,22 @@ export default function AffiliatePage() {
           --ffb:      'DM Sans', system-ui, sans-serif;
           --shadow:   0 4px 24px rgba(26,29,13,.10);
           --shadow-lg:0 8px 40px rgba(26,29,13,.16);
+
+          /* Aliases: these names are used below but were never defined */
+          --olive-dark:  #26360f;
+          --olive-soft:  var(--olive2);
+          --olive-light: var(--olivedim);
+          --ink-muted:   var(--ink7);
+          --ink-faint:   var(--ink4);
+          --bdr-strong:  var(--bdr2);
+          --surf-subtle: #faf8f2;
+          --shadow-sm:   0 1px 6px rgba(26,29,13,.06);
+          --shadow-md:   var(--shadow);
+          --green-bg:    var(--greendim);
+          --amber:       #9a6a00;
+          --amber-bg:    #fdf3d8;
+          --gold-light:  var(--golddim);
+          --red-bg:      rgba(192,57,43,.08);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -344,7 +360,7 @@ export default function AffiliatePage() {
         img { display: block; max-width: 100%; }
 
         /* ── PAGE ── */
-        .aff-page { min-height: 100dvh; background: var(--bg); }
+        .aff-page { min-height: 100dvh; background: var(--bg); overflow-x: hidden; }
 
         /* ── HERO ── */
         .aff-hero {
@@ -363,7 +379,7 @@ export default function AffiliatePage() {
         .aff-eyebrow::before, .aff-eyebrow::after { content: ''; width: 18px; height: 1.5px; background: var(--olive); opacity: 0.5; }
         .aff-hero h1 {
           font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(2rem, 3.8vw, 3.2rem); font-weight: 500; color: var(--olive-dark); line-height: 1.15;
+          font-size: clamp(1.7rem, 3.8vw, 3.2rem); font-weight: 500; color: var(--olive-dark); line-height: 1.15;
         }
         .aff-hero h1 em { font-style: italic; color: var(--gold); }
         .aff-hero-desc {
@@ -372,34 +388,27 @@ export default function AffiliatePage() {
         .aff-code-badge {
           background: var(--surf); border: 1.5px solid var(--bdr-strong);
           padding: 10px 18px; border-radius: 6px; box-shadow: var(--shadow-sm);
-          display: flex; flex-direction: column; gap: 2px;
+          display: flex; flex-direction: column; gap: 2px; max-width: 100%;
         }
         .aff-code-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
-        .aff-code-val { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: var(--olive); letter-spacing: 0.1em; }
+        .aff-code-val { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: var(--olive); letter-spacing: 0.1em; overflow-wrap: anywhere; }
 
         /* ── CONTAINER ── */
-        .aff-container { max-width: 1180px; margin: 0 auto; padding: 28px 20px 0; }
+        .aff-container { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
 
         /* ── STATS ROW ── */
         .aff-stats-grid {
           display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;
         }
-        @media(max-width: 900px) {
-          .aff-stats-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media(max-width: 480px) {
-          .aff-stats-grid { grid-template-columns: 1fr; }
-        }
         .aff-card {
           background: var(--surf); border: 1px solid var(--bdr);
           border-radius: 8px; padding: 20px 20px; box-shadow: var(--shadow-sm);
-          transition: transform 0.2s, box-shadow 0.2s;
+          transition: transform 0.2s, box-shadow 0.2s; min-width: 0;
         }
-        .aff-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        .aff-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .aff-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
         .aff-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-muted); }
         .aff-pill {
-          font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.04em;
+          font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.04em; white-space: nowrap;
         }
         .aff-pill.pill-green { background: var(--green-bg); color: var(--green); }
         .aff-pill.pill-amber { background: var(--amber-bg); color: var(--amber); }
@@ -414,12 +423,12 @@ export default function AffiliatePage() {
           border-radius: 8px; padding: 18px 22px; margin-bottom: 28px;
           display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
         }
-        .aff-share-info { display: flex; flex-direction: column; gap: 4px; }
+        .aff-share-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
         .aff-share-title { font-size: 13px; font-weight: 700; color: var(--olive-dark); display: flex; align-items: center; gap: 6px; }
         .aff-share-desc { font-size: 12px; color: var(--ink-muted); }
         .aff-input-group { display: flex; gap: 8px; flex: 1; max-width: 520px; min-width: 280px; }
         .aff-input {
-          flex: 1; font-size: 12px; font-family: 'Courier New', monospace; padding: 9px 12px;
+          flex: 1; min-width: 0; font-size: 12px; font-family: 'Courier New', monospace; padding: 9px 12px;
           border: 1px solid var(--bdr-strong); border-radius: 6px; background: var(--surf-subtle); color: var(--ink);
           outline: none; transition: border-color 0.2s;
         }
@@ -428,8 +437,9 @@ export default function AffiliatePage() {
           font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
           padding: 9px 16px; border-radius: 6px; border: 1px solid transparent;
           cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-          transition: all 0.2s;
+          transition: all 0.2s; text-decoration: none;
         }
+        .aff-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .aff-btn-primary { background: var(--olive); color: #fff; border-color: var(--olive); }
         .aff-btn-primary:hover { background: var(--olive-soft); }
         .aff-btn-outline { background: var(--surf); color: var(--olive); border-color: var(--bdr-strong); }
@@ -438,13 +448,15 @@ export default function AffiliatePage() {
 
         /* ── TABS ── */
         .aff-tabs {
-          display: flex; gap: 8px; border-bottom: 2px solid var(--bdr); margin-bottom: 24px; overflow-x: auto;
+          display: flex; gap: 8px; border-bottom: 2px solid var(--bdr); margin-bottom: 24px;
+          overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
         }
+        .aff-tabs::-webkit-scrollbar { display: none; }
         .aff-tab-btn {
           padding: 12px 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
           background: transparent; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px;
           color: var(--ink-muted); cursor: pointer; display: flex; align-items: center; gap: 8px;
-          transition: all 0.2s; white-space: nowrap;
+          transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
         }
         .aff-tab-btn:hover { color: var(--olive); }
         .aff-tab-btn.active { color: var(--olive-dark); border-bottom-color: var(--olive); }
@@ -453,10 +465,25 @@ export default function AffiliatePage() {
         }
         .aff-tab-btn.active .aff-tab-count { background: var(--olive-light); color: var(--olive); font-weight: 700; }
 
+        /* ── SHARED SECTION / PANEL HEADINGS ── */
+        .aff-section-head {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+        }
+        .aff-section-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; color: var(--olive-dark); line-height: 1.2; }
+        .aff-section-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 2px; }
+        .aff-panel-head {
+          padding: 16px 20px; border-bottom: 1px solid var(--bdr); background: var(--surf-subtle);
+          display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .aff-panel-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--olive-dark); margin: 0; line-height: 1.25; }
+        .aff-panel-sub { font-size: 12px; color: var(--ink-muted); margin: 0; }
+
         /* ── TAB 1: PRODUCT SEARCH & GRID ── */
         .aff-search-box {
           position: relative; margin-bottom: 20px; max-width: 580px;
         }
+        .aff-search-box--head { margin: 0; min-width: 280px; }
         .aff-search-input {
           width: 100%; font-size: 13px; padding: 12px 42px 12px 16px;
           border: 1.5px solid var(--bdr-strong); border-radius: 8px; background: var(--surf);
@@ -464,40 +491,42 @@ export default function AffiliatePage() {
         }
         .aff-search-input:focus { border-color: var(--olive); box-shadow: 0 0 0 3px rgba(48,67,24,0.08); }
         .aff-search-clear {
-          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+          position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
           background: transparent; border: none; font-size: 14px; color: var(--ink-faint); cursor: pointer;
+          width: 38px; height: 38px;
         }
         .aff-products-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
         }
         .aff-product-card {
           background: var(--surf); border: 1px solid var(--bdr); border-radius: 8px;
-          overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;
+          overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;
         }
-        .aff-product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--bdr-strong); }
         .aff-product-img-wrap {
           position: relative; width: 100%; aspect-ratio: 4/4.5; background: #eee8dc; overflow: hidden;
         }
         .aff-product-img { object-fit: cover; transition: transform 0.3s; }
-        .aff-product-card:hover .aff-product-img { transform: scale(1.04); }
         .aff-product-info { padding: 14px 14px 16px; display: flex; flex-direction: column; flex: 1; }
         .aff-product-cat { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
         .aff-product-title {
           font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35;
           margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .aff-product-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; margin-top: auto; }
+        .aff-product-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; margin-top: auto; flex-wrap: wrap; }
         .aff-product-price { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 700; color: var(--olive); }
         .aff-product-orig { font-size: 11px; text-decoration: line-through; color: var(--ink-faint); }
         .aff-product-comm { font-size: 10.5px; font-weight: 700; color: var(--green); margin-left: auto; }
         .aff-product-actions { display: flex; flex-direction: column; gap: 6px; }
+        .aff-btn-block { width: 100%; justify-content: center; }
+        .aff-btn-sm { font-size: 10px; }
 
-        /* ── TAB 2: LINKS TABLE ── */
+        /* ── TAB 2 / 3 / 4: TABLES ── */
         .aff-table-wrapper {
           background: var(--surf); border: 1px solid var(--bdr); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm);
         }
-        .aff-table-scroll { overflow-x: auto; }
+        .aff-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table.aff-data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 650px; }
+        table.aff-data-table.aff-data-table--compact { min-width: 0; }
         table.aff-data-table th {
           background: var(--surf-subtle); padding: 12px 16px; text-align: left;
           font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-muted);
@@ -508,18 +537,20 @@ export default function AffiliatePage() {
         }
         table.aff-data-table tr:last-child td { border-bottom: none; }
         table.aff-data-table tr:hover td { background: #fafaf5; }
-        .td-prod-cell { display: flex; align-items: center; gap: 12px; }
+        .td-prod-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
         .td-prod-thumb { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #eae4d8; flex-shrink: 0; }
         .td-prod-title { font-weight: 600; color: var(--ink); line-height: 1.3; }
+        .aff-link-input { width: 220px; flex: none; font-size: 11px; padding: 6px 8px; }
 
         /* ── TAB 3: COUPON CREATOR ── */
         .aff-coupon-panel {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+          display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
         }
-        @media(max-width: 768px) { .aff-coupon-panel { grid-template-columns: 1fr; } }
         .aff-coupon-creator-card {
           background: var(--surf); border: 1.5px solid var(--bdr); border-radius: 8px; padding: 24px;
         }
+        .aff-coupon-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--olive-dark); margin-bottom: 6px; }
+        .aff-coupon-desc { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 18px; line-height: 1.6; }
         .aff-form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 6px; display: block; }
         .aff-coupon-input {
           width: 100%; font-size: 15px; font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: 0.1em;
@@ -529,16 +560,17 @@ export default function AffiliatePage() {
         .aff-coupon-input:focus { border-color: var(--olive); }
         .aff-coupon-preview {
           background: var(--gold-light); border: 1px dashed var(--gold); border-radius: 6px;
-          padding: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+          padding: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
         }
-        .aff-coupon-preview-code { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: var(--olive); }
-        .aff-coupon-preview-disc { font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; }
+        .aff-coupon-preview-code { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: var(--olive); overflow-wrap: anywhere; }
+        .aff-coupon-preview-disc { font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; white-space: nowrap; }
 
         /* ── NOTICES / BANNER ── */
         .aff-notice-banner {
           background: var(--olive-light); border: 1px solid rgba(48,67,24,0.18);
           border-radius: 8px; padding: 14px 18px; margin-top: 24px; font-size: 12px;
           color: var(--olive-dark); line-height: 1.6; display: flex; align-items: flex-start; gap: 10px;
+          overflow-wrap: anywhere;
         }
 
         /* ── SKELETON & EMPTY ── */
@@ -555,6 +587,123 @@ export default function AffiliatePage() {
         .aff-empty-icon { font-size: 36px; margin-bottom: 8px; }
         .aff-empty-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
         .aff-empty-sub { font-size: 12.5px; color: var(--ink-faint); max-width: 400px; margin: 0 auto; line-height: 1.6; }
+
+        /* ══════════════════════════════════════════════════════
+           RESPONSIVE
+           Large desktop  ≥1280
+           Laptop         1025–1279 (base styles)
+           Tablet         641–1024
+           Mobile         ≤640
+        ══════════════════════════════════════════════════════ */
+
+        /* Hover lift only on devices that actually hover (no sticky hover on touch) */
+        @media (hover: hover) {
+          .aff-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+          .aff-product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--bdr-strong); }
+          .aff-product-card:hover .aff-product-img { transform: scale(1.04); }
+        }
+
+        /* ── Large desktop ── */
+        @media (min-width: 1280px) {
+          .aff-hero-inner, .aff-container { max-width: 1280px; }
+        }
+
+        /* ── Tablet & below ── */
+        @media (max-width: 1024px) {
+          .aff-hero { padding: 36px 20px 28px; }
+          .aff-products-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+        }
+
+        @media (max-width: 900px) {
+          .aff-stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .aff-coupon-panel { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+          .aff-container { padding: 22px 16px 40px; }
+          .aff-share-bar { padding: 16px; }
+          .aff-input-group { max-width: none; min-width: 0; width: 100%; flex: 1 1 100%; }
+          .aff-search-box--head { min-width: 0; width: 100%; max-width: none; }
+          .aff-section-title { font-size: 21px; }
+          .aff-btn { min-height: 40px; }
+          .aff-search-input, .aff-coupon-input, .aff-input { font-size: 16px; } /* stops iOS zoom-on-focus */
+          .aff-input { font-size: 13px; }
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 640px) {
+          .aff-hero { padding: 28px 16px 22px; }
+          .aff-hero-inner { align-items: flex-start; gap: 16px; }
+          .aff-hero-desc { font-size: 13px; }
+          .aff-code-badge { width: 100%; }
+          .aff-code-val { font-size: 16px; }
+
+          /* Share bar: input on its own row, buttons share the next row */
+          .aff-input-group { flex-wrap: wrap; }
+          .aff-input-group .aff-input { flex: 1 1 100%; }
+          .aff-input-group .aff-btn { flex: 1; justify-content: center; }
+
+          .aff-tab-btn { padding: 11px 14px; font-size: 11px; gap: 6px; }
+
+          .aff-panel-head { padding: 14px 16px; }
+          .aff-panel-title { font-size: 18px; }
+
+          /* Product grid: 2 columns */
+          .aff-products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .aff-product-info { padding: 10px 10px 12px; }
+          .aff-product-title { font-size: 12px; }
+          .aff-product-price { font-size: 16px; }
+          .aff-product-comm { margin-left: 0; flex-basis: 100%; }
+          .aff-product-actions .aff-btn { padding: 9px 8px; font-size: 10px; letter-spacing: 0.04em; }
+
+          /* Coupon card */
+          .aff-coupon-creator-card { padding: 18px 16px; }
+          .aff-coupon-title { font-size: 20px; }
+          .aff-coupon-preview-code { font-size: 16px; }
+
+          .aff-notice-banner { padding: 12px 14px; }
+          .aff-empty-state { padding: 32px 16px; }
+
+          /* Tables become stacked cards (uses the data-label on each td) */
+          .aff-table-scroll { overflow-x: visible; }
+          table.aff-data-table,
+          table.aff-data-table tbody { display: block; width: 100%; min-width: 0; }
+          table.aff-data-table thead { display: none; }
+          table.aff-data-table tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--bdr); }
+          table.aff-data-table tr:last-child { border-bottom: none; }
+          table.aff-data-table tr:hover td { background: transparent; }
+          table.aff-data-table td {
+            display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            padding: 7px 16px; border-bottom: none; text-align: right !important;
+          }
+          table.aff-data-table td::before {
+            content: attr(data-label);
+            font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--ink-muted); text-align: left; flex-shrink: 0;
+          }
+          table.aff-data-table td.td-full { display: block; text-align: left !important; padding-top: 10px; }
+          table.aff-data-table td.td-full::before { display: none; }
+          table.aff-data-table td.td-stack { display: block; text-align: left !important; }
+          table.aff-data-table td.td-stack::before { display: block; margin-bottom: 6px; }
+          table.aff-data-table td.td-action::before { display: none; }
+          table.aff-data-table td.td-action .aff-btn { width: 100%; justify-content: center; }
+          .aff-link-input { width: 100%; font-size: 13px; }
+        }
+
+        @media (max-width: 560px) {
+          .aff-stats-grid { gap: 10px; margin-bottom: 18px; }
+          .aff-card { padding: 14px; }
+          .aff-card-header { margin-bottom: 6px; }
+          .aff-card-title { font-size: 10px; letter-spacing: 0.1em; }
+          .aff-card-header .aff-pill { display: none; }
+          .aff-card-number { font-size: 24px; }
+          .aff-card-sub { font-size: 10.5px; }
+        }
+
+        @media (max-width: 360px) {
+          .aff-stats-grid { grid-template-columns: 1fr; }
+          .aff-products-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <div className="aff-page">
@@ -610,7 +759,7 @@ export default function AffiliatePage() {
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="aff-card">
                     <div className="aff-skeleton-box" style={{ height: 12, width: 90, marginBottom: 12 }} />
-                    <div className="aff-skeleton-box" style={{ height: 32, width: 130 }} />
+                    <div className="aff-skeleton-box" style={{ height: 32, width: 130, maxWidth: '100%' }} />
                   </div>
                 ))}
               </div>
@@ -743,17 +892,17 @@ export default function AffiliatePage() {
               {/* ── TAB 1: PRODUCT PICKER & LINK GENERATOR ── */}
               {activeTab === 'products' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                  <div className="aff-section-head">
                     <div>
-                      <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, fontWeight: 600, color: 'var(--olive-dark)' }}>
+                      <h2 className="aff-section-title">
                         Choose Any Product to Create an Affiliate Link
                       </h2>
-                      <p style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>
+                      <p className="aff-section-sub">
                         Showing 10 products by default. Use the search box below to search any piece from the catalog.
                       </p>
                     </div>
 
-                    <div className="aff-search-box" style={{ margin: 0, minWidth: 280 }}>
+                    <div className="aff-search-box aff-search-box--head">
                       <input
                         className="aff-search-input"
                         type="text"
@@ -762,7 +911,7 @@ export default function AffiliatePage() {
                         onChange={(e) => handleSearchChange(e.target.value)}
                       />
                       {searchQuery && (
-                        <button className="aff-search-clear" onClick={() => handleSearchChange('')}>
+                        <button className="aff-search-clear" onClick={() => handleSearchChange('')} aria-label="Clear search">
                           ✕
                         </button>
                       )}
@@ -803,7 +952,7 @@ export default function AffiliatePage() {
                                 src={p.mainImage || p.images?.[0] || '/images/hero.png'}
                                 alt={p.title}
                                 fill
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                 className="aff-product-img"
                               />
                             </div>
@@ -826,15 +975,13 @@ export default function AffiliatePage() {
                                 {existing ? (
                                   <>
                                     <button
-                                      className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-primary'}`}
-                                      style={{ width: '100%', justifyContent: 'center' }}
+                                      className={`aff-btn aff-btn-block ${isCopied ? 'aff-btn-success' : 'aff-btn-primary'}`}
                                       onClick={() => handleCopy(existing.url, copyKey)}
                                     >
                                       {isCopied ? '✓ Link Copied' : '⎘ Copy Affiliate Link'}
                                     </button>
                                     <a
-                                      className="aff-btn aff-btn-outline"
-                                      style={{ width: '100%', justifyContent: 'center', fontSize: 10 }}
+                                      className="aff-btn aff-btn-outline aff-btn-block aff-btn-sm"
                                       href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
                                         `Check out "${p.title}" on MakeUsSparkle: ${existing.url}`
                                       )}`}
@@ -846,8 +993,7 @@ export default function AffiliatePage() {
                                   </>
                                 ) : (
                                   <button
-                                    className="aff-btn aff-btn-primary"
-                                    style={{ width: '100%', justifyContent: 'center' }}
+                                    className="aff-btn aff-btn-primary aff-btn-block"
                                     disabled={isGenerating}
                                     onClick={() => handleGenerateLink(p._id)}
                                   >
@@ -867,12 +1013,12 @@ export default function AffiliatePage() {
               {/* ── TAB 2: MY GENERATED LINKS & CLICKS ── */}
               {activeTab === 'links' && (
                 <div className="aff-table-wrapper">
-                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--bdr)', background: 'var(--surf-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="aff-panel-head">
                     <div>
-                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 20, color: 'var(--olive-dark)', margin: 0 }}>
+                      <h3 className="aff-panel-title">
                         Your Generated Product Links &amp; Live Clicks
                       </h3>
-                      <p style={{ fontSize: 12, color: 'var(--ink-muted)', margin: 0 }}>
+                      <p className="aff-panel-sub">
                         Every unique click is tracked in real-time. Share your link to drive orders.
                       </p>
                     </div>
@@ -913,7 +1059,7 @@ export default function AffiliatePage() {
                             const isCopied = copiedKey === (l.id || l.linkCode);
                             return (
                               <tr key={linkKey}>
-                                <td>
+                                <td className="td-full">
                                   <div className="td-prod-cell">
                                     {l.product?.mainImage && (
                                       <Image
@@ -932,26 +1078,25 @@ export default function AffiliatePage() {
                                     </div>
                                   </div>
                                 </td>
-                                <td>
+                                <td className="td-stack" data-label="Link">
                                   <input
-                                    className="aff-input"
-                                    style={{ width: 220, fontSize: 11, padding: '6px 8px' }}
+                                    className="aff-input aff-link-input"
                                     readOnly
                                     value={l.url}
                                   />
                                 </td>
-                                <td style={{ textAlign: 'center' }}>
+                                <td style={{ textAlign: 'center' }} data-label="Clicks">
                                   <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--olive)' }}>
                                     {l.clicks || 0}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'center', fontWeight: 600 }}>
+                                <td style={{ textAlign: 'center', fontWeight: 600 }} data-label="Orders">
                                   {l.ordersCount || 0}
                                 </td>
-                                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--olive)' }}>
+                                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--olive)' }} data-label="Total Earned">
                                   {formatINR(l.totalEarned || 0)}
                                 </td>
-                                <td style={{ textAlign: 'center' }}>
+                                <td className="td-action" style={{ textAlign: 'center' }}>
                                   <button
                                     className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-outline'}`}
                                     style={{ fontSize: 10, padding: '6px 12px' }}
@@ -975,10 +1120,10 @@ export default function AffiliatePage() {
                 <div className="aff-coupon-panel">
                   {/* Coupon Generator Card */}
                   <div className="aff-coupon-creator-card">
-                    <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: 'var(--olive-dark)', marginBottom: 6 }}>
+                    <h3 className="aff-coupon-title">
                       Create Your Custom Coupon Code
                     </h3>
-                    <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginBottom: 18, lineHeight: 1.6 }}>
+                    <p className="aff-coupon-desc">
                       Create a personalized coupon (e.g. <strong>{affiliateCode}10</strong> or your name). Customers get <strong>10% off</strong> at checkout, and you earn <strong>10% commission</strong> when the order is delivered!
                     </p>
 
@@ -1020,8 +1165,7 @@ export default function AffiliatePage() {
 
                       <button
                         type="submit"
-                        className="aff-btn aff-btn-primary"
-                        style={{ width: '100%', justifyContent: 'center' }}
+                        className="aff-btn aff-btn-primary aff-btn-block"
                         disabled={creatingCoupon}
                       >
                         {creatingCoupon ? 'Creating Coupon...' : '+ Create My Coupon Code'}
@@ -1031,8 +1175,8 @@ export default function AffiliatePage() {
 
                   {/* Existing Coupons List */}
                   <div className="aff-table-wrapper" style={{ height: 'fit-content' }}>
-                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--bdr)', background: 'var(--surf-subtle)' }}>
-                      <h4 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: 'var(--olive-dark)', margin: 0 }}>
+                    <div className="aff-panel-head">
+                      <h4 className="aff-panel-title">
                         Your Active Affiliate Coupons
                       </h4>
                     </div>
@@ -1041,49 +1185,51 @@ export default function AffiliatePage() {
                       <div className="aff-empty-state" style={{ padding: '30px 16px' }}>
                         <div className="aff-empty-icon">🎟️</div>
                         <div className="aff-empty-title">No coupons created yet</div>
-                        <div className="aff-empty-sub">Use the form on the left to create your first branded affiliate coupon.</div>
+                        <div className="aff-empty-sub">Use the form {'above'} to create your first branded affiliate coupon.</div>
                       </div>
                     ) : (
-                      <table className="aff-data-table" style={{ minWidth: 0 }}>
-                        <thead>
-                          <tr>
-                            <th>Coupon</th>
-                            <th>Discount</th>
-                            <th style={{ textAlign: 'center' }}>Times Used</th>
-                            <th style={{ textAlign: 'right' }}>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {coupons.map((c, idx) => {
-                            const cpnKey = c.id || (c as any)._id || c.code || `cpn_${idx}`;
-                            const isCopied = copiedKey === c.code;
-                            return (
-                              <tr key={cpnKey}>
-                                <td>
-                                  <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 700, fontSize: 13, color: 'var(--olive)' }}>
-                                    {c.code}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span style={{ fontWeight: 600 }}>{c.discountValue}% OFF</span>
-                                </td>
-                                <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                                  {c.usedCount || 0}
-                                </td>
-                                <td style={{ textAlign: 'right' }}>
-                                  <button
-                                    className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-outline'}`}
-                                    style={{ fontSize: 10, padding: '5px 10px' }}
-                                    onClick={() => handleCopy(c.code, c.code)}
-                                  >
-                                    {isCopied ? '✓ Copied' : 'Copy Code'}
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                      <div className="aff-table-scroll">
+                        <table className="aff-data-table aff-data-table--compact">
+                          <thead>
+                            <tr>
+                              <th>Coupon</th>
+                              <th>Discount</th>
+                              <th style={{ textAlign: 'center' }}>Times Used</th>
+                              <th style={{ textAlign: 'right' }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {coupons.map((c, idx) => {
+                              const cpnKey = c.id || (c as any)._id || c.code || `cpn_${idx}`;
+                              const isCopied = copiedKey === c.code;
+                              return (
+                                <tr key={cpnKey}>
+                                  <td data-label="Coupon">
+                                    <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 700, fontSize: 13, color: 'var(--olive)' }}>
+                                      {c.code}
+                                    </span>
+                                  </td>
+                                  <td data-label="Discount">
+                                    <span style={{ fontWeight: 600 }}>{c.discountValue}% OFF</span>
+                                  </td>
+                                  <td style={{ textAlign: 'center', fontWeight: 700 }} data-label="Times Used">
+                                    {c.usedCount || 0}
+                                  </td>
+                                  <td className="td-action" style={{ textAlign: 'right' }}>
+                                    <button
+                                      className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-outline'}`}
+                                      style={{ fontSize: 10, padding: '5px 10px' }}
+                                      onClick={() => handleCopy(c.code, c.code)}
+                                    >
+                                      {isCopied ? '✓ Copied' : 'Copy Code'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1092,12 +1238,12 @@ export default function AffiliatePage() {
               {/* ── TAB 4: ORDERS & COMMISSIONS ── */}
               {activeTab === 'orders' && (
                 <div className="aff-table-wrapper">
-                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--bdr)', background: 'var(--surf-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="aff-panel-head">
                     <div>
-                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 20, color: 'var(--olive-dark)', margin: 0 }}>
+                      <h3 className="aff-panel-title">
                         Affiliate Orders &amp; Earnings Log
                       </h3>
-                      <p style={{ fontSize: 12, color: 'var(--ink-muted)', margin: 0 }}>
+                      <p className="aff-panel-sub">
                         Track every order placed via your links or coupons. Earnings reflect once marked Delivered by admin.
                       </p>
                     </div>
@@ -1130,36 +1276,36 @@ export default function AffiliatePage() {
                             const rowKey = row.id || (row as any)._id || `comm_${row.orderId || idx}_${idx}`;
                             return (
                               <tr key={rowKey}>
-                              <td>
-                                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>
-                                  {row.productTitle || (row.couponCode ? `Coupon: ${row.couponCode}` : 'Store Order')}
-                                </div>
-                                <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Courier New, monospace' }}>
-                                  ID: #{row.orderId.slice(-6).toUpperCase()}
-                                </div>
-                              </td>
-                              <td style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{row.referredName}</td>
-                              <td style={{ fontSize: 11.5, color: 'var(--ink-faint)' }}>{formatDate(row.date)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatINR(row.orderAmount)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--olive)', fontSize: 14 }}>
-                                {formatINR(row.earning)}
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                {row.isDelivered ? (
-                                  <span className="aff-pill pill-green" title="Delivered & Commission Credited">
-                                    ✓ Delivered (Earned)
-                                  </span>
-                                ) : row.isCancelled ? (
-                                  <span className="aff-pill" style={{ background: 'var(--red-bg)', color: 'var(--red)' }}>
-                                    ✕ Cancelled
-                                  </span>
-                                ) : (
-                                  <span className="aff-pill pill-amber" title="Order placed / in transit. Commission will reflect upon delivery.">
-                                    ⏳ Pending Delivery
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
+                                <td className="td-full">
+                                  <div style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                                    {row.productTitle || (row.couponCode ? `Coupon: ${row.couponCode}` : 'Store Order')}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Courier New, monospace' }}>
+                                    ID: #{row.orderId.slice(-6).toUpperCase()}
+                                  </div>
+                                </td>
+                                <td style={{ color: 'var(--ink-muted)', fontWeight: 500 }} data-label="Customer">{row.referredName}</td>
+                                <td style={{ fontSize: 11.5, color: 'var(--ink-faint)' }} data-label="Date">{formatDate(row.date)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 600 }} data-label="Order Amount">{formatINR(row.orderAmount)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--olive)', fontSize: 14 }} data-label="Your 10%">
+                                  {formatINR(row.earning)}
+                                </td>
+                                <td style={{ textAlign: 'center' }} data-label="Status">
+                                  {row.isDelivered ? (
+                                    <span className="aff-pill pill-green" title="Delivered & Commission Credited">
+                                      ✓ Delivered (Earned)
+                                    </span>
+                                  ) : row.isCancelled ? (
+                                    <span className="aff-pill" style={{ background: 'var(--red-bg)', color: 'var(--red)' }}>
+                                      ✕ Cancelled
+                                    </span>
+                                  ) : (
+                                    <span className="aff-pill pill-amber" title="Order placed / in transit. Commission will reflect upon delivery.">
+                                      ⏳ Pending Delivery
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
                             );
                           })}
                         </tbody>

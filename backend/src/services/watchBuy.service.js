@@ -52,6 +52,10 @@ function assertValid(data, { partial = false } = {}) {
 		out.posterUrl = url;
 	}
 	if (data.duration !== undefined) out.duration = Math.max(0, Number(data.duration) || 0);
+	if (data.gender !== undefined) {
+		const g = String(data.gender || "").trim().toLowerCase();
+		out.gender = ["women", "men", "kids", "all"].includes(g) ? g : "all";
+	}
 	if (data.isActive !== undefined) out.isActive = data.isActive === true || data.isActive === "true";
 	if (data.sortOrder !== undefined) out.sortOrder = Number(data.sortOrder) || 0;
 
@@ -82,20 +86,48 @@ class WatchBuyService {
 		};
 	}
 
-	async listPublic() {
-		const docs = await WatchBuyVideo.find({ isActive: true })
+	async listPublic(gender) {
+		const query = { isActive: true };
+		if (gender) {
+			const g = String(gender).trim().toLowerCase();
+			if (["women", "men", "kids"].includes(g)) {
+				query.gender = { $in: [g, "all"] };
+			}
+		}
+		const docs = await WatchBuyVideo.find(query)
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.limit(MAX_VIDEOS)
 			.populate("product");
-		const items = docs.filter((d) => d.product && d.product.isActive !== false).map(serialize);
+		let items = docs.filter((d) => d.product && d.product.isActive !== false).map(serialize);
+		if (gender) {
+			const g = String(gender).trim().toLowerCase();
+			items = items.filter((item) => {
+				const itemGender = item.gender;
+				if (itemGender === g || itemGender === "all" || !itemGender) {
+					const prodGender = String(item.product?.gender || "").toLowerCase();
+					if (prodGender && prodGender !== "unisex" && prodGender !== g) {
+						return false;
+					}
+					return true;
+				}
+				return false;
+			});
+		}
 		await productService.attachOfferTags(items.map((i) => i.product));
 		return { success: true, videos: items };
 	}
 
-	async listAdmin() {
-		const docs = await WatchBuyVideo.find({})
+	async listAdmin(gender) {
+		const query = {};
+		if (gender) {
+			const g = String(gender).trim().toLowerCase();
+			if (["women", "men", "kids"].includes(g)) {
+				query.gender = g;
+			}
+		}
+		const docs = await WatchBuyVideo.find(query)
 			.sort({ sortOrder: 1, createdAt: -1 })
-			.populate("product", "title mainImage images price");
+			.populate("product", "title mainImage images price gender");
 		return { success: true, videos: docs.map(serialize) };
 	}
 

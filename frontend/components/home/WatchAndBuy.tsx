@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fetchWatchAndBuy, type CatalogWatchBuyVideo } from "@/lib/catalogApi";
 import { useCart } from "@/lib/cartContext";
+import { useGender } from "@/lib/genderContext";
 import CarouselArrows from "@/components/ui/CarouselArrows";
 import styles from "./WatchAndBuy.module.css";
 
@@ -254,6 +255,7 @@ export default function WatchAndBuy() {
      first or last copy we silently jump one copy-width, which looks identical. */
   const [looping, setLooping] = useState(true);
   const setWidth = useRef(0);
+  const { gender } = useGender();
 
   /* Don't touch the network until the shopper scrolls close */
   useEffect(() => {
@@ -267,9 +269,9 @@ export default function WatchAndBuy() {
   useEffect(() => {
     if (!near) return;
     let live = true;
-    fetchWatchAndBuy().then((r) => live && setItems(r)).catch(() => live && setItems([]));
+    fetchWatchAndBuy(gender).then((r) => live && setItems(r)).catch(() => live && setItems([]));
     return () => { live = false; };
-  }, [near]);
+  }, [near, gender]);
 
   const close = useCallback(() => setOpen(null), []);
 

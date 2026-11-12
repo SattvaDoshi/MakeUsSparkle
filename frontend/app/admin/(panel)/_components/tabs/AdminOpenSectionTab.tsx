@@ -33,6 +33,8 @@ type AdminOpenSectionTabProps = {
   onChange: (form: OpenSectionForm) => void;
   onSubmit: () => void;
   saving?: boolean;
+  selectedGender?: "women" | "men" | "kids";
+  onGenderChange?: (gender: "women" | "men" | "kids") => void;
 };
 
 export default function AdminOpenSectionTab({
@@ -41,6 +43,8 @@ export default function AdminOpenSectionTab({
   onChange,
   onSubmit,
   saving,
+  selectedGender = "women",
+  onGenderChange,
 }: AdminOpenSectionTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [addType, setAddType] = useState<"product" | "category">("product");
@@ -98,9 +102,24 @@ export default function AdminOpenSectionTab({
   /* ── render ── */
   return (
     <section className="admin-content">
+      {/* ── Gender Switcher ── */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
+        {(["women", "men", "kids"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            className={`admin-btn ${selectedGender === g ? "" : "admin-btn-muted"}`}
+            style={{ textTransform: "capitalize", padding: "8px 22px", fontWeight: 600 }}
+            onClick={() => onGenderChange?.(g)}
+          >
+            {g === "women" ? "👩 Women" : g === "men" ? "👨 Men" : "🧒 Kids"} Section
+          </button>
+        ))}
+      </div>
+
       {/* ── Section Settings ── */}
       <div className="admin-panel" style={{ marginBottom: "2rem" }}>
-        <h2>Section Settings</h2>
+        <h2>Section Settings ({selectedGender.toUpperCase()})</h2>
 
         <div className="admin-form-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: "1.5rem" }}>
           <div className="admin-form-group">

@@ -41,7 +41,7 @@ function getOfferBadge(offer: OfferDetail): { label: string; sub: string } {
 }
 
 function getDiscountedPrice(product: CatalogProduct, offer: OfferDetail): number | null {
-  const base = product.discountedPrice ?? product.price;
+  const base = product.originalPrice ?? product.price;
   if (offer.offerType === 'percentage') return Math.round(base * (1 - offer.discountValue / 100));
   if (offer.offerType === 'fixed') return Math.max(0, base - offer.discountValue);
   return null;
@@ -63,7 +63,7 @@ function getProductBadge(offer: OfferDetail): string {
 // ──────────────────────────────────────────────
 function OfferProductCard({ product, offer }: { product: CatalogProduct; offer: OfferDetail }) {
   // Same card as everywhere else; the price shown is the price after this offer.
-  const base = product.discountedPrice ?? product.price;
+  const base = product.originalPrice ?? product.price;
   const afterOfferPrice = getDiscountedPrice(product, offer);
   const shown = afterOfferPrice !== null
     ? { ...product, price: afterOfferPrice, originalPrice: base }

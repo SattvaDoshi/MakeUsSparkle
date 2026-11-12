@@ -7,6 +7,7 @@ import Link from "next/link";
 import ProductCard from "@/components/product/ProductCard";
 import CarouselArrows from "@/components/ui/CarouselArrows";
 import { fetchOpenSection, type CatalogOpenSection, type CatalogOpenSectionItem } from "@/lib/catalogApi";
+import { useGender } from "@/lib/genderContext";
 
 /* ─────────────────────────────────────────
    Category Banner Card
@@ -39,12 +40,14 @@ function CategoryBannerCard({ item }: { item: CatalogOpenSectionItem }) {
 ───────────────────────────────────────── */
 export default function OpenSection() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { gender } = useGender();
   const [section, setSection] = useState<CatalogOpenSection | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
-    fetchOpenSection()
+    setLoading(true);
+    fetchOpenSection(gender)
       .then((data) => {
         if (!alive) return;
         setSection(data);
@@ -57,12 +60,10 @@ export default function OpenSection() {
         if (alive) setLoading(false);
       });
     return () => { alive = false; };
-  }, []);
+  }, [gender]);
 
-  // console.log("[OpenSection] Render state:", { loading, section });
-
-  if (loading) return <ProductRowSkeleton />;
-  if (!section || section.items.length === 0) return null;
+  if (!loading && (!section || !section.isActive || section.items.length === 0)) return null;
+  if (loading && (!section || section.items.length === 0)) return <ProductRowSkeleton />;
 
   const allCategories = section.items.every((i) => i.type === "category");
 

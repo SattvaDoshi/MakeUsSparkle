@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchPromoBanners } from "@/lib/catalogApi";
 import { safeHref } from "@/lib/safeUrl";
 import CarouselArrows from "@/components/ui/CarouselArrows";
+import { useGender } from "@/lib/genderContext";
 import styles from "./PromoSection.module.css";
 
 /**
@@ -93,6 +94,7 @@ export default function PromoSection() {
   const pausedUntil = useRef(0);
   const inViewRef = useRef(false);
 
+  const { gender } = useGender();
   const [slides, setSlides] = useState<Slide[] | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [active, setActive] = useState(0);
@@ -100,14 +102,14 @@ export default function PromoSection() {
   /* Load banners */
   useEffect(() => {
     let live = true;
-    fetchPromoBanners()
+    fetchPromoBanners(gender)
       .then((rows: ApiBanner[]) => {
         if (!live) return;
         setSlides((rows || []).filter((r) => r && r.isActive !== false).map(toSlide).filter((s) => s.image));
       })
       .catch(() => live && setSlides([]));
     return () => { live = false; };
-  }, []);
+  }, [gender]);
 
   /* Reveal on first view; remember whether we're on screen for autoplay */
   useEffect(() => {

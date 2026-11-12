@@ -329,61 +329,241 @@ class AffiliateService {
 	 * Create or retrieve an affiliate coupon code for the logged in user.
 	 */
 	async createAffiliateCoupon(userId, customCode = "") {
-		const user = await User.findById(userId);
-		if (!user) throw new Error("User not found");
+		throw new Error("Affiliate coupon creation is managed exclusively by admin.");
+	}
 
-		if (!user.referralCode) {
-			user.referralCode = await generateUniqueCode();
-			await user.save();
-		}
+	/**
+	 * Admin: Get overview of all affiliates, stats, commission earnings, links, and assigned coupons.
+	 */
+	async getAdminAffiliatesOverview() {
+		// 1. Fetch all users who have a referral code or have commissions/links
+		const [affiliateUsers, allCommissions, allLinks, allAffiliateCoupons] = await Promise.all([
+			User.find({ referralCode: { $exists: true, $ne: "" } })
+				.select("_id name email phone referralCode affiliateClicks createdAt")
+				.sort({ createdAt: -1 })
+				.lean(),
+			AffiliateCommission.find()
+				.populate("affiliate", "name email referralCode")
+				.populate("referredUser", "name email")
+				.populate("order", "totalAmount status createdAt paymentMode")
+				.populate("product", "title mainImage price")
+				.sort({ createdAt: -1 })
+				.lean(),
+			AffiliateLink.find()
+				.populate("affiliate", "name email referralCode")
+				.populate("product", "title price mainImage")
+				.populate("combo", "name price image type")
+				.sort({ createdAt: -1 })
+				.lean(),
+			Coupon.find({ isAffiliateCoupon: true })
+				.populate("affiliateUser", "name email referralCode")
+				.populate("applicableCategories", "name")
+				.populate("applicableSubCategories", "name")
+				.populate("applicableStyles", "name")
+				.populate("applicableProducts", "title price")
+				.sort({ createdAt: -1 })
+				.lean(),
+		]);
 
-		const cleanCode = (customCode || `${user.referralCode}10`)
-			.trim()
-			.toUpperCase()
-			.replace(/[^A-Z0-9]/g, "");
+		// Map referrals count per affiliate
+		const referralCounts = await User.aggregate([
+			{ $match: { referredBy: { $ne: null } } },
+			{ $group: { _id: "$referredBy", count: { $sum: 1 } } },
+		]);
+		const referralCountMap = new Map(referralCounts.map((r) => [String(r._id), r.count]));
 
-		if (cleanCode.length < 3 || cleanCode.length > 20) {
-			throw new Error("Coupon code must be between 3 and 20 alphanumeric characters.");
-		}
+		// Build affiliate performance cards
+		const affiliateSummaries = affiliateUsers.map((u) => {
+			const uId = String(u._id);
+			const userCommissions = allCommissions.filter((c) => String(c.affiliate?._id || c.affiliate) === uId);
+			const userLinks = allLinks.filter((l) => String(l.affiliate?._id || l.affiliate) === uId);
+			const userCoupons = allAffiliateCoupons.filter((cp) => String(cp.affiliateUser?._id || cp.affiliateUser) === uId);
 
-		const mapCoupon = (cp) => ({
-			id: cp._id.toString(),
-			code: cp.code,
-			name: cp.name,
-			discountValue: cp.discountValue,
-			discountType: cp.discountType,
-			usedCount: cp.usedCount || 0,
-			isActive: cp.isActive !== false,
-			createdAt: cp.createdAt ? cp.createdAt.toISOString() : "",
+			const deliveredCommissions = userCommissions.filter(
+				(c) => c.status === "delivered" || c.status === "approved" || c.status === "paid"
+			);
+			const pendingCommissions = userCommissions.filter((c) => c.status === "pending");
+
+			const totalSalesGenerated = userCommissions
+				.filter((c) => c.status !== "cancelled")
+				.reduce((sum, c) => sum + (c.orderAmount || c.order?.totalAmount || 0), 0);
+
+			const totalEarnedDelivered = deliveredCommissions.reduce((sum, c) => sum + (c.commission || 0), 0);
+			const totalEarnedPending = pendingCommissions.reduce((sum, c) => sum + (c.commission || 0), 0);
+
+			const linkClicks = userLinks.reduce((sum, l) => sum + (l.clicks || 0), 0);
+			const totalClicks = linkClicks + (u.affiliateClicks || 0);
+
+			return {
+				id: uId,
+				name: u.name || "N/A",
+				email: u.email,
+				phone: u.phone || "",
+				referralCode: u.referralCode,
+				totalUsersReferred: referralCountMap.get(uId) || 0,
+				totalClicks,
+				totalOrders: userCommissions.filter((c) => c.status !== "cancelled").length,
+				deliveredOrders: deliveredCommissions.length,
+				pendingOrders: pendingCommissions.length,
+				totalSalesGenerated,
+				totalEarnedDelivered,
+				totalEarnedPending,
+				linksCount: userLinks.length,
+				couponsCount: userCoupons.length,
+				createdAt: u.createdAt ? u.createdAt.toISOString() : "",
+			};
 		});
 
+		// Global summary stats across entire affiliate system
+		const totalAffiliates = affiliateUsers.length;
+		const totalAffiliateSales = allCommissions
+			.filter((c) => c.status !== "cancelled")
+			.reduce((sum, c) => sum + (c.orderAmount || c.order?.totalAmount || 0), 0);
+		const totalDeliveredCommission = allCommissions
+			.filter((c) => c.status === "delivered" || c.status === "approved" || c.status === "paid")
+			.reduce((sum, c) => sum + (c.commission || 0), 0);
+		const totalPendingCommission = allCommissions
+			.filter((c) => c.status === "pending")
+			.reduce((sum, c) => sum + (c.commission || 0), 0);
+		const totalClicksAll = affiliateSummaries.reduce((sum, a) => sum + a.totalClicks, 0);
+
+		// Format commissions list for admin inspection
+		const formattedCommissions = allCommissions.map((c) => ({
+			id: String(c._id),
+			affiliateId: c.affiliate?._id ? String(c.affiliate._id) : String(c.affiliate || ""),
+			affiliateName: c.affiliate?.name || c.affiliate?.email || "Unknown Affiliate",
+			affiliateCode: c.affiliate?.referralCode || "",
+			referredUserName: c.referredUser?.name || c.referredUser?.email || "Guest Shopper",
+			orderId: c.order?._id ? String(c.order._id) : "N/A",
+			orderStatus: c.order?.status || c.status,
+			orderAmount: c.orderAmount || c.order?.totalAmount || 0,
+			commission: c.commission || 0,
+			status: c.status,
+			productTitle: c.product?.title || null,
+			couponCode: c.couponCode || null,
+			date: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
+		}));
+
+		// Format affiliate coupons for admin inspection
+		const formattedCoupons = allAffiliateCoupons.map((cp) => ({
+			id: String(cp._id),
+			code: cp.code,
+			name: cp.name,
+			description: cp.description || "",
+			discountType: cp.discountType,
+			discountValue: cp.discountValue,
+			maxDiscount: cp.maxDiscount,
+			minOrderValue: cp.minOrderValue || 0,
+			usageLimit: cp.usageLimit,
+			usedCount: cp.usedCount || 0,
+			isActive: cp.isActive !== false,
+			expiryDate: cp.expiryDate ? cp.expiryDate.toISOString() : null,
+			affiliateUser: cp.affiliateUser
+				? {
+						id: String(cp.affiliateUser._id),
+						name: cp.affiliateUser.name || cp.affiliateUser.email,
+						referralCode: cp.affiliateUser.referralCode,
+				  }
+				: null,
+			applicableCategories: (cp.applicableCategories || []).map((c) => ({ id: String(c._id || c), name: c.name || "Category" })),
+			applicableSubCategories: (cp.applicableSubCategories || []).map((s) => ({ id: String(s._id || s), name: s.name || "SubCategory" })),
+			applicableStyles: (cp.applicableStyles || []).map((st) => ({ id: String(st._id || st), name: st.name || "Style" })),
+			applicableProducts: (cp.applicableProducts || []).map((p) => ({ id: String(p._id || p), title: p.title || "Product" })),
+			createdAt: cp.createdAt ? cp.createdAt.toISOString() : "",
+		}));
+
+		return {
+			success: true,
+			stats: {
+				totalAffiliates,
+				totalAffiliateSales,
+				totalDeliveredCommission,
+				totalPendingCommission,
+				totalClicksAll,
+				totalOrders: allCommissions.filter((c) => c.status !== "cancelled").length,
+			},
+			affiliates: affiliateSummaries,
+			commissions: formattedCommissions,
+			coupons: formattedCoupons,
+		};
+	}
+
+	/**
+	 * Admin: Create an affiliate coupon assigned to an affiliate user with rules (categories, products, discount %, flat).
+	 */
+	async createAdminAffiliateCoupon(couponData) {
+		const {
+			code,
+			name,
+			description,
+			discountType = "percentage",
+			discountValue,
+			maxDiscount,
+			minOrderValue = 0,
+			usageLimit = 999999,
+			expiryDate,
+			affiliateUserId,
+			applicableCategories = [],
+			applicableSubCategories = [],
+			applicableStyles = [],
+			applicableProducts = [],
+			applicableProductTypes = [],
+		} = couponData;
+
+		if (!code || !String(code).trim()) {
+			throw new Error("Coupon code is required");
+		}
+		if (!affiliateUserId) {
+			throw new Error("Affiliate user selection is required");
+		}
+		if (discountValue === undefined || discountValue === null || Number(discountValue) <= 0) {
+			throw new Error("Valid discount value is required");
+		}
+
+		const user = await User.findById(affiliateUserId);
+		if (!user) throw new Error("Affiliate user not found");
+
+		const cleanCode = String(code).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
 		const existing = await Coupon.findOne({ code: cleanCode });
 		if (existing) {
-			if (String(existing.affiliateUser) === String(userId)) {
-				return { success: true, coupon: mapCoupon(existing), created: false };
-			}
-			throw new Error("This coupon code is already taken. Please choose another code.");
+			throw new Error(`Coupon code "${cleanCode}" is already in use.`);
 		}
 
 		const coupon = await Coupon.create({
 			code: cleanCode,
-			name: `Affiliate Coupon - ${user.name || user.email || user.referralCode}`,
-			description: "10% off affiliate coupon",
-			discountType: "percentage",
-			discountValue: 10,
-			minOrderValue: 0,
-			usageLimit: 999999,
+			name: name || `Affiliate - ${user.name || user.email || user.referralCode}`,
+			description: description || `Special affiliate coupon for ${user.name || user.referralCode}`,
+			discountType: discountType === "fixed" ? "fixed" : "percentage",
+			discountValue: Number(discountValue),
+			maxDiscount: maxDiscount ? Number(maxDiscount) : undefined,
+			minOrderValue: Number(minOrderValue || 0),
+			usageLimit: Number(usageLimit || 999999),
+			expiryDate: expiryDate ? new Date(expiryDate) : undefined,
 			isActive: true,
 			isAffiliateCoupon: true,
-			affiliateUser: userId,
-			issuedForUserId: userId,
+			affiliateUser: user._id,
+			applicableCategories: Array.isArray(applicableCategories) ? applicableCategories : [],
+			applicableSubCategories: Array.isArray(applicableSubCategories) ? applicableSubCategories : [],
+			applicableStyles: Array.isArray(applicableStyles) ? applicableStyles : [],
+			applicableProducts: Array.isArray(applicableProducts) ? applicableProducts : [],
+			applicableProductTypes: Array.isArray(applicableProductTypes) ? applicableProductTypes : [],
 		});
 
 		return {
 			success: true,
-			coupon: mapCoupon(coupon),
-			created: true,
+			coupon,
 		};
+	}
+
+	/**
+	 * Admin: Delete an affiliate coupon.
+	 */
+	async deleteAdminAffiliateCoupon(couponId) {
+		const coupon = await Coupon.findOneAndDelete({ _id: couponId, isAffiliateCoupon: true });
+		if (!coupon) {
+			throw new Error("Affiliate coupon not found");
+		}
+		return { success: true, message: "Affiliate coupon deleted successfully" };
 	}
 
 	/**

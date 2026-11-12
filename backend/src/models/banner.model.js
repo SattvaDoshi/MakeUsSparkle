@@ -8,6 +8,12 @@ const bannerSchema = new mongoose.Schema(
       default: "promo",
       index: true,
     },
+    gender: {
+      type: String,
+      enum: ["women", "men", "kids", "all"],
+      default: "all",
+      index: true,
+    },
     // Legacy/admin text field kept for compatibility.
     text: {
       type: String,

@@ -56,9 +56,13 @@ class BannerService {
 			? data.subtitle.trim()
 			: (typeof data.description === "string" ? data.description.trim() : "");
 		const normalizedBannerType = String(data.bannerType || "promo").trim().toLowerCase() === "main" ? "main" : "promo";
+		const normalizedGender = ["women", "men", "kids", "all"].includes(String(data.gender || "").toLowerCase())
+			? String(data.gender).toLowerCase()
+			: "all";
 
 		return {
 			bannerType: normalizedBannerType,
+			gender: normalizedGender,
 			text: typeof data.text === "string" && data.text.trim() ? data.text.trim() : normalizedTitle,
 			title: normalizedTitle,
 			subtitle: normalizedSubtitle,
@@ -97,12 +101,26 @@ class BannerService {
 		};
 	}
 
-	async getBanners() {
+	async getBanners(query = {}) {
 		try {
-			const banners = await Banner.find({
-				isActive: true,
+			const filter = {
 				$or: [{ bannerType: "promo" }, { bannerType: { $exists: false } }],
-			}).sort({ sortOrder: 1, createdAt: -1 });
+			};
+			// In public endpoints, only active banners are returned
+			if (query.admin !== "true") {
+				filter.isActive = true;
+			}
+			if (query.gender) {
+				const g = String(query.gender).toLowerCase().trim();
+				if (["women", "men", "kids"].includes(g)) {
+					if (query.admin === "true") {
+						filter.gender = g;
+					} else {
+						filter.gender = { $in: [g, "all"] };
+					}
+				}
+			}
+			const banners = await Banner.find(filter).sort({ sortOrder: 1, createdAt: -1 });
 			return { success: true, banners };
 		} catch (error) {
 			console.error("Error fetching banners:", error);

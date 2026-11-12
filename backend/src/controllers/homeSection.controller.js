@@ -6,46 +6,84 @@ import productService from "../services/product.service.js";
 const NEW_ARRIVALS_KEY = "new-arrivals";
 const OPEN_SECTION_KEY = "open-section";
 
+function getNewArrivalsKey(gender) {
+	const g = String(gender || "").trim().toLowerCase();
+	if (["women", "men", "kids"].includes(g)) return `new-arrivals-${g}`;
+	return NEW_ARRIVALS_KEY;
+}
+
+function getOpenSectionKey(gender) {
+	const g = String(gender || "").trim().toLowerCase();
+	if (["women", "men", "kids"].includes(g)) return `open-section-${g}`;
+	return OPEN_SECTION_KEY;
+}
+
 function normalizeProductIds(value) {
 	if (!Array.isArray(value)) return [];
 	return value.map((id) => String(id || "").trim()).filter(Boolean);
 }
 
-async function getOrCreateNewArrivals() {
-	return HomeSection.findOneAndUpdate(
-		{ key: NEW_ARRIVALS_KEY },
-		{
-			$setOnInsert: {
-				key: NEW_ARRIVALS_KEY,
-				eyebrow: "Fresh off the shelf",
-				title: "New Arrivals",
-				products: [],
-				isActive: true,
-			},
-		},
-		{ new: true, upsert: true }
-	).populate("products");
+async function getOrCreateNewArrivals(gender) {
+	const key = getNewArrivalsKey(gender);
+	let section = await HomeSection.findOne({ key }).populate("products");
+	if (!section && key === "new-arrivals-women") {
+		const legacy = await HomeSection.findOne({ key: NEW_ARRIVALS_KEY }).populate("products");
+		if (legacy) {
+			section = await HomeSection.create({
+				key: "new-arrivals-women",
+				eyebrow: legacy.eyebrow || "Fresh off the shelf",
+				title: legacy.title || "New Arrivals",
+				products: legacy.products || [],
+				isActive: legacy.isActive !== false,
+			});
+			await section.populate("products");
+		}
+	}
+	if (!section) {
+		const isWomen = key.includes("women") || key === NEW_ARRIVALS_KEY;
+		section = await HomeSection.create({
+			key,
+			eyebrow: isWomen ? "Fresh off the shelf" : "",
+			title: isWomen ? "New Arrivals" : `${gender ? String(gender).charAt(0).toUpperCase() + String(gender).slice(1) : ""} New Arrivals`.trim(),
+			products: [],
+			isActive: true,
+		});
+	}
+	return section;
 }
 
-async function getOrCreateOpenSection() {
-	return HomeSection.findOneAndUpdate(
-		{ key: OPEN_SECTION_KEY },
-		{
-			$setOnInsert: {
-				key: OPEN_SECTION_KEY,
-				eyebrow: "",
-				title: "New Arrivals",
-				items: [],
-				isActive: true,
-			},
-		},
-		{ new: true, upsert: true }
-	).populate("items.product");
+async function getOrCreateOpenSection(gender) {
+	const key = getOpenSectionKey(gender);
+	let section = await HomeSection.findOne({ key }).populate("items.product");
+	if (!section && key === "open-section-women") {
+		const legacy = await HomeSection.findOne({ key: OPEN_SECTION_KEY }).populate("items.product");
+		if (legacy) {
+			section = await HomeSection.create({
+				key: "open-section-women",
+				eyebrow: legacy.eyebrow || "",
+				title: legacy.title || "New Arrivals",
+				items: legacy.items || [],
+				isActive: legacy.isActive !== false,
+			});
+			await section.populate("items.product");
+		}
+	}
+	if (!section) {
+		section = await HomeSection.create({
+			key,
+			eyebrow: "",
+			title: `${gender ? String(gender).charAt(0).toUpperCase() + String(gender).slice(1) : ""} Trending`.trim() || "Trending Now",
+			items: [],
+			isActive: true,
+		});
+	}
+	return section;
 }
 
 export async function getNewArrivalsSection(req, res) {
 	try {
-		const sectionDoc = await getOrCreateNewArrivals();
+		const gender = req.query.gender;
+		const sectionDoc = await getOrCreateNewArrivals(gender);
 		const section = sectionDoc ? sectionDoc.toObject() : null;
 		if (section && Array.isArray(section.products)) {
 			await productService.attachOfferTags(section.products);
@@ -59,6 +97,8 @@ export async function getNewArrivalsSection(req, res) {
 
 export async function updateNewArrivalsSection(req, res) {
 	try {
+		const gender = req.body.gender || req.query.gender;
+		const key = getNewArrivalsKey(gender);
 		const productIds = normalizeProductIds(req.body.products);
 		const existingProducts = productIds.length
 			? await Product.find({ _id: { $in: productIds } }).select("_id")
@@ -67,10 +107,10 @@ export async function updateNewArrivalsSection(req, res) {
 		const orderedProductIds = productIds.filter((id) => existingIdSet.has(id));
 
 		const section = await HomeSection.findOneAndUpdate(
-			{ key: NEW_ARRIVALS_KEY },
+			{ key },
 			{
 				$set: {
-					key: NEW_ARRIVALS_KEY,
+					key,
 					eyebrow: String(req.body.eyebrow || "").trim(),
 					title: String(req.body.title || "").trim(),
 					products: orderedProductIds,
@@ -89,7 +129,8 @@ export async function updateNewArrivalsSection(req, res) {
 
 export async function getOpenSection(req, res) {
 	try {
-		const sectionDoc = await getOrCreateOpenSection();
+		const gender = req.query.gender;
+		const sectionDoc = await getOrCreateOpenSection(gender);
 		const section = sectionDoc ? sectionDoc.toObject() : null;
 		if (section && Array.isArray(section.items)) {
 			const prods = section.items.map((item) => item?.product).filter(Boolean);
@@ -104,6 +145,9 @@ export async function getOpenSection(req, res) {
 
 export async function updateOpenSection(req, res) {
 	try {
+		const gender = req.body.gender || req.query.gender;
+		const key = getOpenSectionKey(gender);
+
 		// Parse items from body (sent as JSON string or array)
 		let rawItems = [];
 		try {
@@ -117,7 +161,7 @@ export async function updateOpenSection(req, res) {
 		}
 
 		// Fetch current section to get existing image publicIds for deletion
-		const existing = await HomeSection.findOne({ key: OPEN_SECTION_KEY });
+		const existing = await HomeSection.findOne({ key });
 		const existingItemsMap = new Map();
 		if (existing?.items) {
 			for (const item of existing.items) {
@@ -178,10 +222,10 @@ export async function updateOpenSection(req, res) {
 		}
 
 		const section = await HomeSection.findOneAndUpdate(
-			{ key: OPEN_SECTION_KEY },
+			{ key },
 			{
 				$set: {
-					key: OPEN_SECTION_KEY,
+					key,
 					eyebrow: String(req.body.eyebrow || "").trim(),
 					title: String(req.body.title || "").trim(),
 					items: processedItems,

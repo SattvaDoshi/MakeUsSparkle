@@ -50,14 +50,92 @@ let _cachedActiveCoupons = null;
 let _activeOffersCacheTime = 0;
 const OFFERS_CACHE_TTL_MS = 60000; // 60 seconds
 
+export function invalidateOffersAndCouponsCache() {
+	_cachedActiveOffers = null;
+	_cachedActiveCoupons = null;
+	_activeOffersCacheTime = 0;
+}
+
+const getIdStr = (val) => {
+	if (!val) return "";
+	if (typeof val === "object") return String(val._id || val.id || "");
+	return String(val);
+};
+
+const offerMatchesProduct = (offer, prod) => {
+	if (!offer) return false;
+	const prodIdStr = getIdStr(prod._id || prod.id);
+	const catIdStr = getIdStr(prod.category);
+	const subCatIdStr = getIdStr(prod.subCategory);
+
+	const hasProds = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
+	const hasSubCats = Array.isArray(offer.applicableSubCategories) && offer.applicableSubCategories.length > 0;
+	const hasCats = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
+
+	if (hasProds && offer.applicableProducts.some((p) => getIdStr(p) === prodIdStr)) {
+		return true;
+	}
+	if (hasSubCats && subCatIdStr && offer.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)) {
+		return true;
+	}
+	if (hasCats && catIdStr && offer.applicableCategories.some((c) => getIdStr(c) === catIdStr)) {
+		return true;
+	}
+	if (!hasProds && !hasSubCats && !hasCats) {
+		return true;
+	}
+	return false;
+};
+
+const couponMatchesProduct = (coupon, prod) => {
+	if (!coupon) return false;
+	if (coupon.isAffiliateCoupon || coupon.issuedForUserId || coupon.issuedForEmail) {
+		return false;
+	}
+
+	const prodIdStr = getIdStr(prod._id || prod.id);
+	const catIdStr = getIdStr(prod.category);
+	const subCatIdStr = getIdStr(prod.subCategory);
+	const genderStr = String(prod.gender || "").toLowerCase().trim();
+
+	const hasProds = Array.isArray(coupon.applicableProducts) && coupon.applicableProducts.length > 0;
+	const hasSubCats = Array.isArray(coupon.applicableSubCategories) && coupon.applicableSubCategories.length > 0;
+	const hasCats = Array.isArray(coupon.applicableCategories) && coupon.applicableCategories.length > 0;
+	const hasGenders = Array.isArray(coupon.applicableProductTypes) && coupon.applicableProductTypes.length > 0;
+
+	if (hasProds && coupon.applicableProducts.some((p) => getIdStr(p) === prodIdStr)) {
+		return true;
+	}
+	if (hasSubCats && subCatIdStr && coupon.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)) {
+		return true;
+	}
+	if (hasCats && catIdStr && coupon.applicableCategories.some((c) => getIdStr(c) === catIdStr)) {
+		return true;
+	}
+	if (hasGenders && genderStr && coupon.applicableProductTypes.some((g) => {
+		const gStr = String(g).toLowerCase().trim();
+		return gStr === genderStr || genderStr === "unisex";
+	})) {
+		return true;
+	}
+	if (!hasProds && !hasSubCats && !hasCats && !hasGenders) {
+		return true;
+	}
+	return false;
+};
+
 async function getCachedOffersAndCoupons() {
 	const now = Date.now();
 	if (_cachedActiveOffers && _cachedActiveCoupons && (now - _activeOffersCacheTime < OFFERS_CACHE_TTL_MS)) {
 		return { activeOffers: _cachedActiveOffers, activeCoupons: _cachedActiveCoupons };
 	}
 	const [activeOffers, activeCoupons] = await Promise.all([
-		Offer.find({ isActive: { $ne: false } }).lean(),
-		Coupon.find({ isActive: { $ne: false } }).lean(),
+		Offer.find({
+			$or: [{ isActive: true }, { isActive: "true" }, { isActive: { $exists: false } }, { isActive: null }],
+		}).lean(),
+		Coupon.find({
+			$or: [{ isActive: true }, { isActive: "true" }, { isActive: { $exists: false } }, { isActive: null }],
+		}).lean(),
 	]);
 	_cachedActiveOffers = activeOffers;
 	_cachedActiveCoupons = activeCoupons;
@@ -154,92 +232,176 @@ class ProductService {
 			const { activeOffers, activeCoupons } = await getCachedOffersAndCoupons();
 
 			const validOffers = activeOffers.filter(
-				(o) => o.isActive !== false &&
-					(!o.startsAt || new Date(o.startsAt) <= now) &&
-					(!o.expiryDate || new Date(o.expiryDate) >= now)
+				(o) => o && o.isActive !== false && o.isActive !== "false"
 			);
 			const validCoupons = activeCoupons.filter(
-				(c) => c.isActive !== false &&
-					(!c.startsAt || new Date(c.startsAt) <= now) &&
-					(!c.expiryDate || new Date(c.expiryDate) >= now)
+				(c) => c && c.isActive !== false && c.isActive !== "false"
 			);
 
-			// Sitewide offer fallback (active offer that has no specific product or category restrictions)
-			const sitewideOffer = validOffers.find(
-				(o) => (!Array.isArray(o.applicableProducts) || o.applicableProducts.length === 0) &&
-					(!Array.isArray(o.applicableCategories) || o.applicableCategories.length === 0)
-			);
+			const normalizeKey = (s = "") =>
+				String(s)
+					.toLowerCase()
+					.replace(/kh/g, "k")
+					.replace(/[^a-z0-9]/g, " ")
+					.trim();
 
 			for (const prod of productList) {
 				if (!prod) continue;
-				const prodIdStr = String(prod._id || prod.id || "");
-				const catIdStr = prod.category ? String(prod.category._id || prod.category) : "";
-				const subCatIdStr = prod.subCategory ? String(prod.subCategory._id || prod.subCategory) : "";
+				const prodIdStr = getIdStr(prod._id || prod.id);
+				const catIdStr = getIdStr(prod.category);
+				const subCatIdStr = getIdStr(prod.subCategory);
 
-				// 1. Direct product match on Offer
-				const matchedOfferProd = validOffers.find((o) =>
-					Array.isArray(o.applicableProducts) && o.applicableProducts.some((pId) => String(pId?._id || pId || "") === prodIdStr)
-				);
-				if (matchedOfferProd && matchedOfferProd.title) {
-					prod.offerTag = matchedOfferProd.title;
-					continue;
-				}
+				const subCatText = typeof prod.subCategory === "object" && prod.subCategory
+					? `${prod.subCategory.name || ""} ${prod.subCategory.slug || ""}`
+					: "";
+				const catText = typeof prod.category === "object" && prod.category
+					? `${prod.category.name || ""} ${prod.category.slug || ""}`
+					: "";
+				const tagsText = Array.isArray(prod.tags) ? prod.tags.join(" ") : "";
+				const prodText = `${prod.title || ""} ${prod.slug || ""} ${subCatText} ${catText} ${tagsText}`.toLowerCase();
+				const prodTextNorm = normalizeKey(prodText);
 
-				// 2. Direct product match on Coupon
-				const matchedCouponProd = validCoupons.find((c) =>
-					Array.isArray(c.applicableProducts) && c.applicableProducts.some((pId) => String(pId?._id || pId || "") === prodIdStr)
-				);
-				if (matchedCouponProd && (matchedCouponProd.name || matchedCouponProd.code)) {
-					prod.offerTag = matchedCouponProd.name || matchedCouponProd.code;
-					continue;
-				}
+				const matchesKeywordOffer = (o) => {
+					if (!o?.title) return false;
+					const titleNorm = normalizeKey(o.title);
+					const words = titleNorm.split(/\s+/).filter((w) => w.length > 2 && !["deal", "offer", "combo", "free", "sale", "save"].includes(w));
+					if (words.length > 0 && words.some((w) => prodTextNorm.includes(w))) {
+						return true;
+					}
+					// Also match if subcategory slug/name is in the offer title
+					if (subCatText && words.some((w) => normalizeKey(subCatText).includes(w))) {
+						return true;
+					}
+					return false;
+				};
 
-				// 3. SubCategory match on Coupon
-				if (subCatIdStr) {
-					const matchedCouponSubCat = validCoupons.find((c) =>
-						Array.isArray(c.applicableSubCategories) && c.applicableSubCategories.some((scId) => String(scId?._id || scId || "") === subCatIdStr)
+				// 1. Determine Offer Tag / Badge (if not already set)
+				if (!prod.offerTag) {
+					const matchedOfferProd = validOffers.find((o) =>
+						Array.isArray(o.applicableProducts) && o.applicableProducts.some((p) => getIdStr(p) === prodIdStr)
 					);
-					if (matchedCouponSubCat && (matchedCouponSubCat.name || matchedCouponSubCat.code)) {
-						prod.offerTag = matchedCouponSubCat.name || matchedCouponSubCat.code;
-						continue;
+					const matchedCouponProd = validCoupons.find((c) =>
+						Array.isArray(c.applicableProducts) && c.applicableProducts.some((p) => getIdStr(p) === prodIdStr)
+					);
+					const matchedOfferSubCat = subCatIdStr ? validOffers.find((o) =>
+						Array.isArray(o.applicableSubCategories) && o.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)
+					) : null;
+					const matchedCouponSubCat = subCatIdStr ? validCoupons.find((c) =>
+						Array.isArray(c.applicableSubCategories) && c.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)
+					) : null;
+					const matchedOfferCat = catIdStr ? validOffers.find((o) =>
+						Array.isArray(o.applicableCategories) && o.applicableCategories.some((c) => getIdStr(c) === catIdStr)
+					) : null;
+					const matchedCouponCat = catIdStr ? validCoupons.find((c) =>
+						Array.isArray(c.applicableCategories) && c.applicableCategories.some((c) => getIdStr(c) === catIdStr)
+					) : null;
+					const matchedKeywordOffer = validOffers.find(matchesKeywordOffer);
+					const sitewideOffer = validOffers.find(
+						(o) => (!Array.isArray(o.applicableProducts) || o.applicableProducts.length === 0) &&
+							(!Array.isArray(o.applicableSubCategories) || o.applicableSubCategories.length === 0) &&
+							(!Array.isArray(o.applicableCategories) || o.applicableCategories.length === 0)
+					);
+					const sitewideCoupon = validCoupons.find(
+						(c) => !c.isAffiliateCoupon && !c.issuedForUserId && !c.issuedForEmail &&
+							(!Array.isArray(c.applicableProducts) || c.applicableProducts.length === 0) &&
+							(!Array.isArray(c.applicableSubCategories) || c.applicableSubCategories.length === 0) &&
+							(!Array.isArray(c.applicableCategories) || c.applicableCategories.length === 0) &&
+							(!Array.isArray(c.applicableProductTypes) || c.applicableProductTypes.length === 0)
+					);
+
+					const tag =
+						matchedOfferProd?.title ||
+						matchedCouponProd?.name || matchedCouponProd?.code ||
+						matchedOfferSubCat?.title ||
+						matchedCouponSubCat?.name || matchedCouponSubCat?.code ||
+						matchedOfferCat?.title ||
+						matchedCouponCat?.name || matchedCouponCat?.code ||
+						matchedKeywordOffer?.title ||
+						sitewideOffer?.title ||
+						sitewideCoupon?.name || sitewideCoupon?.code;
+						sitewideCoupon?.name || sitewideCoupon?.code;
+
+					if (tag) {
+						prod.offerTag = tag;
 					}
 				}
 
-				// 4. Category match on Offer
-				if (catIdStr) {
-					const matchedOfferCat = validOffers.find((o) =>
-						Array.isArray(o.applicableCategories) && o.applicableCategories.some((cId) => String(cId?._id || cId || "") === catIdStr)
-					);
-					if (matchedOfferCat && matchedOfferCat.title) {
-						prod.offerTag = matchedOfferCat.title;
-						continue;
+				// 2. Compute discounted price, original price, and % off
+				const basePrice = Number(prod.price ?? 0);
+				if (basePrice > 0) {
+					const manualDiscount = prod.discountedPrice != null && Number(prod.discountedPrice) > 0 && Number(prod.discountedPrice) < basePrice
+						? Number(prod.discountedPrice)
+						: null;
+
+					if (manualDiscount !== null) {
+						prod.originalPrice = basePrice;
+						prod.discountedPrice = manualDiscount;
+						prod.price = manualDiscount;
+						if (!prod.discountTag) {
+							const pct = Math.round(((basePrice - manualDiscount) / basePrice) * 100);
+							if (pct > 0) prod.discountTag = `${pct}% off`;
+						}
+					} else {
+						let bestDiscountAmount = 0;
+						let bestDiscountPercentage = 0;
+						let bestDiscountTag = "";
+						let discountOfferTitle = "";
+
+						for (const offer of validOffers) {
+							if (offerMatchesProduct(offer, prod) || matchesKeywordOffer(offer)) {
+								let discAmount = 0;
+								let discPct = 0;
+								if (offer.offerType === "percentage" && offer.discountValue > 0) {
+									discPct = offer.discountValue;
+									discAmount = Math.round(basePrice * (discPct / 100));
+								} else if (offer.offerType === "fixed" && offer.discountValue > 0) {
+									discAmount = Math.min(basePrice, offer.discountValue);
+									discPct = Math.round((discAmount / basePrice) * 100);
+								}
+								if (discAmount > bestDiscountAmount) {
+									bestDiscountAmount = discAmount;
+									bestDiscountPercentage = discPct;
+									bestDiscountTag = `${discPct}% off`;
+									discountOfferTitle = offer.title || `${discPct}% off`;
+								}
+							}
+						}
+
+						for (const coupon of validCoupons) {
+							if (couponMatchesProduct(coupon, prod)) {
+								let discAmount = 0;
+								let discPct = 0;
+								if (coupon.discountType === "percentage" && coupon.discountValue > 0) {
+									discPct = coupon.discountValue;
+									discAmount = Math.round(basePrice * (discPct / 100));
+									if (coupon.maxDiscount && coupon.maxDiscount > 0) {
+										discAmount = Math.min(discAmount, coupon.maxDiscount);
+										discPct = Math.round((discAmount / basePrice) * 100);
+									}
+								} else if (coupon.discountType === "fixed" && coupon.discountValue > 0) {
+									discAmount = Math.min(basePrice, coupon.discountValue);
+									discPct = Math.round((discAmount / basePrice) * 100);
+								}
+								if (discAmount > bestDiscountAmount) {
+									bestDiscountAmount = discAmount;
+									bestDiscountPercentage = discPct;
+									bestDiscountTag = `${discPct}% off`;
+									discountOfferTitle = coupon.name || coupon.code || `${discPct}% off`;
+								}
+							}
+						}
+
+						if (bestDiscountAmount > 0) {
+							const calcDiscountedPrice = Math.max(0, basePrice - bestDiscountAmount);
+							prod.originalPrice = basePrice;
+							prod.discountedPrice = calcDiscountedPrice;
+							prod.price = calcDiscountedPrice;
+							prod.discountTag = prod.discountTag || bestDiscountTag;
+							if (!prod.offerTag) {
+								prod.offerTag = discountOfferTitle;
+							}
+						}
 					}
-
-					// 5. Category match on Coupon
-					const matchedCouponCat = validCoupons.find((c) =>
-						Array.isArray(c.applicableCategories) && c.applicableCategories.some((cId) => String(cId?._id || cId || "") === catIdStr)
-					);
-					if (matchedCouponCat && (matchedCouponCat.name || matchedCouponCat.code)) {
-						prod.offerTag = matchedCouponCat.name || matchedCouponCat.code;
-						continue;
-					}
-				}
-
-				// 6. Name / keyword fallback match (e.g. "jhumkha combo deal" matching products containing "jhumk")
-				const prodText = `${prod.title || ""} ${prod.slug || ""}`.toLowerCase();
-				const matchedKeywordOffer = validOffers.find((o) => {
-					if (!o.title) return false;
-					const words = o.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3 && !["deal", "offer", "combo", "free", "sale", "save"].includes(w));
-					return words.length > 0 && words.some((w) => prodText.includes(w));
-				});
-				if (matchedKeywordOffer && matchedKeywordOffer.title) {
-					prod.offerTag = matchedKeywordOffer.title;
-					continue;
-				}
-
-				// 7. Sitewide offer fallback
-				if (sitewideOffer && sitewideOffer.title) {
-					prod.offerTag = sitewideOffer.title;
 				}
 			}
 		} catch (err) {
@@ -1125,6 +1287,9 @@ class ProductService {
 			console.error("Error reordering products:", error);
 			throw error;
 		}
+	}
+	invalidateOffersCache() {
+		invalidateOffersAndCouponsCache();
 	}
 }
 

@@ -19,6 +19,7 @@ const offerSchema = new mongoose.Schema(
 		usedCount: { type: Number, default: 0, min: 0 },
 		image: { type: String, default: "", trim: true },
 		applicableCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+		applicableSubCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }],
 		applicableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
 	},
 	{
@@ -26,7 +27,7 @@ const offerSchema = new mongoose.Schema(
 	}
 );
 
-const Offer = mongoose.model("Offer", offerSchema);
+const Offer = mongoose.models.Offer || mongoose.model("Offer", offerSchema);
 
 export default Offer;
 export { offerSchema };

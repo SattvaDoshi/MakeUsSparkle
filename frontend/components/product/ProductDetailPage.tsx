@@ -769,9 +769,16 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       computedPrice = matchingVariant.salePrice * (1 - volumeDiscountPct / 100);
       computedOriginalPrice = originalPrice || price;
     } else if (matchingVariant.price) {
-      // Only MRP, no sale price — show it as the current price with no strikethrough
-      computedPrice = matchingVariant.price * (1 - volumeDiscountPct / 100);
-      computedOriginalPrice = matchingVariant.price; // same → no strikethrough shown
+      const storeDiscountRatio = (originalPrice && originalPrice > (discountedPrice || price))
+        ? (originalPrice - (discountedPrice || price)) / originalPrice
+        : 0;
+      if (storeDiscountRatio > 0) {
+        computedOriginalPrice = matchingVariant.price;
+        computedPrice = Math.round(matchingVariant.price * (1 - storeDiscountRatio)) * (1 - volumeDiscountPct / 100);
+      } else {
+        computedPrice = matchingVariant.price * (1 - volumeDiscountPct / 100);
+        computedOriginalPrice = matchingVariant.price;
+      }
     } else {
       computedPrice = (discountedPrice || price) * (1 - volumeDiscountPct / 100);
     }
@@ -1445,7 +1452,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               onChange={setActiveImg}
               alt={productName}
               soldOut={Number(currentStock) <= 0}
-              chip={discount > 0 ? `${discount}% off` : product.badge || undefined}
+              chip={product.offerTag || product.offer || (discount > 0 ? `${discount}% off` : product.badge || undefined)}
               fallback={FALLBACK_PRODUCT_IMAGE}
               wish={!isFromCombo ? (
                 <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>

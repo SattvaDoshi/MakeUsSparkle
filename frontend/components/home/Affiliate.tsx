@@ -152,11 +152,6 @@ export default function AffiliatePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
-  // Custom Coupon State
-  const [couponInput, setCouponInput] = useState('');
-  const [creatingCoupon, setCreatingCoupon] = useState(false);
-  const [couponMsg, setCouponMsg] = useState<{ text: string; error: boolean } | null>(null);
-
   // Copy Feedback
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -269,38 +264,6 @@ export default function AffiliatePage() {
       alert(err instanceof Error ? err.message : 'Failed to generate link.');
     } finally {
       setGeneratingId(null);
-    }
-  };
-
-  // Create Custom Coupon
-  const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatingCoupon(true);
-    setCouponMsg(null);
-    try {
-      const res = await apiRequest<{ success: boolean; coupon: AffiliateCouponItem; created: boolean }>(
-        '/affiliate/create-coupon',
-        {
-          method: 'POST',
-          body: JSON.stringify({ code: couponInput }),
-        }
-      );
-      if (res.success && res.coupon) {
-        const couponItem: AffiliateCouponItem = {
-          ...res.coupon,
-          id: res.coupon.id || (res.coupon as any)._id || res.coupon.code,
-        };
-        setCoupons((prev) => [
-          couponItem,
-          ...prev.filter((c) => (c.id || (c as any)._id || c.code) !== (couponItem.id || couponItem.code)),
-        ]);
-        setCouponInput('');
-        setCouponMsg({ text: `Coupon "${couponItem.code}" created successfully with 10% discount!`, error: false });
-      }
-    } catch (err) {
-      setCouponMsg({ text: err instanceof Error ? err.message : 'Failed to create coupon.', error: true });
-    } finally {
-      setCreatingCoupon(false);
     }
   };
 
@@ -876,7 +839,7 @@ export default function AffiliatePage() {
                   className={`aff-tab-btn ${activeTab === 'coupons' ? 'active' : ''}`}
                   onClick={() => setActiveTab('coupons')}
                 >
-                  <span>🎟️ My Custom Coupons</span>
+                  <span>🎟️ Assigned Coupons</span>
                   <span className="aff-tab-count">{coupons.length}</span>
                 </button>
 
@@ -1115,123 +1078,79 @@ export default function AffiliatePage() {
                 </div>
               )}
 
-              {/* ── TAB 3: CUSTOM COUPONS ── */}
+              {/* ── TAB 3: ASSIGNED COUPONS ── */}
               {activeTab === 'coupons' && (
-                <div className="aff-coupon-panel">
-                  {/* Coupon Generator Card */}
-                  <div className="aff-coupon-creator-card">
-                    <h3 className="aff-coupon-title">
-                      Create Your Custom Coupon Code
-                    </h3>
-                    <p className="aff-coupon-desc">
-                      Create a personalized coupon (e.g. <strong>{affiliateCode}10</strong> or your name). Customers get <strong>10% off</strong> at checkout, and you earn <strong>10% commission</strong> when the order is delivered!
-                    </p>
-
-                    <form onSubmit={handleCreateCoupon}>
-                      <label className="aff-form-label">Coupon Code</label>
-                      <input
-                        className="aff-coupon-input"
-                        type="text"
-                        placeholder={`${affiliateCode}10`}
-                        value={couponInput}
-                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        maxLength={20}
-                      />
-
-                      <div className="aff-coupon-preview">
-                        <div>
-                          <div className="aff-coupon-preview-code">
-                            {couponInput.trim() || `${affiliateCode}10`}
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>
-                            Applies 10% discount on entire cart
-                          </div>
-                        </div>
-                        <span className="aff-coupon-preview-disc">10% OFF</span>
-                      </div>
-
-                      {couponMsg && (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: couponMsg.error ? 'var(--red)' : 'var(--green)',
-                            marginBottom: 12,
-                          }}
-                        >
-                          {couponMsg.text}
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        className="aff-btn aff-btn-primary aff-btn-block"
-                        disabled={creatingCoupon}
-                      >
-                        {creatingCoupon ? 'Creating Coupon...' : '+ Create My Coupon Code'}
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* Existing Coupons List */}
-                  <div className="aff-table-wrapper" style={{ height: 'fit-content' }}>
-                    <div className="aff-panel-head">
+                <div className="aff-table-wrapper">
+                  <div className="aff-panel-head">
+                    <div>
                       <h4 className="aff-panel-title">
-                        Your Active Affiliate Coupons
+                        Your Affiliate Promo Coupons
                       </h4>
+                      <p className="aff-panel-sub">
+                        Coupons specially created for you by the store administration. Share them with your audience to offer discounts and earn commission.
+                      </p>
                     </div>
-
-                    {coupons.length === 0 ? (
-                      <div className="aff-empty-state" style={{ padding: '30px 16px' }}>
-                        <div className="aff-empty-icon">🎟️</div>
-                        <div className="aff-empty-title">No coupons created yet</div>
-                        <div className="aff-empty-sub">Use the form {'above'} to create your first branded affiliate coupon.</div>
-                      </div>
-                    ) : (
-                      <div className="aff-table-scroll">
-                        <table className="aff-data-table aff-data-table--compact">
-                          <thead>
-                            <tr>
-                              <th>Coupon</th>
-                              <th>Discount</th>
-                              <th style={{ textAlign: 'center' }}>Times Used</th>
-                              <th style={{ textAlign: 'right' }}>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {coupons.map((c, idx) => {
-                              const cpnKey = c.id || (c as any)._id || c.code || `cpn_${idx}`;
-                              const isCopied = copiedKey === c.code;
-                              return (
-                                <tr key={cpnKey}>
-                                  <td data-label="Coupon">
-                                    <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 700, fontSize: 13, color: 'var(--olive)' }}>
-                                      {c.code}
-                                    </span>
-                                  </td>
-                                  <td data-label="Discount">
-                                    <span style={{ fontWeight: 600 }}>{c.discountValue}% OFF</span>
-                                  </td>
-                                  <td style={{ textAlign: 'center', fontWeight: 700 }} data-label="Times Used">
-                                    {c.usedCount || 0}
-                                  </td>
-                                  <td className="td-action" style={{ textAlign: 'right' }}>
-                                    <button
-                                      className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-outline'}`}
-                                      style={{ fontSize: 10, padding: '5px 10px' }}
-                                      onClick={() => handleCopy(c.code, c.code)}
-                                    >
-                                      {isCopied ? '✓ Copied' : 'Copy Code'}
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    <span className="aff-pill pill-olive">{coupons.length} Active Coupon{coupons.length !== 1 ? 's' : ''}</span>
                   </div>
+
+                  {coupons.length === 0 ? (
+                    <div className="aff-empty-state" style={{ padding: '40px 16px' }}>
+                      <div className="aff-empty-icon">🎟️</div>
+                      <div className="aff-empty-title">No coupons assigned yet</div>
+                      <div className="aff-empty-sub">
+                        Our administration team issues exclusive affiliate discount coupons. Once created by admin, they will appear here automatically.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aff-table-scroll">
+                      <table className="aff-data-table">
+                        <thead>
+                          <tr>
+                            <th>Coupon Code</th>
+                            <th>Offer Name</th>
+                            <th>Discount</th>
+                            <th style={{ textAlign: 'center' }}>Times Used</th>
+                            <th style={{ textAlign: 'right' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {coupons.map((c, idx) => {
+                            const cpnKey = c.id || (c as any)._id || c.code || `cpn_${idx}`;
+                            const isCopied = copiedKey === c.code;
+                            return (
+                              <tr key={cpnKey}>
+                                <td data-label="Coupon Code">
+                                  <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 700, fontSize: 14, color: 'var(--olive)', letterSpacing: '0.05em' }}>
+                                    {c.code}
+                                  </span>
+                                </td>
+                                <td data-label="Offer Name">
+                                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{c.name || 'Affiliate Discount'}</span>
+                                </td>
+                                <td data-label="Discount">
+                                  <span className="aff-pill pill-green" style={{ fontSize: 11 }}>
+                                    {c.discountType === 'fixed' ? `₹${c.discountValue} OFF` : `${c.discountValue}% OFF`}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'center', fontWeight: 700 }} data-label="Times Used">
+                                  {c.usedCount || 0}
+                                </td>
+                                <td className="td-action" style={{ textAlign: 'right' }}>
+                                  <button
+                                    className={`aff-btn ${isCopied ? 'aff-btn-success' : 'aff-btn-outline'}`}
+                                    style={{ fontSize: 11, padding: '6px 12px' }}
+                                    onClick={() => handleCopy(c.code, c.code)}
+                                  >
+                                    {isCopied ? '✓ Copied' : 'Copy Code'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
 

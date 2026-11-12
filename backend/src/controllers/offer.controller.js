@@ -3,7 +3,7 @@ import Offer from "../models/offer.model.js";
 export const getPublicOffers = async (req, res) => {
 	try {
 		const offers = await Offer.find({
-			isActive: { $ne: false },
+			$or: [{ isActive: true }, { isActive: "true" }, { isActive: { $exists: false } }, { isActive: null }],
 		}).sort({ createdAt: -1 });
 		res.json({ success: true, offers });
 	} catch (error) {
@@ -15,7 +15,7 @@ export const getPublicOffers = async (req, res) => {
 export const getOfferById = async (req, res) => {
 	try {
 		const offer = await Offer.findById(req.params.id);
-		if (!offer || !offer.isActive) {
+		if (!offer || (offer.isActive === false || offer.isActive === "false")) {
 			return res.status(404).json({ success: false, message: "Offer not found or inactive" });
 		}
 		res.json({ success: true, offer });

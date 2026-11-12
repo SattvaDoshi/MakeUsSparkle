@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import ProductCard from "@/components/product/ProductCard";
 import CarouselArrows from "@/components/ui/CarouselArrows";
 import { fetchNewArrivalsSection, type CatalogProduct } from "@/lib/catalogApi";
+import { useGender } from "@/lib/genderContext";
 /* ─────────────────────────────────────────
    New Arrivals Section
 ───────────────────────────────────────── */
 export default function NewArrivals() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { gender } = useGender();
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [eyebrow, setEyebrow] = useState("");
   const [title, setTitle] = useState("New Arrivals");
@@ -16,8 +18,9 @@ export default function NewArrivals() {
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
 
-    fetchNewArrivalsSection()
+    fetchNewArrivalsSection(gender)
       .then((section) => {
         if (!alive) return;
         setEyebrow(section?.eyebrow || "");
@@ -35,7 +38,7 @@ export default function NewArrivals() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [gender]);
 
   if (!loading && products.length === 0) return null;
  

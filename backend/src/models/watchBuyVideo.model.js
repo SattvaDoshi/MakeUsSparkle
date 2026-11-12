@@ -14,13 +14,14 @@ const watchBuyVideoSchema = new mongoose.Schema(
     // Optional custom poster image (otherwise the first frame is used).
     posterUrl: { type: String, trim: true, default: "" },
     duration: { type: Number, default: 0 }, // seconds
+    gender: { type: String, enum: ["women", "men", "kids", "all"], default: "all", index: true },
     isActive: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-watchBuyVideoSchema.index({ isActive: 1, sortOrder: 1, createdAt: -1 });
+watchBuyVideoSchema.index({ isActive: 1, gender: 1, sortOrder: 1, createdAt: -1 });
 
 const WatchBuyVideo = mongoose.model("WatchBuyVideo", watchBuyVideoSchema);
 export default WatchBuyVideo;

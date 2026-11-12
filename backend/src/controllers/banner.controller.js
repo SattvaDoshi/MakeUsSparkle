@@ -2,7 +2,7 @@ import bannerService from "../services/banner.service.js";
 
 export async function getBanners(req, res) {
 	try {
-		const result = await bannerService.getBanners();
+		const result = await bannerService.getBanners(req.query);
 		res.json(result);
 	} catch (error) {
 		console.error("Get banners error:", error);

@@ -126,8 +126,8 @@ export default function ProductCard({
      product label, offer, low stock, free shipping, new arrival. */
   const tagList: { key: string; text: string; kind: 'plain' | 'offer' | 'warn' | 'good' }[] = [];
   if (!isOutOfStock) {
-    if (badge) tagList.push({ key: 'badge', text: badge, kind: 'plain' });
     if (offerTitle) tagList.push({ key: 'offer', text: offerTitle, kind: 'offer' });
+    if (badge) tagList.push({ key: 'badge', text: badge, kind: 'plain' });
     const stock = product.stock ?? Infinity;
     if (stock > 0 && stock <= 5) tagList.push({ key: 'low', text: `Only ${stock} left`, kind: 'warn' });
     if (price >= FREE_SHIPPING_MIN) tagList.push({ key: 'ship', text: 'Free Shipping', kind: 'good' });

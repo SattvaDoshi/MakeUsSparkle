@@ -60,7 +60,7 @@ export async function generateAffiliateLink(req, res) {
 
 /**
  * POST /affiliate/create-coupon
- * Creates a 10% affiliate coupon code for the user.
+ * (Disabled for regular users)
  */
 export async function createAffiliateCoupon(req, res) {
 	try {
@@ -69,6 +69,48 @@ export async function createAffiliateCoupon(req, res) {
 		res.json(result);
 	} catch (error) {
 		console.error("createAffiliateCoupon error:", error);
+		res.status(403).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * GET /admin/affiliate/dashboard
+ * Returns complete affiliate analytics, performance by user, commission logs, and affiliate coupons.
+ */
+export async function getAdminAffiliatesOverview(req, res) {
+	try {
+		const result = await affiliateService.getAdminAffiliatesOverview();
+		res.json(result);
+	} catch (error) {
+		console.error("getAdminAffiliatesOverview error:", error);
+		res.status(500).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * POST /admin/affiliate/coupons
+ * Admin creates an affiliate coupon under a specific affiliate user with targeting and limits.
+ */
+export async function createAdminAffiliateCoupon(req, res) {
+	try {
+		const result = await affiliateService.createAdminAffiliateCoupon(req.body);
+		res.status(201).json(result);
+	} catch (error) {
+		console.error("createAdminAffiliateCoupon error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+/**
+ * DELETE /admin/affiliate/coupons/:id
+ * Admin deletes an affiliate coupon.
+ */
+export async function deleteAdminAffiliateCoupon(req, res) {
+	try {
+		const result = await affiliateService.deleteAdminAffiliateCoupon(req.params.id);
+		res.json(result);
+	} catch (error) {
+		console.error("deleteAdminAffiliateCoupon error:", error);
 		res.status(400).json({ success: false, message: error.message });
 	}
 }

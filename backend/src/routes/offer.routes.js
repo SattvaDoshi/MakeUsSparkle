@@ -3,6 +3,7 @@ import { getPublicOffers, getOfferById } from "../controllers/offer.controller.j
 
 const router = Router();
 
+router.get("/", getPublicOffers);
 router.get("/public", getPublicOffers);
 router.get("/:id", getOfferById);
 

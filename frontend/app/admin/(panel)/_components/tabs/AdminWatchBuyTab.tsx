@@ -6,12 +6,13 @@ type AdminProduct = { _id: string; title: string; price?: number; mainImage?: st
 type WatchBuyEntry = {
 	_id: string;
 	title?: string;
-	product?: { _id: string; title?: string; mainImage?: string; images?: string[]; price?: number } | string;
+	product?: { _id: string; title?: string; mainImage?: string; images?: string[]; price?: number; gender?: string } | string;
 	publicId?: string;
 	videoUrl?: string;
 	src?: string;
 	poster?: string;
 	duration?: number;
+	gender?: "women" | "men" | "kids" | "all";
 	isActive: boolean;
 	sortOrder: number;
 };

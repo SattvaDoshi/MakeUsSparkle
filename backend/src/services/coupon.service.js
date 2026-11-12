@@ -4,6 +4,7 @@ import Category from "../models/category.model.js";
 import SubCategory from "../models/subCategory.model.js";
 import Style from "../models/style.model.js";
 import crypto from "crypto";
+import { invalidateOffersAndCouponsCache } from "./product.service.js";
 
 class CouponService {
 	normalizeCode(code = "") {
@@ -98,6 +99,14 @@ class CouponService {
 
 		if (payload.isActive !== undefined) {
 			payload.isActive = Boolean(payload.isActive);
+		}
+
+		if (payload.isAffiliateCoupon !== undefined) {
+			payload.isAffiliateCoupon = Boolean(payload.isAffiliateCoupon);
+		}
+
+		if (payload.affiliateUser !== undefined) {
+			payload.affiliateUser = payload.affiliateUser || null;
 		}
 
 		return payload;
@@ -382,7 +391,8 @@ class CouponService {
 
 	async getCoupons() {
 		try {
-			const coupons = await Coupon.find().sort({ createdAt: -1 });
+			// Do not include affiliate coupons in standard admin coupons list
+			const coupons = await Coupon.find({ isAffiliateCoupon: { $ne: true } }).sort({ createdAt: -1 });
 			return { success: true, coupons };
 		} catch (error) {
 			console.error("Error fetching coupons:", error);
@@ -392,12 +402,10 @@ class CouponService {
 
 	async getPublicOffers() {
 		try {
-			const now = new Date();
 			const offers = await Coupon.find({
 				isActive: { $ne: false },
 				isWelcomeOffer: { $ne: true },
-				$or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }],
-				$and: [{ $or: [{ expiryDate: { $exists: false } }, { expiryDate: null }, { expiryDate: { $gte: now } }] }],
+				isAffiliateCoupon: { $ne: true },
 			})
 				.select("code name description discountType discountValue maxDiscount minOrderValue expiryDate offerCategory image isFeatured")
 				.sort({ isFeatured: -1, createdAt: -1 });
@@ -498,6 +506,7 @@ class CouponService {
 		try {
 			const payload = this.buildCouponPayload(couponData);
 			const coupon = await Coupon.create(payload);
+			invalidateOffersAndCouponsCache();
 			return { success: true, coupon };
 		} catch (error) {
 			console.error("Error creating coupon:", error);
@@ -517,6 +526,7 @@ class CouponService {
 			if (!coupon) {
 				throw new Error("Coupon not found");
 			}
+			invalidateOffersAndCouponsCache();
 			return { success: true, coupon };
 		} catch (error) {
 			console.error("Error updating coupon:", error);
@@ -527,6 +537,7 @@ class CouponService {
 	async deleteCoupon(couponId) {
 		try {
 			await Coupon.findByIdAndDelete(couponId);
+			invalidateOffersAndCouponsCache();
 			return { success: true, message: "Coupon deleted successfully" };
 		} catch (error) {
 			console.error("Error deleting coupon:", error);

@@ -398,9 +398,14 @@ function normalizeProduct(
   const rating = Number(item.rating ?? 0);
   const reviewCount = Math.max(Array.isArray(item.reviews) ? item.reviews.length : 0, Number((item as any).reviewCount ?? 0));
   const dbPrice = Number(item.price ?? 0);
-  const discountedPrice = item.discountedPrice ? Number(item.discountedPrice) : null;
-  const originalPrice = discountedPrice ? dbPrice : null;
-  const price = discountedPrice || dbPrice;
+  const discountedPrice = item.discountedPrice != null && Number(item.discountedPrice) > 0 ? Number(item.discountedPrice) : null;
+  const originalPrice = (item as any).originalPrice != null && Number((item as any).originalPrice) > 0
+    ? Number((item as any).originalPrice)
+    : (discountedPrice && discountedPrice < dbPrice ? dbPrice : null);
+  const price = (discountedPrice && originalPrice && originalPrice > discountedPrice)
+    ? discountedPrice
+    : (discountedPrice && discountedPrice < dbPrice ? discountedPrice : dbPrice);
+  const discountTag = item.discountTag || (originalPrice && originalPrice > price ? `${Math.round(((originalPrice - price) / originalPrice) * 100)}% off` : null);
   // Use _id as slug so the detail page can call GET /products/:id directly
   const slug = item._id;
 
@@ -592,9 +597,12 @@ export async function fetchHomeContent(): Promise<any> {
   }, 5 * 60 * 1000);
 }
 
-export async function fetchPromoBanners(): Promise<any[]> {
-  return withCatalogCache("promo_banners", async () => {
-    const data = await apiRequest<{ success: boolean; banners?: any[] }>("/banners");
+export async function fetchPromoBanners(gender?: string): Promise<any[]> {
+  const g = gender ? String(gender).toLowerCase() : "";
+  const key = `promo_banners_${g || "all"}`;
+  return withCatalogCache(key, async () => {
+    const query = g ? `?gender=${encodeURIComponent(g)}` : "";
+    const data = await apiRequest<{ success: boolean; banners?: any[] }>(`/banners${query}`);
     return data.banners || [];
   }, 5 * 60 * 1000);
 }
@@ -633,16 +641,19 @@ export async function fetchCatalogProducts(filters: { subCategorySlug?: string }
   }, PRODUCT_CACHE_TTL);
 }
 
-export async function fetchNewArrivalsSection(): Promise<CatalogHomeSection | null> {
+export async function fetchNewArrivalsSection(gender?: string): Promise<CatalogHomeSection | null> {
+  const g = gender ? String(gender).toLowerCase() : "";
+  const query = g ? `?gender=${encodeURIComponent(g)}` : "";
   const [categories, subCategories, styles, sectionResponse] = await Promise.all([
     fetchCatalogCategories(),
     fetchCatalogSubCategories(),
     fetchCatalogStyles(),
-    apiRequest<{ success: boolean; section?: BackendHomeSection }>("/home-sections/new-arrivals"),
+    apiRequest<{ success: boolean; section?: BackendHomeSection }>(`/home-sections/new-arrivals${query}`),
   ]);
 
   const section = sectionResponse.section;
   if (!section || section.isActive === false) return null;
+  if (!section.products || section.products.length === 0) return null;
 
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
@@ -700,9 +711,11 @@ interface BackendOpenSection {
   isActive?: boolean;
 }
 
-export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
+export async function fetchOpenSection(gender?: string): Promise<CatalogOpenSection | null> {
   try {
-    const sectionResponse = await apiRequest<{ success: boolean; section?: BackendOpenSection }>("/home-sections/open-section");
+    const g = gender ? String(gender).toLowerCase() : "";
+    const query = g ? `?gender=${encodeURIComponent(g)}` : "";
+    const sectionResponse = await apiRequest<{ success: boolean; section?: BackendOpenSection }>(`/home-sections/open-section${query}`);
 
     const section = sectionResponse.section;
     if (!section || section.isActive === false) return null;
@@ -723,11 +736,16 @@ export async function fetchOpenSection(): Promise<CatalogOpenSection | null> {
           p.mainImage,
         ]);
         const dbPrice = Number(p.price ?? 0);
-        const discountedPrice = p.discountedPrice ? Number(p.discountedPrice) : null;
-        const originalPrice = discountedPrice ? dbPrice : null;
-        const price = discountedPrice || dbPrice;
+        const discountedPrice = p.discountedPrice != null && Number(p.discountedPrice) > 0 ? Number(p.discountedPrice) : null;
+        const originalPrice = (p as any).originalPrice != null && Number((p as any).originalPrice) > 0
+          ? Number((p as any).originalPrice)
+          : (discountedPrice && discountedPrice < dbPrice ? dbPrice : null);
+        const price = (discountedPrice && originalPrice && originalPrice > discountedPrice)
+          ? discountedPrice
+          : (discountedPrice && discountedPrice < dbPrice ? discountedPrice : dbPrice);
         const rating = Number(p.rating ?? 0);
         const reviewCount = Math.max(Array.isArray(p.reviews) ? p.reviews.length : 0, Number((p as any).reviewCount ?? 0));
+        const discountTag = (p as any).discountTag || (originalPrice && originalPrice > price ? `${Math.round(((originalPrice - price) / originalPrice) * 100)}% off` : null);
         const slug = p._id;
         const catId = getRefId(p.category);
         const subCatId = getRefId(p.subCategory);
@@ -1213,29 +1231,34 @@ export interface CatalogWatchBuyVideo {
   product: CatalogProduct;
 }
 
-export async function fetchWatchAndBuy(): Promise<CatalogWatchBuyVideo[]> {
+export async function fetchWatchAndBuy(gender?: string): Promise<CatalogWatchBuyVideo[]> {
+  const g = gender ? String(gender).toLowerCase() : "";
+  const query = g ? `?gender=${encodeURIComponent(g)}` : "";
   const [categories, subCategories, styles, res] = await Promise.all([
     fetchCatalogCategories(),
     fetchCatalogSubCategories(),
     fetchCatalogStyles(),
-    apiRequest<{ success: boolean; videos?: any[] }>("/watch-buy"),
+    apiRequest<{ success: boolean; videos?: any[] }>(`/watch-buy${query}`),
   ]);
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
   const styleMap = new Map(styles.map((item) => [item.id, item]));
 
   const real = (res.videos || []).filter((v) => v && v.product && v.src);
-  if (real.length === 0 && DEMO_ENABLED) {
-    // Placeholder clips paired with real catalogue products, so the section can be shown before videos are uploaded.
-    const products = (await fetchCatalogProducts()).filter((p) => p.images?.[0]).slice(0, DEMO_CLIPS.length);
-    return products.map((product, i) => ({
-      id: `demo-${product.id}`,
-      title: DEMO_CLIPS[i].title,
-      src: DEMO_CLIPS[i].src,
-      poster: product.mainImage || product.images[0],
-      duration: 15,
-      product,
-    }));
+  if (real.length === 0) {
+    if (!g && DEMO_ENABLED) {
+      // Placeholder clips paired with real catalogue products, so the section can be shown before videos are uploaded.
+      const products = (await fetchCatalogProducts()).filter((p) => p.images?.[0]).slice(0, DEMO_CLIPS.length);
+      return products.map((product, i) => ({
+        id: `demo-${product.id}`,
+        title: DEMO_CLIPS[i].title,
+        src: DEMO_CLIPS[i].src,
+        poster: product.mainImage || product.images[0],
+        duration: 15,
+        product,
+      }));
+    }
+    return [];
   }
 
   return real

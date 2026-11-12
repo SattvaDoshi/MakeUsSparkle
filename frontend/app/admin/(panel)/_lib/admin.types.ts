@@ -237,6 +237,7 @@ export type AdminOffer = {
 export type AdminBanner = {
 	_id: string;
 	bannerType?: "promo" | "main";
+	gender?: "women" | "men" | "kids" | "all";
 	text?: string;
 	title?: string;
 	subtitle?: string;

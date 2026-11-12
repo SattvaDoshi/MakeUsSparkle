@@ -25,6 +25,12 @@ import AdminFaqTab from "./_components/tabs/AdminFaqTab";
 import AdminCombosTab from "./_components/tabs/AdminCombosTab";
 import AdminExitSurveysTab from "./_components/tabs/AdminExitSurveysTab";
 import AdminShippingTab from "./_components/tabs/AdminShippingTab";
+import AdminAffiliatesTab, {
+	type AffiliateUserSummary,
+	type AdminAffiliateCommissionLog,
+	type AdminAffiliateCouponItem,
+	type AdminAffiliateStats,
+} from "./_components/tabs/AdminAffiliatesTab";
 import AdminOpenSectionTab, { type OpenSectionForm, type OpenSectionItem } from "./_components/tabs/AdminOpenSectionTab";
 import type { AdminExitSurvey, ShippingInfo } from "./_lib/admin.types";
 
@@ -278,7 +284,7 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection" | "watchBuy" | "founder" | "faq";
+type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "affiliate" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection" | "watchBuy" | "founder" | "faq";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
@@ -293,6 +299,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "orders", label: "Orders" },
 	{ key: "payments", label: "Payments" },
 	{ key: "coupons", label: "Offers & Coupons" },
+	{ key: "affiliate", label: "Affiliate & Partners" },
 	{ key: "banners", label: "Home Page" },
 	{ key: "reviews", label: "Reviews" },
 	{ key: "surveys", label: "Exit Surveys" },
@@ -529,6 +536,20 @@ export default function AdminDashboardPage() {
 	const [combos, setCombos] = useState<AdminCombo[]>([]);
 	const [surveys, setSurveys] = useState<AdminExitSurvey[]>([]);
 
+	// Affiliate Tab State
+	const [affiliateStats, setAffiliateStats] = useState<AdminAffiliateStats>({
+		totalAffiliates: 0,
+		totalAffiliateSales: 0,
+		totalDeliveredCommission: 0,
+		totalPendingCommission: 0,
+		totalClicksAll: 0,
+		totalOrders: 0,
+	});
+	const [affiliates, setAffiliates] = useState<AffiliateUserSummary[]>([]);
+	const [affiliateCommissions, setAffiliateCommissions] = useState<AdminAffiliateCommissionLog[]>([]);
+	const [affiliateCoupons, setAffiliateCoupons] = useState<AdminAffiliateCouponItem[]>([]);
+	const [affiliateRefreshing, setAffiliateRefreshing] = useState(false);
+
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [userForm, setUserForm] = useState(defaultUserForm);
 	const [offerForm, setOfferForm] = useState(defaultOfferForm);
@@ -720,6 +741,29 @@ export default function AdminDashboardPage() {
 		setSurveys(result.surveys || []);
 	}, []);
 
+	const loadAffiliatesData = useCallback(async () => {
+		setAffiliateRefreshing(true);
+		try {
+			const res = await apiRequest<{
+				success: boolean;
+				stats: AdminAffiliateStats;
+				affiliates: AffiliateUserSummary[];
+				commissions: AdminAffiliateCommissionLog[];
+				coupons: AdminAffiliateCouponItem[];
+			}>("/admin/affiliate/dashboard");
+			if (res.success) {
+				setAffiliateStats(res.stats);
+				setAffiliates(res.affiliates || []);
+				setAffiliateCommissions(res.commissions || []);
+				setAffiliateCoupons(res.coupons || []);
+			}
+		} catch (err) {
+			console.error("Error loading affiliate dashboard:", err);
+		} finally {
+			setAffiliateRefreshing(false);
+		}
+	}, []);
+
 	const loadActiveTab = useCallback(async (tab: TabKey) => {
 		setLoading(true);
 		setError(null);
@@ -749,12 +793,21 @@ export default function AdminDashboardPage() {
 		if (tab === "watchBuy") await loadProducts();
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
 			if (tab === "surveys") await loadSurveys();
+			if (tab === "affiliate") {
+				await Promise.all([
+					loadAffiliatesData(),
+					loadCategories(),
+					loadSubCategories(),
+					loadStyles(),
+					loadProducts(),
+				]);
+			}
 		} catch (error) {
 			console.error("Error loading tab data:", error);
 		} finally {
 			setLoading(false);
 		}
-	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos, loadSurveys, loadOpenSection]);
+	}, [loadBanners, loadMainBanners, loadHomeContent, loadCoupons, loadOffers, loadHome, loadOrders, loadPayments, loadProducts, loadReviews, loadUsers, loadCharms, loadCategories, loadSubCategories, loadStyles, loadGenders, loadNewArrivals, loadCombos, loadSurveys, loadOpenSection, loadAffiliatesData]);
 
 	useEffect(() => {
 		void loadActiveTab(activeTab);
@@ -1515,6 +1568,35 @@ export default function AdminDashboardPage() {
 		onCreateCustomCombo={handleCreateCustomCombo}
 		onEditCombo={handleEditCombo}
 		onDeleteCombo={handleDeleteCombo}
+	/>;
+	if (activeTab === "affiliate") return <AdminAffiliatesTab
+		stats={affiliateStats}
+		affiliates={affiliates}
+		commissions={affiliateCommissions}
+		coupons={affiliateCoupons}
+		categories={categories}
+		subcategories={subcategories}
+		styles={styles}
+		products={products}
+		onCreateCoupon={async (data) => {
+			await runAction(async () => {
+				await apiRequest("/admin/affiliate/coupons", {
+					method: "POST",
+					body: JSON.stringify(data),
+				});
+				await loadAffiliatesData();
+			}, "Affiliate coupon created successfully");
+		}}
+		onDeleteCoupon={async (id) => {
+			await runAction(async () => {
+				await apiRequest(`/admin/affiliate/coupons/${id}`, {
+					method: "DELETE",
+				});
+				await loadAffiliatesData();
+			}, "Affiliate coupon deleted successfully");
+		}}
+		refreshing={affiliateRefreshing}
+		onRefresh={loadAffiliatesData}
 	/>;
 		if (activeTab === "surveys") return <AdminExitSurveysTab surveys={surveys} />;
 		if (activeTab === "shipping") return <AdminShippingTab />;

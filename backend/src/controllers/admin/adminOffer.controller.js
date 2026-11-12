@@ -1,5 +1,6 @@
 import Offer from "../../models/offer.model.js";
 import { uploadToCloudinary } from "../../config/upload.config.js";
+import { invalidateOffersAndCouponsCache } from "../../services/product.service.js";
 
 export const createOffer = async (req, res) => {
 	try {
@@ -15,11 +16,18 @@ export const createOffer = async (req, res) => {
 		if (typeof offerData.applicableCategories === "string") {
 			offerData.applicableCategories = offerData.applicableCategories.split(",").map((id) => id.trim()).filter(Boolean);
 		}
+		if (typeof offerData.applicableSubCategories === "string") {
+			offerData.applicableSubCategories = offerData.applicableSubCategories.split(",").map((id) => id.trim()).filter(Boolean);
+		}
 		if (typeof offerData.applicableProducts === "string") {
 			offerData.applicableProducts = offerData.applicableProducts.split(",").map((id) => id.trim()).filter(Boolean);
 		}
+		if (offerData.isActive !== undefined) {
+			offerData.isActive = offerData.isActive === true || offerData.isActive === "true" || offerData.isActive === 1 || offerData.isActive === "1";
+		}
 
 		const offer = await Offer.create(offerData);
+		invalidateOffersAndCouponsCache();
 		res.status(201).json({ success: true, offer });
 	} catch (error) {
 		console.error("Error creating offer:", error);
@@ -40,14 +48,21 @@ export const updateOffer = async (req, res) => {
 		if (typeof offerData.applicableCategories === "string") {
 			offerData.applicableCategories = offerData.applicableCategories.split(",").map((id) => id.trim()).filter(Boolean);
 		}
+		if (typeof offerData.applicableSubCategories === "string") {
+			offerData.applicableSubCategories = offerData.applicableSubCategories.split(",").map((id) => id.trim()).filter(Boolean);
+		}
 		if (typeof offerData.applicableProducts === "string") {
 			offerData.applicableProducts = offerData.applicableProducts.split(",").map((id) => id.trim()).filter(Boolean);
+		}
+		if (offerData.isActive !== undefined) {
+			offerData.isActive = offerData.isActive === true || offerData.isActive === "true" || offerData.isActive === 1 || offerData.isActive === "1";
 		}
 
 		const offer = await Offer.findByIdAndUpdate(req.params.id, offerData, { new: true });
 		if (!offer) {
 			return res.status(404).json({ success: false, message: "Offer not found" });
 		}
+		invalidateOffersAndCouponsCache();
 		res.json({ success: true, offer });
 	} catch (error) {
 		console.error("Error updating offer:", error);
@@ -61,6 +76,7 @@ export const deleteOffer = async (req, res) => {
 		if (!offer) {
 			return res.status(404).json({ success: false, message: "Offer not found" });
 		}
+		invalidateOffersAndCouponsCache();
 		res.json({ success: true, message: "Offer deleted" });
 	} catch (error) {
 		console.error("Error deleting offer:", error);

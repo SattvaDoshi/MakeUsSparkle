@@ -889,16 +889,18 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   ]).filter(Boolean) as string[];
   const displayImg = currentImages?.[activeImg] || mainImg || matchingVariant?.image || FALLBACK_PRODUCT_IMAGE;
 
+  const basePrice = discountedPrice || price;
+  const baseOriginalPrice = (originalPrice && originalPrice > basePrice) ? originalPrice : ((price && price > basePrice) ? price : basePrice);
+
   let discount = 0;
-  if (discountedPrice && price) discount = Math.round(((price - discountedPrice) / price) * 100);
-  else if (originalPrice && price) discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  if (baseOriginalPrice > basePrice) {
+    discount = Math.round(((baseOriginalPrice - basePrice) / baseOriginalPrice) * 100);
+  }
 
   const currentStock = matchingVariant?.stock ?? stock;
   const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
   const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
   const selectedCharmCount = charmData.count;
-  const basePrice = discountedPrice || price;
-  const baseOriginalPrice = originalPrice || price;
   const perCharmPrice = product?.perCharmPrice ?? 0;
 
   const chainOptions: ChainOption[] = useMemo(() => {
@@ -1802,7 +1804,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               onChange={setActiveImg}
               alt={productName}
               soldOut={Number(currentStock) <= 0}
-              chip={discount > 0 ? `${discount}% off` : product.badge || undefined}
+              chip={product.offerTag || product.offer || (discount > 0 ? `${discount}% off` : product.badge || undefined)}
               fallback={FALLBACK_PRODUCT_IMAGE}
               wish={
                 <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
@@ -1831,10 +1833,10 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
 
             <div className="pdp-price-row">
               <span className="pdp-price">₹{totalCharmPrice.toLocaleString('en-IN')}</span>
-              {(discountedPrice || originalPrice) && (
+              {totalCharmOriginalPrice > totalCharmPrice && (
                 <>
                   <span className="pdp-original">₹{totalCharmOriginalPrice.toLocaleString('en-IN')}</span>
-                  <span className="pdp-discount">{discount}% off</span>
+                  {discount > 0 && <span className="pdp-discount">{discount}% off</span>}
                 </>
               )}
             </div>

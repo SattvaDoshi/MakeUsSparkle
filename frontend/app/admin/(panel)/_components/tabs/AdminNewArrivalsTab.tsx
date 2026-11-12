@@ -20,6 +20,8 @@ type AdminNewArrivalsTabProps = {
 	products: AdminProduct[];
 	onChange: (form: NewArrivalsForm) => void;
 	onSubmit: (event: FormEvent) => void;
+	selectedGender?: "women" | "men" | "kids";
+	onGenderChange?: (gender: "women" | "men" | "kids") => void;
 };
 
 export default function AdminNewArrivalsTab({
@@ -27,6 +29,8 @@ export default function AdminNewArrivalsTab({
 	products,
 	onChange,
 	onSubmit,
+	selectedGender = "women",
+	onGenderChange,
 }: AdminNewArrivalsTabProps) {
 	const selected = new Set(form.products);
 
@@ -62,8 +66,23 @@ export default function AdminNewArrivalsTab({
 
 	return (
 		<section className="admin-content">
+			{/* ── Gender Switcher ── */}
+			<div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
+				{(["women", "men", "kids"] as const).map((g) => (
+					<button
+						key={g}
+						type="button"
+						className={`admin-btn ${selectedGender === g ? "" : "admin-btn-muted"}`}
+						style={{ textTransform: "capitalize", padding: "8px 22px", fontWeight: 600 }}
+						onClick={() => onGenderChange?.(g)}
+					>
+						{g === "women" ? "👩 Women" : g === "men" ? "👨 Men" : "🧒 Kids"} New Arrivals
+					</button>
+				))}
+			</div>
+
 			<form onSubmit={onSubmit} className="admin-panel" style={{ marginBottom: "2rem" }}>
-				<h2>Section Settings</h2>
+				<h2>Section Settings ({selectedGender.toUpperCase()})</h2>
 				<div className="admin-form-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: "1.5rem" }}>
 					<div className="admin-form-group">
 						<label>Eyebrow Text</label>

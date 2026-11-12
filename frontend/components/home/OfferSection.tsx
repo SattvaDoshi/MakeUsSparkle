@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getApiUrl } from '@/lib/api';
 import { cdnImage } from '@/lib/cdn';
 import styles from './OfferSection.module.css';
 
@@ -150,12 +150,31 @@ export default function OffersSection() {
     let ignore = false;
     (async () => {
       try {
-        const [couponsRes, offersRes] = await Promise.allSettled([
-          apiRequest<{ success: boolean; offers?: ApiOffer[] }>('/coupons/offers'),
-          apiRequest<{ success: boolean; offers?: ApiOffer[] }>('/offers/public'),
+        const fetchEndpoint = async (path: string): Promise<ApiOffer[]> => {
+          try {
+            const data = await apiRequest<{ success: boolean; offers?: ApiOffer[] }>(path);
+            if (Array.isArray(data?.offers)) return data.offers;
+            if (Array.isArray(data)) return data as any;
+          } catch {
+            try {
+              const res = await fetch(getApiUrl(path));
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data?.offers)) return data.offers;
+                if (Array.isArray(data)) return data;
+              }
+            } catch {}
+          }
+          return [];
+        };
+
+        const [rawCoupons, rawStore] = await Promise.all([
+          fetchEndpoint('/coupons/offers'),
+          fetchEndpoint('/offers/public'),
         ]);
-        const coupons = couponsRes.status === 'fulfilled' ? (couponsRes.value?.offers || []).filter(isNotExpired).map((o) => mapApiOffer(o, true)) : [];
-        const store = offersRes.status === 'fulfilled' ? (offersRes.value?.offers || []).filter(isNotExpired).map((o) => mapApiOffer(o, false)) : [];
+
+        const coupons = rawCoupons.filter(isNotExpired).map((o) => mapApiOffer(o, true));
+        const store = rawStore.filter(isNotExpired).map((o) => mapApiOffer(o, false));
         if (!ignore) setOffers([...store, ...coupons]);
       } finally {
         if (!ignore) setLoading(false);

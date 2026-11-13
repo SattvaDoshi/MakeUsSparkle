@@ -502,8 +502,8 @@ interface CacheEntry<T> {
 
 const catalogCache = new Map<string, CacheEntry<any>>();
 const inFlightRequests = new Map<string, Promise<any>>();
-const TAXONOMY_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for categories/styles/genders
-const PRODUCT_CACHE_TTL = 3 * 60 * 1000;   // 3 minutes for products
+const TAXONOMY_CACHE_TTL = 30 * 1000; // 30 seconds for categories/styles/genders
+const PRODUCT_CACHE_TTL = 5 * 1000;   // 5 seconds for products (deduplicates simultaneous calls)
 
 export function clearCatalogCache(prefix?: string) {
   if (!prefix) {
@@ -594,17 +594,14 @@ export async function fetchHomeContent(): Promise<any> {
   return withCatalogCache("home_content", async () => {
     const data = await apiRequest<{ success: boolean; homeContent?: any }>("/home-content");
     return data.homeContent || null;
-  }, 5 * 60 * 1000);
+  }, 10 * 1000);
 }
 
 export async function fetchPromoBanners(gender?: string): Promise<any[]> {
   const g = gender ? String(gender).toLowerCase() : "";
-  const key = `promo_banners_${g || "all"}`;
-  return withCatalogCache(key, async () => {
-    const query = g ? `?gender=${encodeURIComponent(g)}` : "";
-    const data = await apiRequest<{ success: boolean; banners?: any[] }>(`/banners${query}`);
-    return data.banners || [];
-  }, 5 * 60 * 1000);
+  const query = g ? `?gender=${encodeURIComponent(g)}` : "";
+  const data = await apiRequest<{ success: boolean; banners?: any[] }>(`/banners${query}`);
+  return data.banners || [];
 }
 
 export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {

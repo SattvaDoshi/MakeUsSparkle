@@ -22,6 +22,18 @@ export const createOffer = async (req, res) => {
 		if (typeof offerData.applicableProducts === "string") {
 			offerData.applicableProducts = offerData.applicableProducts.split(",").map((id) => id.trim()).filter(Boolean);
 		}
+
+		// Clean up scoping according to targetType
+		if (offerData.targetType === "product") {
+			offerData.applicableCategories = [];
+			offerData.applicableSubCategories = [];
+		} else if (offerData.targetType === "category") {
+			offerData.applicableProducts = [];
+		} else if (offerData.targetType === "all") {
+			offerData.applicableCategories = [];
+			offerData.applicableSubCategories = [];
+			offerData.applicableProducts = [];
+		}
 		if (offerData.isActive !== undefined) {
 			offerData.isActive = offerData.isActive === true || offerData.isActive === "true" || offerData.isActive === 1 || offerData.isActive === "1";
 		}
@@ -53,6 +65,18 @@ export const updateOffer = async (req, res) => {
 		}
 		if (typeof offerData.applicableProducts === "string") {
 			offerData.applicableProducts = offerData.applicableProducts.split(",").map((id) => id.trim()).filter(Boolean);
+		}
+
+		// Clean up scoping according to targetType
+		if (offerData.targetType === "product") {
+			offerData.applicableCategories = [];
+			offerData.applicableSubCategories = [];
+		} else if (offerData.targetType === "category") {
+			offerData.applicableProducts = [];
+		} else if (offerData.targetType === "all") {
+			offerData.applicableCategories = [];
+			offerData.applicableSubCategories = [];
+			offerData.applicableProducts = [];
 		}
 		if (offerData.isActive !== undefined) {
 			offerData.isActive = offerData.isActive === true || offerData.isActive === "true" || offerData.isActive === 1 || offerData.isActive === "1";

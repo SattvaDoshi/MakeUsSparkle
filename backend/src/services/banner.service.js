@@ -116,7 +116,7 @@ class BannerService {
 					if (query.admin === "true") {
 						filter.gender = g;
 					} else {
-						filter.gender = { $in: [g, "all"] };
+						filter.gender = { $in: [g, "all", null, ""] };
 					}
 				}
 			}

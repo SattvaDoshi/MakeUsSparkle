@@ -170,6 +170,7 @@ type AdminOffer = {
 	usageLimit: number;
 	usedCount: number;
 	image?: string;
+	targetType?: "all" | "category" | "product";
 	applicableCategories?: Array<{ _id: string; name?: string } | string>;
 	applicableProducts?: Array<{ _id: string; title?: string } | string>;
 };
@@ -353,6 +354,7 @@ type OfferFormState = {
 	expiryDate: string;
 	isActive: boolean;
 	usageLimit: string;
+	targetType: "all" | "category" | "product";
 	applicableCategories: string;
 	applicableProducts: string;
 	imageFile: File | null;
@@ -369,6 +371,7 @@ type BannerFormState = {
 	link: string;
 	description: string;
 	tags: string;
+	gender: "women" | "men" | "kids" | "all";
 	product: string;
 	image: string;
 	imageAlt: string;
@@ -439,6 +442,7 @@ const defaultOfferForm: OfferFormState = {
 	expiryDate: "",
 	isActive: true,
 	usageLimit: "0",
+	targetType: "all",
 	applicableCategories: "",
 	applicableProducts: "",
 	imageFile: null,
@@ -455,6 +459,7 @@ const defaultBannerForm: BannerFormState = {
 	link: "",
 	description: "",
 	tags: "",
+	gender: "all",
 	product: "",
 	image: "",
 	imageAlt: "",
@@ -519,6 +524,7 @@ export default function AdminDashboardPage() {
 	const [reviews, setReviews] = useState<AdminReview[]>([]);
 	const [charms, setCharms] = useState<AdminCharmItem[]>([]);
 	const [newArrivalsForm, setNewArrivalsForm] = useState(defaultNewArrivalsForm);
+	const [newArrivalsGender, setNewArrivalsGender] = useState<"women" | "men" | "kids">("women");
 
 	const defaultOpenSectionForm: OpenSectionForm = {
 		eyebrow: "",
@@ -527,6 +533,7 @@ export default function AdminDashboardPage() {
 		items: [],
 	};
 	const [openSectionForm, setOpenSectionForm] = useState<OpenSectionForm>(defaultOpenSectionForm);
+	const [openSectionGender, setOpenSectionGender] = useState<"women" | "men" | "kids">("women");
 	const [openSectionSaving, setOpenSectionSaving] = useState(false);
 
 	const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -699,8 +706,9 @@ export default function AdminDashboardPage() {
 		setCombos(result.combos || []);
 	}, []);
 
-	const loadNewArrivals = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; section?: AdminHomeSection }>("/admin/home-sections/new-arrivals");
+	const loadNewArrivals = useCallback(async (targetGender?: string) => {
+		const g = targetGender || newArrivalsGender;
+		const result = await apiRequest<{ success: boolean; section?: AdminHomeSection }>(`/admin/home-sections/new-arrivals?gender=${g}`);
 		const section = result.section;
 		setNewArrivalsForm({
 			eyebrow: section?.eyebrow || "Fresh off the shelf",
@@ -708,10 +716,11 @@ export default function AdminDashboardPage() {
 			products: (section?.products || []).map((item) => typeof item === "string" ? item : item._id).filter(Boolean),
 			isActive: section?.isActive !== false,
 		});
-	}, []);
+	}, [newArrivalsGender]);
 
-	const loadOpenSection = useCallback(async () => {
-		const result = await apiRequest<{ success: boolean; section?: any }>("/admin/home-sections/open-section");
+	const loadOpenSection = useCallback(async (targetGender?: string) => {
+		const g = targetGender || openSectionGender;
+		const result = await apiRequest<{ success: boolean; section?: any }>(`/admin/home-sections/open-section?gender=${g}`);
 		const section = result.section;
 		if (!section) return;
 		const items: OpenSectionItem[] = (section.items || []).map((item: any) => {
@@ -734,7 +743,7 @@ export default function AdminDashboardPage() {
 			isActive: section.isActive !== false,
 			items,
 		});
-	}, []);
+	}, [openSectionGender]);
 
 	const loadSurveys = useCallback(async () => {
 		const result = await apiRequest<{ success: boolean; surveys: AdminExitSurvey[] }>("/admin/exit-surveys");
@@ -1028,9 +1037,14 @@ export default function AdminDashboardPage() {
 		if (offerForm.startsAt) formData.append("startsAt", new Date(offerForm.startsAt).toISOString());
 		if (offerForm.expiryDate) formData.append("expiryDate", new Date(offerForm.expiryDate).toISOString());
 		formData.append("isActive", String(offerForm.isActive));
+		formData.append("targetType", offerForm.targetType);
 
-		if (offerForm.applicableCategories) formData.append("applicableCategories", offerForm.applicableCategories);
-		if (offerForm.applicableProducts) formData.append("applicableProducts", offerForm.applicableProducts);
+		if (offerForm.targetType === "category" && offerForm.applicableCategories) {
+			formData.append("applicableCategories", offerForm.applicableCategories);
+		}
+		if (offerForm.targetType === "product" && offerForm.applicableProducts) {
+			formData.append("applicableProducts", offerForm.applicableProducts);
+		}
 
 		if (offerForm.imageFile) {
 			formData.append("image", offerForm.imageFile);
@@ -1202,6 +1216,7 @@ export default function AdminDashboardPage() {
 			"tags",
 			JSON.stringify(bannerForm.tags.split(",").map((item) => item.trim()).filter(Boolean))
 		);
+		formData.append("gender", bannerForm.gender || "all");
 		formData.append("imageAlt", bannerForm.imageAlt);
 		formData.append("textSide", bannerForm.textSide);
 		formData.append("isActive", String(bannerForm.isActive));
@@ -1358,9 +1373,9 @@ export default function AdminDashboardPage() {
 		await runAction(async () => {
 			await apiRequest("/admin/home-sections/new-arrivals", {
 				method: "PUT",
-				body: JSON.stringify(newArrivalsForm),
+				body: JSON.stringify({ ...newArrivalsForm, gender: newArrivalsGender }),
 			});
-			await loadNewArrivals();
+			await loadNewArrivals(newArrivalsGender);
 		}, "New arrivals updated");
 	};
 
@@ -1371,6 +1386,7 @@ export default function AdminDashboardPage() {
 			formData.append("title", openSectionForm.title);
 			formData.append("eyebrow", openSectionForm.eyebrow);
 			formData.append("isActive", String(openSectionForm.isActive));
+			formData.append("gender", openSectionGender);
 
 			// Serialize items without the _newImageFile (File objects can't be JSON-stringified)
 			const itemsPayload = openSectionForm.items.map((item) => {
@@ -1394,7 +1410,7 @@ export default function AdminDashboardPage() {
 				method: "PUT",
 				body: formData,
 			});
-			await loadOpenSection();
+			await loadOpenSection(openSectionGender);
 			setNotice("Open section updated");
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to save open section");
@@ -1464,6 +1480,16 @@ export default function AdminDashboardPage() {
 			onDeleteCoupon={handleDeleteCoupon}
 			onEditOffer={(entry) => {
 				const mapIds = (values?: Array<{ _id: string } | string>) => (values || []).map((item) => typeof item === "string" ? item : item._id).join(", ");
+				const catIds = mapIds(entry.applicableCategories);
+				const prodIds = mapIds(entry.applicableProducts);
+				let initialTargetType: "all" | "category" | "product" = "all";
+				if (entry.targetType) {
+					initialTargetType = entry.targetType;
+				} else if (prodIds) {
+					initialTargetType = "product";
+				} else if (catIds) {
+					initialTargetType = "category";
+				}
 				setOfferForm({
 					id: entry._id,
 					title: entry.title,
@@ -1476,8 +1502,9 @@ export default function AdminDashboardPage() {
 					expiryDate: entry.expiryDate ? String(entry.expiryDate).slice(0, 10) : "",
 					isActive: entry.isActive,
 					usageLimit: String(entry.usageLimit),
-					applicableCategories: mapIds(entry.applicableCategories),
-					applicableProducts: mapIds(entry.applicableProducts),
+					targetType: initialTargetType,
+					applicableCategories: catIds,
+					applicableProducts: prodIds,
 					imageFile: null,
 					imageUrl: entry.image || "",
 				});
@@ -1499,6 +1526,7 @@ export default function AdminDashboardPage() {
 				link: entry.link ?? "",
 				description: entry.subtitle ?? "",
 				tags: (entry.tags || []).join(", "),
+				gender: (entry.gender as "women" | "men" | "kids" | "all") || "all",
 				product: entry.product?._id ?? "",
 				image: entry.image ?? "",
 				imageAlt: entry.imageAlt ?? "",
@@ -1534,12 +1562,22 @@ export default function AdminDashboardPage() {
 	if (activeTab === "newArrivals") return <AdminNewArrivalsTab
 		form={newArrivalsForm}
 		products={products}
+		selectedGender={newArrivalsGender}
+		onGenderChange={(g) => {
+			setNewArrivalsGender(g);
+			void loadNewArrivals(g);
+		}}
 		onChange={setNewArrivalsForm}
 		onSubmit={handleNewArrivalsSubmit}
 	/>;
 	if (activeTab === "openSection") return <AdminOpenSectionTab
 		form={openSectionForm}
 		products={products}
+		selectedGender={openSectionGender}
+		onGenderChange={(g) => {
+			setOpenSectionGender(g);
+			void loadOpenSection(g);
+		}}
 		onChange={setOpenSectionForm}
 		onSubmit={handleOpenSectionSubmit}
 		saving={openSectionSaving}
@@ -1910,66 +1948,106 @@ export default function AdminDashboardPage() {
 							</div>
 
 							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
-								<label>Applicable Categories</label>
-								<div className="admin-checkbox-list">
-									{categories.map((cat) => (
-										<label key={cat._id} className="admin-checkbox" style={{ margin: 0 }}>
-											<input 
-												type="checkbox" 
-												checked={offerForm.applicableCategories.includes(cat._id)} 
-												onChange={() => setOfferForm(prev => ({ ...prev, applicableCategories: handleCsvToggle(cat._id, prev.applicableCategories) }))} 
-											/>
-											{cat.name}
-										</label>
-									))}
-									{categories.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No categories found</span>}
+								<label><strong>Offer Applicability / Target Scope</strong></label>
+								<div style={{ display: "flex", gap: "1.5rem", marginTop: "0.25rem", marginBottom: "0.5rem" }}>
+									<label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", fontSize: "0.9rem" }}>
+										<input 
+											type="radio" 
+											name="offerTargetType" 
+											value="all" 
+											checked={offerForm.targetType === "all"} 
+											onChange={() => setOfferForm(prev => ({ ...prev, targetType: "all" }))} 
+										/>
+										<span>All Categories (Sitewide)</span>
+									</label>
+									<label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", fontSize: "0.9rem" }}>
+										<input 
+											type="radio" 
+											name="offerTargetType" 
+											value="category" 
+											checked={offerForm.targetType === "category"} 
+											onChange={() => setOfferForm(prev => ({ ...prev, targetType: "category" }))} 
+										/>
+										<span>Specific Categories</span>
+									</label>
+									<label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", fontSize: "0.9rem" }}>
+										<input 
+											type="radio" 
+											name="offerTargetType" 
+											value="product" 
+											checked={offerForm.targetType === "product"} 
+											onChange={() => setOfferForm(prev => ({ ...prev, targetType: "product" }))} 
+										/>
+										<span>Only Selected Products</span>
+									</label>
 								</div>
 							</div>
 
-							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
-								<label>Applicable Products</label>
-								<div className="admin-form-row" style={{ marginBottom: "1rem" }}>
-									<select 
-										value={modalProductFilterCat} 
-										onChange={(e) => {
-											setModalProductFilterCat(e.target.value);
-											setModalProductFilterSubcat("");
-										}}
-										style={{ flex: 1 }}
-									>
-										<option value="">All Categories</option>
-										{categories.map((c) => (
-											<option key={c._id} value={c._id}>{c.name}</option>
+							{offerForm.targetType === "category" && (
+								<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+									<label>Applicable Categories</label>
+									<div className="admin-checkbox-list">
+										{categories.map((cat) => (
+											<label key={cat._id} className="admin-checkbox" style={{ margin: 0 }}>
+												<input 
+													type="checkbox" 
+													checked={offerForm.applicableCategories.includes(cat._id)} 
+													onChange={() => setOfferForm(prev => ({ ...prev, applicableCategories: handleCsvToggle(cat._id, prev.applicableCategories) }))} 
+												/>
+												{cat.name}
+											</label>
 										))}
-									</select>
-									<select 
-										value={modalProductFilterSubcat} 
-										onChange={(e) => setModalProductFilterSubcat(e.target.value)}
-										disabled={!modalProductFilterCat}
-										style={{ flex: 1 }}
-									>
-										<option value="">All Sub-Categories</option>
-										{subcategories
-											.filter(sc => typeof sc.category === 'object' ? sc.category?._id === modalProductFilterCat : sc.category === modalProductFilterCat)
-											.map((sc) => (
-											<option key={sc._id} value={sc._id}>{sc.name}</option>
+										{categories.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No categories found</span>}
+									</div>
+								</div>
+							)}
+
+							{offerForm.targetType === "product" && (
+								<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
+									<label>Applicable Products ({offerForm.applicableProducts ? offerForm.applicableProducts.split(',').filter(Boolean).length : 0} selected)</label>
+									<div className="admin-form-row" style={{ marginBottom: "1rem" }}>
+										<select 
+											value={modalProductFilterCat} 
+											onChange={(e) => {
+												setModalProductFilterCat(e.target.value);
+												setModalProductFilterSubcat("");
+											}}
+											style={{ flex: 1 }}
+										>
+											<option value="">All Categories</option>
+											{categories.map((c) => (
+												<option key={c._id} value={c._id}>{c.name}</option>
+											))}
+										</select>
+										<select 
+											value={modalProductFilterSubcat} 
+											onChange={(e) => setModalProductFilterSubcat(e.target.value)}
+											disabled={!modalProductFilterCat}
+											style={{ flex: 1 }}
+										>
+											<option value="">All Sub-Categories</option>
+											{subcategories
+												.filter(sc => typeof sc.category === 'object' ? sc.category?._id === modalProductFilterCat : sc.category === modalProductFilterCat)
+												.map((sc) => (
+												<option key={sc._id} value={sc._id}>{sc.name}</option>
+											))}
+										</select>
+									</div>
+									<div className="admin-checkbox-list">
+										{filteredModalProducts.map((prod) => (
+											<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
+												<input 
+													type="checkbox" 
+													checked={offerForm.applicableProducts.includes(prod._id)} 
+													onChange={() => setOfferForm(prev => ({ ...prev, applicableProducts: handleCsvToggle(prod._id, prev.applicableProducts) }))} 
+												/>
+												{prod.title}
+											</label>
 										))}
-									</select>
+										{filteredModalProducts.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
+									</div>
 								</div>
-								<div className="admin-checkbox-list">
-									{filteredModalProducts.map((prod) => (
-										<label key={prod._id} className="admin-checkbox" style={{ margin: 0 }}>
-											<input 
-												type="checkbox" 
-												checked={offerForm.applicableProducts.includes(prod._id)} 
-												onChange={() => setOfferForm(prev => ({ ...prev, applicableProducts: handleCsvToggle(prod._id, prev.applicableProducts) }))} 
-											/>
-											{prod.title}
-										</label>
-									))}
-									{filteredModalProducts.length === 0 && <span style={{ fontSize: '0.85rem', color: '#666' }}>No products found</span>}
-								</div>
-							</div>
+							)}
 
 							<div className="admin-form-group" style={{ gridColumn: "1 / -1" }}>
 								<label className="admin-checkbox">
@@ -2056,6 +2134,12 @@ export default function AdminDashboardPage() {
 							setBannerImageFile(file);
 						}} />
 						<input placeholder="Image Alt" value={bannerForm.imageAlt ?? ""} onChange={(event) => setBannerForm((prev) => ({ ...prev, imageAlt: event.target.value }))} />
+						<select value={bannerForm.gender ?? "all"} onChange={(event) => setBannerForm((prev) => ({ ...prev, gender: event.target.value as "women" | "men" | "kids" | "all" }))}>
+							<option value="all">Target Gender: All Genders</option>
+							<option value="women">Target Gender: Women</option>
+							<option value="men">Target Gender: Men</option>
+							<option value="kids">Target Gender: Kids</option>
+						</select>
 						<select value={bannerForm.textSide ?? "right"} onChange={(event) => setBannerForm((prev) => ({ ...prev, textSide: event.target.value as "left" | "right" }))}>
 							<option value="right">Text on Right</option>
 							<option value="left">Text on Left</option>

@@ -62,10 +62,11 @@ export default function OpenSection() {
     return () => { alive = false; };
   }, [gender]);
 
-  if (loading && (!section || section.items.length === 0)) return <ProductRowSkeleton />;
-  if (!section || !section.isActive || section.items.length === 0) return null;
+  if (loading && !section) return <ProductRowSkeleton />;
+  if (!section || !section.isActive || !section.items || section.items.length === 0) return null;
 
-  const allCategories = section.items.every((i) => i.type === "category");
+  const currentSection = section;
+  const allCategories = currentSection.items.every((i) => i.type === "category");
 
   return (
     <>
@@ -237,26 +238,26 @@ export default function OpenSection() {
         }
       `}</style>
 
-      <section className="os-section" aria-label={section.title || "Featured Section"}>
+      <section className="os-section" aria-label={currentSection.title || "Featured Section"}>
         <div className="os-inner">
           <div className="os-header">
             <div className="os-title-group">
-              {section.eyebrow && <span className="os-eyebrow">{section.eyebrow}</span>}
-              <h2 className="os-title">{section.title}</h2>
+              {currentSection.eyebrow && <span className="os-eyebrow">{currentSection.eyebrow}</span>}
+              <h2 className="os-title">{currentSection.title}</h2>
             </div>
             {!allCategories && <CarouselArrows targetRef={scrollRef} label="products" />}
           </div>
 
           {allCategories ? (
-            <div className={`os-cat-row${section.items.length === 1 ? " os-single" : ""}`}>
-              {section.items.map((item) => (
+            <div className={`os-cat-row${currentSection.items.length === 1 ? " os-single" : ""}`}>
+              {currentSection.items.map((item) => (
                 <CategoryBannerCard key={item._id} item={item} />
               ))}
             </div>
           ) : (
             <div className="os-track-wrapper">
               <div className="os-track" ref={scrollRef}>
-                {section.items.map((item) =>
+                {currentSection.items.map((item) =>
                   item.type === "product" && item.product ? (
                     <div key={item._id} className="os-slot"><ProductCard product={item.product} /></div>
                   ) : item.type === "category" ? (

@@ -37,7 +37,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
 	const isMutation = requestOptions.method && requestOptions.method !== "GET";
 	const response = await fetch(getApiUrl(path), {
-		cache: (requestOptions as any).cache ?? (isMutation ? "no-store" : "default"),
+		cache: (requestOptions as any).cache ?? (isMutation ? "no-store" : "no-cache"),
 		...requestOptions,
 		headers,
 	});

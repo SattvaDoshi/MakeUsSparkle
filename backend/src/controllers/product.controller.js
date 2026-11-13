@@ -2,6 +2,7 @@ import productService from "../services/product.service.js";
 
 export async function getProducts(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const result = await productService.getProducts(req.query);
 		res.json(result);
 	} catch (error) {
@@ -22,6 +23,7 @@ export async function getTags(req, res) {
 
 export async function getProductById(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const result = await productService.getProductById(req.params.id);
 		res.json(result);
 	} catch (error) {

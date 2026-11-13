@@ -468,7 +468,15 @@ export default function ProductsPage({
       }
     }
     if (activeTag !== 'All') {
-      list = list.filter((p) => p.badge === activeTag || (p as any).tags?.includes(activeTag));
+      const normTag = activeTag.toLowerCase().trim();
+      list = list.filter((p) => {
+        const badge = String(p.badge || '').toLowerCase().trim();
+        const productLabel = String((p as any).productLabel || '').toLowerCase().trim();
+        const tags = Array.isArray((p as any).tags)
+          ? (p as any).tags.map((t: string) => String(t).toLowerCase().trim())
+          : [];
+        return badge === normTag || productLabel === normTag || tags.includes(normTag);
+      });
     }
     return sortProducts(list, sort);  
   }, [dynamicProducts, gender, activeTag, type, subtype, sort]);

@@ -18,6 +18,11 @@ const offerSchema = new mongoose.Schema(
 		usageLimit: { type: Number, default: 0, min: 0 },
 		usedCount: { type: Number, default: 0, min: 0 },
 		image: { type: String, default: "", trim: true },
+		targetType: {
+			type: String,
+			enum: ["all", "category", "product"],
+			default: "all",
+		},
 		applicableCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
 		applicableSubCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }],
 		applicableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],

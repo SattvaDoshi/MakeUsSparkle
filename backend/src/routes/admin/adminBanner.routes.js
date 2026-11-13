@@ -3,6 +3,7 @@ import {
 	createBanner,
 	createMainBanner,
 	deleteBanner,
+	getBanners,
 	getMainBannersAdmin,
 	updateMainBanner,
 	updateBanner,
@@ -14,6 +15,7 @@ const router = Router();
 
 router.use(requireAuth, requireAdmin);
 
+router.get("/", getBanners);
 router.get("/main", getMainBannersAdmin);
 router.post("/main", uploadSingleImage, createMainBanner);
 router.put("/main/:id", uploadSingleImage, updateMainBanner);

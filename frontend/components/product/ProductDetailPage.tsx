@@ -1726,7 +1726,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {!isFromCombo && (
               <>
                 <div className="pdp-divider" />
-                <CompleteTheLookStrip />
+                <CompleteTheLookStrip items={product?.crossProducts} />
               </>
             )}
             <div className="pdp-divider" />

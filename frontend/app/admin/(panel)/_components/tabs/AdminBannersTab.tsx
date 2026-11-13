@@ -87,6 +87,7 @@ export default function AdminBannersTab({
 
 	const [bannerSearch, setBannerSearch] = useState("");
 	const [bannerFilter, setBannerFilter] = useState("all");
+	const [bannerGenderFilter, setBannerGenderFilter] = useState("all");
 
 	// Hero Content & Moving Lines States
 	const [marqueeItems, setMarqueeItems] = useState<string>("");
@@ -140,9 +141,11 @@ export default function AdminBannersTab({
 			const matchesSearch = !q || b.title?.toLowerCase().includes(q) || b.text?.toLowerCase().includes(q);
 			const activeStatus = b.isActive === false ? "inactive" : "active";
 			const matchesActive = bannerFilter === "all" || activeStatus === bannerFilter;
-			return matchesSearch && matchesActive;
+			const bGender = b.gender || "all";
+			const matchesGender = bannerGenderFilter === "all" || bGender === bannerGenderFilter;
+			return matchesSearch && matchesActive && matchesGender;
 		});
-	}, [banners, bannerSearch, bannerFilter]);
+	}, [banners, bannerSearch, bannerFilter, bannerGenderFilter]);
 
 	const resetMainForm = () => {
 		setMainLink("");
@@ -473,15 +476,26 @@ export default function AdminBannersTab({
 						<option value="active">Active</option>
 						<option value="inactive">Inactive</option>
 					</select>
+					<select className="admin-filter" value={bannerGenderFilter} onChange={(e) => setBannerGenderFilter(e.target.value)}>
+						<option value="all">All Genders</option>
+						<option value="women">Women</option>
+						<option value="men">Men</option>
+						<option value="kids">Kids</option>
+					</select>
 				</div>
 				<div className="admin-table-wrap">
 					<table className="admin-table">
-						<thead><tr><th>Title</th><th>Tag</th><th>Active</th><th>Order</th><th>Link</th><th>Actions</th></tr></thead>
+						<thead><tr><th>Title</th><th>Tag</th><th>Gender</th><th>Active</th><th>Order</th><th>Link</th><th>Actions</th></tr></thead>
 						<tbody>
 							{filteredBanners.map((entry) => (
 								<tr key={entry._id}>
 									<td>{entry.title || entry.text || "-"}</td>
 									<td>{entry.tag || "-"}</td>
+									<td>
+										<span style={{ textTransform: "capitalize", fontWeight: 500 }}>
+											{entry.gender || "all"}
+										</span>
+									</td>
 									<td>{entry.isActive === false ? "No" : "Yes"}</td>
 									<td>{entry.sortOrder ?? 0}</td>
 									<td>{entry.link || "-"}</td>
@@ -494,7 +508,7 @@ export default function AdminBannersTab({
 								</tr>
 							))}
 							{filteredBanners.length === 0 && (
-								<tr><td colSpan={6} style={{ textAlign: "center" }}>No banners found.</td></tr>
+								<tr><td colSpan={7} style={{ textAlign: "center" }}>No banners found.</td></tr>
 							)}
 						</tbody>
 					</table>

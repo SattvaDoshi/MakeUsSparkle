@@ -3,6 +3,7 @@ import imageService from "../services/image.service.js";
 
 export async function getHomeContent(req, res) {
   try {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     let homeContent = await HomeContent.findOne({ key: "home-page" }).lean();
     if (!homeContent) {
       try {

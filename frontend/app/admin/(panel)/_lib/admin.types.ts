@@ -230,6 +230,7 @@ export type AdminOffer = {
 	usageLimit: number;
 	usedCount: number;
 	image?: string;
+	targetType?: "all" | "category" | "product";
 	applicableCategories?: Array<{ _id: string; name?: string } | string>;
 	applicableProducts?: Array<{ _id: string; title?: string } | string>;
 };

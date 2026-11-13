@@ -371,21 +371,23 @@ const addItem = useCallback(
 
   // Fetch active offers
   useEffect(() => {
+    let alive = true;
     async function loadPublicOffers() {
       try {
         const url = getApiUrl('/offers/public');
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.offers)) {
+        const res = await fetch(url).catch(() => null);
+        if (res && res.ok && alive) {
+          const data = await res.json().catch(() => null);
+          if (data && data.success && Array.isArray(data.offers)) {
             setOffers(data.offers);
           }
         }
       } catch (err) {
-        console.error('Failed to load public offers in cart context:', err);
+        // Suppress network down/offline noise
       }
     }
     loadPublicOffers();
+    return () => { alive = false; };
   }, []);
 
   const sub = cartSubtotal(state.items);

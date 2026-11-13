@@ -192,6 +192,7 @@ class AdminService {
 			const products = await Product.find()
 				.populate("category", "name title")
 				.populate("subCategory", "name title")
+				.populate("crossProducts", "_id title price mainImage images")
 				.sort({ createdAt: -1 })
 				.skip(skip)
 				.limit(limit);

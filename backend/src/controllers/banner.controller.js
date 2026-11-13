@@ -2,6 +2,7 @@ import bannerService from "../services/banner.service.js";
 
 export async function getBanners(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const result = await bannerService.getBanners(req.query);
 		res.json(result);
 	} catch (error) {
@@ -12,6 +13,7 @@ export async function getBanners(req, res) {
 
 export async function getMainBanner(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const result = await bannerService.getMainBanner();
 		res.json(result);
 	} catch (error) {

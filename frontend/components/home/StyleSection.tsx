@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { fetchCatalogStyles, fetchHomeContent, slugifyCatalog } from "@/lib/catalogApi";
-import { apiRequest } from "@/lib/api";
 
 // Swiper imports
 import { Swiper, SwiperSlide } from "swiper/react";

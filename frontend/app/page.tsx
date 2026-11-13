@@ -14,13 +14,14 @@ import FounderMessage from '@/components/home/FounderMessage';
 import FaqSection from '@/components/home/FaqSection';
 import { getApiUrl } from '@/lib/api';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 /** Hero content, fetched on the server so the hero image URL is in the first HTML and the
- *  browser can start downloading it immediately (before: it waited for JS + an API call). */
+ *  browser can start downloading it immediately. Freshly fetched with no-store to avoid stale image caching. */
 async function getHeroContent() {
   try {
-    const res = await fetch(getApiUrl('/home-content'), { next: { revalidate: 300 }, signal: AbortSignal.timeout(4000) });
+    const res = await fetch(getApiUrl('/home-content'), { cache: 'no-store', signal: AbortSignal.timeout(4000) });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.homeContent?.heroContent ?? null;

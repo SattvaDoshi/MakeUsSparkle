@@ -559,6 +559,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { fetchHomeContent, fetchCatalogCategories, fetchCatalogSubCategories } from "@/lib/catalogApi";
+import { CircleRowSkeleton } from "./Skeletons";
 
 type Category = "women" | "men" | "kids";
 
@@ -672,6 +673,34 @@ const defaultJewellerySubcategories: CategoryItem[] = [
   },
 ];
 
+const defaultMenJewellerySubcategories: CategoryItem[] = [
+  {
+    name: "Chains",
+    slug: "men-chains",
+    image: "/images/FairyCoded.jpg",
+  },
+  {
+    name: "Bracelets",
+    slug: "men-bracelets",
+    image: "/images/hero_new.png",
+  },
+  {
+    name: "Pendants",
+    slug: "men-pendants",
+    image: "/images/hero.png",
+  },
+  {
+    name: "Rings",
+    slug: "men-rings",
+    image: "/images/GlamLook.jpg",
+  },
+  {
+    name: "Earrings",
+    slug: "men-earrings",
+    image: "/images/IslandGirl.jpg",
+  },
+];
+
 const categoryRoute = (_gender: string, slug: string) => `/subcategory/${slug}`;
 
 function SubcategoryCard({
@@ -764,10 +793,13 @@ export default function HeroVideoComponent({ initialHero }: { initialHero?: Reco
   const router = useRouter();
 
 // was: useState<Record<string, HeroItem>>(defaultHeroContent)
-const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(initialHero ? { ...defaultHeroContent, ...initialHero } : null);  const [categories, setCategories] = useState<CategoryItem[]>(defaultJewellerySubcategories);
+  const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(initialHero ? { ...defaultHeroContent, ...initialHero } : null);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [catLoading, setCatLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+    setCatLoading(true);
 
     async function loadData() {
 
@@ -795,19 +827,36 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
 
         if (!isMounted) return;
 
-        // Identify Jewellery Category ID
-        const jewelleryCat = allCategories.find(
-          (c) => c.name?.trim().toLowerCase() === "jewellery"
-        );
+        // Find Jewellery Category matching the active gender if possible
+        const genderCategories = allCategories.filter((c) => {
+          if (!c.genderSlug) return true;
+          return c.genderSlug.toLowerCase() === activeCategory.toLowerCase();
+        });
+
+        const jewelleryCat =
+          genderCategories.find((c) => c.name?.trim().toLowerCase().includes("jewellery")) ||
+          allCategories.find((c) => c.name?.trim().toLowerCase().includes("jewellery"));
         const jewelleryId = jewelleryCat?.id;
 
         // Filter subcategories that belong to "Jewellery"
-        const jewellerySubs = allSubcategories.filter((sub) => {
+        let jewellerySubs = allSubcategories.filter((sub) => {
           if (sub.categoryId) {
             return jewelleryId && sub.categoryId === jewelleryId;
           }
           return false;
         });
+
+        // Filter or prioritize subcategories appropriate for the gender
+        if (activeCategory === "men") {
+          const menSpecific = jewellerySubs.filter((sub) => {
+            const name = sub.name.toLowerCase();
+            const slug = (sub.slug || "").toLowerCase();
+            return name.includes("men") || slug.startsWith("men-") || !["jhumkha", "hand chain", "hand-chain"].includes(name);
+          });
+          if (menSpecific.length > 0) {
+            jewellerySubs = menSpecific;
+          }
+        }
 
         if (jewellerySubs.length > 0) {
           const mapped: CategoryItem[] = jewellerySubs.map((sub) => {
@@ -815,14 +864,23 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
             const image = sub.image || SUBCATEGORY_FALLBACK_IMAGES[slug] || FALLBACK_JEWELLERY_IMAGE;
             return {
               name: sub.name,
-              slug,
+              slug: sub.slug || slug,
               image,
             };
           });
           setCategories(mapped);
+        } else {
+          setCategories(activeCategory === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories);
         }
       } catch (err) {
         console.error("Failed to load jewellery subcategories:", err);
+        if (isMounted) {
+          setCategories(activeCategory === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories);
+        }
+      } finally {
+        if (isMounted) {
+          setCatLoading(false);
+        }
       }
     }
 
@@ -831,7 +889,7 @@ const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeCategory]);
 
 const content = heroContent ? heroContent[activeCategory] || defaultHeroContent.women : null;
 const hasDesktopImage = !!content?.desktopImage;
@@ -1150,15 +1208,19 @@ const heroLink = safeHref(content?.link);
 
       {/* ── CATEGORY STRIP ── */}
       <section className="cat-strip" aria-label="Shop jewellery subcategories">
-        <div className="cat-row">
-          {categories.map((c) => (
-            <SubcategoryCard
-              key={c.slug}
-              item={c}
-              onClick={() => router.push(categoryRoute(activeCategory, c.slug))}
-            />
-          ))}
-        </div>
+        {catLoading && categories.length === 0 ? (
+          <CircleRowSkeleton count={6} />
+        ) : (
+          <div className="cat-row">
+            {categories.map((c) => (
+              <SubcategoryCard
+                key={c.slug}
+                item={c}
+                onClick={() => router.push(categoryRoute(activeCategory, c.slug))}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </>
   );

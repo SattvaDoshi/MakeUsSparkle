@@ -82,6 +82,7 @@ async function getOrCreateOpenSection(gender) {
 
 export async function getNewArrivalsSection(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const gender = req.query.gender;
 		const sectionDoc = await getOrCreateNewArrivals(gender);
 		const section = sectionDoc ? sectionDoc.toObject() : null;
@@ -129,6 +130,7 @@ export async function updateNewArrivalsSection(req, res) {
 
 export async function getOpenSection(req, res) {
 	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 		const gender = req.query.gender;
 		const sectionDoc = await getOrCreateOpenSection(gender);
 		const section = sectionDoc ? sectionDoc.toObject() : null;

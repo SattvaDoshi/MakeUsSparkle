@@ -43,6 +43,8 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 	const [loading, setLoading] = useState(true);
 	const [title, setTitle] = useState("");
 	const [productId, setProductId] = useState("");
+	const [gender, setGender] = useState<"women" | "men" | "kids" | "all">("all");
+	const [filterGender, setFilterGender] = useState<string>("all");
 	const [productSearch, setProductSearch] = useState("");
 	const [file, setFile] = useState<File | null>(null);
 	const [videoUrl, setVideoUrl] = useState("");
@@ -111,7 +113,7 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 	};
 
 	const reset = () => {
-		setTitle(""); setProductId(""); setProductSearch(""); setFile(null); setVideoUrl(""); setProgress(null);
+		setTitle(""); setProductId(""); setGender("all"); setProductSearch(""); setFile(null); setVideoUrl(""); setProgress(null);
 		if (fileInput.current) fileInput.current.value = "";
 	};
 
@@ -135,6 +137,7 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 				body: JSON.stringify({
 					title: title.trim(),
 					product: productId,
+					gender,
 					publicId,
 					videoUrl: publicId ? "" : videoUrl.trim(),
 					duration,
@@ -223,6 +226,16 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 					</div>
 				</div>
 
+				<div className="admin-form-group" style={{ marginBottom: "1rem" }}>
+					<label>Target Audience / Gender</label>
+					<select value={gender} onChange={(e) => setGender(e.target.value as any)} style={{ maxWidth: 300 }}>
+						<option value="all">All Genders</option>
+						<option value="women">Women</option>
+						<option value="men">Men</option>
+						<option value="kids">Kids</option>
+					</select>
+				</div>
+
 				{progress !== null && (
 					<div style={{ margin: "0 0 1rem" }}>
 						<div style={{ height: 8, background: "#eee", borderRadius: 4, overflow: "hidden" }}>
@@ -236,17 +249,30 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 			</form>
 
 			<div className="admin-panel">
-				<h2>Videos on the homepage ({videos.filter((v) => v.isActive).length} live / {videos.length} total)</h2>
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+					<h2 style={{ margin: 0 }}>Videos on the homepage ({videos.filter((v) => v.isActive).length} live / {videos.length} total)</h2>
+					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<label style={{ fontSize: 13, color: "#666" }}>Filter Gender:</label>
+						<select value={filterGender} onChange={(e) => setFilterGender(e.target.value)} className="admin-filter">
+							<option value="all">All</option>
+							<option value="women">Women</option>
+							<option value="men">Men</option>
+							<option value="kids">Kids</option>
+						</select>
+					</div>
+				</div>
 				{loading ? <p>Loading…</p> : videos.length === 0 ? (
 					<p>No videos yet. Add one above and the “Watch &amp; Buy” section appears below New Arrivals.</p>
 				) : (
 					<div className="admin-table-wrap">
 						<table className="admin-table">
 							<thead>
-								<tr><th>Preview</th><th>Product</th><th>Title</th><th>Length</th><th>Live</th><th>Order</th><th /></tr>
+								<tr><th>Preview</th><th>Product</th><th>Title</th><th>Gender</th><th>Length</th><th>Live</th><th>Order</th><th /></tr>
 							</thead>
 							<tbody>
-								{videos.map((v, index) => (
+								{videos
+									.filter((v) => filterGender === "all" || (v.gender || "all") === filterGender)
+									.map((v, index) => (
 									<tr key={v._id}>
 										<td>
 											{v.poster ? (
@@ -256,6 +282,18 @@ export default function AdminWatchBuyTab({ products, onError, onNotice }: Props)
 										</td>
 										<td>{productTitle(v)}</td>
 										<td>{v.title || "—"}</td>
+										<td>
+											<select
+												value={v.gender || "all"}
+												onChange={(e) => void patch(v._id, { gender: e.target.value }, "Gender updated")}
+												style={{ fontSize: 12, padding: "4px 8px" }}
+											>
+												<option value="all">All</option>
+												<option value="women">Women</option>
+												<option value="men">Men</option>
+												<option value="kids">Kids</option>
+											</select>
+										</td>
 										<td>{v.duration ? `${Math.round(v.duration)}s` : "—"}</td>
 										<td>
 											<input type="checkbox" checked={v.isActive} onChange={(e) => void patch(v._id, { isActive: e.target.checked }, e.target.checked ? "Video is live" : "Video hidden")} aria-label="Show on homepage" />

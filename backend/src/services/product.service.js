@@ -68,10 +68,33 @@ const offerMatchesProduct = (offer, prod) => {
 	const catIdStr = getIdStr(prod.category);
 	const subCatIdStr = getIdStr(prod.subCategory);
 
+	const targetType = offer.targetType || "";
 	const hasProds = Array.isArray(offer.applicableProducts) && offer.applicableProducts.length > 0;
 	const hasSubCats = Array.isArray(offer.applicableSubCategories) && offer.applicableSubCategories.length > 0;
 	const hasCats = Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0;
 
+	// If explicitly product targeted or has products with no category
+	if (targetType === "product" || (hasProds && !hasCats && !hasSubCats)) {
+		return hasProds && offer.applicableProducts.some((p) => getIdStr(p) === prodIdStr);
+	}
+
+	// If category targeted
+	if (targetType === "category") {
+		if (hasCats && catIdStr && offer.applicableCategories.some((c) => getIdStr(c) === catIdStr)) {
+			return true;
+		}
+		if (hasSubCats && subCatIdStr && offer.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)) {
+			return true;
+		}
+		return false;
+	}
+
+	// If all categories / sitewide
+	if (targetType === "all") {
+		return true;
+	}
+
+	// Fallback legacy matching
 	if (hasProds && offer.applicableProducts.some((p) => getIdStr(p) === prodIdStr)) {
 		return true;
 	}
@@ -263,6 +286,10 @@ class ProductService {
 
 				const matchesKeywordOffer = (o) => {
 					if (!o?.title) return false;
+					// If the offer has specific product targeting, do NOT allow broad keyword matching to bleed to unrelated products!
+					if (o.targetType === "product" || (Array.isArray(o.applicableProducts) && o.applicableProducts.length > 0)) {
+						return false;
+					}
 					const titleNorm = normalizeKey(o.title);
 					const words = titleNorm.split(/\s+/).filter((w) => w.length > 2 && !["deal", "offer", "combo", "free", "sale", "save"].includes(w));
 					if (words.length > 0 && words.some((w) => prodTextNorm.includes(w))) {
@@ -276,50 +303,32 @@ class ProductService {
 				};
 
 				// 1. Determine Offer Tag / Badge (if not already set)
+				// Coupons must NEVER appear on product cards as tags/badges. Only Store Offers.
 				if (!prod.offerTag) {
 					const matchedOfferProd = validOffers.find((o) =>
 						Array.isArray(o.applicableProducts) && o.applicableProducts.some((p) => getIdStr(p) === prodIdStr)
 					);
-					const matchedCouponProd = validCoupons.find((c) =>
-						Array.isArray(c.applicableProducts) && c.applicableProducts.some((p) => getIdStr(p) === prodIdStr)
-					);
 					const matchedOfferSubCat = subCatIdStr ? validOffers.find((o) =>
 						Array.isArray(o.applicableSubCategories) && o.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)
-					) : null;
-					const matchedCouponSubCat = subCatIdStr ? validCoupons.find((c) =>
-						Array.isArray(c.applicableSubCategories) && c.applicableSubCategories.some((sc) => getIdStr(sc) === subCatIdStr)
 					) : null;
 					const matchedOfferCat = catIdStr ? validOffers.find((o) =>
 						Array.isArray(o.applicableCategories) && o.applicableCategories.some((c) => getIdStr(c) === catIdStr)
 					) : null;
-					const matchedCouponCat = catIdStr ? validCoupons.find((c) =>
-						Array.isArray(c.applicableCategories) && c.applicableCategories.some((c) => getIdStr(c) === catIdStr)
-					) : null;
 					const matchedKeywordOffer = validOffers.find(matchesKeywordOffer);
 					const sitewideOffer = validOffers.find(
-						(o) => (!Array.isArray(o.applicableProducts) || o.applicableProducts.length === 0) &&
+						(o) => (o.targetType === "all") || (
+							(!Array.isArray(o.applicableProducts) || o.applicableProducts.length === 0) &&
 							(!Array.isArray(o.applicableSubCategories) || o.applicableSubCategories.length === 0) &&
 							(!Array.isArray(o.applicableCategories) || o.applicableCategories.length === 0)
-					);
-					const sitewideCoupon = validCoupons.find(
-						(c) => !c.isAffiliateCoupon && !c.issuedForUserId && !c.issuedForEmail &&
-							(!Array.isArray(c.applicableProducts) || c.applicableProducts.length === 0) &&
-							(!Array.isArray(c.applicableSubCategories) || c.applicableSubCategories.length === 0) &&
-							(!Array.isArray(c.applicableCategories) || c.applicableCategories.length === 0) &&
-							(!Array.isArray(c.applicableProductTypes) || c.applicableProductTypes.length === 0)
+						)
 					);
 
 					const tag =
 						matchedOfferProd?.title ||
-						matchedCouponProd?.name || matchedCouponProd?.code ||
 						matchedOfferSubCat?.title ||
-						matchedCouponSubCat?.name || matchedCouponSubCat?.code ||
 						matchedOfferCat?.title ||
-						matchedCouponCat?.name || matchedCouponCat?.code ||
 						matchedKeywordOffer?.title ||
-						sitewideOffer?.title ||
-						sitewideCoupon?.name || sitewideCoupon?.code;
-						sitewideCoupon?.name || sitewideCoupon?.code;
+						sitewideOffer?.title;
 
 					if (tag) {
 						prod.offerTag = tag;
@@ -327,6 +336,7 @@ class ProductService {
 				}
 
 				// 2. Compute discounted price, original price, and % off
+				// Slashing price on catalog cards is driven by manual discount or Store Offers only (Coupons are checkout-only)
 				const basePrice = Number(prod.price ?? 0);
 				if (basePrice > 0) {
 					const manualDiscount = prod.discountedPrice != null && Number(prod.discountedPrice) > 0 && Number(prod.discountedPrice) < basePrice
@@ -363,30 +373,6 @@ class ProductService {
 									bestDiscountPercentage = discPct;
 									bestDiscountTag = `${discPct}% off`;
 									discountOfferTitle = offer.title || `${discPct}% off`;
-								}
-							}
-						}
-
-						for (const coupon of validCoupons) {
-							if (couponMatchesProduct(coupon, prod)) {
-								let discAmount = 0;
-								let discPct = 0;
-								if (coupon.discountType === "percentage" && coupon.discountValue > 0) {
-									discPct = coupon.discountValue;
-									discAmount = Math.round(basePrice * (discPct / 100));
-									if (coupon.maxDiscount && coupon.maxDiscount > 0) {
-										discAmount = Math.min(discAmount, coupon.maxDiscount);
-										discPct = Math.round((discAmount / basePrice) * 100);
-									}
-								} else if (coupon.discountType === "fixed" && coupon.discountValue > 0) {
-									discAmount = Math.min(basePrice, coupon.discountValue);
-									discPct = Math.round((discAmount / basePrice) * 100);
-								}
-								if (discAmount > bestDiscountAmount) {
-									bestDiscountAmount = discAmount;
-									bestDiscountPercentage = discPct;
-									bestDiscountTag = `${discPct}% off`;
-									discountOfferTitle = coupon.name || coupon.code || `${discPct}% off`;
 								}
 							}
 						}
@@ -472,7 +458,9 @@ class ProductService {
 	async getProductById(productId) {
 		try {
 			if (!mongoose.isValidObjectId(productId)) throw new Error("Product not found");
-			const product = await Product.findById(productId).lean();
+			const product = await Product.findById(productId)
+				.populate("crossProducts", "_id title price discountedPrice mainImage images")
+				.lean();
 			if (!product) {
 				throw new Error("Product not found");
 			}

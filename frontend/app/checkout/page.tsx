@@ -40,7 +40,7 @@ interface PincodeResponse {
   [key: string]: any;
 }
 export default function CheckoutPage() {
-  const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers, setRewardPointsRedeemed, hydrated, removeDiscount } = useCart();
+  const { state, savings, shipping, total, itemCount, toggleGift, clearCart, autoDiscountAmount, appliedOffers, setRewardPointsRedeemed, hydrated, removeDiscount, syncCartPrices } = useCart();
   const { items, isGift, discountCode, discountAmount, selectedGiftId, rewardPointsRedeemed } = state;
 
   const [selectedMethod, setSelectedMethod] = useState('ONLINE');
@@ -277,7 +277,10 @@ export default function CheckoutPage() {
         affiliateProductId: affiliateData?.productId || undefined,
         items: items.map(item => {
           const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(item.id);
-          const mappedProduct = (!item.id.startsWith('custom-') && isValidObjectId) ? item.id : undefined;
+          const validObjectId = (item.sourceId && /^[0-9a-fA-F]{24}$/.test(item.sourceId))
+            ? item.sourceId
+            : (isValidObjectId ? item.id : undefined);
+          const mappedProduct = (!item.id.startsWith('custom-')) ? validObjectId : undefined;
           const selectedCharms = item.selectedCharms?.map((c: { id?: string; _id?: string } | string) => {
             if (typeof c === 'string') return c;
             return c.id || c._id || '';
@@ -380,10 +383,23 @@ export default function CheckoutPage() {
       const msg = err instanceof Error && err.message && err.message !== 'Request failed' ? err.message : 'Failed to place order. Please try again.';
       // A coupon the server can't honour would keep blocking checkout, so drop it and let them retry.
       if (discountCode && /changed/i.test(msg)) removeDiscount();
+
+      // If price or total changed, sync cart with catalog and update total
+      if (/price.*changed/i.test(msg) || /total.*changed/i.test(msg) || /mismatch/i.test(msg) || /no longer available/i.test(msg)) {
+        try {
+          const syncResult = await syncCartPrices();
+          if (syncResult.updated) {
+            alert(`The price of ${syncResult.updatedItems.join(', ')} has been updated to match current store pricing. Your order total has been refreshed. Please click Pay again to proceed.`);
+            setLoading(false);
+            return;
+          }
+        } catch {}
+      }
+
       alert(msg);
       setLoading(false);
     }
-  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, selectedGiftId, discountCode, removeDiscount, state.giftMessage, clearCart, user, selectedAddressIndex, billingSameAsShipping, selectedBillingAddressIndex]);
+  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, selectedGiftId, discountCode, removeDiscount, state.giftMessage, clearCart, user, selectedAddressIndex, billingSameAsShipping, selectedBillingAddressIndex, syncCartPrices]);
 
   if (orderPlaced) {
     return (

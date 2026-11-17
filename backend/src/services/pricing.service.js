@@ -266,7 +266,8 @@ export async function priceOrder(userId, body = {}) {
 		if (price + 0.5 < floor) {
 			throw new PricingError(
 				`The price of "${String(raw.name || "an item").slice(0, 60)}" has changed. Please refresh your cart and try again.`,
-				"PRICE_CHANGED"
+				"PRICE_CHANGED",
+				{ productId: raw.sourceId || raw.id, oldPrice: price, currentPrice: floor }
 			);
 		}
 		if (pm === "prepaid_only") strictest = "prepaid_only";

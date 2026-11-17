@@ -9,7 +9,7 @@ import {
   ReactNode,
   useState,
 } from 'react';
-import { applyCouponToCart } from '@/lib/catalogApi';
+import { applyCouponToCart, fetchProductById } from '@/lib/catalogApi';
 import { getApiUrl } from '@/lib/api';
 import { usePathname } from 'next/navigation';
 
@@ -117,6 +117,7 @@ type Action =
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_OFFER_OPTOUT'; payload: string }
   | { type: 'SET_REWARD_POINTS_REDEEMED'; payload: number }
+  | { type: 'SYNC_PRICES'; payload: Array<{ id: string; price: number; originalPrice?: number | null }> }
   | { type: 'HYDRATE';      payload: CartState };
 
 // ─── Selectors (pure helpers) ─────────────────────────────────────────────────
@@ -256,6 +257,22 @@ case 'ADD_ITEM': {
     case 'CLEAR_CART':
       return { ...INITIAL };
 
+    case 'SYNC_PRICES': {
+      const priceMap = new Map(action.payload.map(p => [p.id, p]));
+      const items = state.items.map(item => {
+        const update = priceMap.get(item.id) || (item.sourceId ? priceMap.get(item.sourceId) : undefined);
+        if (update) {
+          return {
+            ...item,
+            price: update.price,
+            originalPrice: update.originalPrice !== undefined ? update.originalPrice : item.originalPrice,
+          };
+        }
+        return item;
+      });
+      return { ...state, items };
+    }
+
     case 'HYDRATE': {
       const hydState = { ...action.payload, rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0, isDrawerOpen: false };
       if (hydState.discountCode === 'STAYWITHUS') {
@@ -285,6 +302,7 @@ interface CartContextValue {
   applyCouponCode: (code: string) => Promise<{ success: boolean; message?: string }>;
   removeDiscount: () => void;
   clearCart:      () => void;
+  syncCartPrices: () => Promise<{ updated: boolean; updatedItems: string[] }>;
   // derived
   subtotal:   number;
   savings:    number;
@@ -359,13 +377,68 @@ const addItem = useCallback(
   const removeDiscount = useCallback(() => dispatch({ type: 'REMOVE_DISCOUNT' }), []);
   const clearCart      = useCallback(() => dispatch({ type: 'CLEAR_CART' }), []);
 
-  useEffect(() => {
-    if (state.discountCode === 'STAYWITHUS') {
-      if (pathname && !pathname.startsWith('/cart') && !pathname.startsWith('/checkout')) {
-        removeDiscount();
+  const syncCartPrices = useCallback(async (): Promise<{ updated: boolean; updatedItems: string[] }> => {
+    if (!state.items || state.items.length === 0) return { updated: false, updatedItems: [] };
+    const itemsToCheck = state.items.filter(
+      (item) => item.sourceId && /^[0-9a-fA-F]{24}$/.test(item.sourceId)
+    );
+    if (!itemsToCheck.length) return { updated: false, updatedItems: [] };
+
+    try {
+      const updates: Array<{ id: string; price: number; originalPrice?: number | null; name: string }> = [];
+
+      await Promise.all(
+        itemsToCheck.map(async (item) => {
+          try {
+            const product = await fetchProductById(item.sourceId!);
+            if (!product) return;
+
+            let currentPrice = product.discountedPrice || product.price;
+            if (Array.isArray(product.variants) && product.variants.length > 0) {
+              const v = product.variants.find(
+                (v) =>
+                  (!item.color || v.color?.toLowerCase() === item.color.toLowerCase()) &&
+                  (!item.size || v.size?.toLowerCase() === item.size.toLowerCase())
+              );
+              if (v) {
+                currentPrice = v.salePrice || v.price || currentPrice;
+              }
+            }
+
+            const giftBoxPrice = item.giftBox ? Number(item.giftBoxDetails?.price ?? 50) : 0;
+            const finalExpectedPrice = currentPrice + giftBoxPrice;
+
+            if (Math.abs(item.price - finalExpectedPrice) > 0.01) {
+              updates.push({
+                id: item.id,
+                price: finalExpectedPrice,
+                originalPrice: product.originalPrice ? product.originalPrice + giftBoxPrice : null,
+                name: item.name || product.name || 'item',
+              });
+            }
+          } catch (e) {
+            console.warn('Failed to verify price for item:', item.name, e);
+          }
+        })
+      );
+
+      if (updates.length > 0) {
+        dispatch({ type: 'SYNC_PRICES', payload: updates });
+        return { updated: true, updatedItems: updates.map((u) => u.name) };
       }
+    } catch (e) {
+      console.warn('syncCartPrices error:', e);
     }
-  }, [pathname, state.discountCode, removeDiscount]);
+    return { updated: false, updatedItems: [] };
+  }, [state.items]);
+
+  // Automatically sync cart prices on initial load once hydrated
+  useEffect(() => {
+    if (hydrated && state.items.length > 0) {
+      syncCartPrices();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   const [offers, setOffers] = useState<any[]>([]);
 
@@ -590,6 +663,7 @@ const addItem = useCallback(
     toggleGift, setGiftId,    setGiftMessage,
     applyDiscount, removeDiscount,
     clearCart,
+    syncCartPrices,
     applyCouponCode,
     toggleOfferOptOut: (id: string) => dispatch({ type: 'TOGGLE_OFFER_OPTOUT', payload: id }),
     setRewardPointsRedeemed: (points: number) => dispatch({ type: 'SET_REWARD_POINTS_REDEEMED', payload: points }),

@@ -14,6 +14,7 @@ import CharmItem from "../models/charmItem.model.js";
 import Offer from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import couponService from "./coupon.service.js";
+import productService from "./product.service.js";
 import { resolveProductId } from "./orderItemSelection.service.js";
 
 const HEX24 = /^[0-9a-fA-F]{24}$/;
@@ -106,6 +107,7 @@ async function lineFloor(item) {
 		if (combo) return { floor: comboFloor(combo), kind: "combo", paymentMode: "cod_allowed" };
 		const product = await Product.findById(id).lean();
 		if (product) {
+			await productService.attachOfferTags(product);
 			return { floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed" };
 		}
 		const charm = await CharmItem.findById(id).select("price").lean();
@@ -118,6 +120,7 @@ async function lineFloor(item) {
 		if (resolvedId && !ids.includes(resolvedId)) {
 			const product = await Product.findById(resolvedId).lean();
 			if (product) {
+				await productService.attachOfferTags(product);
 				return { floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed" };
 			}
 		}

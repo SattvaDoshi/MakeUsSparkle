@@ -30,11 +30,33 @@ async function getHeroContent() {
   }
 }
 
+/** Categories and subcategories, fetched on server with no-store so the latest added items
+ *  and real current image URLs are in the initial HTML with 0 delay and no stale flash. */
+async function getInitialTaxonomy() {
+  try {
+    const [catsRes, subsRes] = await Promise.all([
+      fetch(getApiUrl('/categories'), { cache: 'no-store', signal: AbortSignal.timeout(4000) }),
+      fetch(getApiUrl('/subcategories'), { cache: 'no-store', signal: AbortSignal.timeout(4000) }),
+    ]);
+    const catsData = catsRes.ok ? await catsRes.json() : null;
+    const subsData = subsRes.ok ? await subsRes.json() : null;
+    return {
+      categories: Array.isArray(catsData?.categories) ? catsData.categories : [],
+      subcategories: Array.isArray(subsData?.subcategories) ? subsData.subcategories : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
-  const initialHero = await getHeroContent();
+  const [initialHero, initialTaxonomy] = await Promise.all([
+    getHeroContent(),
+    getInitialTaxonomy(),
+  ]);
   return (
     <main className="home-main">
-      <HeroVideo initialHero={initialHero} />
+      <HeroVideo initialHero={initialHero} initialTaxonomy={initialTaxonomy} />
       <OpenSection />
       <PromoSection/>
       <SingleBanner/>

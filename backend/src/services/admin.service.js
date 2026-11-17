@@ -213,7 +213,7 @@ class AdminService {
 		try {
 			const skip = (page - 1) * limit;
 			const orders = await Order.find()
-				.populate("user", "name email")
+				.populate("user", "name email phone")
 				.populate("items.product", "name images")
 				.populate("items.selectedCharms")
 				.populate("items.selectionGroups.items.item")
@@ -229,6 +229,54 @@ class AdminService {
 			};
 		} catch (error) {
 			console.error("Error fetching admin orders:", error);
+			throw error;
+		}
+	}
+
+	async getUserOrderHistory({ userId, email, phone }) {
+		try {
+			const conditions = [];
+			if (userId && /^[0-9a-fA-F]{24}$/.test(String(userId))) {
+				conditions.push({ user: userId });
+			}
+			if (email && typeof email === "string" && email.trim()) {
+				const cleanEmail = email.trim().toLowerCase();
+				conditions.push({ "shippingAddress.email": cleanEmail });
+				conditions.push({ "address.email": cleanEmail });
+			}
+			if (phone && typeof phone === "string" && phone.trim()) {
+				const cleanPhone = phone.replace(/\D/g, "");
+				if (cleanPhone.length >= 10) {
+					conditions.push({ "shippingAddress.phone": new RegExp(cleanPhone.slice(-10) + "$") });
+					conditions.push({ "address.phone": new RegExp(cleanPhone.slice(-10) + "$") });
+				}
+			}
+
+			if (conditions.length === 0) {
+				return { success: true, orders: [], totalOrders: 0, totalSpent: 0 };
+			}
+
+			const orders = await Order.find({ $or: conditions })
+				.populate("user", "name email phone")
+				.populate("items.product", "name images title")
+				.populate("items.selectedCharms")
+				.populate("items.selectionGroups.items.item")
+				.sort({ createdAt: -1 })
+				.lean();
+
+			const totalOrders = orders.length;
+			const totalSpent = orders
+				.filter((o) => o.status !== "cancelled")
+				.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+			return {
+				success: true,
+				orders,
+				totalOrders,
+				totalSpent,
+			};
+		} catch (error) {
+			console.error("Error fetching user order history:", error);
 			throw error;
 		}
 	}

@@ -110,6 +110,19 @@ export async function getOrders(req, res) {
 	}
 }
 
+export async function getUserOrderHistory(req, res) {
+	try {
+		const userId = req.params.userId || req.query.userId;
+		const email = req.query.email;
+		const phone = req.query.phone;
+		const result = await adminService.getUserOrderHistory({ userId, email, phone });
+		res.json(result);
+	} catch (error) {
+		console.error("Get user order history error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
 export async function getPayments(req, res) {
 	try {
 		const page = parseInt(req.query.page) || 1;

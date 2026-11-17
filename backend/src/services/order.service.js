@@ -4,8 +4,10 @@ import Review from "../models/review.model.js";
 import emailService from "./email.service.js";
 import { normalizeOrderItem, resolveProductId, isSelectableCategory } from "./orderItemSelection.service.js";
 import Offer from "../models/offer.model.js";
+import Coupon from "../models/coupon.model.js";
 import inventoryService from "./inventory.service.js";
 import affiliateService from "./affiliate.service.js";
+import { priceOrder } from "./pricing.service.js";
 
 class OrderService {
 	async resolveProductId(item = {}) {

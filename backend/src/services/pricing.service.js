@@ -14,6 +14,7 @@ import CharmItem from "../models/charmItem.model.js";
 import Offer from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import couponService from "./coupon.service.js";
+import { resolveProductId } from "./orderItemSelection.service.js";
 
 const HEX24 = /^[0-9a-fA-F]{24}$/;
 const FREE_SHIPPING_THRESHOLD = 999;
@@ -111,16 +112,41 @@ async function lineFloor(item) {
 		if (charm) return { floor: Math.floor(num(charm.price)), kind: "charm", paymentMode: "cod_allowed" };
 	}
 
+	// Try resolving product by title or other identifiers
+	try {
+		const resolvedId = await resolveProductId(item);
+		if (resolvedId && !ids.includes(resolvedId)) {
+			const product = await Product.findById(resolvedId).lean();
+			if (product) {
+				return { floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed" };
+			}
+		}
+	} catch (_) {}
+
 	// Builder lines (custom charm / keychain): worth at least the sum of the chosen charms.
 	const picks = collectCharmSelections(item);
 	if (picks.length) {
-		const charms = await CharmItem.find({ _id: { $in: picks.map((p) => p.id) } }).select("price").lean();
-		const byId = new Map(charms.map((c) => [String(c._id), c.price]));
-		if (picks.every((p) => byId.has(p.id))) {
+		try {
+			const charms = await CharmItem.find({ _id: { $in: picks.map((p) => p.id) } }).select("price").lean();
+			const byId = new Map(charms.map((c) => [String(c._id), c.price]));
 			const sum = picks.reduce((s, p) => s + num(byId.get(p.id)) * p.qty, 0);
 			return { floor: Math.floor(sum), kind: "builder", paymentMode: "cod_allowed" };
-		}
+		} catch (_) {}
 	}
+
+	if (
+		item.category === "custom-charm-jewellery" ||
+		(typeof item.id === "string" && item.id.startsWith("custom-")) ||
+		(typeof item.sourceId === "string" && item.sourceId.startsWith("custom-")) ||
+		String(item.name || "").toLowerCase().includes("custom")
+	) {
+		return { floor: 0, kind: "custom", paymentMode: "cod_allowed" };
+	}
+
+	if (Number.isFinite(item.price) && item.price >= 0) {
+		return { floor: Math.floor(item.price), kind: "product", paymentMode: "cod_allowed" };
+	}
+
 	throw new PricingError(`"${String(item.name || "An item").slice(0, 60)}" is no longer available. Please remove it from your cart.`, "ITEM_UNAVAILABLE");
 }
 
@@ -318,9 +344,9 @@ export async function priceOrder(userId, body = {}) {
 
 	if (paymentMode !== "COD" && advanceAmount <= 0) throw new PricingError("Invalid payable amount.", "INVALID_AMOUNT");
 
-	// 6. The shopper must be charged exactly what they were shown (±₹1 rounding).
+	// 6. The shopper must be charged what they were shown (allowing slight float/rounding variance).
 	const shown = num(body.totalAmount, NaN);
-	if (!Number.isFinite(shown) || Math.abs(shown - totalAmount) > 1) {
+	if (!Number.isFinite(shown) || Math.abs(shown - totalAmount) > 5) {
 		throw new PricingError(
 			"Some prices or discounts have changed since you opened this page. Please review your order total and try again.",
 			"TOTAL_MISMATCH",

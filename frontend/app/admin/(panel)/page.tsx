@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import { apiRequest } from "@/lib/api";
+import { clearCatalogCache } from "@/lib/catalogApi";
 import { useAuth } from "@/lib/authContext";
 import AdminProductModal from "./AdminProductModal";
 import type { SalesAnalyticsItem, ProductAnalyticsItem, OrderAnalyticsItem } from "./_lib/admin.types";
@@ -1085,6 +1086,7 @@ export default function AdminDashboardPage() {
 	const handleCreateCategory = async (formData: FormData) => {
 		await runAction(async () => {
 			await apiRequest("/admin/categories", { method: "POST", body: formData });
+			clearCatalogCache();
 			await loadCategories();
 		}, "Category created");
 	};
@@ -1092,6 +1094,7 @@ export default function AdminDashboardPage() {
 	const handleEditCategory = async (id: string, formData: FormData) => {
 		await runAction(async () => {
 			await apiRequest(`/admin/categories/${id}`, { method: "PUT", body: formData });
+			clearCatalogCache();
 			await loadCategories();
 		}, "Category updated");
 	};
@@ -1099,6 +1102,7 @@ export default function AdminDashboardPage() {
 	const handleDeleteCategory = async (id: string) => {
 		await runAction(async () => {
 			await apiRequest(`/admin/categories/${id}`, { method: "DELETE" });
+			clearCatalogCache();
 			await loadCategories();
 		}, "Category deleted");
 	};
@@ -1107,6 +1111,7 @@ export default function AdminDashboardPage() {
 	const handleCreateSubCategory = async (formData: FormData) => {
 		await runAction(async () => {
 			await apiRequest("/admin/subcategories", { method: "POST", body: formData });
+			clearCatalogCache();
 			await loadSubCategories();
 		}, "Subcategory created");
 	};
@@ -1114,6 +1119,7 @@ export default function AdminDashboardPage() {
 	const handleEditSubCategory = async (id: string, formData: FormData) => {
 		await runAction(async () => {
 			await apiRequest(`/admin/subcategories/${id}`, { method: "PUT", body: formData });
+			clearCatalogCache();
 			await loadSubCategories();
 		}, "Subcategory updated");
 	};
@@ -1121,6 +1127,7 @@ export default function AdminDashboardPage() {
 	const handleDeleteSubCategory = async (id: string) => {
 		await runAction(async () => {
 			await apiRequest(`/admin/subcategories/${id}`, { method: "DELETE" });
+			clearCatalogCache();
 			await loadSubCategories();
 		}, "Subcategory deleted");
 	};

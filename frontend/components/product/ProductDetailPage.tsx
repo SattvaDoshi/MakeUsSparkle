@@ -799,8 +799,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     }, stock)
     : stock;
   const maxSelectable = Math.max(1, Math.min(product?.maxQuantity || Infinity, currentStock || 0));
-  const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map((v) => v.size));
-  const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
+  const sizeOptions = sizes.length > 0 ? sizes : [];
   const totalWithGiftBox = computedPrice + (giftBoxAdded ? (product?.giftBox?.price ? Number(product.giftBox.price) : 50) : 0);
 
   const wished = product ? isWished(product.id) : false;

@@ -384,10 +384,7 @@ function normalizeProduct(
   }));
 
   const colors = colorsFromBackend.length > 0 ? colorsFromBackend : colorsFromVariants;
-  const sizes = uniqueStrings([
-    ...(Array.isArray(item.sizes) ? item.sizes : []),
-    ...variants.map((variant) => variant.size),
-  ]);
+  const sizes = Array.isArray(item.sizes) ? uniqueStrings(item.sizes) : [];
 
   const imagePool = uniqueStrings([
     ...(Array.isArray(item.images) ? item.images : []),
@@ -502,7 +499,7 @@ interface CacheEntry<T> {
 
 const catalogCache = new Map<string, CacheEntry<any>>();
 const inFlightRequests = new Map<string, Promise<any>>();
-const TAXONOMY_CACHE_TTL = 30 * 1000; // 30 seconds for categories/styles/genders
+const TAXONOMY_CACHE_TTL = 3 * 1000; // 3 seconds for categories/styles/genders (keeps UI fresh)
 const PRODUCT_CACHE_TTL = 5 * 1000;   // 5 seconds for products (deduplicates simultaneous calls)
 
 export function clearCatalogCache(prefix?: string) {
@@ -619,8 +616,13 @@ export async function fetchCatalogProducts(filters: { subCategorySlug?: string }
     const matchedSubCategory = subCategories.find(
       (subCategory) => subCategory.slug === targetSlug || toSlug(subCategory.name) === targetSlug,
     );
+    const matchedCategory = categories.find(
+      (cat) => cat.slug === targetSlug || toSlug(cat.name) === targetSlug,
+    );
     if (matchedSubCategory?.id) {
       params.set("subCategory", matchedSubCategory.id);
+    } else if (matchedCategory?.id) {
+      params.set("category", matchedCategory.id);
     }
   }
 

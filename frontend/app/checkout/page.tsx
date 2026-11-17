@@ -343,6 +343,8 @@ export default function CheckoutPage() {
             sourceId: item.sourceId,
             name: item.name,
             category: item.category,
+            categoryId: item.categoryId,
+            subCategoryId: item.subCategoryId,
             quantity: item.qty,
             price: item.price,
             color: item.color,

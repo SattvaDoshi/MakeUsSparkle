@@ -502,8 +502,9 @@ const addItem = useCallback(
   };
 
   // Build the pool of item instances
-  let pool: Array<{ id: string; sourceId?: string; category?: string; categoryId?: string; subCategoryId?: string; price: number }> = [];
+  let pool: Array<{ id: string; sourceId?: string; category?: string; categoryId?: string; subCategoryId?: string; price: number; isAlreadyDiscounted: boolean }> = [];
   state.items.forEach((item) => {
+    const isAlreadyDiscounted = Boolean(item.originalPrice && item.originalPrice > item.price);
     for (let q = 0; q < item.qty; q++) {
       pool.push({
         id: item.id,
@@ -512,6 +513,7 @@ const addItem = useCallback(
         categoryId: item.categoryId,
         subCategoryId: item.subCategoryId,
         price: item.price,
+        isAlreadyDiscounted,
       });
     }
   });
@@ -572,13 +574,19 @@ const addItem = useCallback(
     } else if (offer.offerType === 'percentage') {
       const val = offer.discountValue || 0;
       matchingIndices.forEach(idx => {
-        offerDiscount += pool[idx].price * (val / 100);
-        usedIndices.add(idx);
+        // Avoid double-discounting if the item was already discounted directly on its line price
+        if (!pool[idx].isAlreadyDiscounted) {
+          offerDiscount += pool[idx].price * (val / 100);
+          usedIndices.add(idx);
+        }
       });
     } else if (offer.offerType === 'fixed') {
       const val = offer.discountValue || 0;
-      offerDiscount = val;
-      matchingIndices.forEach(idx => usedIndices.add(idx));
+      const unDiscounted = matchingIndices.filter(idx => !pool[idx].isAlreadyDiscounted);
+      if (unDiscounted.length > 0) {
+        offerDiscount = val;
+        unDiscounted.forEach(idx => usedIndices.add(idx));
+      }
     }
 
     if (offerDiscount > 0) {

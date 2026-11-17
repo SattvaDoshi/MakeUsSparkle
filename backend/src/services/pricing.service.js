@@ -107,8 +107,17 @@ async function lineFloor(item) {
 		if (combo) return { floor: comboFloor(combo), kind: "combo", paymentMode: "cod_allowed" };
 		const product = await Product.findById(id).lean();
 		if (product) {
+			const originalBasePrice = Number(product.price ?? 0);
 			await productService.attachOfferTags(product);
-			return { floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed" };
+			const isAlreadyDiscounted = (product.originalPrice && product.originalPrice > product.price) || (product.discountedPrice && product.discountedPrice < originalBasePrice);
+			return {
+				floor: await productFloor(product, item),
+				kind: "product",
+				paymentMode: product.paymentMode || "cod_allowed",
+				categoryId: product.category ? String(product.category) : undefined,
+				subCategoryId: product.subCategory ? String(product.subCategory) : undefined,
+				isAlreadyDiscounted: Boolean(isAlreadyDiscounted),
+			};
 		}
 		const charm = await CharmItem.findById(id).select("price").lean();
 		if (charm) return { floor: Math.floor(num(charm.price)), kind: "charm", paymentMode: "cod_allowed" };
@@ -120,8 +129,17 @@ async function lineFloor(item) {
 		if (resolvedId && !ids.includes(resolvedId)) {
 			const product = await Product.findById(resolvedId).lean();
 			if (product) {
+				const originalBasePrice = Number(product.price ?? 0);
 				await productService.attachOfferTags(product);
-				return { floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed" };
+				const isAlreadyDiscounted = (product.originalPrice && product.originalPrice > product.price) || (product.discountedPrice && product.discountedPrice < originalBasePrice);
+				return {
+					floor: await productFloor(product, item),
+					kind: "product",
+					paymentMode: product.paymentMode || "cod_allowed",
+					categoryId: product.category ? String(product.category) : undefined,
+					subCategoryId: product.subCategory ? String(product.subCategory) : undefined,
+					isAlreadyDiscounted: Boolean(isAlreadyDiscounted),
+				};
 			}
 		}
 	} catch (_) {}
@@ -178,7 +196,18 @@ async function computeOffers(lines, optedInIds) {
 	});
 
 	let pool = [];
-	for (const l of lines) for (let q = 0; q < l.qty; q++) pool.push({ id: l.id, sourceId: l.sourceId, categoryId: l.categoryId, subCategoryId: l.subCategoryId, price: l.price });
+	for (const l of lines) {
+		for (let q = 0; q < l.qty; q++) {
+			pool.push({
+				id: l.id,
+				sourceId: l.sourceId,
+				categoryId: l.categoryId,
+				subCategoryId: l.subCategoryId,
+				price: l.price,
+				isAlreadyDiscounted: l.isAlreadyDiscounted,
+			});
+		}
+	}
 
 	let auto = 0;
 	const applied = [];
@@ -213,10 +242,19 @@ async function computeOffers(lines, optedInIds) {
 			}
 		} else if (offer.offerType === "percentage") {
 			const v = offer.discountValue || 0;
-			idxs.forEach((idx) => { discount += pool[idx].price * (v / 100); used.add(idx); });
+			idxs.forEach((idx) => {
+				if (!pool[idx].isAlreadyDiscounted) {
+					discount += pool[idx].price * (v / 100);
+					used.add(idx);
+				}
+			});
 		} else if (offer.offerType === "fixed") {
-			discount = offer.discountValue || 0;
-			idxs.forEach((idx) => used.add(idx));
+			const v = offer.discountValue || 0;
+			const unDiscountedIdxs = idxs.filter((idx) => !pool[idx].isAlreadyDiscounted);
+			if (unDiscountedIdxs.length > 0) {
+				discount = v;
+				unDiscountedIdxs.forEach((idx) => used.add(idx));
+			}
 		}
 
 		if (discount > 0) {
@@ -265,7 +303,9 @@ export async function priceOrder(userId, body = {}) {
 		if (!(qty >= 1 && qty <= MAX_QTY)) throw new PricingError("Invalid item quantity.", "INVALID_QTY");
 		if (!Number.isFinite(price) || price < 0) throw new PricingError("Invalid item price.", "INVALID_PRICE");
 
-		const { floor, paymentMode: pm } = await lineFloor(raw);
+		const lineFloorResult = await lineFloor(raw);
+		const floor = lineFloorResult.floor;
+		const pm = lineFloorResult.paymentMode;
 		if (price + 0.5 < floor) {
 			throw new PricingError(
 				`The price of "${String(raw.name || "an item").slice(0, 60)}" has changed. Please refresh your cart and try again.`,
@@ -279,8 +319,9 @@ export async function priceOrder(userId, body = {}) {
 		lines.push({
 			id: String(raw.id || raw.sourceId || ""),
 			sourceId: raw.sourceId ? String(raw.sourceId) : undefined,
-			categoryId: raw.categoryId,
-			subCategoryId: raw.subCategoryId,
+			categoryId: raw.categoryId || lineFloorResult.categoryId,
+			subCategoryId: raw.subCategoryId || lineFloorResult.subCategoryId,
+			isAlreadyDiscounted: Boolean(lineFloorResult.isAlreadyDiscounted),
 			price: Math.round(price * 100) / 100,
 			qty,
 		});

@@ -10,6 +10,7 @@ import { useGender } from "@/lib/genderContext";
 import { getApiUrl } from "@/lib/api";
 import { fetchHomeContent } from "@/lib/catalogApi";
 import styles from "./UpperNav.module.css";
+import { lockScroll } from '@/lib/scrollLock';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type SearchResults = { products: any[]; categories: any[]; styles: any[]; combos: any[] };
@@ -188,12 +189,11 @@ export default function TopNav() {
   /* Lock scroll + Esc while drawer is open */
   useEffect(() => {
     if (!menuOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlock();
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);

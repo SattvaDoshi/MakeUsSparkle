@@ -25,6 +25,9 @@ export interface CatalogStyle {
   slug: string;
   // gender can be a string slug/id or an object returned from the backend
   gender?: string | BackendGender;
+  /** Style-page sub heading / caption set in the admin. undefined = never set (use built-in text). */
+  eyebrow?: string;
+  caption?: string;
 }
 
 export interface CatalogGender {
@@ -151,6 +154,8 @@ interface BackendStyle {
   name?: string;
   image?: string;
   gender?: BackendMaybeRef;
+  eyebrow?: string;
+  caption?: string;
 }
 
 interface BackendGender {
@@ -320,6 +325,8 @@ function toStyle(item: BackendStyle): CatalogStyle {
     image: item.image,
     slug: toSlug(name),
     gender: (item.gender as any) ?? undefined,
+    eyebrow: typeof item.eyebrow === "string" ? item.eyebrow : undefined,
+    caption: typeof item.caption === "string" ? item.caption : undefined,
   };
 }
 

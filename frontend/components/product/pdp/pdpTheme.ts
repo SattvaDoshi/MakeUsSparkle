@@ -166,5 +166,39 @@ export const PDP_THEME_CSS = `
           .pdp-trust-item:last-child{border-bottom:0}
           .acc-body{padding-left:2px}
           .acc-head-left{font-size:14.5px}
+          /* compact variant pickers on mobile */
+          .pdp-swatches{gap:8px;margin-bottom:12px}
+          .pdp-swatch{width:22px;height:22px;border-width:2px}
+          .pdp-sizes{gap:6px;margin-bottom:6px}
+          .pdp-size-btn{min-width:0;height:auto;padding:6px 12px;font-size:10.5px;letter-spacing:.04em}
+        }
+
+        /* ── Info section: soft colour accents (cream cards, tinted icons) ── */
+        .pdp-info .acc-item{background:#fdfbf5;border-color:#ece5cf}
+        .pdp-info .acc-item:hover{border-color:#ddd0a4}
+        .pdp-info .acc-item--open{background:#fffdf6;border-color:#d9c27a;box-shadow:0 6px 22px rgba(154,122,46,.10)}
+        .pdp-info .acc-item:nth-of-type(4n+1) .acc-emoji{background:#e4efe7;color:#2a4736}
+        .pdp-info .acc-item:nth-of-type(4n+2) .acc-emoji{background:#f7edcc;color:#8a6a1c}
+        .pdp-info .acc-item:nth-of-type(4n+3) .acc-emoji{background:#f6e3df;color:#9a4a42}
+        .pdp-info .acc-item:nth-of-type(4n+4) .acc-emoji{background:#e8e4f3;color:#5a4a8c}
+        .pdp-info .acc-item--open .acc-emoji{background:#2a4736;color:#fff}
+        .pdp-info .acc-chevron{background:#e4efe7;color:#2a4736}
+        .pdp-info .acc-item--open .acc-chevron{background:#2a4736;color:#fff}
+        .pdp-info .acc-head:hover{background:#faf6e8}
+        .dlv-table{background:#fdfbf5;border-color:#ece5cf}
+        .dlv-row{border-top-color:#ece5cf}
+        .dlv-head{background:#f6f0dc;color:#8a6a1c}
+        .dlv-row:nth-of-type(2) .est-ico{background:#e4efe7;color:#2a4736}
+        .dlv-row:nth-of-type(3) .est-ico{background:#f7edcc;color:#8a6a1c}
+        .dlv-free{background:#e4efe7;border:1px solid #cfe0d3}
+        @media(max-width:639px){
+          .pdp-info .acc-head{padding:11px 12px}
+          .pdp-info .acc-emoji{width:30px;height:30px;font-size:14px}
+          .pdp-info .acc-head-left{font-size:14px;gap:10px}
+          .pdp-info .acc-chevron{width:24px;height:24px}
+          .pdp-info .acc-item{margin-bottom:8px}
+          .dlv{margin-top:16px}
+          .dlv-title{font-size:20px;margin-bottom:10px}
+          .dlv-row{padding:11px 12px}
         }
 `;

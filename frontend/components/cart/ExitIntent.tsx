@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { apiRequest } from '@/lib/api';
+import { lockScroll } from '@/lib/scrollLock';
 
 const DISCOUNT_CODE  = 'STAYWITHUS';
 const DISCOUNT_AMOUNT = 20;
@@ -44,6 +45,8 @@ export default function ExitIntent() {
     if (!window.history.state?.exitGuard) window.history.pushState({ exitGuard: true }, '');
 
     const handlePop = () => {
+      // Landing on our own guard entry (e.g. the forward button) is not an exit attempt: only count real "back" presses.
+      if (window.history.state?.exitGuard) return;
       exitCountRef.current++;
       // Intercept the back button once only. Pressing back again always leaves, no more questions.
       if (exitCountRef.current > 1) {
@@ -64,8 +67,8 @@ export default function ExitIntent() {
 
   // Lock body scroll when modal is open
   useEffect(() => {
-    document.body.style.overflow = modal !== 'none' ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (modal === 'none') return;
+    return lockScroll();
   }, [modal]);
 
   const closeModal = useCallback(() => setModal('none'), []);

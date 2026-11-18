@@ -1,4 +1,5 @@
 'use client';
+import { useLater } from '@/lib/useLater';
 import SafeHtml from '@/components/ui/SafeHtml';
 import { PdpSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
@@ -17,6 +18,7 @@ import PdpStickyBar from './pdp/PdpStickyBar';
 import pdpStyles from './pdp/pdp.module.css';
 import { useStickyColumns } from './pdp/useStickyColumns';
 import { GiftBoxUpsell, CompleteTheLookStrip, AccordionItem, EstimatedDeliveryBlock, type AccordionData } from './ProductDetailPage';
+import { lockScroll } from '@/lib/scrollLock';
 
 /* ─── Types ─── */
 
@@ -69,8 +71,8 @@ function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClo
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', handleKey); document.body.style.overflow = ''; };
+    const unlock = lockScroll();
+    return () => { document.removeEventListener('keydown', handleKey); unlock(); };
   }, [onClose]);
 
   return (
@@ -775,6 +777,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
 export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const later = useLater();
   const { toggleItem, isWished } = useWishlist();
 
   const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
@@ -1044,8 +1047,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     for (let i = 0; i < qty; i++) addItem(item);
     fireConfetti(cartBtnRef.current);
     setCartAnim(true); setSparkleAnim(true);
-    setTimeout(() => setCartAnim(false), 700);
-    setTimeout(() => setSparkleAnim(false), 800);
+    later(() => setCartAnim(false), 700, 'cartAnim');
+    later(() => setSparkleAnim(false), 800, 'sparkleAnim');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addItem, product, qty, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain, currentStock]);
 

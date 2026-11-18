@@ -124,6 +124,8 @@ export default function OpenSection() {
           padding-bottom: 8px;
           padding-left: 40px;
           padding-right: 40px;
+          scroll-padding-left: 40px;
+          scroll-padding-right: 40px;
           scrollbar-width: none;
           align-items: stretch;
         }
@@ -209,7 +211,7 @@ export default function OpenSection() {
           .os-slot { flex: 0 0 248px; }
           .os-inner { padding: 0 32px; }
           .os-track-wrapper { margin-left: -32px; margin-right: -32px; }
-          .os-track { padding-left: 32px; padding-right: 32px; }
+          .os-track { padding-left: 32px; padding-right: 32px; scroll-padding-left: 32px; scroll-padding-right: 32px; }
         }
         @media (min-width: 640px) and (max-width: 1023px) {
           .os-section { padding: 44px 0 56px; }
@@ -217,7 +219,7 @@ export default function OpenSection() {
           .os-header { margin-bottom: 28px; }
           .os-slot { flex: 0 0 224px; }
           .os-track-wrapper { margin-left: -28px; margin-right: -28px; }
-          .os-track { padding-left: 28px; padding-right: 28px; }
+          .os-track { padding-left: 28px; padding-right: 28px; scroll-padding-left: 28px; scroll-padding-right: 28px; }
         }
         @media (max-width: 639px) {
           .os-section { padding: 36px 0 48px; }
@@ -225,7 +227,7 @@ export default function OpenSection() {
           .os-header { margin-bottom: 20px; }
           .os-track { gap: 14px; }
           .os-track-wrapper { margin-left: -18px; margin-right: -18px; }
-          .os-track { padding-left: 18px; padding-right: 18px; }
+          .os-track { padding-left: 18px; padding-right: 18px; scroll-padding-left: 18px; scroll-padding-right: 18px; }
           .os-slot { flex: 0 0 168px; }
           .os-cat-card { flex: 0 0 80%; height: clamp(160px, 60vw, 300px); }
           .os-cat-row.os-single .os-cat-card { flex: 0 0 100%; height: clamp(200px, 70vw, 380px); }
@@ -234,7 +236,7 @@ export default function OpenSection() {
           .os-slot { flex: 0 0 150px; }
           .os-inner { padding: 0 14px; }
           .os-track-wrapper { margin-left: -14px; margin-right: -14px; }
-          .os-track { padding-left: 14px; padding-right: 14px; }
+          .os-track { padding-left: 14px; padding-right: 14px; scroll-padding-left: 14px; scroll-padding-right: 14px; }
         }
       `}</style>
 

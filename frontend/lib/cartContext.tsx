@@ -117,7 +117,8 @@ type Action =
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_OFFER_OPTOUT'; payload: string }
   | { type: 'SET_REWARD_POINTS_REDEEMED'; payload: number }
-  | { type: 'HYDRATE';      payload: CartState };
+  | { type: 'HYDRATE';      payload: CartState }
+  | { type: 'SYNC';         payload: CartState };
 
 // ─── Selectors (pure helpers) ─────────────────────────────────────────────────
 const FREE_SHIPPING_THRESHOLD = 999;
@@ -165,51 +166,58 @@ function key(item: Partial<CartItem>) {
   return item.cartItemId || `${item.id}__${item.colorHex}__${item.size || ''}__${item.customNote || ''}__${item.selectedCharms?.length || 0}__${item.giftBox ? 'gb' : 'nogb'}`;
 }
 
+const newLineId = () => Date.now().toString() + Math.random().toString(36).slice(2, 11);
+
+/**
+ * Two adds are the "same line" only when everything that makes the piece what it is matches: product,
+ * colour, size, note, gift box, customisation (messages / photos), charms, chain, bundle contents and price.
+ * Anything else becomes its own line, so a second customised hamper never overwrites the first.
+ */
+function fingerprint(i: Partial<CartItem>) {
+  return JSON.stringify([
+    String(i.sourceId ?? i.id ?? ''), i.colorHex ?? '', i.size ?? '', i.customNote ?? '',
+    i.giftBox ?? null, i.giftMessage ?? null, i.customData ?? null, i.selectedCharms ?? null,
+    i.selectionGroups ?? null, i.chain ?? '', i.price ?? 0,
+  ]);
+}
+
+/** A cart line is addressed by its own cartItemId; lines saved before ids existed fall back to product id + colour. */
+function isLine(i: CartItem, id: string, colorHex: string) {
+  return i.cartItemId ? i.cartItemId === id : (i.id === id && i.colorHex === colorHex);
+}
+
+const MAX_LINE_QTY = 99;
+
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
 
 case 'ADD_ITEM': {
-  const idx = state.items.findIndex(
-    i => i.id === action.payload.id && i.colorHex === action.payload.colorHex && Boolean(i.giftBox) === Boolean(action.payload.giftBox)
-  );
+  const fp = fingerprint(action.payload);
+  const idx = state.items.findIndex(i => fingerprint(i) === fp);
+  const openDrawer = action.openDrawer ?? true;
 
   if (idx >= 0) {
     const items = state.items.map((i, n) =>
-      n === idx ? { ...i, qty: i.qty + 1 } : i
+      n === idx ? { ...i, qty: Math.min(MAX_LINE_QTY, i.qty + 1) } : i
     );
-    return { ...state, items, isDrawerOpen: action.openDrawer ?? true };
+    return { ...state, items, isDrawerOpen: openDrawer };
   }
 
-  const newItem = {
-    ...action.payload,
-    cartItemId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    qty: 1,
-  };
-  return {
-    ...state,
-    items: [...state.items, newItem],
-    isDrawerOpen: action.openDrawer ?? true,
-  };
+  const newItem = { ...action.payload, cartItemId: newLineId(), qty: 1 };
+  return { ...state, items: [...state.items, newItem], isDrawerOpen: openDrawer };
 }
 
     case 'REMOVE_ITEM': {
-      return {
-        ...state,
-        items: state.items.filter(i => key(i) !== action.payload.id && i.id !== action.payload.id && `${i.id}__${i.colorHex}` !== `${action.payload.id}__${action.payload.colorHex}`),
-      };
+      return { ...state, items: state.items.filter(i => !isLine(i, action.payload.id, action.payload.colorHex)) };
     }
 
     case 'UPDATE_QTY': {
+      const { id, colorHex, qty } = action.payload;
       return {
         ...state,
-        items:
-          action.payload.qty <= 0
-            ? state.items.filter(i => key(i) !== action.payload.id && i.id !== action.payload.id && `${i.id}__${i.colorHex}` !== `${action.payload.id}__${action.payload.colorHex}`)
-            : state.items.map(i =>
-                (key(i) === action.payload.id || i.id === action.payload.id || `${i.id}__${i.colorHex}` === `${action.payload.id}__${action.payload.colorHex}`)
-                  ? { ...i, qty: action.payload.qty }
-                  : i,
-              ),
+        items: qty <= 0
+          ? state.items.filter(i => !isLine(i, id, colorHex))
+          : state.items.map(i => isLine(i, id, colorHex) ? { ...i, qty: Math.min(MAX_LINE_QTY, Math.floor(qty)) } : i),
       };
     }
 
@@ -256,8 +264,16 @@ case 'ADD_ITEM': {
     case 'CLEAR_CART':
       return { ...INITIAL };
 
+    case 'SYNC': // another tab changed the cart: take its lines, keep this tab's drawer as it is
+      return { ...reducer(INITIAL, { type: 'HYDRATE', payload: action.payload }), isDrawerOpen: state.isDrawerOpen };
+
     case 'HYDRATE': {
-      const hydState = { ...action.payload, rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0, isDrawerOpen: false };
+      const hydState = {
+        ...action.payload,
+        items: action.payload.items.map(i => i.cartItemId ? i : { ...i, cartItemId: newLineId() }),
+        rewardPointsRedeemed: action.payload.rewardPointsRedeemed || 0,
+        isDrawerOpen: false,
+      };
       if (hydState.discountCode === 'STAYWITHUS') {
         hydState.discountCode = '';
         hydState.discountAmount = 0;
@@ -298,6 +314,8 @@ interface CartContextValue {
   itemCount:  number;
   /** false until the saved cart has been read from this browser (avoids a flash of an empty cart). */
   hydrated:   boolean;
+  /** true when this browser could not store the cart (it will be lost on refresh). */
+  persistFailed: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -305,43 +323,70 @@ const CartContext = createContext<CartContextValue | null>(null);
 // ─── Provider ─────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'maison_cart_v1';
 
+/** The cart lives in the browser, so never trust its shape: drop malformed lines, clamp quantities. */
+function readCart(raw: string | null): CartState | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CartState;
+    const items = (Array.isArray(parsed?.items) ? parsed.items : []).filter((i) =>
+      i && typeof i.id === 'string' && typeof i.name === 'string' && Number.isFinite(i.price) && i.price >= 0 && Number.isFinite(i.qty),
+    ).map((i) => ({
+      ...i,
+      qty: Math.min(MAX_LINE_QTY, Math.max(1, Math.floor(i.qty))),
+      // Links and images come from storage too: only same-site paths and http(s) images are allowed through.
+      href: typeof i.href === 'string' && /^\/(?!\/)/.test(i.href) ? i.href : '',
+      image: typeof i.image === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(i.image) ? i.image : '',
+    }));
+    return { ...parsed, items, isDrawerOpen: false };
+  } catch {
+    return null;
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const pathname = usePathname();
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from localStorage once on mount
+  // Set when the browser refuses to store the cart (storage full, private mode): the cart still works this
+  // visit, but it would be lost on refresh, so the UI tells the shopper.
+  const [persistFailed, setPersistFailed] = useState(false);
+
+  // Hydrate from localStorage once on mount, then follow changes made in other tabs
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as CartState;
-        // The cart lives in the browser, so never trust its shape: drop malformed lines, clamp quantities, start closed.
-        const items = (Array.isArray(parsed?.items) ? parsed.items : []).filter((i) =>
-          i && typeof i.id === 'string' && typeof i.name === 'string' && Number.isFinite(i.price) && i.price >= 0 && Number.isFinite(i.qty),
-        ).map((i) => ({
-          ...i,
-          qty: Math.min(99, Math.max(1, Math.floor(i.qty))),
-          // Links and images come from storage too: only same-site paths and http(s) images are allowed through.
-          href: typeof i.href === 'string' && /^\/(?!\/)/.test(i.href) ? i.href : '',
-          image: typeof i.image === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(i.image) ? i.image : '',
-        }));
-        dispatch({ type: 'HYDRATE', payload: { ...parsed, items, isDrawerOpen: false } });
-      }
-    } catch {}
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch {}
+    const saved = readCart(raw);
+    if (saved) dispatch({ type: 'HYDRATE', payload: saved });
     setHydrated(true);
 
     const handleClearCart = () => dispatch({ type: 'CLEAR_CART' });
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      if (e.newValue === null) { dispatch({ type: 'CLEAR_CART' }); return; } // cleared / logged out in another tab
+      const next = readCart(e.newValue);
+      if (next) dispatch({ type: 'SYNC', payload: next });
+    };
     window.addEventListener('makeussparkle:clear-cart', handleClearCart);
-    return () => window.removeEventListener('makeussparkle:clear-cart', handleClearCart);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('makeussparkle:clear-cart', handleClearCart);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
-  // Persist to localStorage on every change
+  // Persist on every change, but only after the saved cart has been read: saving the empty starting state first
+  // would overwrite the real cart. Whether the drawer is open is per-tab, so it is not saved.
   useEffect(() => {
+    if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {}
-  }, [state]);
+      const { isDrawerOpen: _open, ...persisted } = state;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+      setPersistFailed(false);
+    } catch {
+      setPersistFailed(true);
+    }
+  }, [state, hydrated]);
 
 const addItem = useCallback(
   (item: Omit<CartItem, 'qty'>, openDrawer = true) =>
@@ -602,6 +647,7 @@ const addItem = useCallback(
     total:     finalTotal,
     itemCount: cartItemCount(state.items),
     hydrated,
+    persistFailed,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

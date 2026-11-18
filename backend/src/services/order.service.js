@@ -1,3 +1,4 @@
+import { releaseOrderPerks } from "./orderLifecycle.service.js";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
 import Review from "../models/review.model.js";
@@ -207,6 +208,7 @@ class OrderService {
 
 			if (status === "cancelled") {
 				await inventoryService.restoreOrderInventory(order);
+				await releaseOrderPerks(order._id);
 			}
 
 			// When admin marks order delivered, reflect commission in affiliate dashboard!
@@ -239,6 +241,7 @@ class OrderService {
 			await order.save();
 
 			await inventoryService.restoreOrderInventory(order);
+			await releaseOrderPerks(order._id);
 			await affiliateService.onOrderCancelled(order);
 
 			return { success: true, message: "Order cancelled successfully", order };

@@ -1,4 +1,5 @@
 'use client';
+import { useLater } from '@/lib/useLater';
 import SafeHtml from '@/components/ui/SafeHtml';
 import { PdpSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -604,6 +605,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const isFromCombo = searchParams.get('fromCombo') === 'true';
 
   const { addItem } = useCart();
+  const later = useLater();
   const { toggleItem, isWished } = useWishlist();
 
   const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
@@ -912,9 +914,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     items.forEach(item => addItem(item));
     fireConfetti(cartBtnRef.current);
     setCartAnim(true); setSparkleAnim(true);
-    setTimeout(() => setCartAnim(false), 700);
-    setTimeout(() => setSparkleAnim(false), 800);
-  }, [buildCartItems, addItem, isSelectionComplete, currentStock]);
+    later(() => setCartAnim(false), 700, 'cartAnim');
+    later(() => setSparkleAnim(false), 800, 'sparkleAnim');
+  }, [buildCartItems, addItem, isSelectionComplete, currentStock, later]);
 
   const handleColorChange = useCallback((productIndex: number, colorIndex: number) => {
     setSelections(prev => {

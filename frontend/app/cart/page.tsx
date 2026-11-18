@@ -1,11 +1,13 @@
 'use client';
 
+import CartSaveWarning from '@/components/cart/CartSaveWarning';
 import Em from "@/components/ui/Em";
 import { CartSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/lib/cartContext';
+import { useCartStockIssues } from '@/lib/useCartStockIssues';
 import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
 import { cdnImage } from '@/lib/cdn';
@@ -64,11 +66,13 @@ export default function CartPage() {
 
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { hydrated } = useCart();
+  const stockIssues = useCartStockIssues(state.items);
+  const hasStockIssue = Object.keys(stockIssues).length > 0;
   const router = useRouter();
   // Guests get the sign-up popup right here; once they are in, they continue straight to checkout.
   const goCheckout = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (authLoading) return;
+    if (authLoading || hasStockIssue) return;
     if (isAuthenticated) { router.push('/checkout'); return; }
     window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'register', next: '/checkout' } }));
   };
@@ -296,6 +300,8 @@ export default function CartPage() {
 
 .cp-checkout-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; height:56px; margin-top:16px; background:var(--forest); color:#fff; border:0; border-radius:999px; font:inherit; font-size:13px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; text-decoration:none; cursor:pointer; transition:background .2s, transform .15s; }
 .cp-checkout-btn:hover { background:var(--forest-d); }
+.cp-checkout-btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed; }
+.cp-stock-issue { margin:0; font-size:13px; font-weight:500; color:#b3261e; }
 .cp-checkout-btn:active { transform:scale(.99); }
 .cp-pay-note { display:flex; align-items:center; justify-content:center; gap:7px; margin:12px 0 0; font-size:12px; color:var(--mist); }
 .cp-pay-note svg { color:var(--forest); }
@@ -317,6 +323,8 @@ export default function CartPage() {
 .cp-empty-link { display:inline-flex; align-items:center; gap:10px; padding:15px 32px; background:var(--forest); color:#fff; border-radius:999px; text-decoration:none; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
 
 /* Mobile sticky checkout */
+/* The sticky bar is the checkout button below desktop width; hide the inline duplicate there */
+@media (max-width:1023px) { .cp-checkout-inline { display:none; } }
 .cp-sticky { position:fixed; left:0; right:0; bottom:0; z-index:50; background:#fff; border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); display:flex; align-items:center; gap:14px; box-shadow:0 -8px 24px rgba(26,26,20,.08); }
 .cp-sticky-total { display:flex; flex-direction:column; line-height:1.15; min-width:0; }
 .cp-sticky-total small { font-size:11.5px; color:var(--mist); }
@@ -379,7 +387,8 @@ export default function CartPage() {
                 <span className="cp-count">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
               </div>
 
-              <div className="cp-layout">
+              <CartSaveWarning />
+          <div className="cp-layout">
                 <div className="cp-left">
                   <div className="cp-card">
                     <div className="cp-ship">
@@ -435,11 +444,12 @@ export default function CartPage() {
                         <div className="cp-item-body">
                           <div className="cp-item-top">
                             <Link href={item.href || `/products/${item.id}`} className="cp-item-name">{item.name}</Link>
-                            <button className="cp-item-remove" onClick={() => removeItem(item.id, item.colorHex)} aria-label={`Remove ${item.name}`} title="Remove">
+                            <button className="cp-item-remove" onClick={() => removeItem(item.cartItemId ?? item.id, item.colorHex)} aria-label={`Remove ${item.name}`} title="Remove">
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
                             </button>
                           </div>
 
+                          {stockIssues[item.cartItemId ?? item.id] && <p className="cp-stock-issue" role="alert">{stockIssues[item.cartItemId ?? item.id]}</p>}
                           {chips.length > 0 && <div className="cp-chips">{chips}</div>}
                           {(item as any).priceBreakdown && <div className="cp-meta">{(item as any).priceBreakdown}</div>}
                           {giftPrice > 0 && (
@@ -448,9 +458,9 @@ export default function CartPage() {
 
                           <div className="cp-item-foot">
                             <div className="cp-qty" role="group" aria-label={`Quantity of ${item.name}`}>
-                              <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty - 1)} disabled={item.qty <= 1} aria-label="Decrease quantity">−</button>
+                              <button className="cp-qty-btn" onClick={() => updateQty(item.cartItemId ?? item.id, item.colorHex, item.qty - 1)} disabled={item.qty <= 1} aria-label="Decrease quantity">−</button>
                               <span className="cp-qty-val" aria-live="polite">{item.qty}</span>
-                              <button className="cp-qty-btn" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)} disabled={item.qty >= 10} aria-label="Increase quantity">+</button>
+                              <button className="cp-qty-btn" onClick={() => updateQty(item.cartItemId ?? item.id, item.colorHex, item.qty + 1)} disabled={item.qty >= 10} aria-label="Increase quantity">+</button>
                             </div>
                             <div className="cp-item-price">
                               <b>₹{itemTotal.toLocaleString('en-IN')}</b>
@@ -744,7 +754,7 @@ export default function CartPage() {
                     </div>
                     <p className="cp-tax-note">Inclusive of all taxes</p>
 
-                    <Link href="/checkout" className="cp-checkout-btn" onClick={goCheckout}>
+                    <Link href="/checkout" className="cp-checkout-btn cp-checkout-inline" aria-disabled={hasStockIssue} onClick={goCheckout}>
                       Proceed to checkout
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                     </Link>
@@ -765,7 +775,7 @@ export default function CartPage() {
 
               <div className="cp-sticky">
                 <div className="cp-sticky-total"><small>Total</small><b>₹{displayTotal.toLocaleString('en-IN')}</b></div>
-                <Link href="/checkout" className="cp-checkout-btn" onClick={goCheckout}>Checkout</Link>
+                <Link href="/checkout" className="cp-checkout-btn" aria-disabled={hasStockIssue} onClick={goCheckout}>Checkout</Link>
               </div>
             </>
           )}

@@ -74,7 +74,7 @@ function extractCharmNumbers(item = {}) {
 /**
  * Finds the variant inside product.variants that best matches the ordered item.
  */
-function findMatchingVariant(variants = [], item = {}) {
+export function findMatchingVariant(variants = [], item = {}) {
 	if (!Array.isArray(variants) || variants.length === 0) return null;
 
 	const targetColor = normalizeText(item.color);

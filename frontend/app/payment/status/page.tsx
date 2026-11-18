@@ -1,7 +1,7 @@
 'use client';
 
 import Em from "@/components/ui/Em";
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
@@ -11,49 +11,56 @@ function PaymentStatusContent() {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
 
-  const [status, setStatus] = useState<'verifying' | 'success' | 'failed' | 'error'>('verifying');
+  const [status, setStatus] = useState<'verifying' | 'success' | 'pending' | 'failed' | 'error'>('verifying');
+  const started = useRef(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const merchantOrderId = searchParams.get('merchantOrderId');
-    const orderId = searchParams.get('orderId');
+    if (started.current) return; // StrictMode runs effects twice in dev: verify once
+    started.current = true;
 
-    if (!merchantOrderId || !orderId) {
-      // Try from sessionStorage (set just before redirect)
-      const stored = sessionStorage.getItem('pendingPayment');
-      if (stored) {
-        const { orderId: storedOrderId, merchantOrderId: storedMerchantOrderId, paymentMode } = JSON.parse(stored);
-        verifyPayment(storedOrderId, storedMerchantOrderId, paymentMode);
-      } else {
-        setStatus('error');
-        setMessage('Missing payment information.');
-      }
+    let stored: { orderId?: string; merchantOrderId?: string; paymentMode?: string } = {};
+    try { stored = JSON.parse(sessionStorage.getItem('pendingPayment') || '{}'); } catch { /* ignore a corrupt entry */ }
+
+    const orderId = searchParams.get('orderId') || stored.orderId;
+    const merchantOrderId = searchParams.get('merchantOrderId') || stored.merchantOrderId;
+    if (!orderId || !merchantOrderId) {
+      setStatus('error');
+      setMessage('Missing payment information.');
       return;
     }
-
-    // Also read paymentMode from sessionStorage if query params are provided
-    const stored = sessionStorage.getItem('pendingPayment');
-    const paymentMode = stored ? JSON.parse(stored).paymentMode : 'ONLINE';
-    verifyPayment(orderId, merchantOrderId, paymentMode);
+    verifyPayment(orderId, merchantOrderId, stored.paymentMode || 'ONLINE');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function verifyPayment(orderId: string, merchantOrderId: string, paymentMode = 'ONLINE') {
-    try {
-      setStatus('verifying');
-      await apiRequest('/payment/verify', {
-        method: 'POST',
-        body: JSON.stringify({ orderId, merchantOrderId, paymentMode }),
-      });
-      sessionStorage.removeItem('pendingPayment');
-      clearCart();
-      setStatus('success');
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.warn('Payment verification failed:', error.message);
-      setStatus('failed');
-      setMessage(error.message || 'Payment could not be verified. Please contact support.');
+    setStatus('verifying');
+    // The bank can take a little while to confirm: ask a few times before telling the shopper to wait.
+    const ATTEMPTS = 8;
+    for (let i = 0; i < ATTEMPTS; i++) {
+      try {
+        const res = await apiRequest<{ state?: 'paid' | 'pending' }>('/payment/verify', {
+          method: 'POST',
+          body: JSON.stringify({ orderId, merchantOrderId, paymentMode }),
+        });
+        if (res?.state !== 'pending') {
+          sessionStorage.removeItem('pendingPayment');
+          clearCart();
+          setStatus('success');
+          return;
+        }
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.warn('Payment verification failed:', error.message);
+        sessionStorage.removeItem('pendingPayment');
+        setStatus('failed');
+        setMessage(error.message || 'Payment could not be verified. Please contact support.');
+        return;
+      }
+      if (i < ATTEMPTS - 1) await new Promise((r) => setTimeout(r, 4000));
     }
+    // Still processing. The order is kept safe on the server and finished automatically; the cart stays so nothing is lost.
+    setStatus('pending');
   }
 
   return (
@@ -91,6 +98,16 @@ function PaymentStatusContent() {
             </>
           )}
 
+          {status === 'pending' && (
+            <>
+              <div className="ps-icon"><Em c="⏳" /></div>
+              <h1 className="ps-title">Confirming your payment</h1>
+              <p className="ps-sub">Your bank is taking a little longer than usual. You don&apos;t need to pay again. If the payment goes through, your order is confirmed automatically and we&apos;ll email you. If it doesn&apos;t, nothing is charged and your cart is kept.</p>
+              <Link href="/profile" className="ps-btn">View my orders</Link>
+              <Link href="/" className="ps-btn-outline">Go Home</Link>
+            </>
+          )}
+
           {(status === 'failed' || status === 'error') && (
             <>
               <div className="ps-icon"><Em c="❌" /></div>
@@ -98,7 +115,7 @@ function PaymentStatusContent() {
               {message && <div className="ps-error-msg">{message}</div>}
               <p className="ps-sub">
                 {status === 'failed'
-                  ? 'Your payment could not be verified. If money was deducted, it will be refunded within 5–7 business days.'
+                  ? 'The payment did not go through, so the order was cancelled and any reward points or coupon were returned. If money was deducted, it is refunded within 5–7 business days.'
                   : 'Something went wrong. Please try again or contact our support team.'}
               </p>
               <Link href="/checkout" className="ps-btn">Try Again</Link>

@@ -11,6 +11,7 @@ import NewArrivals from '@/components/home/NewArrivals';
 import OpenSection from '@/components/home/OpenSection';
 import WatchAndBuy from '@/components/home/WatchAndBuy';
 import FounderMessage from '@/components/home/FounderMessage';
+import ProductShelf from '@/components/home/ProductShelf';
 import FaqSection from '@/components/home/FaqSection';
 import { getApiUrl } from '@/lib/api';
 
@@ -37,12 +38,15 @@ export default async function HomePage() {
       <HeroVideo initialHero={initialHero} />
       <OpenSection />
       <PromoSection/>
+      <ProductShelf mode="popular" eyebrow="Most loved" title="Customer" em="favourites" href="/categories" linkLabel="Shop all" />
       <SingleBanner/>
       <BannerSection />
+      <ProductShelf mode="gifts" eyebrow="Made to gift" title="Gifts & charm" em="picks" href="/combos" linkLabel="All gifts" tint />
     <Style/>
     <NewArrivals/>
     <WatchAndBuy/>
       <FounderMessage />
+      <ProductShelf mode="deals" eyebrow="Best value" title="Top" em="deals" href="/offers" linkLabel="All offers" />
       {/* <CategorySection /> */}
       {/* <TrustBadges /> */}
       <TestimonialsSection />

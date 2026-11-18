@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import { cdnImage } from '@/lib/cdn';
 import styles from './pdp.module.css';
+import { lockScroll } from '@/lib/scrollLock';
 
 /** Thumbnails + hover-zoom on desktop, swipeable full-width carousel on mobile, fullscreen lightbox on tap/click. */
 export default function PdpGallery({
@@ -65,8 +66,8 @@ export default function PdpGallery({
       if (e.key === 'ArrowLeft') onChange((safe - 1 + list.length) % list.length);
     };
     document.addEventListener('keydown', key);
-    const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', key); document.body.style.overflow = prev; };
+    const unlock = lockScroll();
+    return () => { document.removeEventListener('keydown', key); unlock(); };
   }, [lightbox, safe, list.length, onChange]);
 
   const onErr = (e: React.SyntheticEvent<HTMLImageElement>) => { if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; };

@@ -6,6 +6,7 @@ import { INDIAN_STATES } from '@/lib/indianStates';
 import Em from "@/components/ui/Em";
 import { useState, useCallback, useEffect } from 'react';
 import { useCartStockIssues } from '@/lib/useCartStockIssues';
+import { useSheetSwipe, SHEET_GRAB_CSS } from '@/lib/useSheetSwipe';
 import Link from 'next/link';
 import { useCart, GIFT_OPTIONS } from '@/lib/cartContext';
 import { useAuth, type AuthUser } from '@/lib/authContext';
@@ -55,6 +56,7 @@ export default function CheckoutPage() {
   const stockIssueCount = Object.keys(stockIssues).length;
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showExpressPopup, setShowExpressPopup] = useState(false);
+  const { sheetRef: expressSheetRef, grabProps: expressGrab } = useSheetSwipe(() => setShowExpressPopup(false));
   const [deliveryType, setDeliveryType] = useState<'standard' | 'express'>('standard');
 
   const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -444,7 +446,6 @@ export default function CheckoutPage() {
           background: #ffffff;
           font-family: 'DM Sans', sans-serif;
           color: #0f1a0f;
-          margin-top: 60px;
           overflow-x: hidden;
           width: 100%;
         }
@@ -892,12 +893,22 @@ export default function CheckoutPage() {
         .ck-popup-warn strong { font-weight: 800; color: #3d0e06; }
         .ck-popup-close { width: 100%; padding: 14px; background: #2d5a27; color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: background .2s; }
         .ck-popup-close:hover { background: #3a7a32; }
+        ${SHEET_GRAB_CSS}
+        /* Phones: rises from the bottom as a sheet */
+        @media (max-width: 767px) {
+          .ck-popup-overlay { align-items: flex-end; padding: 0; }
+          .ck-popup { max-width: none; border-radius: 22px 22px 0 0; padding: 0 20px calc(22px + env(safe-area-inset-bottom)); max-height: 88dvh; overflow-y: auto; animation: ckSheetUp .34s cubic-bezier(.22,.68,0,1); box-shadow: 0 -12px 44px rgba(5,15,5,.3); }
+          @keyframes ckSheetUp { from { transform: translateY(100%); } to { transform: none; } }
+          .ck-popup .sheet-grab span { background: rgba(5,15,5,.22); }
+          .ck-popup-icon { margin-top: 4px; }
+        }
       `}</style>
 
       {/* ── Express Popup ── */}
       {showExpressPopup && (
         <div className="ck-popup-overlay" onClick={() => setShowExpressPopup(false)}>
-          <div className="ck-popup" onClick={e => e.stopPropagation()}>
+          <div ref={expressSheetRef as React.RefObject<HTMLDivElement>} className="ck-popup" onClick={e => e.stopPropagation()}>
+            <div className="sheet-grab" {...expressGrab} aria-hidden="true"><span /></div>
             <div className="ck-popup-icon"><Em c="⚡" /></div>
             <h2 className="ck-popup-title">Express Delivery</h2>
             <p className="ck-popup-body">
@@ -1077,25 +1088,6 @@ export default function CheckoutPage() {
               </div>
               </>)}
               {step === 2 && (<>
-              <div className="ck-recap">
-                <div className="ck-recap-row">
-                  <div>
-                    <div className="ck-recap-label">Delivering to</div>
-                    <div className="ck-recap-text">
-                      {(() => { const a = user?.addresses?.[selectedAddressIndex]; return a ? `${a.name || user?.name || 'Customer'} · ${a.addressLine1 || a.fullAddress || ''}${a.city ? ', ' + a.city : ''}${a.pincode ? ' - ' + a.pincode : ''}` : '—'; })()}
-                    </div>
-                  </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
-                </div>
-                <div className="ck-recap-row">
-                  <div>
-                    <div className="ck-recap-label">Delivery</div>
-                    <div className="ck-recap-text">{deliveryType === 'express' ? 'Express' : 'Standard'}</div>
-                  </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
-                </div>
-              </div>
-
               <p className="ck-col-title">Payment</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
                 <div className="ck-panel-head">Select Payment Method</div>
@@ -1146,6 +1138,25 @@ export default function CheckoutPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="ck-recap" style={{ marginTop: 18 }}>
+                <div className="ck-recap-row">
+                  <div>
+                    <div className="ck-recap-label">Delivering to</div>
+                    <div className="ck-recap-text">
+                      {(() => { const a = user?.addresses?.[selectedAddressIndex]; return a ? `${a.name || user?.name || 'Customer'} · ${a.addressLine1 || a.fullAddress || ''}${a.city ? ', ' + a.city : ''}${a.pincode ? ' - ' + a.pincode : ''}` : '—'; })()}
+                    </div>
+                  </div>
+                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                </div>
+                <div className="ck-recap-row">
+                  <div>
+                    <div className="ck-recap-label">Delivery</div>
+                    <div className="ck-recap-text">{deliveryType === 'express' ? 'Express' : 'Standard'}</div>
+                  </div>
+                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                </div>
               </div>
 
               </>)}

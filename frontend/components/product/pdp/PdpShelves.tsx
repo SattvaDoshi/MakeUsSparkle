@@ -30,7 +30,7 @@ function Shelf({ eyebrow, title, em, children, href, linkLabel }: { eyebrow: str
 }
 
 /** "You may also like", "Shop by category" and "Recently viewed" — shown under the product. */
-export default function PdpShelves({ product }: { product: CatalogProduct }) {
+export default function PdpShelves({ product }: { product: Pick<CatalogProduct, 'sourceId'> & Partial<CatalogProduct> }) {
   const [all, setAll] = useState<CatalogProduct[]>([]);
   const [cats, setCats] = useState<CatalogCategory[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -52,11 +52,13 @@ export default function PdpShelves({ product }: { product: CatalogProduct }) {
 
   const similar = useMemo(() => {
     const others = all.filter((p) => String(p.sourceId) !== me);
-    const sameSub = others.filter((p) => product.subCategoryId && p.subCategoryId === product.subCategoryId);
-    const sameCat = others.filter((p) => product.categoryId && p.categoryId === product.categoryId && !sameSub.includes(p));
-    const rest = others.filter((p) => !sameSub.includes(p) && !sameCat.includes(p));
-    return [...sameSub, ...sameCat, ...rest].slice(0, 12);
-  }, [all, me, product.subCategoryId, product.categoryId]);
+    // Same collection (style) first, then the same sub-category, then the same category, then everything else.
+    const sameStyle = others.filter((p) => product.styleId && p.styleId === product.styleId);
+    const sameSub = others.filter((p) => product.subCategoryId && p.subCategoryId === product.subCategoryId && !sameStyle.includes(p));
+    const sameCat = others.filter((p) => product.categoryId && p.categoryId === product.categoryId && !sameStyle.includes(p) && !sameSub.includes(p));
+    const rest = others.filter((p) => !sameStyle.includes(p) && !sameSub.includes(p) && !sameCat.includes(p));
+    return [...sameStyle, ...sameSub, ...sameCat, ...rest].slice(0, 12);
+  }, [all, me, product.styleId, product.subCategoryId, product.categoryId]);
 
   const recent = useMemo(() => {
     const byId = new Map(all.map((p) => [String(p.sourceId), p]));

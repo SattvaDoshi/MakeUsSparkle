@@ -81,6 +81,14 @@ const productSchema = new mongoose.Schema(
     images: [String],
     imagePublicIds: [String],
 
+    // "Worn by customers" photos shown on the product page (section hidden when empty)
+    wornPhotos: [{
+      url: { type: String, required: true },
+      publicId: { type: String },
+      caption: { type: String, default: "", trim: true, maxlength: 80 },
+      _id: false,
+    }],
+
     // Per-product size chart image (Cloudinary URL) and measurement steps
     sizeChartImage: { type: String, default: null },
     sizeChartImagePublicId: { type: String, default: null },

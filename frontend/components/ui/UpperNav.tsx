@@ -144,6 +144,8 @@ function Results({
 
 export default function TopNav() {
   const pathname = usePathname();
+  // On a product page the piece already decides men/women, so the toggle goes and only the search bar stays pinned.
+  const isProductPage = pathname.startsWith('/products/');
   const { itemCount, openDrawer } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { gender, setGender, genders } = useGender();
@@ -267,7 +269,7 @@ export default function TopNav() {
       </div>
 
       {/* ── Main nav ── */}
-      <header className={styles.nav}>
+      <header className={`${styles.nav}${isProductPage ? ` ${styles.navPdp}` : ''}`}>
         <div className={styles.inner}>
           <div className={styles.left}>
             <button
@@ -337,7 +339,7 @@ export default function TopNav() {
 
         {/* ── Mobile row: gender + always-open search ── */}
         <div className={styles.mobileBar} ref={mobileWrapRef}>
-          {renderGender()}
+          {!isProductPage && renderGender()}
           <div className={styles.mobileSearch}>
             <SearchIcon size={16} />
             <input

@@ -18,6 +18,10 @@
 .wishBtn { position:absolute; top:12px; right:12px; z-index:3; width:42px; height:42px; border-radius:50%; border:0; background:#fff; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.1); transition:transform .2s, background .2s, color .2s; }
 .wishBtn:hover { transform:scale(1.08); }
 .wishOn { background:var(--forest); color:#fff; }
+.shareBtn { position:absolute; top:62px; right:12px; z-index:3; width:42px; height:42px; border-radius:50%; border:0; background:#fff; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.1); transition:transform .2s; }
+.shareBtn:hover { transform:scale(1.08); }
+.shareBtn:focus-visible { outline:2px solid var(--forest); outline-offset:2px; }
+.shareToast { position:absolute; top:70px; right:62px; z-index:4; padding:7px 12px; border-radius:999px; background:var(--ink); color:#fff; font-size:12px; white-space:nowrap; }
 .soldOverlay { position:absolute; inset:0; z-index:2; background:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; }
 .soldOverlay span { background:var(--ink); color:#fff; padding:10px 22px; border-radius:999px; font-size:12px; letter-spacing:.2em; text-transform:uppercase; font-weight:600; }
 .track { display:none; }

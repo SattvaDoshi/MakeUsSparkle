@@ -231,6 +231,18 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 		}));
 	});
 
+	// "Worn by customers" photos (shown on the product page only when at least one is added)
+	type WornItem = { id: string; type: "existing" | "new"; url?: string; file?: File; preview: string; caption: string };
+	const [wornItems, setWornItems] = useState<WornItem[]>(() =>
+		((initialData?.wornPhotos || []) as Array<{ url: string; caption?: string }>).map((w, i) => ({
+			id: `worn-existing-${i}-${Math.random().toString(36).substring(2, 7)}`,
+			type: "existing" as const,
+			url: w.url,
+			preview: w.url,
+			caption: w.caption || "",
+		}))
+	);
+
 	const [dragIdx, setDragIdx] = useState<number | null>(null);
 	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -602,6 +614,14 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 				}
 			});
 			formData.append("galleryOrder", JSON.stringify(orderSpec));
+
+			let wornNew = 0;
+			const wornSpec = wornItems.flatMap<{ type: string; url?: string; index?: number; caption: string }>((w) => {
+				if (w.type === "existing" && w.url) return [{ type: "existing", url: w.url, caption: w.caption }];
+				if (w.type === "new" && w.file) { formData.append("wornImages", w.file); return [{ type: "new", index: wornNew++, caption: w.caption }]; }
+				return [];
+			});
+			formData.append("wornOrder", JSON.stringify(wornSpec));
 
 			if (sizeChartImageFile) {
 				formData.append("sizeChartImage", sizeChartImageFile);
@@ -1766,6 +1786,48 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 											borderRadius: "6px",
 											fontSize: "0.95rem",
 										}}
+									/>
+								</div>
+
+								<div className="input-group" style={{ gridColumn: "1 / -1", display: "grid", gap: "0.5rem" }}>
+									<label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Worn by customers (optional, max 12)</label>
+									<p style={{ margin: 0, fontSize: "0.8rem", color: "#6b6b5e" }}>Real customer photos shown under the product. Leave empty and the section is hidden.</p>
+									{wornItems.length > 0 && (
+										<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "0.75rem" }}>
+											{wornItems.map((w) => (
+												<div key={w.id} style={{ border: "1px solid #d4d4c8", borderRadius: 8, padding: 6, display: "grid", gap: 6, background: "#fff" }}>
+													<div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 6, overflow: "hidden", background: "#f1efe6" }}>
+														{/* eslint-disable-next-line @next/next/no-img-element */}
+														<img src={w.preview} alt="Customer photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+														<button type="button" aria-label="Remove photo" onClick={() => setWornItems((prev) => prev.filter((x) => x.id !== w.id))} style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: "50%", border: 0, background: "rgba(0,0,0,.65)", color: "#fff", cursor: "pointer", lineHeight: 1 }}>×</button>
+													</div>
+													<input
+														type="text"
+														value={w.caption}
+														maxLength={80}
+														placeholder="Caption (e.g. Priya, Mumbai)"
+														onChange={(e) => setWornItems((prev) => prev.map((x) => (x.id === w.id ? { ...x, caption: e.target.value } : x)))}
+														style={{ padding: "0.3rem 0.4rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.8rem", minWidth: 0 }}
+													/>
+												</div>
+											))}
+										</div>
+									)}
+									<input
+										type="file"
+										multiple
+										accept="image/jpeg,image/png,image/webp,image/avif"
+										disabled={wornItems.length >= 12}
+										onChange={(e) => {
+											const files = Array.from(e.target.files || []).slice(0, Math.max(0, 12 - wornItems.length));
+											files.forEach((file) => {
+												const reader = new FileReader();
+												reader.onload = () => setWornItems((prev) => prev.length >= 12 ? prev : [...prev, { id: `worn-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, type: "new", file, preview: reader.result as string, caption: "" }]);
+												reader.readAsDataURL(file);
+											});
+											e.target.value = "";
+										}}
+										style={{ padding: "0.4rem", border: "1px solid #d4d4c8", borderRadius: "6px", fontSize: "0.95rem" }}
 									/>
 								</div>
 

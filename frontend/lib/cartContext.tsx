@@ -554,7 +554,8 @@ const addItem = useCallback(
     }
 
     if (offerDiscount > 0) {
-      const isApplied = !(state.optedOutOffers || []).includes(offer._id);
+      // Offers apply automatically (the shopper no longer picks them), so any old opt-out saved in the browser is ignored.
+      const isApplied = true;
       applicableOffers.push({
         id: offer._id,
         title: offer.title,

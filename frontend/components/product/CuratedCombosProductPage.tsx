@@ -18,6 +18,7 @@ import type { ReviewData } from '@/lib/catalogApi';
 import { CharmSelector, ChainSelector, type ChainOption } from './CharmProductDetailPage';
 import PdpGallery from './pdp/PdpGallery';
 import PdpReviews from './pdp/PdpReviews';
+import PdpShelves from './pdp/PdpShelves';
 import PdpStickyBar from './pdp/PdpStickyBar';
 import { useStickyColumns } from './pdp/useStickyColumns';
 import pc from './ProductCard.module.css';
@@ -1335,6 +1336,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       </div>
 
       <ComboReviews comboId={combo.id} />
+      <PdpShelves product={{ sourceId: combo.id }} />
 
       <PdpStickyBar
         show={showSticky}
@@ -1615,6 +1617,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
       <div className="hamper-divider" style={{ marginTop: 24 }} />
       <ComboExtras description={slot.description} />
       <ComboReviews comboId={slot.id} />
+      <PdpShelves product={{ sourceId: slot.id }} />
 
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
@@ -2639,6 +2642,16 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .dlv-rate { font-weight:600; color:#2a4736; text-align:right; }
         .dlv-head span:last-child { text-align:right; }
         .dlv-free { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:12px 14px; border-radius:12px; background:#f1f5f1; color:#1f3a2a; font-size:13.5px; }
+        @media (max-width:639px) {
+          .dlv { margin-top:14px; }
+          .dlv-title { font-size:19px; margin-bottom:8px; }
+          .dlv-row { grid-template-columns:1.2fr 1fr 1fr .62fr; gap:6px; padding:9px 10px; font-size:12px; }
+          .dlv-head { padding:8px 10px; font-size:8.5px; letter-spacing:.05em; line-height:1.2; }
+          .dlv-name { gap:6px; font-size:12px; }
+          .est-ico { width:22px; height:22px; font-size:12px; }
+          .dlv-cell { font-size:12px; color:#4a4a40; }
+          .dlv-free { margin-top:8px; padding:9px 11px; font-size:12px; gap:8px; }
+        }
         body.hide-bnav .bnav { display:none !important; }
         body.hide-bnav .has-bottom-nav { padding-bottom:0 !important; }
         .hamper-page .modal-textarea, .hamper-page select.modal-textarea { width:100% !important; max-width:none !important; }
@@ -2696,15 +2709,14 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           .hamper-main-block { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:48px; align-items:start; }
         }
         @media (max-width:639px) {
-          .dlv-head { display:none; }
-          .dlv-row { grid-template-columns:1fr auto; grid-template-areas:"name rate" "m m" "r r"; row-gap:4px; }
-          .dlv-name { grid-area:name; } .dlv-rate { grid-area:rate; }
-          .dlv-cell:nth-of-type(1) { grid-area:m; } .dlv-cell:nth-of-type(2) { grid-area:r; }
-          .dlv-cell::before { content:attr(data-l) ": "; color:#6f6f64; }
           .combo-acc-body { padding-left:18px; }
-          .combo-trust { grid-template-columns:1fr; }
-          .combo-trust-item { border-right:0; border-bottom:1px solid #ecebe4; }
-          .combo-trust-item:last-child { border-bottom:0; }
+          /* three across, icon over text */
+          .combo-trust { grid-template-columns:repeat(3,1fr); }
+          .combo-trust-item { display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px; min-width:0; padding:10px 4px; border-right:1px solid #ecebe4; border-bottom:0; }
+          .combo-trust-item:last-child { border-right:0; }
+          .combo-trust-icon { width:22px; height:22px; margin:0; }
+          .combo-trust-title { font-size:10px; letter-spacing:.02em; line-height:1.25; }
+          .combo-trust-sub { font-size:9.5px; line-height:1.25; }
         }
       `}</style>
 

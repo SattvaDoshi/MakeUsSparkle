@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { PDP_THEME_CSS } from './pdp/pdpTheme';
 import PdpGallery from './pdp/PdpGallery';
 import PdpReviews from './pdp/PdpReviews';
+import PdpWorn from '@/components/product/pdp/PdpWorn';
 import PdpShelves from './pdp/PdpShelves';
 import PdpStickyBar from './pdp/PdpStickyBar';
 import pdpStyles from './pdp/pdp.module.css';
@@ -116,36 +117,72 @@ export function GiftBoxUpsell({
   description: string;
   price: number;
 }) {
-  const perks = description.split(/[·•|]/).map((t) => t.trim()).filter(Boolean).slice(0, 4);
+  // "Rigid magnetic-close box · satin ribbon · message card" → a list behind the ⓘ, so the card stays clean
+  const perks = description.split(/[·•|]/).map((t) => t.trim()).filter(Boolean).slice(0, 6)
+    .map((t) => t.charAt(0).toUpperCase() + t.slice(1));
+  const [infoOpen, setInfoOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!infoOpen) return;
+    const away = (e: Event) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setInfoOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setInfoOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [infoOpen]);
+
   return (
-    <button type="button" role="checkbox" aria-checked={added} onClick={onToggle} className={`gift-card${added ? ' is-on' : ''}`}>
-      <span className="gift-img">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
-      </span>
-      <span className="gift-main">
-        <span className="gift-tag">7 in 10 gifters choose this</span>
-        <span className="gift-title-row">
-          <span className="gift-title">{heading}</span>
-          <span className="gift-price">+₹{price}</span>
+    <div className={`gift-wrap${added ? ' is-on' : ''}`} ref={wrapRef}>
+      <div
+        role="checkbox"
+        aria-checked={added}
+        tabIndex={0}
+        className="gift-card"
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggle(); } }}
+      >
+        <span className="gift-img">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
         </span>
-        {perks.length > 0 && (
-          <span className="gift-perks">
-            {perks.map((t) => (
-              <span key={t} className="gift-perk">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                {t}
-              </span>
-            ))}
+        <span className="gift-main">
+          <span className="gift-text">
+            <span className="gift-title-row">
+              <span className="gift-title">{heading}</span>
+              {perks.length > 0 && (
+                <button
+                  type="button"
+                  className="gift-info"
+                  aria-label={`What's included in the ${heading}`}
+                  aria-expanded={infoOpen}
+                  onClick={(e) => { e.stopPropagation(); setInfoOpen((o) => !o); }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9.5" /><line x1="12" y1="11" x2="12" y2="16.5" /><circle cx="12" cy="7.6" r=".6" fill="currentColor" /></svg>
+                </button>
+              )}
+            </span>
+            <span className="gift-price">+₹{price}</span>
           </span>
-        )}
-      </span>
-      <span className="gift-check" aria-hidden="true">
-        {added
-          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-          : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>}
-      </span>
-    </button>
+          <span className="gift-add" aria-hidden="true">
+            {added ? (
+              <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>Added</>
+            ) : 'Add'}
+          </span>
+        </span>
+      </div>
+
+      {infoOpen && perks.length > 0 && (
+        <ul className="gift-perks-open" aria-label={`What's included in the ${heading}`}>
+          {perks.map((t) => (
+            <li key={t}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+              {t}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 // ─── Reviews Section ──────────────────────────────────────────────────────────
@@ -1454,7 +1491,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               onChange={setActiveImg}
               alt={productName}
               soldOut={Number(currentStock) <= 0}
-              chip={product.offerTag || product.offer || (discount > 0 ? `${discount}% off` : product.badge || undefined)}
+              chip={product.offerTag || product.offer || product.badge || undefined}
               fallback={FALLBACK_PRODUCT_IMAGE}
               wish={!isFromCombo ? (
                 <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
@@ -1487,14 +1524,15 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 {computedOriginalPrice > computedPrice && (
                   <>
                     <span className="pdp-original">₹{Math.round(computedOriginalPrice).toLocaleString('en-IN')}</span>
-                    {discount > 0 && <span className="pdp-discount">{discount}% off</span>}
+                    <span className="pdp-discount">
+                      Save ₹{Math.round(computedOriginalPrice - computedPrice).toLocaleString('en-IN')}{discount > 0 ? ` · ${discount}% off` : ''}
+                    </span>
                   </>
                 )}
               </div>
-              <p className="pdp-tax">
-                Inclusive of all taxes{computedOriginalPrice > computedPrice ? ` · You save ₹${Math.round(computedOriginalPrice - computedPrice).toLocaleString('en-IN')}` : ''}
-              </p>
-              {discountTag && (
+              <p className="pdp-tax">Inclusive of all taxes</p>
+              {/* An offer worth reading (e.g. "Buy 3 get 1 free"); the plain "10% off" is already the pill above */}
+              {discountTag && !/^\s*\d+(\.\d+)?\s*%\s*off\s*$/i.test(discountTag) && (
                 <div className="pdp-offer">
                   <span className="pdp-offer-icon"><Em c="🏷" size="1.05em" /></span>
                   <span className="pdp-offer-text">{discountTag}</span>
@@ -1612,7 +1650,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 </div>
               );
             })}
-            {description && <p className="pdp-desc">{description}</p>}
             {tags.length > 0 && (
               <div
                 aria-hidden="true"
@@ -1712,9 +1749,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Premium Gift Box upsell — show when NOT in combo context and giftBox is enabled in the product data */}
             {!isFromCombo && product?.giftBox?.enabled && (
               <>
-                <p className="pdp-section-label" style={{ margin: '18px 0 12px' }}>
-                  Make it a Gift
-                </p>
+                <div style={{ height: 16 }} />
                 <GiftBoxUpsell
                   added={giftBoxAdded}
                   onToggle={() => setGiftBoxAdded(v => !v)}
@@ -1747,6 +1782,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           </div>
         </div>
 
+        <PdpWorn photos={product.wornPhotos} />
         <PdpReviews productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
         <PdpShelves product={product} />
         <div style={{ height: 56 }} />

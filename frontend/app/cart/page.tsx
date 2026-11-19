@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/authContext';
 import { apiRequest } from '@/lib/api';
 import { cdnImage } from '@/lib/cdn';
 import CartUpsell from '@/components/cart/CartUpsell';
+import CouponSheet from '@/components/cart/CouponSheet';
 import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 
 // ─── Gift Box Options (Cart level) ──────────────────────────────────────────
@@ -50,8 +51,6 @@ export default function CartPage() {
     setRewardPointsRedeemed,
     autoDiscountAmount,
     appliedOffers,
-    applicableOffers,
-    toggleOfferOptOut,
   } = useCart();
 
   const {
@@ -111,6 +110,7 @@ export default function CartPage() {
   const displayTotal = baseTotal - actualRedeemedPoints;
 
   const [couponInput, setCouponInput] = useState('');
+  const [showCoupons, setShowCoupons] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
@@ -118,6 +118,7 @@ export default function CartPage() {
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const FREE_SHIP = 999;
   const toFree = Math.max(0, FREE_SHIP - subtotal);
+  const totalSaved = savings + (autoDiscountAmount || 0) + (discountAmount || 0) + (actualRedeemedPoints || 0);
   const shipPct = Math.min(100, Math.round((subtotal / FREE_SHIP) * 100));
   useEffect(() => {
     let live = true;
@@ -180,7 +181,7 @@ export default function CartPage() {
 .cp-ship { padding:16px 18px; background:#fafaf6; }
 .cp-ship-msg { margin:0 0 10px; font-size:14px; color:#3a3a32; display:flex; align-items:center; gap:8px; }
 .cp-ship-msg b { color:var(--forest); }
-.cp-ship-track { height:8px; background:#e7e5da; border-radius:99px; overflow:hidden; }
+.cp-ship-track { height:6px; background:#e7e5da; border-radius:99px; overflow:hidden; }
 .cp-ship-fill { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#3d6b4f,var(--forest)); transition:width .5s ease; }
 .cp-savings { margin:0; padding:11px 18px; background:var(--soft); color:var(--forest-d); font-size:13.5px; font-weight:500; display:flex; align-items:center; gap:8px; border-top:1px solid var(--line); border-radius:0 0 17px 17px; }
 
@@ -266,6 +267,8 @@ export default function CartPage() {
 .cp-summary-row--savings, .cp-summary-row--savings span:last-child { color:var(--forest); }
 .cp-summary-row--total { font-size:16px; font-weight:600; border-top:1px solid var(--line); padding-top:14px; margin:6px 0 0; }
 .cp-summary-row--total span:last-child { font-size:22px; font-weight:600; }
+.cp-saved-pill { margin:14px 0 0; padding:10px 14px; border-radius:12px; background:#e9f4ec; color:#1f4a31; font-size:13.5px; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px; }
+.cp-saved-pill b { font-weight:700; }
 .cp-tax-note { margin:4px 0 0; font-size:12px; color:var(--mist); text-align:right; }
 .cp-summary-row .cp-free-tag, .cp-free-tag { background:var(--forest); color:#fff !important; font-size:10.5px; font-weight:600; letter-spacing:.1em; padding:3px 9px; border-radius:999px; }
 
@@ -276,7 +279,7 @@ export default function CartPage() {
 .cp-offer input { accent-color:var(--forest); width:16px; height:16px; }
 .cp-offer b { font-size:13.5px; font-weight:600; color:var(--forest); }
 
-.cp-promo { background:#fafaf6; border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:16px; }
+.cp-promo { background:transparent; border:0; border-bottom:1px solid var(--line); border-radius:0; padding:0 0 14px; margin-bottom:14px; }
 .cp-promo-head { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-bottom:10px; color:var(--ink); }
 .cp-promo-head svg { color:var(--forest); }
 .cp-promo .cp-coupon-row { padding-bottom:0; }
@@ -290,6 +293,8 @@ export default function CartPage() {
 .cp-coupon-input::placeholder { text-transform:none; letter-spacing:normal; color:#9a9a8e; }
 .cp-coupon-btn { height:46px; padding:0 22px; background:var(--ink); color:#fff; border:0; border-radius:999px; font:inherit; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
 .cp-coupon-btn:hover { background:#000; }
+.cp-view-coupons { all:unset; box-sizing:border-box; cursor:pointer; font-size:13px; font-weight:600; color:var(--forest); padding:2px 0 12px; }
+.cp-view-coupons:focus-visible { outline:2px solid var(--forest); outline-offset:2px; }
 .cp-coupon-msg { font-size:12.5px; margin:-6px 0 12px; }
 .cp-coupon-msg--error { color:var(--red); }
 .cp-coupon-msg--success { color:var(--forest); }
@@ -401,9 +406,6 @@ export default function CartPage() {
                         <span className="cp-ship-fill" style={{ width: `${shipPct}%` }} />
                       </div>
                     </div>
-                    {savings > 0 && (
-                      <p className="cp-savings"><Em c="🎉" /> You&apos;re saving ₹{savings.toLocaleString('en-IN')} on this order</p>
-                    )}
                     <div className="cp-list">
                   {items.map((item) => {
                     const key = item.cartItemId ?? `${item.id}-${item.colorHex}`;
@@ -659,6 +661,7 @@ export default function CartPage() {
                             />
                             <button className="cp-coupon-btn" onClick={handleApplyCoupon}>Apply</button>
                           </div>
+                          <button type="button" className="cp-view-coupons" onClick={() => setShowCoupons(true)}>View all available coupons ›</button>
                           {couponError && <p className="cp-coupon-msg cp-coupon-msg--error">{couponError}</p>}
                           {couponSuccess && <p className="cp-coupon-msg cp-coupon-msg--success">{couponSuccess}</p>}
                         </>
@@ -725,19 +728,11 @@ export default function CartPage() {
                       </div>
                     )}
 
-                    {applicableOffers.length > 0 && (
-                      <div className="cp-offers">
-                        {applicableOffers.map((o) => (
-                          <div key={o.id} className={`cp-offer${o.applied ? ' on' : ''}`}>
-                            <label>
-                              <input type="checkbox" checked={o.applied} onChange={() => toggleOfferOptOut(o.id)} />
-                              <span>{o.title}</span>
-                            </label>
-                            <b>{o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}</b>
-                          </div>
-                        ))}
+                    {appliedOffers.map((o) => (
+                      <div key={o.id} className="cp-summary-row cp-summary-row--savings">
+                        <span>{o.title}</span><span>−₹{o.amount.toLocaleString('en-IN')}</span>
                       </div>
-                    )}
+                    ))}
 
                     <div className="cp-summary-row">
                       <span>Shipping</span>
@@ -753,6 +748,9 @@ export default function CartPage() {
                       <span>Total</span><span>₹{displayTotal.toLocaleString('en-IN')}</span>
                     </div>
                     <p className="cp-tax-note">Inclusive of all taxes</p>
+                    {totalSaved > 0 && (
+                      <p className="cp-saved-pill"><Em c="🎉" /> You&apos;re saving <b>₹{totalSaved.toLocaleString('en-IN')}</b> on this order</p>
+                    )}
 
                     <Link href="/checkout" className="cp-checkout-btn cp-checkout-inline" aria-disabled={hasStockIssue} onClick={goCheckout}>
                       Proceed to checkout
@@ -771,6 +769,7 @@ export default function CartPage() {
                     <div className="cp-trust-item"><Em c="🔒" /><span>100% secure checkout</span></div>
                   </div>
                 </aside>
+                <CouponSheet open={showCoupons} onClose={() => setShowCoupons(false)} subtotal={subtotal} appliedCode={discountCode} onApply={applyCouponCode} />
               </div>
 
               <div className="cp-sticky">

@@ -109,6 +109,7 @@ export interface CatalogProduct {
   sizeChartImage?: string | null;
   /** Steps to measure for the size chart */
   sizeChartSteps?: string;
+  wornPhotos?: Array<{ url: string; caption?: string }>;
   /** Per-product gift box upsell configuration. */
   giftBox?: {
     enabled: boolean;
@@ -219,6 +220,8 @@ interface BackendProduct {
   perCharmPrice?: number;
   sizeChartImage?: string | null;
   sizeChartSteps?: string;
+  /** Customer photos shown in the "Worn by customers" section (empty = section hidden). */
+  wornPhotos?: Array<{ url: string; caption?: string }>;
   giftBox?: {
     enabled?: boolean;
     heading?: string;
@@ -475,6 +478,7 @@ function normalizeProduct(
     perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,
     sizeChartSteps: item.sizeChartSteps || "",
+    wornPhotos: Array.isArray((item as any).wornPhotos) ? (item as any).wornPhotos.filter((w: any) => w?.url).map((w: any) => ({ url: w.url, caption: w.caption || '' })) : [],
     crossProducts: Array.isArray((item as any).crossProducts)
       ? (item as any).crossProducts.map((cp: any) => ({
           _id: cp._id ? String(cp._id) : String(cp),
@@ -802,6 +806,7 @@ export async function fetchOpenSection(gender?: string): Promise<CatalogOpenSect
           perCharmPrice: 0,
           sizeChartImage: p.sizeChartImage || null,
           sizeChartSteps: p.sizeChartSteps || "",
+          wornPhotos: Array.isArray((p as any).wornPhotos) ? (p as any).wornPhotos.filter((w: any) => w?.url).map((w: any) => ({ url: w.url, caption: w.caption || '' })) : [],
           giftBox: p.giftBox ? {
             enabled: p.giftBox.enabled !== false,
             heading: p.giftBox.heading || "Premium Gift Box",

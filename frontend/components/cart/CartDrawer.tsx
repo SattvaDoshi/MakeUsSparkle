@@ -10,6 +10,7 @@ import CartUpsell from '@/components/cart/CartUpsell';
 import CartSaveWarning from '@/components/cart/CartSaveWarning';
 import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 import { lockScroll } from '@/lib/scrollLock';
+import { useSheetSwipe, SHEET_GRAB_CSS } from '@/lib/useSheetSwipe';
 
 /** Chosen options (colour, size, etc.) saved on a hamper piece, as readable text lines */
 function getOptionLines(customData: any): Array<[string, string]> {
@@ -27,9 +28,10 @@ function getOptionLines(customData: any): Array<[string, string]> {
 
 // ─── Main CartDrawer ──────────────────────────────────────────────────────────
 export default function CartDrawer() {
-  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut } = useCart();
+  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers } = useCart();
   const { isDrawerOpen, items } = state;
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { sheetRef, grabProps } = useSheetSwipe(closeDrawer);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const FREE_SHIP = 999;
   const toFree = Math.max(0, FREE_SHIP - subtotal);
@@ -416,6 +418,23 @@ export default function CartDrawer() {
         .ci-pricebox b { font-size: 16px; font-weight: 600; color: #1a1a14; }
         .ci-pricebox s { font-size: 12px; color: #8b8b80; }
         @media (max-width: 480px) { .drawer-items { padding: 12px 14px 20px; } .ci-imgwrap { flex-basis: 76px; width: 76px; height: 96px; } }
+
+        ${SHEET_GRAB_CSS}
+        /* ── Phones: the cart rises from the bottom as a sheet ── */
+        @media (max-width: 767px) {
+          .drawer-panel {
+            top: auto; left: 0; right: 0; bottom: 0;
+            width: 100%; height: auto; max-height: 88dvh;
+            border-radius: 22px 22px 0 0;
+            transform: translateY(100%);
+            transition: transform .38s cubic-bezier(.22,.68,0,1);
+            box-shadow: 0 -12px 44px rgba(26,31,13,.24);
+            overflow: hidden;
+          }
+          .drawer-overlay.open .drawer-panel { transform: translateY(0); }
+          .drawer-panel .drawer-head { padding-top: 4px; }
+          .drawer-items { min-height: 0; }
+        }
       `}</style>
 
       <div
@@ -423,7 +442,8 @@ export default function CartDrawer() {
         className={`drawer-overlay${isDrawerOpen ? ' open' : ''}`}
         onClick={e => { if (e.target === overlayRef.current) closeDrawer(); }}
       >
-        <div className="drawer-panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+        <div ref={sheetRef as React.RefObject<HTMLDivElement>} className="drawer-panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+          <div className="sheet-grab" {...grabProps} aria-hidden="true"><span /></div>
 
           {/* ── Header ── */}
           <div className="drawer-head">
@@ -558,21 +578,7 @@ export default function CartDrawer() {
                 );
               })}
 
-              {/* Store offers */}
-              {applicableOffers.length > 0 && (
-                <div className="offers">
-                  <span className="offers-h">Store offers</span>
-                  {applicableOffers.map((o) => (
-                    <label key={o.id} className={`offer${o.applied ? ' on' : ''}`}>
-                      <input type="checkbox" checked={o.applied} onChange={() => toggleOfferOptOut(o.id)} />
-                      <span className="offer-t">{o.title}</span>
-                      <span className="offer-a">{o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
+       <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
             </div>
           )}
 

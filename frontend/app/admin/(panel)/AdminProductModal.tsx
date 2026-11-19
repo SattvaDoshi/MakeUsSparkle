@@ -569,12 +569,12 @@ export default function AdminProductModal({ mode, initialData, onClose, onSucces
 					}
 				});
 			}
-			if (sizes.length > 0) formData.append("sizes", JSON.stringify(sizes));
+			formData.append("sizes", JSON.stringify(sizes || []));
 
 			// Variants
 			const processedVariants = variants.map((v) => ({
 				color: v.color,
-				size: v.size,
+				size: sizes.length > 0 ? (v.size || "") : "",
 				price: v.price,
 				salePrice: v.salePrice,
 				stock: v.stock,

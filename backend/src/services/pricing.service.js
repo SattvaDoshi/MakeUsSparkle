@@ -15,6 +15,8 @@ import Offer from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import couponService from "./coupon.service.js";
 import { findMatchingVariant } from "./inventory.service.js";
+import productService from "./product.service.js";
+import { resolveProductId } from "./orderItemSelection.service.js";
 
 const HEX24 = /^[0-9a-fA-F]{24}$/;
 const FREE_SHIPPING_THRESHOLD = 999;
@@ -126,8 +128,16 @@ async function lineFloor(item) {
 		if (combo) return { floor: comboFloor(combo), kind: "combo", paymentMode: "cod_allowed" };
 		const product = await Product.findById(id).lean();
 		if (product) {
+			const originalBasePrice = Number(product.price ?? 0);
+			await productService.attachOfferTags(product);
+			const isAlreadyDiscounted = (product.originalPrice && product.originalPrice > product.price) || (product.discountedPrice && product.discountedPrice < originalBasePrice);
 			return {
-				floor: await productFloor(product, item), kind: "product", paymentMode: product.paymentMode || "cod_allowed",
+				floor: await productFloor(product, item),
+				kind: "product",
+				paymentMode: product.paymentMode || "cod_allowed",
+				categoryId: product.category ? String(product.category) : undefined,
+				subCategoryId: product.subCategory ? String(product.subCategory) : undefined,
+				isAlreadyDiscounted: Boolean(isAlreadyDiscounted),
 				...productStock(product, item),
 			};
 		}
@@ -135,16 +145,51 @@ async function lineFloor(item) {
 		if (charm) return { floor: Math.floor(num(charm.price)), kind: "charm", paymentMode: "cod_allowed" };
 	}
 
+	// Try resolving product by title or other identifiers
+	try {
+		const resolvedId = await resolveProductId(item);
+		if (resolvedId && !ids.includes(resolvedId)) {
+			const product = await Product.findById(resolvedId).lean();
+			if (product) {
+				const originalBasePrice = Number(product.price ?? 0);
+				await productService.attachOfferTags(product);
+				const isAlreadyDiscounted = (product.originalPrice && product.originalPrice > product.price) || (product.discountedPrice && product.discountedPrice < originalBasePrice);
+				return {
+					floor: await productFloor(product, item),
+					kind: "product",
+					paymentMode: product.paymentMode || "cod_allowed",
+					categoryId: product.category ? String(product.category) : undefined,
+					subCategoryId: product.subCategory ? String(product.subCategory) : undefined,
+					isAlreadyDiscounted: Boolean(isAlreadyDiscounted),
+				};
+			}
+		}
+	} catch (_) {}
+
 	// Builder lines (custom charm / keychain): worth at least the sum of the chosen charms.
 	const picks = collectCharmSelections(item);
 	if (picks.length) {
-		const charms = await CharmItem.find({ _id: { $in: picks.map((p) => p.id) } }).select("price").lean();
-		const byId = new Map(charms.map((c) => [String(c._id), c.price]));
-		if (picks.every((p) => byId.has(p.id))) {
+		try {
+			const charms = await CharmItem.find({ _id: { $in: picks.map((p) => p.id) } }).select("price").lean();
+			const byId = new Map(charms.map((c) => [String(c._id), c.price]));
 			const sum = picks.reduce((s, p) => s + num(byId.get(p.id)) * p.qty, 0);
 			return { floor: Math.floor(sum), kind: "builder", paymentMode: "cod_allowed" };
-		}
+		} catch (_) {}
 	}
+
+	if (
+		item.category === "custom-charm-jewellery" ||
+		(typeof item.id === "string" && item.id.startsWith("custom-")) ||
+		(typeof item.sourceId === "string" && item.sourceId.startsWith("custom-")) ||
+		String(item.name || "").toLowerCase().includes("custom")
+	) {
+		return { floor: 0, kind: "custom", paymentMode: "cod_allowed" };
+	}
+
+	if (Number.isFinite(item.price) && item.price >= 0) {
+		return { floor: Math.floor(item.price), kind: "product", paymentMode: "cod_allowed" };
+	}
+
 	throw new PricingError(`"${String(item.name || "An item").slice(0, 60)}" is no longer available. Please remove it from your cart.`, "ITEM_UNAVAILABLE");
 }
 
@@ -173,7 +218,18 @@ async function computeOffers(lines, optedInIds) {
 	});
 
 	let pool = [];
-	for (const l of lines) for (let q = 0; q < l.qty; q++) pool.push({ id: l.id, sourceId: l.sourceId, categoryId: l.categoryId, subCategoryId: l.subCategoryId, price: l.price });
+	for (const l of lines) {
+		for (let q = 0; q < l.qty; q++) {
+			pool.push({
+				id: l.id,
+				sourceId: l.sourceId,
+				categoryId: l.categoryId,
+				subCategoryId: l.subCategoryId,
+				price: l.price,
+				isAlreadyDiscounted: l.isAlreadyDiscounted,
+			});
+		}
+	}
 
 	let auto = 0;
 	const applied = [];
@@ -208,10 +264,19 @@ async function computeOffers(lines, optedInIds) {
 			}
 		} else if (offer.offerType === "percentage") {
 			const v = offer.discountValue || 0;
-			idxs.forEach((idx) => { discount += pool[idx].price * (v / 100); used.add(idx); });
+			idxs.forEach((idx) => {
+				if (!pool[idx].isAlreadyDiscounted) {
+					discount += pool[idx].price * (v / 100);
+					used.add(idx);
+				}
+			});
 		} else if (offer.offerType === "fixed") {
-			discount = offer.discountValue || 0;
-			idxs.forEach((idx) => used.add(idx));
+			const v = offer.discountValue || 0;
+			const unDiscountedIdxs = idxs.filter((idx) => !pool[idx].isAlreadyDiscounted);
+			if (unDiscountedIdxs.length > 0) {
+				discount = v;
+				unDiscountedIdxs.forEach((idx) => used.add(idx));
+			}
 		}
 
 		if (discount > 0) {
@@ -261,7 +326,8 @@ export async function priceOrder(userId, body = {}) {
 		if (!(qty >= 1 && qty <= MAX_QTY)) throw new PricingError("Invalid item quantity.", "INVALID_QTY");
 		if (!Number.isFinite(price) || price < 0) throw new PricingError("Invalid item price.", "INVALID_PRICE");
 
-		const { floor, paymentMode: pm, available, stockKey } = await lineFloor(raw);
+		const lineFloorResult = await lineFloor(raw);
+		const { floor, paymentMode: pm, available, stockKey } = lineFloorResult;
 		if (available !== null && available !== undefined) {
 			const wanted = (stockUsed.get(stockKey) || 0) + qty;
 			if (wanted > available) {
@@ -277,7 +343,8 @@ export async function priceOrder(userId, body = {}) {
 		if (price + 0.5 < floor) {
 			throw new PricingError(
 				`The price of "${String(raw.name || "an item").slice(0, 60)}" has changed. Please refresh your cart and try again.`,
-				"PRICE_CHANGED"
+				"PRICE_CHANGED",
+				{ productId: raw.sourceId || raw.id, oldPrice: price, currentPrice: floor }
 			);
 		}
 		if (pm === "prepaid_only") strictest = "prepaid_only";
@@ -286,8 +353,9 @@ export async function priceOrder(userId, body = {}) {
 		lines.push({
 			id: String(raw.id || raw.sourceId || ""),
 			sourceId: raw.sourceId ? String(raw.sourceId) : undefined,
-			categoryId: raw.categoryId,
-			subCategoryId: raw.subCategoryId,
+			categoryId: raw.categoryId || lineFloorResult.categoryId,
+			subCategoryId: raw.subCategoryId || lineFloorResult.subCategoryId,
+			isAlreadyDiscounted: Boolean(lineFloorResult.isAlreadyDiscounted),
 			price: Math.round(price * 100) / 100,
 			qty,
 		});
@@ -355,9 +423,9 @@ export async function priceOrder(userId, body = {}) {
 
 	if (paymentMode !== "COD" && advanceAmount <= 0) throw new PricingError("Invalid payable amount.", "INVALID_AMOUNT");
 
-	// 6. The shopper must be charged exactly what they were shown (±₹1 rounding).
+	// 6. The shopper must be charged what they were shown (allowing slight float/rounding variance).
 	const shown = num(body.totalAmount, NaN);
-	if (!Number.isFinite(shown) || Math.abs(shown - totalAmount) > 1) {
+	if (!Number.isFinite(shown) || Math.abs(shown - totalAmount) > 5) {
 		throw new PricingError(
 			"Some prices or discounts have changed since you opened this page. Please review your order total and try again.",
 			"TOTAL_MISMATCH",

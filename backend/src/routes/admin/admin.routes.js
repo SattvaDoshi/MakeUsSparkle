@@ -11,6 +11,7 @@ import {
 	getCoupons,
 	getDashboard,
 	getOrders,
+	getUserOrderHistory,
 	getPayments,
 	getProducts,
 	getReviews,
@@ -36,6 +37,8 @@ router.put("/users/:id", updateUser);
 router.delete("/users/:id", deleteUser);
 router.get("/products", getProducts);
 router.get("/orders", getOrders);
+router.get("/orders/user-history", getUserOrderHistory);
+router.get("/orders/user-history/:userId", getUserOrderHistory);
 router.delete("/orders/:id", deleteOrder);
 router.get("/payments", getPayments);
 router.put("/payments/:orderId/status", updatePaymentStatus);

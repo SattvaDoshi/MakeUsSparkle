@@ -903,8 +903,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
   }
 
   const currentStock = matchingVariant?.stock ?? stock;
-  const availableSizes = sizes.length > 0 ? sizes : uniqueValues(variants.map(v => v.size));
-  const sizeOptions = availableSizes.length > 0 ? availableSizes : [];
+  const sizeOptions = sizes.length > 0 ? sizes : [];
   const selectedCharmCount = charmData.count;
   const perCharmPrice = product?.perCharmPrice ?? 0;
 

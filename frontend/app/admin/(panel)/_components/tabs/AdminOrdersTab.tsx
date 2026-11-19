@@ -87,6 +87,86 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 		}
 	};
 
+	// Customer Order History Modal State
+	const [historyModalUser, setHistoryModalUser] = useState<{
+		userId?: string;
+		name?: string;
+		email?: string;
+		phone?: string;
+		currentOrderId?: string;
+	} | null>(null);
+	const [historyOrders, setHistoryOrders] = useState<AdminOrder[]>([]);
+	const [historyLoading, setHistoryLoading] = useState(false);
+	const [historyStats, setHistoryStats] = useState({ totalOrders: 0, totalSpent: 0 });
+
+	// Compute order count per user in the currently loaded dataset
+	const userOrderCountMap = useMemo(() => {
+		const map = new Map<string, number>();
+		for (const o of orders) {
+			const keys = [o.user?._id, o.user?.email, o.address?.phone].filter(Boolean) as string[];
+			for (const k of keys) {
+				map.set(k, (map.get(k) || 0) + 1);
+			}
+		}
+		return map;
+	}, [orders]);
+
+	const openCustomerHistory = useCallback(async (order: AdminOrder) => {
+		const userId = order.user?._id;
+		const email = order.user?.email || (order.address as any)?.email;
+		const phone = order.address?.phone || order.address?.alternativePhone;
+		const name = order.user?.name || order.address?.name || "Customer";
+
+		setHistoryModalUser({
+			userId,
+			name,
+			email,
+			phone,
+			currentOrderId: order._id,
+		});
+
+		// Seed instantly from memory
+		const localMatches = orders.filter((o) => {
+			if (userId && o.user?._id && o.user._id === userId) return true;
+			if (email && (o.user?.email === email || (o.address as any)?.email === email)) return true;
+			if (phone && (o.address?.phone === phone || order.address?.alternativePhone === phone)) return true;
+			return false;
+		});
+
+		setHistoryOrders(localMatches);
+		setHistoryStats({
+			totalOrders: localMatches.length,
+			totalSpent: localMatches.filter((o) => o.status !== "cancelled").reduce((s, o) => s + (o.totalAmount || 0), 0),
+		});
+		setHistoryLoading(true);
+
+		try {
+			const params = new URLSearchParams();
+			if (userId) params.set("userId", userId);
+			if (email) params.set("email", email);
+			if (phone) params.set("phone", phone);
+
+			const res = await apiRequest<{
+				success: boolean;
+				orders: AdminOrder[];
+				totalOrders: number;
+				totalSpent: number;
+			}>(`/admin/orders/user-history?${params.toString()}`);
+
+			if (res.success && Array.isArray(res.orders)) {
+				setHistoryOrders(res.orders);
+				setHistoryStats({
+					totalOrders: res.totalOrders ?? res.orders.length,
+					totalSpent: res.totalSpent ?? res.orders.reduce((s, o) => s + (o.totalAmount || 0), 0),
+				});
+			}
+		} catch (err) {
+			console.error("Failed to fetch user order history:", err);
+		} finally {
+			setHistoryLoading(false);
+		}
+	}, [orders]);
+
 	const loadWarehouses = useCallback(async () => {
 		if (warehousesLoaded) return;
 		try {
@@ -240,6 +320,143 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 				.ao-status-shipped { background: #e3f2fd; color: #1565c0; }
 				.ao-status-delivered { background: #f3e5f5; color: #6a1b9a; }
 				.ao-status-cancelled { background: #ffebee; color: #c62828; }
+
+				.ao-history-btn {
+					background: #f0f5e8;
+					color: #2e7d32;
+					border: 1px solid #c8e6c9;
+					border-radius: 6px;
+					padding: 3px 8px;
+					font-size: 11px;
+					font-weight: 700;
+					cursor: pointer;
+					transition: all 0.15s;
+					white-space: nowrap;
+					display: inline-flex;
+					align-items: center;
+					gap: 4px;
+				}
+				.ao-history-btn:hover {
+					background: #2e7d32;
+					color: #ffffff;
+					border-color: #2e7d32;
+				}
+				.ao-user-repeat-badge {
+					background: #e8f5e9;
+					color: #2e7d32;
+					font-size: 10px;
+					font-weight: 700;
+					padding: 1px 6px;
+					border-radius: 10px;
+					border: 1px solid #c8e6c9;
+					white-space: nowrap;
+				}
+				.ao-modal-backdrop {
+					position: fixed;
+					inset: 0;
+					background: rgba(15, 26, 15, 0.6);
+					backdrop-filter: blur(4px);
+					z-index: 9999;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					padding: 20px;
+				}
+				.ao-modal-card {
+					background: #ffffff;
+					border-radius: 16px;
+					width: 100%;
+					max-width: 860px;
+					max-height: 90vh;
+					display: flex;
+					flex-direction: column;
+					box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+					overflow: hidden;
+					animation: aoModalFadeIn 0.2s ease-out;
+				}
+				@keyframes aoModalFadeIn {
+					from { opacity: 0; transform: scale(0.97) translateY(8px); }
+					to { opacity: 1; transform: scale(1) translateY(0); }
+				}
+				.ao-modal-header {
+					padding: 20px 24px;
+					border-bottom: 1px solid #ebebeb;
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					background: #fafbf8;
+				}
+				.ao-modal-title {
+					font-size: 17px;
+					font-weight: 800;
+					color: #1a2710;
+					display: flex;
+					align-items: center;
+					gap: 8px;
+				}
+				.ao-modal-close {
+					background: none;
+					border: none;
+					font-size: 20px;
+					cursor: pointer;
+					color: #777;
+					padding: 4px 8px;
+					border-radius: 6px;
+				}
+				.ao-modal-close:hover {
+					background: #eee;
+					color: #111;
+				}
+				.ao-modal-stats {
+					display: grid;
+					grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+					gap: 12px;
+					padding: 16px 24px;
+					background: #fdfdfd;
+					border-bottom: 1px solid #f0f0f0;
+				}
+				.ao-modal-stat-box {
+					background: #f7f9f2;
+					border: 1px solid #e2ebd6;
+					border-radius: 10px;
+					padding: 10px 14px;
+				}
+				.ao-modal-stat-label {
+					font-size: 11px;
+					text-transform: uppercase;
+					letter-spacing: 0.05em;
+					color: #6f7f5a;
+					font-weight: 700;
+				}
+				.ao-modal-stat-val {
+					font-size: 18px;
+					font-weight: 800;
+					color: #2d3e18;
+					margin-top: 2px;
+				}
+				.ao-modal-body {
+					padding: 20px 24px;
+					overflow-y: auto;
+					flex: 1;
+					display: flex;
+					flex-direction: column;
+					gap: 14px;
+				}
+				.ao-history-item {
+					background: #ffffff;
+					border: 1.5px solid #eaeaea;
+					border-radius: 12px;
+					padding: 14px 18px;
+					transition: all 0.15s;
+				}
+				.ao-history-item:hover {
+					border-color: #c8e6c9;
+					box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+				}
+				.ao-history-item.is-current {
+					border-color: #2e7d32;
+					background: #fafdf8;
+				}
 
 				.ao-expand-btn {
 					background: none; border: none; cursor: pointer; padding: 8px;
@@ -412,6 +629,8 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 
 							const hasDiscount = (order.discountAmount ?? 0) > 0 || (order.autoDiscountAmount ?? 0) > 0;
 							const hasRewardPoints = (order.rewardPointsRedeemed ?? 0) > 0;
+							const userKey = order.user?._id || order.user?.email || order.address?.phone || "";
+							const orderCount = userOrderCountMap.get(userKey) || 1;
 
 							return (
 								<div className="ao-card" key={order._id}>
@@ -426,9 +645,29 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 
 										{/* Customer */}
 										<div className="ao-col">
-											<span className="ao-label">Customer</span>
-											<span className="ao-val">{order.user?.name || "—"}</span>
-											<span className="ao-val-sub">{order.user?.email || "—"}</span>
+											<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+												<span className="ao-label">Customer</span>
+												{orderCount > 1 && (
+													<span className="ao-user-repeat-badge" title="Repeat Customer">
+														{orderCount} orders
+													</span>
+												)}
+											</div>
+											<div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "space-between" }}>
+												<span className="ao-val">{order.user?.name || order.address?.name || "—"}</span>
+												<button
+													type="button"
+													className="ao-history-btn"
+													title="View full customer order history"
+													onClick={(e) => {
+														e.stopPropagation();
+														void openCustomerHistory(order);
+													}}
+												>
+													📜 History
+												</button>
+											</div>
+											<span className="ao-val-sub">{order.user?.email || order.address?.phone || "—"}</span>
 										</div>
 
 										{/* Amount */}
@@ -556,6 +795,31 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 															<span className="ao-detail-val" style={{ fontFamily: "monospace", fontSize: 11 }}>{order.phonePeTransactionId}</span>
 														</div>
 													)}
+												</div>
+
+												{/* Customer Order History Card */}
+												<div style={{ marginTop: -2, marginBottom: 14, padding: "12px 14px", background: "#f5f9f0", borderRadius: 10, border: "1px solid #dce8d0" }}>
+													<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+														<span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#2e7d32", display: "flex", alignItems: "center", gap: 5 }}>
+															👤 Customer History
+														</span>
+														<button
+															type="button"
+															className="ao-history-btn"
+															style={{ fontSize: 11, padding: "3px 8px" }}
+															onClick={(e) => {
+																e.stopPropagation();
+																void openCustomerHistory(order);
+															}}
+														>
+															View All Orders
+														</button>
+													</div>
+													<div style={{ fontSize: 12, color: "#3d4a22" }}>
+														{orderCount > 1
+															? `Repeat customer with ${orderCount} orders in record.`
+															: "Customer has 1 order on record."}
+													</div>
 												</div>
 
 												{/* Financials */}
@@ -881,6 +1145,164 @@ export default function AdminOrdersTab({ orders, onStatusChange, onDelete, onShi
 					)}
 				</div>
 			</div>
+
+			{/* Customer Order History Modal */}
+			{historyModalUser && (
+				<div
+					className="ao-modal-backdrop"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) setHistoryModalUser(null);
+					}}
+				>
+					<div className="ao-modal-card">
+						<div className="ao-modal-header">
+							<div>
+								<div className="ao-modal-title">
+									<span>👤 Customer Order History</span>
+									<span style={{ fontSize: 13, fontWeight: 500, color: "#666" }}>
+										— {historyModalUser.name || "Customer"}
+									</span>
+								</div>
+								<div style={{ fontSize: 12, color: "#777", marginTop: 4, display: "flex", gap: 12, flexWrap: "wrap" }}>
+									{historyModalUser.email && <span>✉️ {historyModalUser.email}</span>}
+									{historyModalUser.phone && <span>📞 {historyModalUser.phone}</span>}
+								</div>
+							</div>
+							<button
+								type="button"
+								className="ao-modal-close"
+								onClick={() => setHistoryModalUser(null)}
+								title="Close"
+							>
+								✕
+							</button>
+						</div>
+
+						<div className="ao-modal-stats">
+							<div className="ao-modal-stat-box">
+								<div className="ao-modal-stat-label">Total Orders</div>
+								<div className="ao-modal-stat-val">{historyStats.totalOrders}</div>
+							</div>
+							<div className="ao-modal-stat-box">
+								<div className="ao-modal-stat-label">Total Spend</div>
+								<div className="ao-modal-stat-val">₹{Math.round(historyStats.totalSpent).toLocaleString("en-IN")}</div>
+							</div>
+							<div className="ao-modal-stat-box">
+								<div className="ao-modal-stat-label">Avg Order Value</div>
+								<div className="ao-modal-stat-val">
+									₹{historyStats.totalOrders > 0
+										? Math.round(historyStats.totalSpent / historyStats.totalOrders).toLocaleString("en-IN")
+										: 0}
+								</div>
+							</div>
+							<div className="ao-modal-stat-box">
+								<div className="ao-modal-stat-label">Delivered Orders</div>
+								<div className="ao-modal-stat-val">
+									{historyOrders.filter((o) => o.status === "delivered").length}
+								</div>
+							</div>
+						</div>
+
+						<div className="ao-modal-body">
+							{historyLoading && (
+								<div style={{ padding: "12px 0", textAlign: "center", color: "#666", fontSize: 13 }}>
+									Fetching updated order history...
+								</div>
+							)}
+							{historyOrders.length === 0 && !historyLoading ? (
+								<div style={{ padding: "32px 0", textAlign: "center", color: "#999" }}>
+									No previous orders found for this customer.
+								</div>
+							) : (
+								historyOrders.map((ho) => {
+									const isCurrent = ho._id === historyModalUser.currentOrderId;
+									const totalItems = (ho.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0);
+									return (
+										<div
+											key={ho._id}
+											className={`ao-history-item ${isCurrent ? "is-current" : ""}`}
+										>
+											<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+												<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+													<span style={{ fontWeight: 800, fontSize: 14, color: "#1a2710" }}>
+														#{formatShortId(ho._id)}
+													</span>
+													{isCurrent && (
+														<span style={{ fontSize: 11, background: "#2e7d32", color: "#fff", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
+															Current Order
+														</span>
+													)}
+													<span style={{ fontSize: 12, color: "#777" }}>
+														{formatDateTime(ho.createdAt)}
+													</span>
+												</div>
+												<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+													<span className={`ao-badge ao-badge-${normalizeOrderStatus(ho.status)}`}>
+														{ho.status || "placed"}
+													</span>
+													<span className={`ao-badge ao-badge-${normalizePaymentStatus(ho.paymentStatus)}`}>
+														{(ho.paymentMode || (ho as any).paymentMethod)?.toUpperCase() || "PAYMENT"}: {ho.paymentStatus || "pending"}
+													</span>
+													<span style={{ fontWeight: 800, fontSize: 15, color: "var(--olive-900)", marginLeft: 6 }}>
+														₹{Math.round(ho.totalAmount || 0).toLocaleString("en-IN")}
+													</span>
+												</div>
+											</div>
+
+											{/* Order items preview */}
+											<div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+												{(ho.items || []).map((it, idx) => {
+													const img = getItemImage(it);
+													const name = getItemName(it);
+													return (
+														<div
+															key={idx}
+															style={{
+																display: "flex",
+																alignItems: "center",
+																gap: 6,
+																background: "#f7f8f4",
+																border: "1px solid #e5e9df",
+																borderRadius: 8,
+																padding: "4px 8px",
+																fontSize: 12,
+																maxWidth: 240,
+															}}
+															title={name}
+														>
+															{img ? (
+																<img src={img} alt="" style={{ width: 22, height: 22, objectFit: "cover", borderRadius: 4 }} />
+															) : (
+																<span>📦</span>
+															)}
+															<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, color: "#2d3e18" }}>
+																{name}
+															</span>
+															<span style={{ color: "#777", fontWeight: 700 }}>x{it.quantity || 1}</span>
+														</div>
+													);
+												})}
+												{totalItems > (ho.items || []).length && (
+													<span style={{ alignSelf: "center", fontSize: 11, color: "#888", fontWeight: 600 }}>
+														+{totalItems - (ho.items || []).length} more
+													</span>
+												)}
+											</div>
+
+											{/* Shipping address line */}
+											{ho.address && (
+												<div style={{ marginTop: 8, fontSize: 11.5, color: "#777" }}>
+													📍 {ho.address.city || ""}{ho.address.state ? `, ${ho.address.state}` : ""} {ho.address.pincode ? `(${ho.address.pincode})` : ""}
+												</div>
+											)}
+										</div>
+									);
+								})
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</section>
 	);
 }

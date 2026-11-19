@@ -3,7 +3,7 @@
 // import Image from "next/image";
 // import { useGender } from "@/lib/genderContext";
 // import { useRouter } from "next/navigation";
-// import { useEffect, useState } from "react";
+// import { useEffect, useState, useMemo } from "react";
 // import { apiRequest } from "@/lib/api";
 
 // type Category = "women" | "men" | "kids";
@@ -556,7 +556,7 @@ import { safeHref } from "@/lib/safeUrl";
 import Link from "next/link";
 import { useGender } from "@/lib/genderContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { apiRequest } from "@/lib/api";
 import { fetchHomeContent, fetchCatalogCategories, fetchCatalogSubCategories } from "@/lib/catalogApi";
 import { CircleRowSkeleton } from "./Skeletons";
@@ -628,48 +628,49 @@ function toSlug(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-const FALLBACK_JEWELLERY_IMAGE = "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg";
+const FALLBACK_JEWELLERY_IMAGE = "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794314010/makeusparkle/subcategories/s4uezdmvlerqd3xvtikh.png";
 
 const SUBCATEGORY_FALLBACK_IMAGES: Record<string, string> = {
-  bracelets: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551076/makeusparkle/subcategories/ndmqu1fwuteg5dainrbd.jpg",
-  earrings: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg",
-  "hand-chain": "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551145/makeusparkle/subcategories/nb2nomsu7caogkuismh5.jpg",
-  jhumkha: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=90",
-  necklaces: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
-  necklace: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
-  rings: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551124/makeusparkle/subcategories/wbi5bd8gwlaze75xmvav.jpg",
+  rings: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794314010/makeusparkle/subcategories/s4uezdmvlerqd3xvtikh.png",
+  earrings: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794823404/makeusparkle/subcategories/ytpppcnyhkmwvpq0eoel.png",
+  necklaces: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794315477/makeusparkle/subcategories/jqikxn5cs4vdyzdomp5v.jpg",
+  necklace: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794315477/makeusparkle/subcategories/jqikxn5cs4vdyzdomp5v.jpg",
+  bracelets: "https://res.cloudinary.com/diodxwxrl/image/upload/v1792162410/makeusparkle/subcategories/qufcyee5kwid9scj9gyc.jpg",
+  "hand-chain": "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794312077/makeusparkle/subcategories/y4wbk98vyab6veivqicq.png",
+  jhumkha: "https://res.cloudinary.com/diodxwxrl/image/upload/v1792171079/makeusparkle/subcategories/ekkjlrk3tdm2obz4dlzt.jpg",
 };
 
+// Default ordered categories for women: rings, earrings, necklaces, bracelets, hand chain, jhumkas
 const defaultJewellerySubcategories: CategoryItem[] = [
   {
-    name: "Bracelets",
-    slug: "bracelets",
-    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551076/makeusparkle/subcategories/ndmqu1fwuteg5dainrbd.jpg",
+    name: "Rings",
+    slug: "rings",
+    image: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794314010/makeusparkle/subcategories/s4uezdmvlerqd3xvtikh.png",
   },
   {
     name: "Earrings",
     slug: "earrings",
-    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547302/makeusparkle/subcategories/olkaipfizchqi5fwskgj.jpg",
-  },
-  {
-    name: "Hand chain",
-    slug: "hand-chain",
-    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551145/makeusparkle/subcategories/nb2nomsu7caogkuismh5.jpg",
-  },
-  {
-    name: "Jhumkha",
-    slug: "jhumkha",
-    image: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=90",
+    image: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794823404/makeusparkle/subcategories/ytpppcnyhkmwvpq0eoel.png",
   },
   {
     name: "Necklaces",
     slug: "necklaces",
-    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781547311/makeusparkle/subcategories/xopdbf3wjnj6jrvcsrmp.jpg",
+    image: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794315477/makeusparkle/subcategories/jqikxn5cs4vdyzdomp5v.jpg",
   },
   {
-    name: "Rings",
-    slug: "rings",
-    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1781551124/makeusparkle/subcategories/wbi5bd8gwlaze75xmvav.jpg",
+    name: "Bracelets",
+    slug: "bracelets",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1792162410/makeusparkle/subcategories/qufcyee5kwid9scj9gyc.jpg",
+  },
+  {
+    name: "Hand chain",
+    slug: "hand-chain",
+    image: "https://res.cloudinary.com/ilqmtq1k/image/upload/v1794312077/makeusparkle/subcategories/y4wbk98vyab6veivqicq.png",
+  },
+  {
+    name: "Jhumkha",
+    slug: "jhumkha",
+    image: "https://res.cloudinary.com/diodxwxrl/image/upload/v1792171079/makeusparkle/subcategories/ekkjlrk3tdm2obz4dlzt.jpg",
   },
 ];
 
@@ -701,6 +702,127 @@ const defaultMenJewellerySubcategories: CategoryItem[] = [
   },
 ];
 
+const WOMEN_CATEGORY_ORDER = [
+  "rings",
+  "earrings",
+  "necklace",
+  "bracelets",
+  "hand chain",
+  "jhumkas",
+];
+
+function normalizeCategoryName(name: string): string {
+  const s = (name || "").toLowerCase().trim();
+  if (s.includes("earring") || s.includes("earing")) return "earrings";
+  if (s.includes("ring")) return "rings";
+  if (s.includes("necklace")) return "necklace";
+  if (s.includes("bracelet")) return "bracelets";
+  if (s.includes("hand") && s.includes("chain")) return "hand chain";
+  if (s.includes("jhumk") || s.includes("jhumka") || s.includes("jhumkha")) return "jhumkas";
+  return s;
+}
+
+function getCategoryRank(name: string): number {
+  const norm = normalizeCategoryName(name);
+  const idx = WOMEN_CATEGORY_ORDER.indexOf(norm);
+  return idx !== -1 ? idx : 999;
+}
+
+export function buildCategoriesForGender(
+  activeGender: string,
+  rawCategories?: any[],
+  rawSubcategories?: any[]
+): CategoryItem[] {
+  const gender = (activeGender || "women").toLowerCase();
+  const allCats = rawCategories || [];
+  const allSubs = rawSubcategories || [];
+
+  if (allSubs.length === 0 && allCats.length === 0) {
+    if (gender === "men") return defaultMenJewellerySubcategories;
+    return defaultJewellerySubcategories;
+  }
+
+  // Find exact Jewellery category ID
+  const jewelleryCat =
+    allCats.find((c: any) => (c.name || "").trim().toLowerCase() === "jewellery") ||
+    allCats.find((c: any) => (c.name || "").trim().toLowerCase().includes("jewellery") && !(c.name || "").toLowerCase().includes("charm") && !(c.name || "").toLowerCase().includes("matching"));
+  const jewelleryId = jewelleryCat?._id ? String(jewelleryCat._id) : jewelleryCat?.id ? String(jewelleryCat.id) : null;
+
+  // 1. Get subcategories belonging strictly to Jewellery
+  let subs = allSubs.filter((s: any) => {
+    const catId = s.category?._id
+      ? String(s.category._id)
+      : s.category
+        ? String(s.category)
+        : s.categoryId
+          ? String(s.categoryId)
+          : null;
+    if (catId && jewelleryId) {
+      return catId === jewelleryId;
+    }
+    const catName = (s.category?.name || "").toLowerCase();
+    if (catName === "jewellery") return true;
+    return false;
+  });
+
+  // Fallback if subcategories had unpopulated category refs
+  if (subs.length === 0 && allSubs.length > 0) {
+    if (gender === "men") {
+      subs = allSubs.filter((s: any) => {
+        const name = (s.name || "").toLowerCase();
+        const slug = (s.slug || "").toLowerCase();
+        return name.includes("men") || slug.startsWith("men-");
+      });
+    } else {
+      subs = allSubs.filter((s: any) => {
+        const norm = normalizeCategoryName(s.name || "");
+        return WOMEN_CATEGORY_ORDER.includes(norm);
+      });
+    }
+  }
+
+  // If gender is men, filter or prioritize men subcategories
+  if (gender === "men") {
+    const menSpecific = subs.filter((sub: any) => {
+      const name = (sub.name || "").toLowerCase();
+      const slug = (sub.slug || "").toLowerCase();
+      return name.includes("men") || slug.startsWith("men-") || !["jhumkha", "hand chain", "hand-chain"].includes(name);
+    });
+    if (menSpecific.length > 0) {
+      subs = menSpecific;
+    } else if (subs.length === 0) {
+      return defaultMenJewellerySubcategories;
+    }
+  }
+
+  // Map subcategories
+  const mappedSubs: CategoryItem[] = subs.map((sub: any) => {
+    const name = sub.name || "";
+    const slug = sub.slug || toSlug(name);
+    const image = sub.image || SUBCATEGORY_FALLBACK_IMAGES[slug] || FALLBACK_JEWELLERY_IMAGE;
+    return {
+      name,
+      slug,
+      image,
+    };
+  });
+
+  // For women, sort strictly in the requested order:
+  // 1. Rings, 2. Earrings, 3. Necklaces, 4. Bracelets, 5. Hand chain, 6. Jhumkas
+  if (gender === "women") {
+    mappedSubs.sort((a, b) => {
+      const rankA = getCategoryRank(a.name);
+      const rankB = getCategoryRank(b.name);
+      if (rankA !== rankB) return rankA - rankB;
+      return 0;
+    });
+  }
+
+  return mappedSubs.length > 0
+    ? mappedSubs
+    : (gender === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories);
+}
+
 const categoryRoute = (_gender: string, slug: string) => `/subcategory/${slug}`;
 
 function SubcategoryCard({
@@ -710,13 +832,13 @@ function SubcategoryCard({
   item: CategoryItem;
   onClick: () => void;
 }) {
-  const [imgSrc, setImgSrc] = useState(
-    item.image || SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE
-  );
+  const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    setImgSrc(item.image || SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE);
+    setFallbackSrc(null);
   }, [item.image, item.slug]);
+
+  const displayImage = fallbackSrc || item.image || SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE;
 
   return (
     <button
@@ -727,15 +849,15 @@ function SubcategoryCard({
     >
       <div className="cat-img">
         <Image
-          src={cdnImage(imgSrc, 240)}
+          src={cdnImage(displayImage, 240)}
           alt={item.name}
           fill
           unoptimized
           sizes="(max-width: 768px) 30vw, 180px"
           onError={() => {
             const fallback = SUBCATEGORY_FALLBACK_IMAGES[item.slug] || FALLBACK_JEWELLERY_IMAGE;
-            if (imgSrc !== fallback) {
-              setImgSrc(fallback);
+            if (displayImage !== fallback) {
+              setFallbackSrc(fallback);
             }
           }}
         />
@@ -786,23 +908,36 @@ function HeroPic({
 }
 
 
-export default function HeroVideoComponent({ initialHero }: { initialHero?: Record<string, HeroItem> | null }) {
+export default function HeroVideoComponent({
+  initialHero,
+  initialTaxonomy,
+}: {
+  initialHero?: Record<string, HeroItem> | null;
+  initialTaxonomy?: { categories: any[]; subcategories: any[] } | null;
+}) {
   const { gender: rawCategory } = useGender();
   const activeCategory = rawCategory || "women";
 
   const router = useRouter();
 
-// was: useState<Record<string, HeroItem>>(defaultHeroContent)
-  const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(initialHero ? { ...defaultHeroContent, ...initialHero } : null);
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [catLoading, setCatLoading] = useState(true);
+  const [heroContent, setHeroContent] = useState<Record<string, HeroItem> | null>(
+    initialHero ? { ...defaultHeroContent, ...initialHero } : null
+  );
+
+  const initialList = useMemo(() => {
+    if (initialTaxonomy?.categories?.length || initialTaxonomy?.subcategories?.length) {
+      return buildCategoriesForGender(activeCategory, initialTaxonomy.categories, initialTaxonomy.subcategories);
+    }
+    return activeCategory === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories;
+  }, [activeCategory, initialTaxonomy]);
+
+  const [categories, setCategories] = useState<CategoryItem[]>(initialList);
+  const [catLoading, setCatLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    setCatLoading(true);
 
     async function loadData() {
-
       // 1. Fetch home content (cached)
       let hero: Record<string, HeroItem> = defaultHeroContent;
       try {
@@ -827,56 +962,12 @@ export default function HeroVideoComponent({ initialHero }: { initialHero?: Reco
 
         if (!isMounted) return;
 
-        // Find Jewellery Category matching the active gender if possible
-        const genderCategories = allCategories.filter((c) => {
-          if (!c.genderSlug) return true;
-          return c.genderSlug.toLowerCase() === activeCategory.toLowerCase();
-        });
-
-        const jewelleryCat =
-          genderCategories.find((c) => c.name?.trim().toLowerCase().includes("jewellery")) ||
-          allCategories.find((c) => c.name?.trim().toLowerCase().includes("jewellery"));
-        const jewelleryId = jewelleryCat?.id;
-
-        // Filter subcategories that belong to "Jewellery"
-        let jewellerySubs = allSubcategories.filter((sub) => {
-          if (sub.categoryId) {
-            return jewelleryId && sub.categoryId === jewelleryId;
-          }
-          return false;
-        });
-
-        // Filter or prioritize subcategories appropriate for the gender
-        if (activeCategory === "men") {
-          const menSpecific = jewellerySubs.filter((sub) => {
-            const name = sub.name.toLowerCase();
-            const slug = (sub.slug || "").toLowerCase();
-            return name.includes("men") || slug.startsWith("men-") || !["jhumkha", "hand chain", "hand-chain"].includes(name);
-          });
-          if (menSpecific.length > 0) {
-            jewellerySubs = menSpecific;
-          }
-        }
-
-        if (jewellerySubs.length > 0) {
-          const mapped: CategoryItem[] = jewellerySubs.map((sub) => {
-            const slug = toSlug(sub.name);
-            const image = sub.image || SUBCATEGORY_FALLBACK_IMAGES[slug] || FALLBACK_JEWELLERY_IMAGE;
-            return {
-              name: sub.name,
-              slug: sub.slug || slug,
-              image,
-            };
-          });
-          setCategories(mapped);
-        } else {
-          setCategories(activeCategory === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories);
+        const built = buildCategoriesForGender(activeCategory, allCategories, allSubcategories);
+        if (built.length > 0 && isMounted) {
+          setCategories(built);
         }
       } catch (err) {
         console.error("Failed to load jewellery subcategories:", err);
-        if (isMounted) {
-          setCategories(activeCategory === "men" ? defaultMenJewellerySubcategories : defaultJewellerySubcategories);
-        }
       } finally {
         if (isMounted) {
           setCatLoading(false);

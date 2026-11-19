@@ -756,7 +756,8 @@ class ProductService {
 				giftBoxImagePublicId = result.publicId;
 			}
 
-			// --- Variants ---
+			// --- Sizes & Variants ---
+			const sizes = this._parseSizes(productData);
 			const rawVariants = this._parseVariants(productData);
 			const variants = [];
 
@@ -782,7 +783,7 @@ class ProductService {
 
 				variants.push({
 					color: v.color || null,
-					size: v.size || null,
+					size: sizes.length > 0 ? (v.size || null) : null,
 					price: v.price ? Number(v.price) : undefined,
 					salePrice: v.salePrice ? Number(v.salePrice) : undefined,
 					image: variantImage,
@@ -818,7 +819,6 @@ class ProductService {
 				});
 			}
 
-			const sizes = this._parseSizes(productData);
 			const charmPieceOptions = this._parseCharmPieceOptions(productData);
 			const charmPiecePricing = this._parseCharmPiecePricing(productData);
 			const charmStocks = this._parseCharmStocks(productData);
@@ -1019,7 +1019,8 @@ class ProductService {
 				giftBoxImagePublicId = null;
 			}
 
-			// --- Variants ---
+			// --- Sizes & Variants ---
+			const sizes = this._parseSizes(updateData);
 			const rawVariants = this._parseVariants(updateData);
 			const variants = [];
 
@@ -1067,7 +1068,7 @@ class ProductService {
 
 				variants.push({
 					color: v.color || null,
-					size: v.size || null,
+					size: sizes.length > 0 ? (v.size || null) : null,
 					price: v.price ? Number(v.price) : undefined,
 					salePrice: v.salePrice ? Number(v.salePrice) : undefined,
 					image: variantImage,
@@ -1132,7 +1133,6 @@ class ProductService {
 				}
 			}
 
-			const sizes = this._parseSizes(updateData);
 			const charmPieceOptions = this._parseCharmPieceOptions(updateData);
 			const charmPiecePricing = this._parseCharmPiecePricing(updateData);
 			const charmStocks = updateData.charmStocks !== undefined ? this._parseCharmStocks(updateData) : undefined;

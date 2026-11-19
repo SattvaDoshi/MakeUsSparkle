@@ -315,6 +315,7 @@ export async function priceOrder(userId, body = {}) {
 	const paymentMode = String(body.paymentMode || "");
 	if (!PAYMENT_MODES.has(paymentMode)) throw new PricingError("Invalid payment method.", "INVALID_PAYMENT_MODE");
 	const deliveryType = body.deliveryType === "express" ? "express" : "standard";
+	if (deliveryType === "express" && paymentMode === "COD") throw new PricingError("Cash on Delivery is not available for Express delivery.", "PAYMENT_MODE_NOT_ALLOWED");
 
 	// 1. Lines: quantity sane, price never below what the catalog allows.
 	const lines = [];

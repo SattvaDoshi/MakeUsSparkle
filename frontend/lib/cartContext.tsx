@@ -176,7 +176,7 @@ const newLineId = () => Date.now().toString() + Math.random().toString(36).slice
  */
 function fingerprint(i: Partial<CartItem>) {
   return JSON.stringify([
-    String(i.sourceId ?? i.id ?? ''), i.colorHex ?? '', i.size ?? '', i.customNote ?? '',
+    String(i.sourceId ?? i.id ?? ''), (i.colorHex ?? '').toLowerCase(), String(i.size ?? '').trim().toLowerCase(), i.customNote ?? '',
     i.giftBox ?? null, i.giftMessage ?? null, i.customData ?? null, i.selectedCharms ?? null,
     i.selectionGroups ?? null, i.chain ?? '', i.price ?? 0,
   ]);

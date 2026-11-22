@@ -8,7 +8,7 @@ export const PDP_THEME_CSS = `
         .pdp-crumbs>*{flex-shrink:0;white-space:nowrap}
         .pdp-crumbs .pdp-crumb-cur{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
         .pdp-crumbs a{color:inherit;text-decoration:none}
-        .pdp-crumbs a:hover{color:var(--ink);text-decoration:underline}
+        @media(hover:hover){.pdp-crumbs a:hover{color:var(--ink);text-decoration:underline}}
         .pdp-name{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(1.8rem,3vw,2.5rem);color:var(--ink)}
         .pdp-price{font-size:2rem}
         .pdp-discount{display:inline-flex;align-items:center;background:#e8f3ec;color:#1f5a38;border:1px solid #cfe3d6;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:600;letter-spacing:.01em;text-transform:none;white-space:nowrap}
@@ -30,10 +30,14 @@ export const PDP_THEME_CSS = `
         .pdp-btn-cart-wrap{grid-area:cart}
         .pdp-btn-buy{grid-area:buy}
         .pdp-btn-cart,.pdp-btn-buy{min-height:54px;border-radius:999px;font-size:12px;width:100%}
-        .pdp-btn-cart{background:#2a4736}
-        .pdp-btn-cart:hover{background:#1f3628}
+        .pdp-btn-cart{background:#2a4736;white-space:nowrap;padding-left:14px;padding-right:14px;letter-spacing:.08em}
+        @media(hover:hover){.pdp-btn-cart:hover{background:#1f3628}}
+        @media(max-width:420px){
+          .pdp-btn-cart{gap:6px;padding-left:10px;padding-right:10px;letter-spacing:.05em}
+          .pdp-btn-cart svg{display:none}
+        }
         .pdp-btn-buy{background:var(--ink)}
-        .pdp-btn-buy:hover{background:#000}
+        @media(hover:hover){.pdp-btn-buy:hover{background:#000}}
         .pdp-trust-item{border-radius:12px;background:#fafaf6;border-color:#ecebe4}
         @media(max-width:1023px){
           .pdp-layout{grid-template-columns:1fr}
@@ -45,7 +49,7 @@ export const PDP_THEME_CSS = `
 
         /* ── Gift box + Complete the look redesign ── */
         .gift-wrap{border:1.5px solid #e6e4da;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s,background .2s,box-shadow .2s}
-        .gift-wrap:hover{border-color:#d8cfa6}
+        @media(hover:hover){.gift-wrap:hover{border-color:#d8cfa6}}
         .gift-wrap.is-on{border-color:#2a4736;background:#f3f8f4;box-shadow:0 0 0 3px rgba(42,71,54,.08)}
         .gift-card{all:unset;box-sizing:border-box;display:flex;align-items:stretch;width:100%;cursor:pointer}
         .gift-card:focus-visible{outline:2px solid #2a4736;outline-offset:-2px;border-radius:14px}
@@ -56,11 +60,12 @@ export const PDP_THEME_CSS = `
         .gift-title-row{display:flex;align-items:center;gap:2px;min-width:0}
         .gift-title{font-size:14.5px;font-weight:600;color:#1a1a14;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .gift-info{all:unset;box-sizing:border-box;flex:0 0 auto;width:24px;height:24px;margin:-2px 0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#8a8a7e;cursor:pointer;transition:background .2s,color .2s}
-        .gift-info:hover,.gift-info[aria-expanded="true"]{background:#eaf0ea;color:#2a4736}
+        .gift-info[aria-expanded="true"]{background:#eaf0ea;color:#2a4736}
+        @media(hover:hover){.gift-info:hover{background:#eaf0ea;color:#2a4736}}
         .gift-info:focus-visible{outline:2px solid #2a4736}
         .gift-price{font-size:13.5px;font-weight:700;color:#2a4736}
         .gift-add{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:62px;height:32px;padding:0 12px;border-radius:999px;border:1.5px solid #2a4736;color:#2a4736;font-size:12.5px;font-weight:700;letter-spacing:.03em;transition:background .2s,color .2s}
-        .gift-wrap:hover .gift-add{background:#e8f3ec}
+        @media(hover:hover){.gift-wrap:hover .gift-add{background:#e8f3ec}}
         .gift-wrap.is-on .gift-add{background:#2a4736;color:#fff}
         .gift-perks-open{list-style:none;margin:0;padding:12px 16px 14px;border-top:1px dashed #e0dcc8;display:flex;flex-direction:column;gap:8px;animation:giftOpen .22s ease}
         .gift-perks-open li{display:flex;align-items:center;gap:10px;font-size:13px;color:#2a2a22;line-height:1.3}
@@ -73,14 +78,14 @@ export const PDP_THEME_CSS = `
         .ctl-strip-rule{display:none}
         .ctl-arrows{display:flex;gap:6px;flex-shrink:0}
         .ctl-arrows button{width:34px;height:34px;border-radius:50%;border:1px solid #dcdacf;background:#fff;font-size:20px;line-height:1;cursor:pointer;color:#1a1a14;transition:background .2s,color .2s}
-        .ctl-arrows button:hover{background:#1a1a14;color:#fff}
+        @media(hover:hover){.ctl-arrows button:hover{background:#1a1a14;color:#fff}}
         .ctl-strip-scroll{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;scrollbar-width:none}
         .ctl-strip-scroll::-webkit-scrollbar{display:none}
         .ctl-card{flex:0 0 176px;height:auto;scroll-snap-align:start;display:flex;flex-direction:column;gap:10px;border:0;background:none;border-radius:0;box-shadow:none;animation:none;opacity:1;transform:none}
-        .ctl-card:hover{transform:none;box-shadow:none}
+        @media(hover:hover){.ctl-card:hover{transform:none;box-shadow:none}}
         .ctl-img-wrap{position:relative;flex:none;aspect-ratio:4/5;border-radius:14px;overflow:hidden;background:#f4f3ee}
         .ctl-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
-        .ctl-card:hover .ctl-img{transform:scale(1.06)}
+        @media(hover:hover){.ctl-card:hover .ctl-img{transform:scale(1.06)}}
         .ctl-disc-badge{position:absolute;top:8px;left:8px;right:auto;font-size:10px;font-weight:600;letter-spacing:.06em;padding:4px 9px;border-radius:999px;background:#fff;color:#2a4736;box-shadow:0 2px 8px rgba(0,0,0,.08)}
         .ctl-card-info{flex:none;padding:0;border:0;gap:3px}
         .ctl-card-name{font-size:13.5px;font-weight:500;color:#1a1a14;white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
@@ -92,10 +97,10 @@ export const PDP_THEME_CSS = `
         /* ── Accordion + delivery redesign ── */
         .acc-wrap-card, .pdp-info .acc-item{background:#fff}
         .pdp-info .acc-item{border:1px solid #ecebe4;border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
-        .pdp-info .acc-item:hover{border-color:#dcdacf}
+        @media(hover:hover){.pdp-info .acc-item:hover{border-color:#dcdacf}}
         .pdp-info .acc-item--open{border-color:#cfd8cf;box-shadow:0 6px 22px rgba(26,26,20,.05)}
         .pdp-info .acc-head{padding:14px 16px;border-radius:0}
-        .pdp-info .acc-head:hover{background:#fafaf6}
+        @media(hover:hover){.pdp-info .acc-head:hover{background:#fafaf6}}
         .pdp-info .acc-head:focus-visible{outline:2px solid #2a4736;outline-offset:-2px}
         .pdp-info .acc-head-left{font-size:15px;font-weight:500}
         .pdp-info .acc-emoji{width:36px;height:36px;background:#f1f5f1}
@@ -140,19 +145,19 @@ export const PDP_THEME_CSS = `
         .pdp-stock{font-size:12.5px;letter-spacing:.02em;color:#b45309;font-weight:500;animation:none}
         .pdp-swatches{gap:12px;margin-bottom:22px}
         .pdp-size-btn{min-width:56px;height:44px;padding:0 18px;font-size:12px;letter-spacing:.06em;border-color:#dcdacf;color:var(--ink)}
-        .pdp-size-btn:hover{border-color:var(--ink);background:#fff}
+        @media(hover:hover){.pdp-size-btn:hover{border-color:var(--ink);background:#fff}}
         .pdp-desc{font-size:14.5px;line-height:1.75;color:#3a3a32;letter-spacing:0}
         .pdp-trust{grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #ecebe4;border-radius:14px;overflow:hidden;margin:22px 0 0;background:#fff}
         .pdp-trust-item{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;text-align:left;padding:14px 14px;border:0;border-right:1px solid #ecebe4;border-radius:0;background:#fff}
         .pdp-trust-item:last-child{border-right:0}
-        .pdp-trust-item:hover{transform:none;box-shadow:none}
+        @media(hover:hover){.pdp-trust-item:hover{transform:none;box-shadow:none}}
         .pdp-trust-icon{grid-row:1 / span 2;width:30px;height:30px;margin:0;color:#2a4736}
         .pdp-trust-title{font-size:11px;letter-spacing:.06em;margin:0;color:var(--ink)}
         .pdp-trust-sub{font-size:11.5px;color:var(--mist)}
         .pdp-accordion{border-top:1px solid #ecebe4}
         .acc-item{border-bottom:1px solid #ecebe4}
         .acc-head{padding:18px 2px}
-        .acc-head:hover{background:none}
+        @media(hover:hover){.acc-head:hover{background:none}}
         .acc-head-left{font-size:15px;font-weight:500;gap:14px;color:var(--ink)}
         .acc-emoji{width:34px;height:34px;border-radius:50%;background:#f4f3ee;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#2a4736;flex-shrink:0}
         .acc-body{padding:0 2px 22px 48px;font-size:14.5px;line-height:1.75;color:#3a3a32;letter-spacing:0}
@@ -172,7 +177,7 @@ export const PDP_THEME_CSS = `
 
         /* ── Info section: soft colour accents (cream cards, tinted icons) ── */
         .pdp-info .acc-item{background:#fdfbf5;border-color:#ece5cf}
-        .pdp-info .acc-item:hover{border-color:#ddd0a4}
+        @media(hover:hover){.pdp-info .acc-item:hover{border-color:#ddd0a4}}
         .pdp-info .acc-item--open{background:#fffdf6;border-color:#d9c27a;box-shadow:0 6px 22px rgba(154,122,46,.10)}
         .pdp-info .acc-item:nth-of-type(4n+1) .acc-emoji{background:#e4efe7;color:#2a4736}
         .pdp-info .acc-item:nth-of-type(4n+2) .acc-emoji{background:#f7edcc;color:#8a6a1c}
@@ -181,7 +186,7 @@ export const PDP_THEME_CSS = `
         .pdp-info .acc-item--open .acc-emoji{background:#2a4736;color:#fff}
         .pdp-info .acc-chevron{background:#e4efe7;color:#2a4736}
         .pdp-info .acc-item--open .acc-chevron{background:#2a4736;color:#fff}
-        .pdp-info .acc-head:hover{background:#faf6e8}
+        @media(hover:hover){.pdp-info .acc-head:hover{background:#faf6e8}}
         .dlv-table{background:#fdfbf5;border-color:#ece5cf}
         .dlv-row{border-top-color:#ece5cf}
         .dlv-head{background:#f6f0dc;color:#8a6a1c}

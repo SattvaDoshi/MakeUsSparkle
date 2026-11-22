@@ -40,8 +40,12 @@
   transition: opacity 0.45s var(--ease), transform 0.7s var(--ease);
 }
 .imgAlt { opacity: 0; }
-.card:hover .imgAlt, .card:focus-within .imgAlt { opacity: 1; }
-.card:hover .img { transform: scale(1.04); }
+/* Hover effects only for devices that really hover: on a phone a tap leaves :hover "stuck", which left the
+   card half-blended with its second photo after coming Back from the product page. */
+@media (hover: hover) {
+  .card:hover .imgAlt, .card:focus-within .imgAlt { opacity: 1; }
+  .card:hover .img { transform: scale(1.04); }
+}
 .soldOut .img { filter: grayscale(0.85); opacity: 0.7; }
 .soldOut .imgAlt { display: none; }
 

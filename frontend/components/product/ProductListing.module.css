@@ -46,6 +46,7 @@
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 22px; }
 .item { opacity: 0; transform: translateY(12px); animation: rise 0.5s ease forwards; }
 @keyframes rise { to { opacity: 1; transform: none; } }
+.itemStatic { animation: none; opacity: 1; transform: none; }
 
 /* Loading */
 .skel { display: flex; flex-direction: column; gap: 10px; }

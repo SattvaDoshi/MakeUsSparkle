@@ -527,6 +527,11 @@ export function clearCatalogCache(prefix?: string) {
   }
 }
 
+/** Last known products, even if past their short TTL. Lets a list page paint instantly (e.g. on Back) while a fresh copy loads. */
+export function peekCatalogProducts(filters: { subCategorySlug?: string } = {}): CatalogProduct[] | undefined {
+  return catalogCache.get(`products_${filters.subCategorySlug || "all"}`)?.data;
+}
+
 async function withCatalogCache<T>(
   key: string,
   fetcher: () => Promise<T>,

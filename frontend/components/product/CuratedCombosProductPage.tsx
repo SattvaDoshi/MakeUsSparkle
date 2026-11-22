@@ -2046,7 +2046,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-eyebrow { display:block;font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--sage);margin-bottom:3px; }
         .modal-title { font-family:var(--ffd);font-size:1.25rem;font-weight:500;color:var(--olive);line-height:1.2; }
         .modal-close { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink4);background:rgba(255,255,255,.6);transition:all .15s;flex-shrink:0;margin-left:12px;border:1px solid var(--bdr); }
-        .modal-close:hover { background:#fff;color:var(--ink); }
+        @media(hover:hover){.modal-close:hover{ background:#fff;color:var(--ink); }}
         .modal-product-strip { display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--bdr);background:#fafaf6;flex-shrink:0; }
         .modal-product-img { width:54px;height:54px;border-radius:4px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0; }
         .modal-product-name { font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px; }
@@ -2073,16 +2073,16 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .modal-sum-tag { font-size:11px;font-weight:500;color:var(--olive);background:rgba(255,255,255,.8);border:1px solid rgba(90,110,43,.25);padding:3px 10px;border-radius:50px; }
         .modal-footer { padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--bdr);display:flex;gap:10px;flex-shrink:0;background:#fafaf6; }
         .modal-btn-skip { flex:1;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);border:1.5px solid var(--bdr2);border-radius:6px;padding:12px 14px;transition:all .18s;min-height:46px; }
-        .modal-btn-skip:hover { border-color:var(--ink4);color:var(--ink); }
+        @media(hover:hover){.modal-btn-skip:hover{ border-color:var(--ink4);color:var(--ink); }}
         .modal-btn-save { flex:2;display:flex;align-items:center;justify-content:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:6px;padding:12px 18px;min-height:46px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s; }
-        .modal-btn-save:hover { background:#2e3c0e; }
+        @media(hover:hover){.modal-btn-save:hover{ background:#2e3c0e; }}
         .modal-btn-save.modal-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
 
         /* ══════════ LIGHTBOX ══════════ */
         .lightbox-backdrop { position:fixed;inset:0;z-index:1100;background:rgba(8,10,4,.86);display:flex;align-items:center;justify-content:center;padding:12px;animation:fadeIn .18s ease;cursor:zoom-out; }
         .lightbox-img { max-width:96vw;max-height:88vh;border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.45);cursor:default;object-fit:contain; }
         .lightbox-close { position:fixed;top:14px;right:14px;z-index:1101;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);transition:background .15s; }
-        .lightbox-close:hover { background:rgba(255,255,255,.24); }
+        @media(hover:hover){.lightbox-close:hover{ background:rgba(255,255,255,.24); }}
 
         /* ══════════ SMALL SHARED BITS ══════════ */
         .cust-compact { display:flex;flex-wrap:wrap;gap:4px;margin-top:3px; }
@@ -2093,7 +2093,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .pricing-tier-label { font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink4); }
         .pricing-tier-row { display:flex;flex-wrap:wrap;gap:8px; }
         .pricing-tier-btn { display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;border-radius:8px;border:1.5px solid var(--bdr2);background:var(--surf);transition:all .18s;min-width:84px;flex:1 1 calc(50% - 8px); }
-        .pricing-tier-btn:hover { border-color:var(--olive2); }
+        @media(hover:hover){.pricing-tier-btn:hover{ border-color:var(--olive2); }}
         .pricing-tier-btn.on { border-color:var(--olive);background:var(--olivedim);box-shadow:inset 0 0 0 1px var(--olive); }
         .pricing-tier-btn-name { font-size:12px;font-weight:700;color:var(--ink); }
         .pricing-tier-btn.on .pricing-tier-btn-name { color:var(--olive); }
@@ -2105,7 +2105,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .upload-tile { display:flex;flex-direction:column;gap:5px;align-items:center; }
         .upload-tile-label { font-size:11px;font-weight:600;color:#4a5c22;text-align:center;max-width:88px; }
         .upload-tile-zone { width:84px;height:84px;display:flex;align-items:center;justify-content:center;border:2px dashed var(--bdr2);border-radius:10px;cursor:pointer;transition:all .2s;background:var(--bg); }
-        .upload-tile-zone:hover { border-color:var(--olive2);background:var(--olivedim); }
+        @media(hover:hover){.upload-tile-zone:hover{ border-color:var(--olive2);background:var(--olivedim); }}
         .upload-tile-plus { font-size:26px;line-height:1;font-weight:500;color:var(--olive); }
         .upload-tile-preview { position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:var(--olivedim); }
         .upload-tile-preview img { width:100%;height:100%;object-fit:cover; }
@@ -2139,7 +2139,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         /* ══════════ DETAIL PAGES — shared container ══════════ */
         .hamper-page, .builder-page { width:100%;max-width:var(--container);margin:0 auto;padding:14px 14px 0; }
         .hamper-back-btn { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--olive2);margin-bottom:12px;padding:6px 0; }
-        .hamper-back-btn:hover { color:var(--olive); }
+        @media(hover:hover){.hamper-back-btn:hover{ color:var(--olive); }}
         .hamper-divider { height:1px;background:var(--bdr);margin:16px 0; }
 
         /* ── hero block: gallery + info ── */
@@ -2192,12 +2192,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-colour-swatch-row-error { box-shadow:inset 0 0 0 1.5px var(--red);border-radius:10px;padding:6px; }
         .hamper-colour-swatch { position:relative;display:flex; }
         .hamper-colour-swatch-btn { display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;padding:7px 8px;cursor:pointer;border-radius:10px;transition:background .18s,box-shadow .18s; }
-        .hamper-colour-swatch-btn:hover { background:var(--olivedim); }
+        @media(hover:hover){.hamper-colour-swatch-btn:hover{ background:var(--olivedim); }}
         .hamper-colour-swatch-btn:disabled { cursor:not-allowed; }
         .hamper-colour-swatch.out { opacity:.5; }
         .hamper-colour-swatch-img-wrap { position:relative;display:block;flex-shrink:0;width:60px;aspect-ratio:4/5;overflow:hidden;border:1.5px solid transparent;transition:all .18s; }
         .hamper-colour-swatch-img-wrap img { width:100%;height:100%;object-fit:cover; }
-        .hamper-colour-swatch-btn:hover .hamper-colour-swatch-img-wrap { border-color:var(--olive2); }
+        @media(hover:hover){.hamper-colour-swatch-btn:hover .hamper-colour-swatch-img-wrap{ border-color:var(--olive2); }}
         .hamper-colour-swatch.on .hamper-colour-swatch-btn { background:var(--olivedim);box-shadow:inset 0 0 0 1.5px var(--olive); }
         .hamper-colour-swatch.on .hamper-colour-swatch-img-wrap { border-color:var(--olive);box-shadow:0 0 0 2px rgba(61,80,22,.18); }
         .hamper-colour-swatch.sm .hamper-colour-swatch-img-wrap { width:44px; }
@@ -2206,7 +2206,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-colour-swatch.text-only .hamper-colour-swatch-btn { padding:9px 16px;border:1.5px solid var(--bdr2);border-radius:50px;min-height:40px;justify-content:center; }
         .hamper-colour-swatch.text-only.on .hamper-colour-swatch-btn { border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive); }
         .swatch-view-link { font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--olive2);text-decoration:underline;text-underline-offset:2px;padding:0;margin-left:auto; }
-        .swatch-view-link:hover { color:var(--olive); }
+        @media(hover:hover){.swatch-view-link:hover{ color:var(--olive); }}
         .modal-field-label .swatch-view-link { margin-left:8px; }
 
         /* ══════════ BUILDER ══════════ */
@@ -2231,27 +2231,27 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
         .builder-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
         .builder-card { background:var(--surf);border:1.5px solid var(--bdr);overflow:hidden;display:flex;flex-direction:column;transition:all .2s;min-width:0; }
-        .builder-card:hover:not(.disabled) { border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }
+        @media(hover:hover){.builder-card:hover:not(.disabled){ border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }}
         .builder-card.chosen { border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,152,42,.15); }
         .builder-card.disabled { opacity:.5; }
         .builder-card-img-wrap { position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--olivedim); }
         .builder-card-img-link { display:block;width:100%;height:100%;cursor:zoom-in; }
         .builder-card-img-link img { width:100%;height:100%;object-fit:cover;transition:transform .35s ease; }
-        .builder-card:hover:not(.disabled) .builder-card-img-link img { transform:scale(1.06); }
+        @media(hover:hover){.builder-card:hover:not(.disabled) .builder-card-img-link img{ transform:scale(1.06); }}
         .builder-card-check { position:absolute;top:8px;right:8px;width:24px;height:24px;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700; }
         .builder-card-body { padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0;flex:1; }
         .builder-card-name-link { text-decoration:none;color:inherit; }
-        .builder-card-name-link:hover .builder-card-name { color:var(--olive); }
+        @media(hover:hover){.builder-card-name-link:hover .builder-card-name{ color:var(--olive); }}
         .builder-card-name { font-family:var(--ffd);font-size:.98rem;font-weight:600;color:var(--ink);line-height:1.25;word-break:break-word; }
         .builder-card-price { font-size:12px;font-weight:600;color:var(--olive2); }
         .builder-no-cust { font-size:10px;color:var(--ink4);font-style:italic; }
         .builder-card-actions { display:flex;gap:6px;margin-top:auto; }
         .builder-edit-btn { flex:1;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);border:1.3px solid var(--olive2);border-radius:50px;padding:9px 0;transition:all .18s; }
-        .builder-edit-btn:hover { background:var(--olive);color:#fff; }
+        @media(hover:hover){.builder-edit-btn:hover{ background:var(--olive);color:#fff; }}
         .builder-remove-btn { flex:1;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink4);border:1.3px solid var(--bdr2);border-radius:50px;padding:9px 0;transition:all .18s; }
-        .builder-remove-btn:hover { color:var(--red);border-color:var(--red); }
+        @media(hover:hover){.builder-remove-btn:hover{ color:var(--red);border-color:var(--red); }}
         .builder-add-btn { margin-top:auto;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--olive);border-radius:50px;padding:11px 0;transition:all .2s; }
-        .builder-add-btn:hover:not(:disabled) { background:#2e3c0e; }
+        @media(hover:hover){.builder-add-btn:hover:not(:disabled){ background:#2e3c0e; }}
         .builder-add-btn:disabled { opacity:.4;cursor:not-allowed;background:var(--bdr2);color:var(--ink4); }
 
         /* ══════════ STICKY BARS ══════════ */
@@ -2265,7 +2265,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-sticky-price-val { font-family:var(--ffd);font-size:1.2rem;font-weight:600;color:var(--ink); }
         .hamper-sticky-price-orig { font-size:11px;color:var(--ink4);text-decoration:line-through; }
         .hamper-sticky-btn { flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 20px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
-        .hamper-sticky-btn:hover { background:#2e3c0e; }
+        @media(hover:hover){.hamper-sticky-btn:hover{ background:#2e3c0e; }}
         .hamper-sticky-btn.done { background:var(--green) !important; }
         .hamper-sticky-btn.hamper-sticky-btn-disabled { background:var(--bdr2);color:var(--ink4);box-shadow:none;cursor:not-allowed; }
 
@@ -2276,7 +2276,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-sticky-label { font-size:11px;font-weight:600;color:var(--ink);line-height:1.4;display:block; }
         .builder-sticky-label--done { color:var(--green); }
         .builder-sticky-cart { flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--olive);padding:13px 18px;border-radius:50px;box-shadow:0 4px 14px rgba(61,80,22,.25);transition:all .2s;white-space:nowrap; }
-        .builder-sticky-cart:hover:not(:disabled) { background:#2e3c0e; }
+        @media(hover:hover){.builder-sticky-cart:hover:not(:disabled){ background:#2e3c0e; }}
         .builder-sticky-cart:disabled { opacity:.4;cursor:not-allowed; }
         .builder-sticky-cart.done { background:var(--green) !important; }
 
@@ -2299,7 +2299,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .charm-fixed-count-note strong { font-weight:700;color:var(--olive-600); }
         .charm-count-grid { display:flex;flex-wrap:wrap;gap:8px; }
         .charm-count-btn { width:40px;height:40px;border-radius:10px;background:#fff;border:1px solid var(--beige-dkr);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;transition:all .15s; }
-        .charm-count-btn:hover { border-color:var(--olive-400);background:var(--olive-50); }
+        @media(hover:hover){.charm-count-btn:hover{ border-color:var(--olive-400);background:var(--olive-50); }}
         .charm-count-btn.active { background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));color:#8c6b20;box-shadow:0 0 0 3px rgba(201,168,76,.15);transform:translateY(-2px);border-color:transparent; }
         .charm-summary-strip { background:linear-gradient(135deg,rgba(90,110,35,.08),rgba(201,168,76,.06));border:1px solid rgba(90,110,35,.18);border-radius:12px;padding:12px 14px; }
         .charm-summary-header { display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--mist);margin-bottom:10px;line-height:1.5; }
@@ -2311,7 +2311,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
         .chain-selector-wrap { background:linear-gradient(135deg,rgba(90,110,35,.07),rgba(201,168,76,.06));border:1.5px solid rgba(90,110,35,.2);border-radius:18px;padding:14px 14px 16px;margin-bottom:16px;position:relative; }
         .chain-trigger { width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--beige-dkr);border-radius:12px;padding:7px 10px;cursor:pointer;text-align:left;transition:border-color .2s,box-shadow .2s; }
-        .chain-trigger:hover { border-color:var(--olive-400); }
+        @media(hover:hover){.chain-trigger:hover{ border-color:var(--olive-400); }}
         .chain-trigger--open { border-color:var(--olive-500);box-shadow:0 0 0 3px rgba(90,110,35,.1); }
         .chain-trigger--missing { border-color:var(--red);background:rgba(192,57,43,.04); }
         .chain-trigger-thumb { width:46px;height:46px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#fff;border:1px solid rgba(61,74,34,.1);display:flex;align-items:center;justify-content:center;cursor:zoom-in;position:relative; }
@@ -2326,11 +2326,11 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .chain-options-panel { margin-top:10px;background:#fff;border:1.5px solid var(--beige-dkr);border-radius:16px;overflow:hidden;animation:chainPanelIn .2s ease both; }
         .chain-option-row { width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;background:#fff;border:none;border-bottom:1px solid rgba(61,74,34,.07);cursor:pointer;text-align:left;transition:background .15s; }
         .chain-option-row:last-child { border-bottom:none; }
-        .chain-option-row:hover { background:var(--olive-50); }
+        @media(hover:hover){.chain-option-row:hover{ background:var(--olive-50); }}
         .chain-option-row--active { background:rgba(201,168,76,.09); }
         .chain-option-thumb { width:68px;height:68px;border-radius:12px;overflow:hidden;flex-shrink:0;position:relative;background:#fff;border:1px solid rgba(61,74,34,.1);cursor:zoom-in; }
         .chain-option-thumb img { width:100%;height:100%;object-fit:contain;display:block;transition:transform .3s ease; }
-        .chain-option-row:hover .chain-option-thumb img { transform:scale(1.05); }
+        @media(hover:hover){.chain-option-row:hover .chain-option-thumb img{ transform:scale(1.05); }}
         .chain-option-zoom { position:absolute;bottom:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(26,31,13,.65);color:#fff;display:flex;align-items:center;justify-content:center; }
         .chain-option-zoom svg { width:11px;height:11px; }
         .chain-option-text { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
@@ -2345,7 +2345,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
         .combo-trust { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px; }
         .combo-trust-item { display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 4px;background:var(--surf);border:1px solid var(--bdr);border-radius:12px;transition:transform .2s,box-shadow .2s; }
-        .combo-trust-item:hover { transform:translateY(-3px);box-shadow:var(--shadow); }
+        @media(hover:hover){.combo-trust-item:hover{ transform:translateY(-3px);box-shadow:var(--shadow); }}
         .combo-trust-icon { width:26px;height:26px;color:var(--olive2);margin-bottom:5px; }
         .combo-trust-title { font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--olive);margin-bottom:2px; }
         .combo-trust-sub { font-size:8px;color:var(--ink7);line-height:1.3; }
@@ -2353,7 +2353,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-accordion { border-top:1px solid var(--bdr); }
         .combo-acc-item { border-bottom:1px solid var(--bdr); }
         .combo-acc-head { display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 2px;transition:background .15s; }
-        .combo-acc-head:hover { background:rgba(61,80,22,.03); }
+        @media(hover:hover){.combo-acc-head:hover{ background:rgba(61,80,22,.03); }}
         .combo-acc-head-left { display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--ink);text-align:left; }
         .combo-acc-emoji { font-size:15px; }
         .combo-acc-chevron { color:var(--ink4);flex-shrink:0;transition:transform .32s ease; }
@@ -2377,7 +2377,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .cpol-alert { background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.18);border-left:3px solid rgba(192,57,43,.5);border-radius:8px;padding:10px 12px;font-size:12px; }
         .cpol-alert strong { color:var(--red); }
         .cpol .cpol-link { align-self:flex-start;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border-bottom:1.5px solid var(--bdr2);padding-bottom:1px; }
-        .cpol .cpol-link:hover { border-color:var(--olive); }
+        @media(hover:hover){.cpol .cpol-link:hover{ border-color:var(--olive); }}
 
         .combo-delivery-label { font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--olive2);margin-bottom:10px; }
         .combo-delivery-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
@@ -2402,7 +2402,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-rev-total { font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.7); }
         .combo-rev-bars { display:flex;flex-direction:column;gap:5px;padding:12px 14px;justify-content:center; }
         .combo-rev-bar-row { display:flex;align-items:center;gap:8px;padding:3px 5px;border-radius:6px; }
-        .combo-rev-bar-row:hover { background:rgba(61,80,22,.05); }
+        @media(hover:hover){.combo-rev-bar-row:hover{ background:rgba(61,80,22,.05); }}
         .combo-rev-bar-row.active { background:var(--golddim); }
         .combo-rev-bar-label { font-size:10px;font-weight:600;color:var(--olive2);min-width:20px;text-align:right; }
         .combo-rev-bar-track { flex:1;height:5px;background:var(--bdr);border-radius:50px;overflow:hidden; }
@@ -2571,7 +2571,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-page, .builder-page { max-width:1480px; padding:8px 16px 0; }
         .hp-crumbs { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#8b8b80; padding:10px 0 12px; overflow:hidden; white-space:nowrap; }
         .hp-crumbs a, .hp-crumbs button { color:#6f6f64; text-decoration:none; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
-        .hp-crumbs a:hover, .hp-crumbs button:hover { color:#1a1a14; }
+        @media(hover:hover){.hp-crumbs a:hover, .hp-crumbs button:hover{ color:#1a1a14; }}
         .hp-crumb-cur { color:#1a1a14; overflow:hidden; text-overflow:ellipsis; min-width:0; }
         .hamper-main-block { display:flex; flex-direction:column; gap:20px; }
         .hamper-main-info { min-width:0; }
@@ -2598,15 +2598,15 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-piece-field-label em { color:#2a4736; }
         .hp-cta { margin-top:22px; }
         .hp-cta-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:17px; border:0; border-radius:999px; background:#2a4736; color:#fff; font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:background .2s, transform .15s; }
-        .hp-cta-btn:hover { background:#1f3a2a; }
+        @media(hover:hover){.hp-cta-btn:hover{ background:#1f3a2a; }}
         .hp-cta-btn:active { transform:scale(.99); }
         .hp-cta-btn.done { background:#1a1a14; }
         .hp-cta-btn-off { background:#1a1a14; }
         .hp-buy-btn { width:100%; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px; padding:16px; border:0; border-radius:999px; background:#b8982a; color:#fff; font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:background .2s, transform .15s; }
-        .hp-buy-btn:hover { background:#a08622; }
+        @media(hover:hover){.hp-buy-btn:hover{ background:#a08622; }}
         .hp-buy-btn:active { transform:scale(.99); }
         .builder-sticky-buy { flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:#b8982a;padding:13px 16px;border-radius:50px;white-space:nowrap;transition:all .2s; }
-        .builder-sticky-buy:hover:not(:disabled) { background:#a08622; }
+        @media(hover:hover){.builder-sticky-buy:hover:not(:disabled){ background:#a08622; }}
         .builder-sticky-buy:disabled { opacity:.4;cursor:not-allowed; }
         @media (max-width:639px) { .builder-sticky-buy { padding:12px 10px;font-size:9px; } }
         .hp-cta-hint { margin:8px 0 0; text-align:center; font-size:12px; color:#8b8b80; }
@@ -2622,7 +2622,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .combo-acc-item { border:1px solid #ecebe4; border-radius:14px; background:#fff; overflow:hidden; transition:border-color .2s, box-shadow .2s; }
         .combo-acc-item--open { border-color:#cfd8cf; box-shadow:0 6px 22px rgba(26,26,20,.05); }
         .combo-acc-head { padding:14px 16px; background:none; }
-        .combo-acc-head:hover { background:#fafaf6; }
+        @media(hover:hover){.combo-acc-head:hover{ background:#fafaf6; }}
         .combo-acc-head-left { font-size:15px; font-weight:500; gap:14px; color:#1a1a14; }
         .combo-acc-emoji { width:36px; height:36px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
         .combo-acc-item--open .combo-acc-emoji { background:#2a4736; color:#fff; }
@@ -2675,13 +2675,13 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-hint.done { color:#2a4736; font-weight:600; }
         .builder-grid { gap:16px; }
         .builder-card { border:1px solid #e6e4da; border-radius:16px; background:#fff; }
-        .builder-card:hover:not(.disabled) { border-color:#cfcbb8; box-shadow:0 10px 28px rgba(26,26,20,.08); transform:translateY(-2px); }
+        @media(hover:hover){.builder-card:hover:not(.disabled){ border-color:#cfcbb8; box-shadow:0 10px 28px rgba(26,26,20,.08); transform:translateY(-2px); }}
         .builder-card.chosen { border-color:#2a4736; box-shadow:0 0 0 3px rgba(42,71,54,.1); }
         .builder-card-check { background:#2a4736; }
         .builder-card-name { font-weight:500; }
         /* Piece cards match the shared ProductCard look (white, image-led, no border) */
         .builder-card { border:0; border-radius:10px; background:#fff; font-family:'Jost',sans-serif; }
-        .builder-card:hover:not(.disabled) { border-color:transparent; box-shadow:none; transform:none; }
+        @media(hover:hover){.builder-card:hover:not(.disabled){ border-color:transparent; box-shadow:none; transform:none; }}
         .builder-card.chosen { border-color:transparent; box-shadow:none; }
         .builder-card-img-wrap { border-radius:10px; background:#f4f3ee; }
         .builder-card.chosen .builder-card-img-wrap { box-shadow:0 0 0 2px #2a4736; }
@@ -2689,9 +2689,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-card-name { font-family:'Jost',sans-serif; font-size:14.5px; font-weight:400; line-height:1.35; letter-spacing:.005em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:normal; }
         .builder-card-price { font-size:16px; font-weight:600; color:#1a1a17; letter-spacing:-.01em; }
         .builder-add-btn { background:#2a4736; }
-        .builder-add-btn:hover:not(:disabled) { background:#1f3628; }
+        @media(hover:hover){.builder-add-btn:hover:not(:disabled){ background:#1f3628; }}
         .builder-edit-btn { color:#2a4736; border-color:#2a4736; }
-        .builder-edit-btn:hover { background:#2a4736; color:#fff; }
+        @media(hover:hover){.builder-edit-btn:hover{ background:#2a4736; color:#fff; }}
         @media (max-width:639px) {
           .builder-card { border-radius:8px; }
           .builder-card-img-wrap { border-radius:8px; }

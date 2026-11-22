@@ -18,6 +18,10 @@
 .wishBtn { position:absolute; top:12px; right:12px; z-index:3; width:42px; height:42px; border-radius:50%; border:0; background:#fff; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.1); transition:transform .2s, background .2s, color .2s; }
 .wishBtn:hover { transform:scale(1.08); }
 .wishOn { background:var(--forest); color:#fff; }
+.shareBtn { position:absolute; top:62px; right:12px; z-index:3; width:42px; height:42px; border-radius:50%; border:0; background:#fff; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.1); transition:transform .2s; }
+.shareBtn:hover { transform:scale(1.08); }
+.shareBtn:focus-visible { outline:2px solid var(--forest); outline-offset:2px; }
+.shareToast { position:absolute; top:70px; right:62px; z-index:4; padding:7px 12px; border-radius:999px; background:var(--ink); color:#fff; font-size:12px; white-space:nowrap; }
 .soldOverlay { position:absolute; inset:0; z-index:2; background:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; }
 .soldOverlay span { background:var(--ink); color:#fff; padding:10px 22px; border-radius:999px; font-size:12px; letter-spacing:.2em; text-transform:uppercase; font-weight:600; }
 .track { display:none; }
@@ -225,3 +229,30 @@
 .gridItem { min-width:0; }
 @media (max-width:1023px) { .grid4 { grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px 14px; } }
 @media (max-width:639px) { .grid4 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 10px; } }
+
+/* ───────── Reviews: compact on mobile ───────── */
+@media (max-width:639px) {
+  .rev { padding:28px 16px 0; }
+  .rev .shelfHead { margin-bottom:12px; align-items:center; }
+  .rev .shelfTitle { font-size:24px; margin-top:2px; }
+  .rev .shelfHead .writeBtn { padding:9px 14px; font-size:10.5px; letter-spacing:.1em; width:auto; }
+  /* empty state: short strip instead of a full card */
+  .noRev { padding:18px 16px; border-radius:16px; }
+  .noRevStars { gap:3px; margin-bottom:6px; }
+  .noRevStars svg { width:16px; height:16px; }
+  .noRev h3 { font-size:20px; margin-bottom:4px; }
+  .noRev p { font-size:13px; line-height:1.5; margin-bottom:12px; }
+  .noRevHints { display:none; }
+  .noRev .writeBtn { padding:10px 20px; font-size:11px; width:auto; }
+  /* with reviews: slimmer summary + bars */
+  .revTop { gap:10px; }
+  .score { padding:16px; border-radius:16px; }
+  .scoreNum { font-size:40px; }
+  .scoreNum small { font-size:16px; }
+  .score .stars { font-size:16px; }
+  .score .scoreSub { font-size:12px; }
+  .score .recommend { margin-top:8px; padding-top:10px; font-size:12px; }
+  .bars { padding:12px 14px; gap:2px; border-radius:16px; }
+  .bar { font-size:12px; padding:2px 0; }
+  .barTrack { height:6px; }
+}

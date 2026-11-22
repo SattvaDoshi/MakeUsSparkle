@@ -138,6 +138,8 @@ export default function NewArrivals() {
           padding-bottom: 8px;
           padding-left: 40px;
           padding-right: 40px;
+          scroll-padding-left: 40px;
+          scroll-padding-right: 40px;
           scrollbar-width: none;
           align-items: stretch;
         }
@@ -168,7 +170,7 @@ export default function NewArrivals() {
           .na-slot { flex: 0 0 248px; }
           .na-inner { padding: 0 32px; }
           .na-track-wrapper { margin-left: -32px; margin-right: -32px; }
-          .na-track { padding-left: 32px; padding-right: 32px; }
+          .na-track { padding-left: 32px; padding-right: 32px; scroll-padding-left: 32px; scroll-padding-right: 32px; }
         }
 
         @media (min-width: 640px) and (max-width: 1023px) {
@@ -178,7 +180,7 @@ export default function NewArrivals() {
           .na-slot { flex: 0 0 224px; }
           .na-view-all { display: none; }
           .na-track-wrapper { margin-left: -28px; margin-right: -28px; }
-          .na-track { padding-left: 28px; padding-right: 28px; }
+          .na-track { padding-left: 28px; padding-right: 28px; scroll-padding-left: 28px; scroll-padding-right: 28px; }
         }
 
         @media (max-width: 639px) {
@@ -188,7 +190,7 @@ export default function NewArrivals() {
           .na-view-all { display: none; }
           .na-track { gap: 14px; }
           .na-track-wrapper { margin-left: -18px; margin-right: -18px; }
-          .na-track { padding-left: 18px; padding-right: 18px; }
+          .na-track { padding-left: 18px; padding-right: 18px; scroll-padding-left: 18px; scroll-padding-right: 18px; }
           .na-slot { flex: 0 0 168px; }
           .na-btn { width: 38px; height: 38px; font-size: 15px; }
         }
@@ -223,7 +225,7 @@ export default function NewArrivals() {
           .na-slot { flex: 0 0 150px; }
           .na-inner { padding: 0 14px; }
           .na-track-wrapper { margin-left: -14px; margin-right: -14px; }
-          .na-track { padding-left: 14px; padding-right: 14px; }
+          .na-track { padding-left: 14px; padding-right: 14px; scroll-padding-left: 14px; scroll-padding-right: 14px; }
         }
       `}</style>
 

@@ -5,6 +5,8 @@ import { CheckoutSkeleton } from '@/components/ui/PageSkeletons';
 import { INDIAN_STATES } from '@/lib/indianStates';
 import Em from "@/components/ui/Em";
 import { useState, useCallback, useEffect } from 'react';
+import { useCartStockIssues } from '@/lib/useCartStockIssues';
+import { useSheetSwipe, SHEET_GRAB_CSS } from '@/lib/useSheetSwipe';
 import Link from 'next/link';
 import { useCart, GIFT_OPTIONS } from '@/lib/cartContext';
 import { useAuth, type AuthUser } from '@/lib/authContext';
@@ -48,8 +50,13 @@ export default function CheckoutPage() {
   // Two steps: 1) where it's going and how fast, 2) how you'll pay
   const [step, setStep] = useState<1 | 2>(1);
   const [stepError, setStepError] = useState('');
+  // Problems from placing the order (price changed, out of stock, payment couldn't start…) — shown in the page, not a popup
+  const [payError, setPayError] = useState('');
+  const stockIssues = useCartStockIssues(items);
+  const stockIssueCount = Object.keys(stockIssues).length;
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showExpressPopup, setShowExpressPopup] = useState(false);
+  const { sheetRef: expressSheetRef, grabProps: expressGrab } = useSheetSwipe(() => setShowExpressPopup(false));
   const [deliveryType, setDeliveryType] = useState<'standard' | 'express'>('standard');
 
   const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -195,7 +202,7 @@ export default function CheckoutPage() {
       console.error(err);
       const msg = err instanceof Error ? err.message : '';
       if (/auth|token/i.test(msg)) { window.dispatchEvent(new CustomEvent('makeussparkle:auth-open', { detail: { tab: 'login' } })); setAddressError('Please sign in again to save your address.'); }
-      else alert('Failed to save address.');
+      else setAddressError('Failed to save address. Please try again.');
     }
     finally { setAddressBusy(false); }
   };
@@ -233,7 +240,7 @@ export default function CheckoutPage() {
       const newAddresses = res?.addresses || [...(user?.addresses || []), payload];
       setSelectedBillingAddressIndex(Math.max(0, newAddresses.length - 1));
       setBillingAddressForm(withAccount({ name: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '', phone: '', alternativePhone: '' }));
-    } catch (err) { console.error(err); alert('Failed to save address.'); }
+    } catch (err) { console.error(err); setBillingAddressError('Failed to save address. Please try again.'); }
     finally { setBillingAddressBusy(false); }
   };
 
@@ -242,19 +249,27 @@ export default function CheckoutPage() {
     const bill = billingSameAsShipping ? ship : user?.addresses?.[selectedBillingAddressIndex];
     if (!ship) { setStepError('Please add or select a shipping address to continue.'); return; }
     if (!bill) { setStepError('Please select a billing address.'); return; }
+    if (stockIssueCount > 0) { setStepError('Some items in your cart are out of stock or over the quantity left. Please update your cart first.'); return; }
     setStepError('');
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const showPayError = (msg: string) => {
+    setPayError(msg);
+    setTimeout(() => document.getElementById('ck-pay-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
+
   const handlePay = useCallback(async () => {
-    if (!selectedMethod) return;
+    if (!selectedMethod || loading) return;
+    setPayError('');
+    if (stockIssueCount > 0) { showPayError('Some items in your cart are no longer available in the quantity you chose. Please update your cart.'); return; }
     const shippingAddress = user?.addresses?.[selectedAddressIndex] ?? null;
-    if (!shippingAddress) { alert('Please select a shipping address.'); return; }
+    if (!shippingAddress) { showPayError('Please select a shipping address.'); return; }
     const billingAddress = billingSameAsShipping
       ? shippingAddress
       : (user?.addresses?.[selectedBillingAddressIndex] ?? null);
-    if (!billingAddress) { alert('Please select a billing address.'); return; }
+    if (!billingAddress) { showPayError('Please select a billing address.'); return; }
 
     setLoading(true);
     try {
@@ -385,23 +400,22 @@ export default function CheckoutPage() {
       const msg = err instanceof Error && err.message && err.message !== 'Request failed' ? err.message : 'Failed to place order. Please try again.';
       // A coupon the server can't honour would keep blocking checkout, so drop it and let them retry.
       if (discountCode && /changed/i.test(msg)) removeDiscount();
-
-      // If price or total changed, sync cart with catalog and update total
+      // If a price changed, sync the cart with the catalog so the shopper sees the refreshed total.
       if (/price.*changed/i.test(msg) || /total.*changed/i.test(msg) || /mismatch/i.test(msg) || /no longer available/i.test(msg)) {
         try {
           const syncResult = await syncCartPrices();
           if (syncResult.updated) {
-            alert(`The price of ${syncResult.updatedItems.join(', ')} has been updated to match current store pricing. Your order total has been refreshed. Please click Pay again to proceed.`);
+            showPayError(`The price of ${syncResult.updatedItems.join(', ')} has been updated to match current store pricing. Your order total is refreshed. Please tap Pay again.`);
             setLoading(false);
             return;
           }
         } catch {}
       }
 
-      alert(msg);
+      showPayError(msg);
       setLoading(false);
     }
-  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, selectedGiftId, discountCode, removeDiscount, state.giftMessage, clearCart, user, selectedAddressIndex, billingSameAsShipping, selectedBillingAddressIndex, syncCartPrices]);
+  }, [selectedMethod, items, finalTotal, amountToPayNow, isGift, selectedGiftId, discountCode, removeDiscount, state.giftMessage, clearCart, user, selectedAddressIndex, billingSameAsShipping, selectedBillingAddressIndex, loading, stockIssueCount, syncCartPrices]);
 
   if (orderPlaced) {
     return (
@@ -449,7 +463,6 @@ export default function CheckoutPage() {
           background: #ffffff;
           font-family: 'DM Sans', sans-serif;
           color: #0f1a0f;
-          margin-top: 60px;
           overflow-x: hidden;
           width: 100%;
         }
@@ -756,6 +769,17 @@ export default function CheckoutPage() {
         .ck-step.on > span, .ck-step.on button > span { background:#2a4736; color:#fff; }
         .ck-step.done { color:#2a4736; }
         .ck-step.done > span, .ck-step.done button > span { background:#e1ece3; color:#2a4736; }
+        .ck-steps { flex-wrap:nowrap; }
+        .ck-step { white-space:nowrap; }
+        .ck-long { font-size:inherit; }
+        @media (max-width: 480px) {
+          .ck-steps { gap:6px; font-size:12px; }
+          .ck-step { gap:6px; }
+          .ck-step button { gap:6px; }
+          .ck-step + .ck-step::before { width:14px; margin-right:0; }
+          .ck-step > span, .ck-step button > span { width:22px; height:22px; font-size:11px; }
+        }
+        @media (max-width: 380px) { .ck-long { display:none; } }
         .ck-recap { background:#fafaf6; border:1px solid #ecebe4; border-radius:14px; padding:4px 16px; margin-bottom:16px; }
         .ck-recap-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; }
         .ck-recap-row + .ck-recap-row { border-top:1px solid #ecebe4; }
@@ -764,6 +788,9 @@ export default function CheckoutPage() {
         .ck-recap-edit { background:none; border:0; color:#2a4736; font:inherit; font-size:13px; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; flex-shrink:0; }
         .ck-cont-left { display:none; }
         .ck-step-error { color:#c0392b; font-size:13px; margin:0 0 10px; }
+        .ck-pay-error { display:flex; flex-direction:column; gap:4px; background:#fdf1ef; border:1px solid rgba(192,57,43,.3); color:#8c2a1f; border-radius:12px; padding:12px 14px; margin:0 0 14px; font-size:13.5px; font-weight:500; }
+        .ck-pay-error small { font-size:12.5px; font-weight:400; }
+        .ck-pay-error a { align-self:flex-start; color:#8c2a1f; font-weight:700; text-decoration:underline; font-size:12.5px; }
 
         /* ═════ Checkout refresh ═════ */
         .ck-top { border-bottom:1px solid #ecebe4; background:#fff; }
@@ -883,12 +910,22 @@ export default function CheckoutPage() {
         .ck-popup-warn strong { font-weight: 800; color: #3d0e06; }
         .ck-popup-close { width: 100%; padding: 14px; background: #2d5a27; color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: background .2s; }
         .ck-popup-close:hover { background: #3a7a32; }
+        ${SHEET_GRAB_CSS}
+        /* Phones: rises from the bottom as a sheet */
+        @media (max-width: 767px) {
+          .ck-popup-overlay { align-items: flex-end; padding: 0; }
+          .ck-popup { max-width: none; border-radius: 22px 22px 0 0; padding: 0 20px calc(22px + env(safe-area-inset-bottom)); max-height: 88dvh; overflow-y: auto; animation: ckSheetUp .34s cubic-bezier(.22,.68,0,1); box-shadow: 0 -12px 44px rgba(5,15,5,.3); }
+          @keyframes ckSheetUp { from { transform: translateY(100%); } to { transform: none; } }
+          .ck-popup .sheet-grab span { background: rgba(5,15,5,.22); }
+          .ck-popup-icon { margin-top: 4px; }
+        }
       `}</style>
 
       {/* ── Express Popup ── */}
       {showExpressPopup && (
         <div className="ck-popup-overlay" onClick={() => setShowExpressPopup(false)}>
-          <div className="ck-popup" onClick={e => e.stopPropagation()}>
+          <div ref={expressSheetRef as React.RefObject<HTMLDivElement>} className="ck-popup" onClick={e => e.stopPropagation()}>
+            <div className="sheet-grab" {...expressGrab} aria-hidden="true"><span /></div>
             <div className="ck-popup-icon"><Em c="⚡" /></div>
             <h2 className="ck-popup-title">Express Delivery</h2>
             <p className="ck-popup-body">
@@ -947,10 +984,17 @@ export default function CheckoutPage() {
           <ol className="ck-steps" aria-label="Checkout steps">
             <li className="ck-step done"><span>✓</span>Cart</li>
             <li className={`ck-step${step === 1 ? ' on' : ' done'}`}>
-              <button type="button" onClick={() => step === 2 && setStep(1)} disabled={step === 1}><span>{step === 2 ? '✓' : '1'}</span>Address &amp; delivery</button>
+              <button type="button" onClick={() => step === 2 && setStep(1)} disabled={step === 1}><span>{step === 2 ? '✓' : '1'}</span>Address<small className="ck-long"> &amp; delivery</small></button>
             </li>
             <li className={`ck-step${step === 2 ? ' on' : ''}`}><span>2</span>Payment</li>
           </ol>
+          {(payError || stockIssueCount > 0) && (
+            <div id="ck-pay-error" className="ck-pay-error" role="alert">
+              {payError || 'Some items in your cart are out of stock or over the quantity left.'}
+              {Object.values(stockIssues).map((m, i) => <small key={i}>{m}</small>)}
+              <Link href="/cart">Review cart</Link>
+            </div>
+          )}
           <div className="ck-layout">
 
             {/* ── LEFT COLUMN ── */}
@@ -1061,25 +1105,6 @@ export default function CheckoutPage() {
               </div>
               </>)}
               {step === 2 && (<>
-              <div className="ck-recap">
-                <div className="ck-recap-row">
-                  <div>
-                    <div className="ck-recap-label">Delivering to</div>
-                    <div className="ck-recap-text">
-                      {(() => { const a = user?.addresses?.[selectedAddressIndex]; return a ? `${a.name || user?.name || 'Customer'} · ${a.addressLine1 || a.fullAddress || ''}${a.city ? ', ' + a.city : ''}${a.pincode ? ' - ' + a.pincode : ''}` : '—'; })()}
-                    </div>
-                  </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
-                </div>
-                <div className="ck-recap-row">
-                  <div>
-                    <div className="ck-recap-label">Delivery</div>
-                    <div className="ck-recap-text">{deliveryType === 'express' ? 'Express' : 'Standard'}</div>
-                  </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
-                </div>
-              </div>
-
               <p className="ck-col-title">Payment</p>
               <div className="ck-panel" style={{ animationDelay: '.08s' }}>
                 <div className="ck-panel-head">Select Payment Method</div>
@@ -1130,6 +1155,25 @@ export default function CheckoutPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="ck-recap" style={{ marginTop: 18 }}>
+                <div className="ck-recap-row">
+                  <div>
+                    <div className="ck-recap-label">Delivering to</div>
+                    <div className="ck-recap-text">
+                      {(() => { const a = user?.addresses?.[selectedAddressIndex]; return a ? `${a.name || user?.name || 'Customer'} · ${a.addressLine1 || a.fullAddress || ''}${a.city ? ', ' + a.city : ''}${a.pincode ? ' - ' + a.pincode : ''}` : '—'; })()}
+                    </div>
+                  </div>
+                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                </div>
+                <div className="ck-recap-row">
+                  <div>
+                    <div className="ck-recap-label">Delivery</div>
+                    <div className="ck-recap-text">{deliveryType === 'express' ? 'Express' : 'Standard'}</div>
+                  </div>
+                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                </div>
               </div>
 
               </>)}

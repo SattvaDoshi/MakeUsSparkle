@@ -107,6 +107,18 @@ export default function TestimonialsSection() {
               ? Array.from({ length: 3 }).map((_, i) => <div key={i} className={styles.skel} aria-hidden="true" />)
               : list.map((t) => (
                   <article key={t.id} className={styles.card}>
+                    {(t.photo || t.productImage) && (
+                      <div className={styles.hero}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          className={styles.heroImg}
+                          src={cdnImage((t.photo || t.productImage) as string, 640)}
+                          alt={t.photo ? `Photo from ${t.name}'s review` : t.productTitle}
+                          loading="lazy" decoding="async"
+                        />
+                        {t.photo && <span className={styles.heroTag}>📷 Customer photo</span>}
+                      </div>
+                    )}
                     <div className={styles.cardTop}>
                       <span className={styles.stars} role="img" aria-label={`${t.rating} out of 5 stars`}>{starsFor(t.rating)}</span>
                       {t.verified && <span className={styles.verified}>✓ Verified buyer</span>}
@@ -115,10 +127,6 @@ export default function TestimonialsSection() {
                     <div className={styles.quoteMark} aria-hidden="true">&ldquo;</div>
                     <div className={styles.bodyRow}>
                       <p className={styles.body}>{t.body}</p>
-                      {t.photo && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img className={styles.photo} src={cdnImage(t.photo, 240)} alt={`Photo from ${t.name}'s review`} loading="lazy" decoding="async" />
-                      )}
                     </div>
 
                     <div className={styles.foot}>

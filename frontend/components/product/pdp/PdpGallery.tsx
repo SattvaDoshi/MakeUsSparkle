@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import { cdnImage } from '@/lib/cdn';
 import styles from './pdp.module.css';
+import { lockScroll } from '@/lib/scrollLock';
 
 /** Thumbnails + hover-zoom on desktop, swipeable full-width carousel on mobile, fullscreen lightbox on tap/click. */
 export default function PdpGallery({
@@ -14,6 +15,25 @@ export default function PdpGallery({
 }) {
   const list = images.length ? images : [fallback];
   const [lightbox, setLightbox] = useState(false);
+  const [shared, setShared] = useState('');
+  const share = useCallback(async () => {
+    const url = window.location.href;
+    const title = document.title;
+    try {
+      if (navigator.share) { await navigator.share({ title, url }); return; }
+      await navigator.clipboard.writeText(url);
+      setShared('Link copied');
+      setTimeout(() => setShared(''), 1800);
+    } catch { /* user dismissed the share sheet */ }
+  }, []);
+  const shareBtn = (
+    <>
+      <button type="button" className={styles.shareBtn} onClick={share} aria-label="Share this product">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" /></svg>
+      </button>
+      {shared && <span className={styles.shareToast} role="status">{shared}</span>}
+    </>
+  );
   const [zoom, setZoom] = useState(false);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const trackRef = useRef<HTMLDivElement>(null);
@@ -65,8 +85,8 @@ export default function PdpGallery({
       if (e.key === 'ArrowLeft') onChange((safe - 1 + list.length) % list.length);
     };
     document.addEventListener('keydown', key);
-    const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', key); document.body.style.overflow = prev; };
+    const unlock = lockScroll();
+    return () => { document.removeEventListener('keydown', key); unlock(); };
   }, [lightbox, safe, list.length, onChange]);
 
   const onErr = (e: React.SyntheticEvent<HTMLImageElement>) => { if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; };
@@ -86,7 +106,7 @@ export default function PdpGallery({
               {i === 0 && soldOut && <span className={styles.soldOverlay}><span>Sold out</span></span>}
             </button>
           ))}
-          <div className={styles.tileWish}>{wish}</div>
+          <div className={styles.tileWish}>{wish}{shareBtn}</div>
         </div>
 
         {/* Mobile carousel */}
@@ -102,7 +122,7 @@ export default function PdpGallery({
           {chip && !soldOut && <span className={styles.chipTL}>{chip}</span>}
           {soldOut && <div className={styles.soldOverlay}><span>Sold out</span></div>}
           {list.length > 1 && <span className={styles.counter}>{safe + 1} / {list.length}</span>}
-          <div className={styles.wrapWish}>{wish}</div>
+          <div className={styles.wrapWish}>{wish}{shareBtn}</div>
           {list.length > 1 && (
             <div className={styles.dots} aria-hidden="true">
               {list.map((_, i) => <span key={i} className={`${styles.dot}${safe === i ? ` ${styles.dotOn}` : ''}`} />)}

@@ -14,6 +14,7 @@
   width: 100%;
   height: 100%;
   background: #fff;
+  border-radius: 10px;
   font-family: 'Jost', sans-serif;
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
@@ -39,8 +40,12 @@
   transition: opacity 0.45s var(--ease), transform 0.7s var(--ease);
 }
 .imgAlt { opacity: 0; }
-.card:hover .imgAlt, .card:focus-within .imgAlt { opacity: 1; }
-.card:hover .img { transform: scale(1.04); }
+/* Hover effects only for devices that really hover: on a phone a tap leaves :hover "stuck", which left the
+   card half-blended with its second photo after coming Back from the product page. */
+@media (hover: hover) {
+  .card:hover .imgAlt, .card:focus-within .imgAlt { opacity: 1; }
+  .card:hover .img { transform: scale(1.04); }
+}
 .soldOut .img { filter: grayscale(0.85); opacity: 0.7; }
 .soldOut .imgAlt { display: none; }
 
@@ -154,7 +159,8 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 12px 2px 4px;
+  /* Side padding keeps text off the white card's edge on tinted page backgrounds */
+  padding: 12px 10px 10px;
   flex: 1 1 auto;
 }
 .eyebrow {
@@ -210,15 +216,15 @@
 
 /* ───────── Small screens ───────── */
 @media (max-width: 639px) {
-  .media { border-radius: 8px; }
+  .card, .media { border-radius: 8px; }
   .chips { top: 8px; left: 8px; gap: 5px; }
   .chip { font-size: 9px; padding: 5px 8px; letter-spacing: 0.08em; }
   .wish { width: 32px; height: 32px; top: 6px; right: 6px; }
   .ratingBadge { right: 8px; bottom: 8px; padding: 5px 8px; font-size: 11.5px; }
   .priceRow { padding-right: 40px; }
-  .body { padding-top: 10px; gap: 4px; }
+  .body { padding: 10px 8px 8px; gap: 4px; }
   .eyebrow { font-size: 9px; letter-spacing: 0.14em; }
-  .name { font-size: 13px; }
+  .name { font-size: 13px; padding-right: 40px; }
   .price { font-size: 14.5px; }
   .was { font-size: 11.5px; }
   .off { font-size: 11px; }

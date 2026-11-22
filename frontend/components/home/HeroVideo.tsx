@@ -1177,6 +1177,8 @@ const heroLink = safeHref(content?.link);
           gap: 14px;
           overflow-x: auto;
           padding: 0 16px;
+          scroll-padding-left: 16px;
+          scroll-padding-right: 16px;
           scroll-snap-type: x proximity;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
@@ -1248,6 +1250,8 @@ const heroLink = safeHref(content?.link);
             overflow-x: auto;
             justify-content: flex-start;
             padding: 0 20px;
+            scroll-padding-left: 20px;
+            scroll-padding-right: 20px;
           }
           .cat-card {
             flex: 0 0 130px;

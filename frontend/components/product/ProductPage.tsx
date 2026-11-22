@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import ProductCard from '@/components/product/ProductCard';
-import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchCatalogProducts, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 import styles from './ProductListing.module.css';
 export const ALL_PRODUCTS = [
@@ -385,9 +385,12 @@ export default function ProductsPage({
   loading?: boolean;
 }) {
   const [activeTag, setActiveTag] = useState('All');
-  const [dynamicProducts, setDynamicProducts] = useState<Product[]>([]);
+  // Coming back (Back button) the catalogue is already in memory: show it straight away so the browser can restore
+  // the scroll position and the cards don't re-animate, then refresh quietly in the background.
+  const [cached] = useState(() => (products ? undefined : (peekCatalogProducts() as Product[] | undefined)));
+  const [dynamicProducts, setDynamicProducts] = useState<Product[]>(cached ?? []);
   const [sort, setSort] = useState<SortOption>('default');
-  const [internalLoading, setInternalLoading] = useState(products ? false : true);
+  const [internalLoading, setInternalLoading] = useState(products || cached ? false : true);
   const isLoading = propLoading !== undefined ? propLoading : internalLoading;
 
   // First screen shows 16 pieces; after that more load automatically as the shopper nears the bottom.
@@ -406,16 +409,16 @@ export default function ProductsPage({
       };
     }
 
-    setInternalLoading(true);
+    if (!cached) setInternalLoading(true);
     fetchCatalogProducts()
       .then((products) => {
         if (mounted) {
-          setDynamicProducts(products as Product[]);
+          setDynamicProducts((prev) => (cached && prev.length === (products as Product[]).length && prev.every((p, i) => p.id === (products as Product[])[i].id) ? prev : (products as Product[])));
           setInternalLoading(false);
         }
       })
       .catch(() => {
-        if (mounted) {
+        if (mounted && !cached) {
           setDynamicProducts([]);
           setInternalLoading(false);
         }
@@ -424,6 +427,7 @@ export default function ProductsPage({
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
   useEffect(() => {
@@ -557,7 +561,7 @@ export default function ProductsPage({
             </div>
           ) : (
             shown.map((product, i) => (
-              <div key={product.id} className={styles.item} style={{ animationDelay: `${Math.min((i % ITEMS_PER_PAGE) * 0.035, 0.4)}s` }}>
+              <div key={product.id} className={cached ? `${styles.item} ${styles.itemStatic}` : styles.item} style={cached ? undefined : { animationDelay: `${Math.min((i % ITEMS_PER_PAGE) * 0.035, 0.4)}s` }}>
                 <ProductCard product={product} productLinkBase={productLinkBase} />
               </div>
             ))

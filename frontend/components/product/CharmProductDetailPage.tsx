@@ -1,4 +1,5 @@
 'use client';
+import { useLater } from '@/lib/useLater';
 import SafeHtml from '@/components/ui/SafeHtml';
 import { PdpSkeleton } from '@/components/ui/PageSkeletons';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
@@ -13,10 +14,13 @@ import { useAuth } from '@/lib/authContext';
 import { PDP_THEME_CSS } from './pdp/pdpTheme';
 import PdpGallery from './pdp/PdpGallery';
 import PdpReviews from './pdp/PdpReviews';
+import PdpWorn from '@/components/product/pdp/PdpWorn';
+import PdpShelves from './pdp/PdpShelves';
 import PdpStickyBar from './pdp/PdpStickyBar';
 import pdpStyles from './pdp/pdp.module.css';
 import { useStickyColumns } from './pdp/useStickyColumns';
 import { GiftBoxUpsell, CompleteTheLookStrip, AccordionItem, EstimatedDeliveryBlock, type AccordionData } from './ProductDetailPage';
+import { lockScroll } from '@/lib/scrollLock';
 
 /* ─── Types ─── */
 
@@ -69,8 +73,8 @@ function ImageLightbox({ onClose, imageUrl, eyebrow, title, footerTip }: { onClo
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', handleKey); document.body.style.overflow = ''; };
+    const unlock = lockScroll();
+    return () => { document.removeEventListener('keydown', handleKey); unlock(); };
   }, [onClose]);
 
   return (
@@ -775,6 +779,7 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
 export default function CharmProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const later = useLater();
   const { toggleItem, isWished } = useWishlist();
 
   const [product, setProduct] = useState<CatalogProduct | null | undefined>(undefined);
@@ -1043,8 +1048,8 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
     for (let i = 0; i < qty; i++) addItem(item);
     fireConfetti(cartBtnRef.current);
     setCartAnim(true); setSparkleAnim(true);
-    setTimeout(() => setCartAnim(false), 700);
-    setTimeout(() => setSparkleAnim(false), 800);
+    later(() => setCartAnim(false), 700, 'cartAnim');
+    later(() => setSparkleAnim(false), 800, 'sparkleAnim');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addItem, product, qty, buildCartItem, custPhotosIncomplete, charmSelectionIncomplete, charmData.count, selectedChain, currentStock]);
 
@@ -1803,7 +1808,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               onChange={setActiveImg}
               alt={productName}
               soldOut={Number(currentStock) <= 0}
-              chip={product.offerTag || product.offer || (discount > 0 ? `${discount}% off` : product.badge || undefined)}
+              chip={product.offerTag || product.offer || product.badge || undefined}
               fallback={FALLBACK_PRODUCT_IMAGE}
               wish={
                 <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
@@ -1835,7 +1840,9 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               {totalCharmOriginalPrice > totalCharmPrice && (
                 <>
                   <span className="pdp-original">₹{totalCharmOriginalPrice.toLocaleString('en-IN')}</span>
-                  {discount > 0 && <span className="pdp-discount">{discount}% off</span>}
+                  <span className="pdp-discount">
+                    Save ₹{Math.round(totalCharmOriginalPrice - totalCharmPrice).toLocaleString('en-IN')}{discount > 0 ? ` · ${discount}% off` : ''}
+                  </span>
                 </>
               )}
             </div>
@@ -1846,7 +1853,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
                 {selectedCharmCount > 0 && ` + ₹${charmsPrice.toLocaleString('en-IN')} (${selectedCharmCount} charms)`}
               </p>
             )}
-            {discountTag && (
+            {discountTag && !/^\s*\d+(\.\d+)?\s*%\s*off\s*$/i.test(discountTag) && (
               <div className="pdp-offer">
                 <span className="pdp-offer-icon">🏷️</span>
                 <span className="pdp-offer-text">{discountTag}</span>
@@ -1896,7 +1903,6 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
               </button>
             )}
 
-            {description && <p className="pdp-desc">{description}</p>}
 
             {tags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
@@ -1960,7 +1966,7 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
             {/* Premium Gift Box upsell — show only if giftBox is enabled in the product data */}
             {product?.giftBox?.enabled && (
               <>
-                <p className="pdp-section-label" style={{ marginBottom: 12 }}>Make it a Gift</p>
+                <div style={{ height: 16 }} />
                 <GiftBoxUpsell
                   added={giftBoxAdded}
                   onToggle={() => setGiftBoxAdded(v => !v)}
@@ -2037,7 +2043,9 @@ export default function CharmProductDetailPage({ slug }: { slug: string }) {
           </div>
         </div>
 
+        <PdpWorn photos={product.wornPhotos} />
         <PdpReviews productId={product.sourceId} reviews={productReviews} setReviews={setProductReviews} />
+        <PdpShelves product={product} />
 
         <PdpStickyBar
           show={showSticky}

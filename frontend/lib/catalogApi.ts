@@ -25,6 +25,9 @@ export interface CatalogStyle {
   slug: string;
   // gender can be a string slug/id or an object returned from the backend
   gender?: string | BackendGender;
+  /** Style-page sub heading / caption set in the admin. undefined = never set (use built-in text). */
+  eyebrow?: string;
+  caption?: string;
 }
 
 export interface CatalogGender {
@@ -106,6 +109,7 @@ export interface CatalogProduct {
   sizeChartImage?: string | null;
   /** Steps to measure for the size chart */
   sizeChartSteps?: string;
+  wornPhotos?: Array<{ url: string; caption?: string }>;
   /** Per-product gift box upsell configuration. */
   giftBox?: {
     enabled: boolean;
@@ -151,6 +155,8 @@ interface BackendStyle {
   name?: string;
   image?: string;
   gender?: BackendMaybeRef;
+  eyebrow?: string;
+  caption?: string;
 }
 
 interface BackendGender {
@@ -214,6 +220,8 @@ interface BackendProduct {
   perCharmPrice?: number;
   sizeChartImage?: string | null;
   sizeChartSteps?: string;
+  /** Customer photos shown in the "Worn by customers" section (empty = section hidden). */
+  wornPhotos?: Array<{ url: string; caption?: string }>;
   giftBox?: {
     enabled?: boolean;
     heading?: string;
@@ -320,6 +328,8 @@ function toStyle(item: BackendStyle): CatalogStyle {
     image: item.image,
     slug: toSlug(name),
     gender: (item.gender as any) ?? undefined,
+    eyebrow: typeof item.eyebrow === "string" ? item.eyebrow : undefined,
+    caption: typeof item.caption === "string" ? item.caption : undefined,
   };
 }
 
@@ -465,6 +475,7 @@ function normalizeProduct(
     perCharmPrice: Number(item.perCharmPrice ?? 0),
     sizeChartImage: item.sizeChartImage || null,
     sizeChartSteps: item.sizeChartSteps || "",
+    wornPhotos: Array.isArray((item as any).wornPhotos) ? (item as any).wornPhotos.filter((w: any) => w?.url).map((w: any) => ({ url: w.url, caption: w.caption || '' })) : [],
     crossProducts: Array.isArray((item as any).crossProducts)
       ? (item as any).crossProducts.map((cp: any) => ({
           _id: cp._id ? String(cp._id) : String(cp),
@@ -514,6 +525,11 @@ export function clearCatalogCache(prefix?: string) {
   for (const key of inFlightRequests.keys()) {
     if (key.startsWith(prefix)) inFlightRequests.delete(key);
   }
+}
+
+/** Last known products, even if past their short TTL. Lets a list page paint instantly (e.g. on Back) while a fresh copy loads. */
+export function peekCatalogProducts(filters: { subCategorySlug?: string } = {}): CatalogProduct[] | undefined {
+  return catalogCache.get(`products_${filters.subCategorySlug || "all"}`)?.data;
 }
 
 async function withCatalogCache<T>(
@@ -797,6 +813,7 @@ export async function fetchOpenSection(gender?: string): Promise<CatalogOpenSect
           perCharmPrice: 0,
           sizeChartImage: p.sizeChartImage || null,
           sizeChartSteps: p.sizeChartSteps || "",
+          wornPhotos: Array.isArray((p as any).wornPhotos) ? (p as any).wornPhotos.filter((w: any) => w?.url).map((w: any) => ({ url: w.url, caption: w.caption || '' })) : [],
           giftBox: p.giftBox ? {
             enabled: p.giftBox.enabled !== false,
             heading: p.giftBox.heading || "Premium Gift Box",

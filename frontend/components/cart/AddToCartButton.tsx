@@ -1,5 +1,6 @@
 'use client';
 
+import { useLater } from '@/lib/useLater';
 import { useRef, useState, useCallback } from 'react';
 import { useCart, CartItem } from '@/lib/cartContext';
 import { fireConfetti } from '@/components/cart/ConfettiManager';
@@ -15,13 +16,14 @@ export default function AddToCartButton({ product, variant = 'full', className }
   const { addItem } = useCart();
   const btnRef = useRef<HTMLButtonElement>(null);
   const [added, setAdded] = useState(false);
+  const later = useLater();
 
   const handleAdd = useCallback(() => {
     addItem(product);
     fireConfetti(btnRef.current);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  }, [addItem, product]);
+    later(() => setAdded(false), 1500, 'added');
+  }, [addItem, product, later]);
 
   const isCompact = variant === 'compact';
 

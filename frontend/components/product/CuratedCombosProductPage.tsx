@@ -1,5 +1,6 @@
 'use client';
 
+import { useLater } from '@/lib/useLater';
 import Em from "@/components/ui/Em";
 import {
   useState,
@@ -17,8 +18,10 @@ import type { ReviewData } from '@/lib/catalogApi';
 import { CharmSelector, ChainSelector, type ChainOption } from './CharmProductDetailPage';
 import PdpGallery from './pdp/PdpGallery';
 import PdpReviews from './pdp/PdpReviews';
+import PdpShelves from './pdp/PdpShelves';
 import PdpStickyBar from './pdp/PdpStickyBar';
 import { useStickyColumns } from './pdp/useStickyColumns';
+import pc from './ProductCard.module.css';
 
 const PRESET_MESSAGES = [
   { value: '', label: 'Choose a message template…' },
@@ -809,28 +812,61 @@ interface PresetComboGridProps {
   onSelect: (id: string) => void;
 }
 
+/**
+ * Combo cards reuse the shared ProductCard styles (ProductCard.module.css) so the
+ * gifts page looks the same as every other product grid. They stay buttons because
+ * selecting a combo opens it in-page rather than navigating to a product URL.
+ */
+function ComboCard({ name, image, eyebrow, badge, price, originalPrice, onClick }: {
+  name: string;
+  image: string;
+  eyebrow: string;
+  badge?: string | null;
+  price: number;
+  originalPrice?: number | null;
+  onClick: () => void;
+}) {
+  const pct = originalPrice && originalPrice > price
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
+  return (
+    <button type="button" className={`${pc.card} combo-card`} onClick={onClick}>
+      <div className={pc.media}>
+        <img className={pc.img} src={safeImageSrc(image)} alt={name} loading="lazy" width={400} height={500} />
+        {badge && (
+          <div className={pc.chips}>
+            <span className={pc.chip} title={badge}>{badge}</span>
+          </div>
+        )}
+      </div>
+      <div className={pc.body}>
+        <span className={pc.eyebrow}>{eyebrow}</span>
+        <span className={pc.name}>{name}</span>
+        <div className={pc.priceRow}>
+          <span className={pc.price}>₹{price.toLocaleString('en-IN')}</span>
+          {pct > 0 && <span className={pc.was}>₹{(originalPrice as number).toLocaleString('en-IN')}</span>}
+          {pct > 0 && <span className={pc.off}>{pct}% off</span>}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function PresetComboGrid({ combos, onSelect }: PresetComboGridProps) {
   return (
     <div className="combo-grid">
-      {combos.map(c => {
-        const pct = Math.round(((c.originalPrice - c.price) / c.originalPrice) * 100);
-        return (
-          <button key={c.id} className="combo-card" onClick={() => onSelect(c.id)}>
-            <div className="combo-card-img-wrap">
-              <img src={safeImageSrc(c.image)} alt={c.name} />
-              {pct > 0 && <span className="combo-card-pct">{pct}% off</span>}
-              {c.badge && <span className="combo-card-badge">{c.badge}</span>}
-            </div>
-            <div className="combo-card-body">
-              <span className="combo-card-name">{c.name}</span>
-              <div className="combo-card-price-row">
-                <span className="combo-card-price">₹{c.price.toLocaleString('en-IN')}</span>
-                {pct > 0 && <span className="combo-card-original">₹{c.originalPrice.toLocaleString('en-IN')}</span>}
-              </div>
-            </div>
-          </button>
-        );
-      })}
+      {combos.map(c => (
+        <ComboCard
+          key={c.id}
+          name={c.name}
+          image={c.image}
+          eyebrow="Gift Set"
+          badge={c.badge}
+          price={c.price}
+          originalPrice={c.originalPrice}
+          onClick={() => onSelect(c.id)}
+        />
+      ))}
     </div>
   );
 }
@@ -844,20 +880,15 @@ function CustomSlotGrid({ slots, onSelect }: CustomSlotGridProps) {
   return (
     <div className="combo-grid">
       {slots.map(s => (
-        <button key={s.id} className="combo-card" onClick={() => onSelect(s.id)}>
-          <div className="combo-card-img-wrap">
-            <img src={safeImageSrc(s.image)} alt={s.name} />
-            {s.badge && <span className="combo-card-badge">{s.badge}</span>}
-          </div>
-          <div className="combo-card-body">
-            <span className="combo-card-name">{s.name}</span>
-            <p className="combo-card-tagline">{s.tagline}</p>
-            <div className="combo-card-price-row">
-              <span className="combo-card-price">₹{s.fixedPrice.toLocaleString('en-IN')}</span>
-              <span className="combo-card-items-tag">{s.maxItems} pieces</span>
-            </div>
-          </div>
-        </button>
+        <ComboCard
+          key={s.id}
+          name={s.name}
+          image={s.image}
+          eyebrow={`Pick ${s.maxItems} pieces`}
+          badge={s.badge}
+          price={s.fixedPrice}
+          onClick={() => onSelect(s.id)}
+        />
       ))}
     </div>
   );
@@ -873,7 +904,7 @@ interface PresetHamperSectionProps {
   onComboVariantChange: (v: ProductVariant) => void;
   /** PATCH-style: only pass the fields that changed — they are merged into that product's existing state. */
   onVariantChange: (pid: string, patch: ProductVariant) => void;
-  onAddToCart: (combo: PresetCombo) => void;
+  onAddToCart: (combo: PresetCombo, buyNow?: boolean) => void;
   cartAdded: boolean;
   onBack: () => void;
 }
@@ -956,14 +987,14 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
   const incompleteProducts = products.filter(p => !isProductSelectionComplete(p, variants[p.id] || {}));
   const canAddToCart = incompleteProducts.length === 0;
 
-  const handleAddToCartClick = () => {
+  const handleAddToCartClick = (buyNow = false) => {
     if (!canAddToCart) {
       setShowValidation(true);
       const el = document.getElementById(`hamper-piece-${incompleteProducts[0].id}`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    onAddToCart(combo);
+    onAddToCart(combo, buyNow);
   };
 
   const comboUploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
@@ -1289,10 +1320,13 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           </div>
 
           <div className="hp-cta" ref={ctaRef}>
-            <button className={`hp-cta-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hp-cta-btn-off' : ''}`} onClick={handleAddToCartClick}>
+            <button className={`hp-cta-btn${cartAdded ? ' done' : ''}${!canAddToCart ? ' hp-cta-btn-off' : ''}`} onClick={() => handleAddToCartClick()}>
               {cartAdded
                 ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Added to cart</>
                 : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Add to Cart · ₹{currentPrice.toLocaleString('en-IN')}</>}
+            </button>
+            <button type="button" className="hp-buy-btn" onClick={() => handleAddToCartClick(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Buy It Now
             </button>
             {!canAddToCart && <p className="hp-cta-hint">Choose options for every piece to continue</p>}
           </div>
@@ -1302,6 +1336,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
       </div>
 
       <ComboReviews comboId={combo.id} />
+      <PdpShelves product={{ sourceId: combo.id }} />
 
       <PdpStickyBar
         show={showSticky}
@@ -1310,7 +1345,7 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
         price={currentPrice}
         original={pct > 0 ? currentOriginalPrice : null}
         soldOut={false}
-        onAdd={handleAddToCartClick}
+        onAdd={() => handleAddToCartClick()}
       />
       {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
     </div>
@@ -1328,7 +1363,7 @@ interface CustomBuilderSectionProps {
   onComboVariantChange: (v: ProductVariant) => void;
   onToggle: (pid: string) => void;
   onVariantChange: (pid: string, patch: ProductVariant) => void;
-  onAddToCart: (slot: CustomComboSlot) => void;
+  onAddToCart: (slot: CustomComboSlot, buyNow?: boolean) => void;
   cartAdded: boolean;
   onBack: () => void;
   gender?: string;
@@ -1582,6 +1617,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
       <div className="hamper-divider" style={{ marginTop: 24 }} />
       <ComboExtras description={slot.description} />
       <ComboReviews comboId={slot.id} />
+      <PdpShelves product={{ sourceId: slot.id }} />
 
       {expanded && selectedProducts.length > 0 && (
         <div className="builder-drawer">
@@ -1620,6 +1656,9 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
           <button className={`builder-sticky-cart${cartAdded ? ' done' : ''}`} disabled={!canAddToCart} onClick={() => onAddToCart(slot)}>
             {cartAdded ? 'Added' : 'Add to Cart'}
           </button>
+          <button className="builder-sticky-buy" disabled={!canAddToCart} onClick={() => onAddToCart(slot, true)}>
+            Buy Now
+          </button>
         </div>
       </div>
       {lightboxImg && <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />}
@@ -1632,6 +1671,7 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 ───────────────────────────────────────────────────────────── */
 export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
   const { addItem } = useCart();
+  const later = useLater();
 
   const [mode, setMode] = useState<'preset' | 'custom'>('preset');
 
@@ -1800,7 +1840,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     loadCombos();
   }, []);
 
-  function handlePresetAddToCart(combo: PresetCombo) {
+  function handlePresetAddToCart(combo: PresetCombo, buyNow = false) {
     const cv = comboVariants[combo.id] || {};
     const charmsPriceTotal = combo.includedProducts.reduce((acc, p) => {
       const v = presetVariants[p.id];
@@ -1856,9 +1896,10 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           };
         }),
       }],
-    });
+    }, buyNow ? false : undefined);
+    if (buyNow) { router.push('/cart'); return; }
     setPresetCartAdded(prev => ({ ...prev, [combo.id]: true }));
-    setTimeout(() => setPresetCartAdded(prev => ({ ...prev, [combo.id]: false })), 1800);
+    later(() => setPresetCartAdded(prev => ({ ...prev, [combo.id]: false })), 1800, `preset-${combo.id}`);
   }
 
   function handleSlotToggle(slotId: string, pid: string) {
@@ -1884,7 +1925,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
     setPresetVariants(prev => ({ ...prev, [pid]: mergeVariant(prev[pid], patch) }));
   }
 
-  function handleCustomAddToCart(slot: CustomComboSlot) {
+  function handleCustomAddToCart(slot: CustomComboSlot, buyNow = false) {
     const ids  = slotSelections[slot.id] || [];
     const vars = slotVariants[slot.id]   || {};
     const cv   = comboVariants[slot.id]  || {};
@@ -1942,9 +1983,10 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           };
         }),
       }],
-    });
+    }, buyNow ? false : undefined);
+    if (buyNow) { router.push('/cart'); return; }
     setCustomCartAdded(prev => ({ ...prev, [slot.id]: true }));
-    setTimeout(() => setCustomCartAdded(prev => ({ ...prev, [slot.id]: false })), 1800);
+    later(() => setCustomCartAdded(prev => ({ ...prev, [slot.id]: false })), 1800, `custom-${slot.id}`);
   }
 
   const inDetail = !loading && (mode === 'preset' ? presetView === 'detail' : customView === 'detail');
@@ -2089,21 +2131,10 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .layout { padding-bottom:96px;width:100%; }
 
         /* ══════════ CARD GRIDS (set picker + product picker) ══════════ */
-        .combo-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:1360px;margin:0 auto;padding:16px 14px 0;width:100%; }
-        .combo-card { background:var(--surf);border:1.5px solid var(--bdr);overflow:hidden;display:flex;flex-direction:column;text-align:left;transition:all .2s;min-width:0; }
-        .combo-card:hover { border-color:var(--olive2);transform:translateY(-3px);box-shadow:var(--shadow-lg); }
-        .combo-card-img-wrap { position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--olivedim); }
-        .combo-card-img-wrap img { width:100%;height:100%;object-fit:cover;transition:transform .35s ease; }
-        .combo-card:hover .combo-card-img-wrap img { transform:scale(1.06); }
-        .combo-card-pct { position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--olive);color:#fff;padding:3px 8px;border-radius:4px; }
-        .combo-card-badge { position:absolute;top:8px;left:8px;font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.93);color:var(--ink);padding:3px 8px;border-radius:4px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-        .combo-card-body { padding:10px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0; }
-        .combo-card-name { font-family:var(--ffd);font-size:1rem;font-weight:600;color:var(--ink);line-height:1.25;word-break:break-word; }
-        .combo-card-tagline { font-size:11px;font-weight:300;color:var(--ink7);line-height:1.55;flex:1; }
-        .combo-card-price-row { display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:auto; }
-        .combo-card-price { font-size:13px;font-weight:700;color:var(--olive2); }
-        .combo-card-original { font-size:11px;color:var(--ink4);text-decoration:line-through; }
-        .combo-card-items-tag { font-size:9px;font-weight:600;color:var(--olive2);background:var(--olivedim);border:1px solid rgba(90,110,43,.2);padding:2px 8px;border-radius:50px;white-space:nowrap; }
+        .combo-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1360px;margin:0 auto;padding:16px 16px 0;width:100%; }
+        /* Combo cards use the shared ProductCard styles; this only resets the <button> wrapper. */
+        .combo-card { border:0;padding:0;margin:0;text-align:left;cursor:pointer;min-width:0;-webkit-appearance:none;appearance:none; }
+        .combo-card:focus-visible { outline:2px solid var(--olive2);outline-offset:3px; }
 
         /* ══════════ DETAIL PAGES — shared container ══════════ */
         .hamper-page, .builder-page { width:100%;max-width:var(--container);margin:0 auto;padding:14px 14px 0; }
@@ -2571,6 +2602,13 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hp-cta-btn:active { transform:scale(.99); }
         .hp-cta-btn.done { background:#1a1a14; }
         .hp-cta-btn-off { background:#1a1a14; }
+        .hp-buy-btn { width:100%; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px; padding:16px; border:0; border-radius:999px; background:#b8982a; color:#fff; font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:background .2s, transform .15s; }
+        .hp-buy-btn:hover { background:#a08622; }
+        .hp-buy-btn:active { transform:scale(.99); }
+        .builder-sticky-buy { flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:#b8982a;padding:13px 16px;border-radius:50px;white-space:nowrap;transition:all .2s; }
+        .builder-sticky-buy:hover:not(:disabled) { background:#a08622; }
+        .builder-sticky-buy:disabled { opacity:.4;cursor:not-allowed; }
+        @media (max-width:639px) { .builder-sticky-buy { padding:12px 10px;font-size:9px; } }
         .hp-cta-hint { margin:8px 0 0; text-align:center; font-size:12px; color:#8b8b80; }
         .combo-extras { margin-top:22px; }
         .combo-extras-grid { display:flex; flex-direction:column; gap:0; }
@@ -2604,6 +2642,16 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .dlv-rate { font-weight:600; color:#2a4736; text-align:right; }
         .dlv-head span:last-child { text-align:right; }
         .dlv-free { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:12px 14px; border-radius:12px; background:#f1f5f1; color:#1f3a2a; font-size:13.5px; }
+        @media (max-width:639px) {
+          .dlv { margin-top:14px; }
+          .dlv-title { font-size:19px; margin-bottom:8px; }
+          .dlv-row { grid-template-columns:1.2fr 1fr 1fr .62fr; gap:6px; padding:9px 10px; font-size:12px; }
+          .dlv-head { padding:8px 10px; font-size:8.5px; letter-spacing:.05em; line-height:1.2; }
+          .dlv-name { gap:6px; font-size:12px; }
+          .est-ico { width:22px; height:22px; font-size:12px; }
+          .dlv-cell { font-size:12px; color:#4a4a40; }
+          .dlv-free { margin-top:8px; padding:9px 11px; font-size:12px; gap:8px; }
+        }
         body.hide-bnav .bnav { display:none !important; }
         body.hide-bnav .has-bottom-nav { padding-bottom:0 !important; }
         .hamper-page .modal-textarea, .hamper-page select.modal-textarea { width:100% !important; max-width:none !important; }
@@ -2631,6 +2679,26 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .builder-card.chosen { border-color:#2a4736; box-shadow:0 0 0 3px rgba(42,71,54,.1); }
         .builder-card-check { background:#2a4736; }
         .builder-card-name { font-weight:500; }
+        /* Piece cards match the shared ProductCard look (white, image-led, no border) */
+        .builder-card { border:0; border-radius:10px; background:#fff; font-family:'Jost',sans-serif; }
+        .builder-card:hover:not(.disabled) { border-color:transparent; box-shadow:none; transform:none; }
+        .builder-card.chosen { border-color:transparent; box-shadow:none; }
+        .builder-card-img-wrap { border-radius:10px; background:#f4f3ee; }
+        .builder-card.chosen .builder-card-img-wrap { box-shadow:0 0 0 2px #2a4736; }
+        .builder-card-body { padding:12px 10px 10px; gap:5px; }
+        .builder-card-name { font-family:'Jost',sans-serif; font-size:14.5px; font-weight:400; line-height:1.35; letter-spacing:.005em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:normal; }
+        .builder-card-price { font-size:16px; font-weight:600; color:#1a1a17; letter-spacing:-.01em; }
+        .builder-add-btn { background:#2a4736; }
+        .builder-add-btn:hover:not(:disabled) { background:#1f3628; }
+        .builder-edit-btn { color:#2a4736; border-color:#2a4736; }
+        .builder-edit-btn:hover { background:#2a4736; color:#fff; }
+        @media (max-width:639px) {
+          .builder-card { border-radius:8px; }
+          .builder-card-img-wrap { border-radius:8px; }
+          .builder-card-body { padding:10px 8px 8px; gap:4px; }
+          .builder-card-name { font-size:13px; }
+          .builder-card-price { font-size:14.5px; }
+        }
         .hamper-sticky-bar, .builder-sticky-bar { left:50%; right:auto; transform:translateX(-50%); bottom:18px; width:min(860px, calc(100% - 32px)); border:1px solid #ecebe4; border-radius:18px; box-shadow:0 16px 44px rgba(26,26,20,.18); padding:10px 14px; }
         .builder-sticky-cart { background:#2a4736; border-radius:999px; }
         .builder-sticky-cart:disabled { background:#b8c6bd; }
@@ -2641,15 +2709,14 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           .hamper-main-block { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:48px; align-items:start; }
         }
         @media (max-width:639px) {
-          .dlv-head { display:none; }
-          .dlv-row { grid-template-columns:1fr auto; grid-template-areas:"name rate" "m m" "r r"; row-gap:4px; }
-          .dlv-name { grid-area:name; } .dlv-rate { grid-area:rate; }
-          .dlv-cell:nth-of-type(1) { grid-area:m; } .dlv-cell:nth-of-type(2) { grid-area:r; }
-          .dlv-cell::before { content:attr(data-l) ": "; color:#6f6f64; }
           .combo-acc-body { padding-left:18px; }
-          .combo-trust { grid-template-columns:1fr; }
-          .combo-trust-item { border-right:0; border-bottom:1px solid #ecebe4; }
-          .combo-trust-item:last-child { border-bottom:0; }
+          /* three across, icon over text */
+          .combo-trust { grid-template-columns:repeat(3,1fr); }
+          .combo-trust-item { display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px; min-width:0; padding:10px 4px; border-right:1px solid #ecebe4; border-bottom:0; }
+          .combo-trust-item:last-child { border-right:0; }
+          .combo-trust-icon { width:22px; height:22px; margin:0; }
+          .combo-trust-title { font-size:10px; letter-spacing:.02em; line-height:1.25; }
+          .combo-trust-sub { font-size:9.5px; line-height:1.25; }
         }
       `}</style>
 

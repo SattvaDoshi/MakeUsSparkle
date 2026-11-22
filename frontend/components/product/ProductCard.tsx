@@ -52,8 +52,6 @@ export interface ProductCardProduct {
   createdAt?: string;
 }
 
-const FREE_SHIPPING_MIN = 999; // matches the "Free Shipping above ₹999" announcement
-const NEW_WINDOW_DAYS = 30;
 const TAG_ROTATE_MS = 3000; // how often the chip on the image changes tag
 const TAG_FADE_MS = 450;    // fade-out before the swap
 
@@ -128,11 +126,6 @@ export default function ProductCard({
   if (!isOutOfStock) {
     if (offerTitle) tagList.push({ key: 'offer', text: offerTitle, kind: 'offer' });
     if (badge) tagList.push({ key: 'badge', text: badge, kind: 'plain' });
-    const stock = product.stock ?? Infinity;
-    if (stock > 0 && stock <= 5) tagList.push({ key: 'low', text: `Only ${stock} left`, kind: 'warn' });
-    if (price >= FREE_SHIPPING_MIN) tagList.push({ key: 'ship', text: 'Free Shipping', kind: 'good' });
-    const ageDays = product.createdAt ? (Date.now() - new Date(product.createdAt).getTime()) / 86_400_000 : Infinity;
-    if (ageDays <= NEW_WINDOW_DAYS) tagList.push({ key: 'new', text: 'New Arrival', kind: 'plain' });
   }
   const [tagIdx, setTagIdx] = useState(0);
   const [tagFading, setTagFading] = useState(false);

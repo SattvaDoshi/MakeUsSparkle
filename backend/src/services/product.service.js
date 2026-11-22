@@ -166,6 +166,30 @@ async function getCachedOffersAndCoupons() {
 	return { activeOffers, activeCoupons };
 }
 
+/**
+ * "Worn by customers" photos. `wornOrder` is a JSON list in display order:
+ *   { type: "existing", url, caption } | { type: "new", index, caption }   (index = position in the uploaded wornImages files)
+ * Returns the photos to store, plus the Cloudinary ids of previously stored photos that were dropped.
+ */
+async function resolveWornPhotos(rawOrder, files, oldPhotos = []) {
+	let order = rawOrder;
+	if (typeof order === "string") { try { order = JSON.parse(order); } catch { order = null; } }
+	if (!Array.isArray(order)) return { photos: oldPhotos, dropped: [] }; // field not sent: leave as is
+	const uploaded = files.length ? await imageService.uploadMultipleImages(files.map((f) => f.buffer), "products/worn") : [];
+	const photos = [];
+	for (const item of order.slice(0, 12)) {
+		const caption = String(item?.caption || "").slice(0, 80);
+		if (item?.type === "existing" && item.url) {
+			const old = oldPhotos.find((p) => p.url === item.url);
+			photos.push({ url: item.url, publicId: old?.publicId, caption });
+		} else if (item?.type === "new" && Number.isInteger(item.index) && uploaded[item.index]) {
+			photos.push({ url: uploaded[item.index].url, publicId: uploaded[item.index].publicId, caption });
+		}
+	}
+	const kept = new Set(photos.map((p) => p.url));
+	return { photos, dropped: oldPhotos.filter((p) => !kept.has(p.url) && p.publicId).map((p) => p.publicId) };
+}
+
 class ProductService {
 	async _normalizeProductGender(value) {
 		if (!value) return undefined;
@@ -836,6 +860,7 @@ class ProductService {
 				mainImagePublicId,
 				images: imageUrls,
 				imagePublicIds,
+				wornPhotos: (await resolveWornPhotos(productData.wornOrder, filesMap.wornImages || [])).photos,
 				colors,
 				sizes,
 				variants,
@@ -951,6 +976,10 @@ class ProductService {
 					}
 				}
 			}
+
+			// --- Worn-by-customers photos ---
+			const worn = await resolveWornPhotos(updateData.wornOrder, filesMap.wornImages || [], product.wornPhotos || []);
+			for (const id of worn.dropped) await imageService.deleteImage(id).catch((e) => console.error("Could not delete worn photo", e));
 
 			// --- Size Chart Image ---
 			let sizeChartImage = product.sizeChartImage || null;
@@ -1145,6 +1174,7 @@ class ProductService {
 					mainImagePublicId,
 					images: imageUrls,
 					imagePublicIds,
+					wornPhotos: worn.photos,
 					colors,
 					sizes,
 					variants,

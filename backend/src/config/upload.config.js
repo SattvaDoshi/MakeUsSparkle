@@ -42,7 +42,7 @@ export const uploadMultiple = multer({
 // Product-specific multer: handles mainImage + images[] + variantImages[n] dynamically
 export const uploadProductImages = multer({
 	storage: uploadStorage,
-	limits: { fileSize: 8 * 1024 * 1024, files: 30, fields: 80 },
+	limits: { fileSize: 8 * 1024 * 1024, files: 45, fields: 80 },
 	fileFilter: (req, file, cb) => {
 		const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 		if (allowedMimes.includes(file.mimetype)) {
@@ -56,6 +56,7 @@ export const uploadProductImages = multer({
 	{ name: "images", maxCount: 20 },
 	{ name: "sizeChartImage", maxCount: 1 },
 	{ name: "giftBoxImage", maxCount: 1 },
+	{ name: "wornImages", maxCount: 12 },
 	// Variant images will come as variantImage_<index> fields (dynamic)
 	...Array.from({ length: 50 }, (_, i) => ({ name: `variantImage_${i}`, maxCount: 1 })),
 	// Band images will come as variantBandImage_<index> fields

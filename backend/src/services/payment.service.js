@@ -9,6 +9,7 @@ import affiliateService from "./affiliate.service.js";
 import inventoryService from "./inventory.service.js";
 import Coupon from "../models/coupon.model.js";
 import { priceOrder } from "./pricing.service.js";
+import { failPendingOrder, settleOrderPayment, releaseOrderPerks } from "./orderLifecycle.service.js";
 
 class PaymentService {
 	async resolveProductId(item = {}) {
@@ -39,35 +40,23 @@ class PaymentService {
 			const frontendUrl = (process.env.NODE_ENV === "production" && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes("localhost")))
 				? "https://makeyousparkle.in"
 				: (process.env.FRONTEND_URL || "https://makeyousparkle.in");
-			// Build redirect URL with merchantOrderId — orderId will be appended after order creation
 			const baseRedirectUrl = `${frontendUrl}/payment/status`;
 
 			// Amount in paise (PhonePe expects paise)
 			const amountInPaise = Math.round(advanceAmount * 100);
 
-			const payRequestBuilder = StandardCheckoutPayRequest.builder()
-				.merchantOrderId(merchantOrderId)
-				.amount(amountInPaise)
-				.redirectUrl(baseRedirectUrl)
-				.message("Make Us Sparkle Order Payment");
-
-			if (orderData.shippingAddress?.phone) {
-				const rawPhone = String(orderData.shippingAddress.phone).replace(/\D/g, "");
-				if (rawPhone.length === 10) {
-					payRequestBuilder.prefillUserLoginDetails(new PrefillUserLoginDetails(rawPhone));
-				}
-			}
-
-			const payRequest = payRequestBuilder.build();
-
-			const phonePeResponse = await phonePeClient.pay(payRequest);
-
-			// Create order record in database
 			const orderItems = await Promise.all(
 				(orderData.items || []).map((item) => normalizeOrderItem(item))
 			);
+			const userDoc = await User.findById(userId);
+			const shippingAddress = orderData.shippingAddress
+				? { ...orderData.shippingAddress, name: orderData.shippingAddress.name || userDoc?.name || "Customer" }
+				: undefined;
+			const billingAddress = (orderData.billingAddress || orderData.shippingAddress)
+				? { ...(orderData.billingAddress || orderData.shippingAddress), name: (orderData.billingAddress || orderData.shippingAddress)?.name || userDoc?.name || "Customer" }
+				: undefined;
 
-			// Handle reward points redemption
+			// 1. Take the shopper's reward points / coupon use (atomic: only if the balance still covers it).
 			const rewardPointsToRedeem = priced.rewardPointsRedeemed;
 			if (rewardPointsToRedeem > 0) {
 				const deducted = await User.findOneAndUpdate(
@@ -80,52 +69,68 @@ class PaymentService {
 				await Coupon.updateOne({ code: priced.discountCode }, { $inc: { usedCount: 1 } });
 			}
 
-			const userDoc = await User.findById(userId);
-			const shippingAddress = orderData.shippingAddress
-				? { ...orderData.shippingAddress, name: orderData.shippingAddress.name || userDoc?.name || "Customer" }
-				: undefined;
-			const billingAddress = (orderData.billingAddress || orderData.shippingAddress)
-				? { ...(orderData.billingAddress || orderData.shippingAddress), name: (orderData.billingAddress || orderData.shippingAddress)?.name || userDoc?.name || "Customer" }
-				: undefined;
+			// 2. Save the order BEFORE contacting PhonePe, so a payment can never exist without an order to match it.
+			let order;
+			try {
+				order = await Order.create({
+					user: userId,
+					items: orderItems,
+					totalAmount,
+					advanceAmount,
+					balanceAmount,
+					paidAmount: 0,
+					shippingAddress,
+					billingAddress,
+					address: shippingAddress,
+					isGift: orderData.isGift,
+					giftMessage: orderData.giftMessage,
+					phonePeOrderId: merchantOrderId,
+					status: "placed",
+					paymentStatus: "pending",
+					paymentMode,
+					deliveryType: priced.deliveryType,
+					discountAmount: priced.discountAmount,
+					discountCode: priced.discountCode || undefined,
+					autoDiscountAmount: priced.autoDiscountAmount,
+					appliedOffers: priced.appliedOffers,
+					rewardPointsRedeemed: rewardPointsToRedeem,
+				});
+			} catch (err) {
+				// No order to release against: hand the perks straight back.
+				if (rewardPointsToRedeem > 0) await User.updateOne({ _id: userId }, { $inc: { rewardPoints: rewardPointsToRedeem } });
+				if (priced.discountCode) await Coupon.updateOne({ code: priced.discountCode, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
+				throw err;
+			}
 
-			const order = await Order.create({
-				user: userId,
-				items: orderItems,
-				totalAmount,
-				advanceAmount,
-				balanceAmount,
-				paidAmount: 0,
-				shippingAddress,
-				billingAddress,
-				address: shippingAddress,
-				isGift: orderData.isGift,
-				giftMessage: orderData.giftMessage,
-				discountCode: orderData.discountCode,
-				discountAmount: orderData.discountAmount || 0,
-				autoDiscountAmount: orderData.autoDiscountAmount || 0,
-				phonePeOrderId: merchantOrderId,
-				status: "placed",
-				paymentStatus: "pending",
-				paymentMode,
-				deliveryType: priced.deliveryType,
-				discountAmount: priced.discountAmount,
-				discountCode: priced.discountCode || undefined,
-				autoDiscountAmount: priced.autoDiscountAmount,
-				appliedOffers: priced.appliedOffers,
-				rewardPointsRedeemed: rewardPointsToRedeem,
-			});
+			// 3. Open the PhonePe session. If that fails, cancel the order and give everything back.
+			let phonePeResponse;
+			try {
+				const payRequestBuilder = StandardCheckoutPayRequest.builder()
+					.merchantOrderId(merchantOrderId)
+					.amount(amountInPaise)
+					.redirectUrl(baseRedirectUrl)
+					.message("Make Us Sparkle Order Payment");
+
+				if (orderData.shippingAddress?.phone) {
+					const rawPhone = String(orderData.shippingAddress.phone).replace(/\D/g, "");
+					if (rawPhone.length === 10) {
+						payRequestBuilder.prefillUserLoginDetails(new PrefillUserLoginDetails(rawPhone));
+					}
+				}
+				phonePeResponse = await phonePeClient.pay(payRequestBuilder.build());
+			} catch (err) {
+				await failPendingOrder(order._id).catch((e) => console.error("Could not unwind order after PhonePe error:", e.message));
+				throw err;
+			}
 
 			// Record affiliate attribution (pending commission awaiting delivery)
 			await affiliateService.onOrderCreated(order, orderData);
-
-			// Build final redirect URL including orderId so status page can verify without sessionStorage
-			const finalRedirectUrl = phonePeResponse.redirectUrl;
 
 			return {
 				success: true,
 				orderId: order._id,
 				merchantOrderId,
-				redirectUrl: finalRedirectUrl,
+				redirectUrl: phonePeResponse.redirectUrl,
 				amount: advanceAmount,
 			};
 		} catch (error) {
@@ -152,83 +157,22 @@ class PaymentService {
 				throw new Error("Order not found");
 			}
 			if (target.paymentStatus === "paid" || target.paymentStatus === "partial_paid") {
-				return { success: true, message: "Payment already verified", order: target };
+				return { success: true, state: "paid", message: "Payment already verified", order: target };
+			}
+			if (target.paymentStatus !== "pending") {
+				throw new Error("This payment did not go through, so the order was cancelled.");
 			}
 
-			if (!phonePeClient) {
-				throw new Error("PhonePe credentials are not configured");
+			// Real-time status from PhonePe (server-side, never trust the client). Safe to call repeatedly / concurrently.
+			const outcome = await settleOrderPayment(target);
+			if (outcome === "paid") {
+				const order = await Order.findById(orderId);
+				return { success: true, state: "paid", message: "Payment verified successfully", order };
 			}
+			if (outcome === "failed") throw new Error("Payment was not completed, so the order was cancelled.");
 
-			// Fetch real-time status from PhonePe (server-side, never trust client)
-			const statusResponse = await phonePeClient.getOrderStatus(merchantOrderId);
-
-			const paymentState = statusResponse?.state;  // "COMPLETED" | "FAILED" | "PENDING"
-			const transactionId = statusResponse?.paymentDetails?.[0]?.transactionId || null;
-
-			if (paymentState !== "COMPLETED") {
-				if (orderId && (paymentState === "FAILED" || paymentState === "CANCELLED")) {
-					await Order.findByIdAndUpdate(orderId, {
-						paymentStatus: "failed",
-						status: "cancelled",
-					}).catch(() => null);
-				}
-				throw new Error(`Payment not completed. Current state: ${paymentState || "UNKNOWN"}`);
-			}
-
-			const existingOrder = target;
-
-			// PhonePe reports the amount actually collected (paise); it must cover what this order asked for.
-			const expectedPaise = Math.round(Number(existingOrder.advanceAmount || existingOrder.totalAmount || 0) * 100);
-			const paidPaise = Number(statusResponse?.amount);
-			if (Number.isFinite(paidPaise) && paidPaise < expectedPaise) {
-				throw new Error("Paid amount does not match the order amount");
-			}
-
-			const isPartialCod = existingOrder.paymentMode === "PARTIAL_COD";
-
-			// Update order status
-			const order = await Order.findByIdAndUpdate(
-				orderId,
-				{
-					paymentStatus: isPartialCod ? "partial_paid" : "paid",
-					paidAmount: isPartialCod
-						? Number(existingOrder.advanceAmount || existingOrder.totalAmount || 0)
-						: Number(existingOrder.totalAmount || 0),
-					phonePeTransactionId: transactionId,
-					status: "placed",
-				},
-				{ returnDocument: "after" }
-			);
-
-			if (!order) {
-				throw new Error("Order not found");
-			}
-
-			// Deduct inventory for all items in the paid order
-			await inventoryService.deductOrderInventory(order);
-
-			// Send order confirmation email
-			const populated = await order.populate([
-				{ path: "user" },
-				{ path: "items.product", select: "title" },
-				{ path: "items.selectedCharms" },
-				{ path: "items.selectionGroups.items.item" },
-			]);
-			await emailService.sendOrderConfirmationEmail(
-				populated.user.email,
-				order._id,
-				order.items,
-				order.totalAmount
-			);
-
-			// Trigger affiliate commission (fire-and-forget – won't crash the order flow)
-			void affiliateService.onOrderPaid(order);
-
-			return {
-				success: true,
-				message: "Payment verified successfully",
-				order,
-			};
+			// Still processing at the bank: not a failure. The background sweeper finishes the order when it lands.
+			return { success: true, state: "pending", message: "Your payment is still being confirmed." };
 		} catch (error) {
 			console.error("Payment verification error:", error);
 			throw error;
@@ -273,6 +217,7 @@ class PaymentService {
 			await order.save();
 
 			await inventoryService.restoreOrderInventory(order);
+			await releaseOrderPerks(order._id);
 
 			return {
 				success: true,

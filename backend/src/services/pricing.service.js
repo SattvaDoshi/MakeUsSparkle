@@ -14,6 +14,7 @@ import CharmItem from "../models/charmItem.model.js";
 import Offer from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import couponService from "./coupon.service.js";
+import { findMatchingVariant } from "./inventory.service.js";
 import productService from "./product.service.js";
 import { resolveProductId } from "./orderItemSelection.service.js";
 
@@ -99,6 +100,26 @@ function collectCharmSelections(item) {
 	return out;
 }
 
+/**
+ * How many of this exact piece can still be sold, or null when stock isn't tracked / can't be judged.
+ * Mirrors how inventory.service deducts: the matching variant AND the product total both go down, so the
+ * tighter of the two is what's really available. Sets and charm products are left to the deduction step.
+ */
+function productStock(product, item) {
+	const hasSets = Array.isArray(item.selectionGroups) && item.selectionGroups.some((g) => g?.items?.length);
+	if (hasSets || (Array.isArray(product.charmStocks) && product.charmStocks.length)) return { available: null };
+	const limits = [];
+	const variant = findMatchingVariant(product.variants, item);
+	if (variant && typeof variant.stock === "number" && !Number.isNaN(variant.stock)) limits.push(variant.stock);
+	if (typeof product.stock === "number" && !Number.isNaN(product.stock)) limits.push(product.stock);
+	if (!limits.length) return { available: null };
+	return {
+		available: Math.max(0, Math.min(...limits)),
+		// lines of the same variant share one pool of stock
+		stockKey: `${String(product._id)}|${variant ? String(variant._id ?? `${variant.color}/${variant.size}`) : "base"}`,
+	};
+}
+
 /** Resolve one cart line to a catalog floor, or throw. */
 async function lineFloor(item) {
 	const ids = hexIds(item.product, item.sourceId, item.id);
@@ -117,6 +138,7 @@ async function lineFloor(item) {
 				categoryId: product.category ? String(product.category) : undefined,
 				subCategoryId: product.subCategory ? String(product.subCategory) : undefined,
 				isAlreadyDiscounted: Boolean(isAlreadyDiscounted),
+				...productStock(product, item),
 			};
 		}
 		const charm = await CharmItem.findById(id).select("price").lean();
@@ -293,9 +315,11 @@ export async function priceOrder(userId, body = {}) {
 	const paymentMode = String(body.paymentMode || "");
 	if (!PAYMENT_MODES.has(paymentMode)) throw new PricingError("Invalid payment method.", "INVALID_PAYMENT_MODE");
 	const deliveryType = body.deliveryType === "express" ? "express" : "standard";
+	if (deliveryType === "express" && paymentMode === "COD") throw new PricingError("Cash on Delivery is not available for Express delivery.", "PAYMENT_MODE_NOT_ALLOWED");
 
 	// 1. Lines: quantity sane, price never below what the catalog allows.
 	const lines = [];
+	const stockUsed = new Map(); // stockKey -> units already claimed by earlier lines in this order
 	let strictest = "cod_allowed";
 	for (const raw of rawItems) {
 		const qty = Math.trunc(num(raw.quantity ?? raw.qty, 0));
@@ -304,8 +328,19 @@ export async function priceOrder(userId, body = {}) {
 		if (!Number.isFinite(price) || price < 0) throw new PricingError("Invalid item price.", "INVALID_PRICE");
 
 		const lineFloorResult = await lineFloor(raw);
-		const floor = lineFloorResult.floor;
-		const pm = lineFloorResult.paymentMode;
+		const { floor, paymentMode: pm, available, stockKey } = lineFloorResult;
+		if (available !== null && available !== undefined) {
+			const wanted = (stockUsed.get(stockKey) || 0) + qty;
+			if (wanted > available) {
+				const name = String(raw.name || "An item").slice(0, 60);
+				throw new PricingError(
+					available <= 0 ? `"${name}" is out of stock. Please remove it from your cart.` : `Only ${available} of "${name}" left. Please lower the quantity in your cart.`,
+					"OUT_OF_STOCK",
+					{ available }
+				);
+			}
+			stockUsed.set(stockKey, wanted);
+		}
 		if (price + 0.5 < floor) {
 			throw new PricingError(
 				`The price of "${String(raw.name || "an item").slice(0, 60)}" has changed. Please refresh your cart and try again.`,

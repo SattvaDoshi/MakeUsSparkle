@@ -5,27 +5,13 @@ import { FILTER_TABS } from '@/lib/products';
 import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 import ProductCard from '@/components/product/ProductCard';
+import { STYLE_LABELS } from '@/lib/styleLabels';
 import styles from './ProductListing.module.css';
 
 type Product = CatalogProduct;
 const PAGE = 16;
 
-const STYLE_LABELS: Record<string, { name: string; tagline: string; sub: string }> = {
-  'soft-girl':        { name: 'Soft Girl',        tagline: 'Bloom Into You',     sub: 'Soft. Sweet. Eternal.'       },
-  'glam-look':        { name: 'Glam Look',        tagline: 'Own The Room',       sub: 'Gilded. Bold. Unapologetic.' },
-  'island-girl':      { name: 'Island Girl',      tagline: 'Salt & Spirit',      sub: 'Breezy. Free. Sun-kissed.'   },
-  'office-jewellery': { name: 'Office Jewellery', tagline: 'Quiet Authority',    sub: 'Refined. Subtle. Powerful.'  },
-  'maximalist':       { name: 'Maximalist',       tagline: 'More Is More',       sub: 'Loud. Layered. Limitless.'   },
-  'fairy-coded':      { name: 'Fairy Coded',      tagline: 'Enchant Everything', sub: 'Whimsical. Magical. Rare.'    },
-  'men-street-edge':  { name: 'Street Edge',      tagline: 'Street Edge',        sub: 'Bold. Raw. Unapologetic.'    },
-  'men-corporate':    { name: 'Corporate Sharp',  tagline: 'Corporate Sharp',    sub: 'Refined. Sleek. Precise.'    },
-  'men-island':       { name: 'Island King',      tagline: 'Island King',        sub: 'Laid-back. Sun-kissed.'       },
-  'men-minimal':      { name: 'Minimal Stack',    tagline: 'Minimal Stack',      sub: 'Clean. Intentional. Strong.' },
-  'men-rocker':       { name: 'Rocker Noir',      tagline: 'Rocker Noir',        sub: 'Dark. Sharp. Rebellious.'    },
-  'men-gold':         { name: 'Gold Royalty',     tagline: 'Gold Royalty',       sub: 'Rich. Heavy. Statement.'     },
-};
-
-const DEFAULT_LABEL = { name: 'Collection', tagline: 'Curated For You', sub: '' };
+const DEFAULT_LABEL = { name: 'Collection', eyebrow: 'Curated For You', caption: '' };
 const ALL_STYLE_IDS = Object.keys(STYLE_LABELS);
 
 function resolveStyleId(raw: string | undefined | null): string {
@@ -44,6 +30,8 @@ function resolveStyleId(raw: string | undefined | null): string {
 export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: string }) {
   const sid = resolveStyleId(styleId);
   const [label, setLabel] = useState(STYLE_LABELS[sid] ?? DEFAULT_LABEL);
+  // Hold back the eyebrow/caption until the admin-set text has loaded so old text never flashes first.
+  const [labelReady, setLabelReady] = useState(false);
   const [sort, setSort] = useState<SortOption>('default');
   const [filter, setFilter] = useState('all');
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -53,18 +41,21 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
 
   useEffect(() => {
     setLabel(STYLE_LABELS[sid] ?? DEFAULT_LABEL);
+    setLabelReady(false);
     let active = true;
     fetchCatalogStyles().then((list) => {
       if (!active) return;
       const found = list.find((s: any) => String(s.slug || slugifyCatalog(s.name)).toLowerCase() === sid);
       if (found) {
+        // Admin-set text always wins (even if blank on purpose); built-in text only fills what was never set.
         setLabel({
           name: found.name,
-          tagline: STYLE_LABELS[sid]?.tagline || 'Curated For You',
-          sub: STYLE_LABELS[sid]?.sub || 'Handpicked from our catalog.',
+          eyebrow: found.eyebrow ?? STYLE_LABELS[sid]?.eyebrow ?? 'Curated For You',
+          caption: found.caption ?? STYLE_LABELS[sid]?.caption ?? 'Handpicked from our catalog.',
         });
       }
-    }).catch(() => {});
+      setLabelReady(true);
+    }).catch(() => { if (active) setLabelReady(true); });
     return () => { active = false; };
   }, [sid]);
 
@@ -111,11 +102,11 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
   return (
     <div className={styles.root}>
       <header className={styles.pageHeader}>
-        <span className={styles.eyebrow}>{label.tagline}</span>
+        <span className={styles.eyebrow} style={{ visibility: labelReady ? 'visible' : 'hidden' }}>{label.eyebrow || '\u00A0'}</span>
         <h1 className={styles.pageTitle}>
           {words.length > 1 ? <>{words.slice(0, -1).join(' ')} <em>{words[words.length - 1]}</em></> : <em>{label.name}</em>}
         </h1>
-        {label.sub && <p style={{ margin: 0, color: '#6f6f64', fontSize: 15 }}>{label.sub}</p>}
+        {(label.caption || !labelReady) && <p style={{ margin: 0, color: '#6f6f64', fontSize: 15, visibility: labelReady ? 'visible' : 'hidden', minHeight: '1.4em' }}>{label.caption || '\u00A0'}</p>}
       </header>
 
       <div className={styles.toolbar}>

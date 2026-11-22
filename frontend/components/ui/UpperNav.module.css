@@ -408,3 +408,12 @@
 /* Hide the browser's built-in clear button (we render our own) */
 .searchInput::-webkit-search-cancel-button,
 .searchInput::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+
+/* ─────────── Product pages (phones/tablets): only the search bar stays pinned ─────────── */
+@media (max-width: 1023px) {
+  /* Offset the sticky header by the logo row's height: the logo scrolls away, the search row stays. */
+  .navPdp { top: -72px; }
+}
+@media (max-width: 480px) {
+  .navPdp { top: -60px; }
+}

@@ -84,6 +84,7 @@ const orderSchema = new mongoose.Schema(
     discountCode: String,
     autoDiscountAmount: { type: Number, default: 0 },
     rewardPointsRedeemed: { type: Number, default: 0 },
+    perksReleased: { type: Boolean, default: false }, // reward points / coupon use already handed back (cancel, failed payment)
     affiliateUser: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     affiliateCode: { type: String, default: null },
     affiliateLink: { type: mongoose.Schema.Types.ObjectId, ref: "AffiliateLink", default: null },

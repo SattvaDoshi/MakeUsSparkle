@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { connectDB, disconnectDB } from "./src/config/db.js";
 import app from "./src/app.js";
+import { startPaymentSweeper } from "./src/services/orderLifecycle.service.js";
 
 const port = process.env.PORT || 5000;
 
@@ -11,6 +12,7 @@ async function startServer() {
 		const server = app.listen(port, () => {
 			console.log(`Server running on port ${port}`);
 		});
+		startPaymentSweeper();
 
 		const shutdown = async (signal) => {
 			console.log(`Received ${signal}. Shutting down gracefully...`);

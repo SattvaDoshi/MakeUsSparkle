@@ -3,10 +3,14 @@
 import Em from "@/components/ui/Em";
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
 import { cdnImage } from '@/lib/cdn';
 import CartUpsell from '@/components/cart/CartUpsell';
+import CartSaveWarning from '@/components/cart/CartSaveWarning';
 import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import { lockScroll } from '@/lib/scrollLock';
+import { useSheetSwipe, SHEET_GRAB_CSS } from '@/lib/useSheetSwipe';
 
 /** Chosen options (colour, size, etc.) saved on a hamper piece, as readable text lines */
 function getOptionLines(customData: any): Array<[string, string]> {
@@ -24,9 +28,10 @@ function getOptionLines(customData: any): Array<[string, string]> {
 
 // ─── Main CartDrawer ──────────────────────────────────────────────────────────
 export default function CartDrawer() {
-  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers, applicableOffers, toggleOfferOptOut } = useCart();
+  const { state, closeDrawer, removeItem, updateQty, itemCount, subtotal, total, autoDiscountAmount, appliedOffers } = useCart();
   const { isDrawerOpen, items } = state;
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { sheetRef, grabProps } = useSheetSwipe(closeDrawer);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const FREE_SHIP = 999;
   const toFree = Math.max(0, FREE_SHIP - subtotal);
@@ -40,6 +45,17 @@ export default function CartDrawer() {
     return () => { live = false; };
   }, [isDrawerOpen, catalog.length]);
 
+  // The drawer lives in the site layout, so it survives page changes: close it whenever the page changes
+  // (back button, a link that forgot to close it) so it can never sit open over the next page.
+  const pathname = usePathname();
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (lastPath.current !== pathname) {
+      lastPath.current = pathname;
+      if (isDrawerOpen) closeDrawer();
+    }
+  }, [pathname, isDrawerOpen, closeDrawer]);
+
   // Close on Esc
   useEffect(() => {
     if (!isDrawerOpen) return;
@@ -50,8 +66,8 @@ export default function CartDrawer() {
 
   // Lock body scroll
   useEffect(() => {
-    document.body.style.overflow = isDrawerOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (!isDrawerOpen) return;
+    return lockScroll();
   }, [isDrawerOpen]);
 
   return (
@@ -79,7 +95,7 @@ export default function CartDrawer() {
 
         /* ── Overlay ── */
         .drawer-overlay {
-          position: fixed; inset: 0; z-index: 500;
+          position: fixed; inset: 0; z-index: 9000; /* above PDP sticky bar (900) + floating buttons */
           background: rgba(26,31,13,0); pointer-events: none;
           transition: background .35s ease;
         }
@@ -95,7 +111,7 @@ export default function CartDrawer() {
           display: flex; flex-direction: column;
           transform: translateX(100%);
           transition: transform .4s cubic-bezier(.22,.68,0,1.12);
-          z-index: 501;
+          z-index: 9001;
           box-shadow: -8px 0 48px rgba(26,31,13,.18);
           font-family: 'Jost', sans-serif; color: var(--ink);
         }
@@ -402,6 +418,23 @@ export default function CartDrawer() {
         .ci-pricebox b { font-size: 16px; font-weight: 600; color: #1a1a14; }
         .ci-pricebox s { font-size: 12px; color: #8b8b80; }
         @media (max-width: 480px) { .drawer-items { padding: 12px 14px 20px; } .ci-imgwrap { flex-basis: 76px; width: 76px; height: 96px; } }
+
+        ${SHEET_GRAB_CSS}
+        /* ── Phones: the cart rises from the bottom as a sheet ── */
+        @media (max-width: 767px) {
+          .drawer-panel {
+            top: auto; left: 0; right: 0; bottom: 0;
+            width: 100%; height: auto; max-height: 88dvh;
+            border-radius: 22px 22px 0 0;
+            transform: translateY(100%);
+            transition: transform .38s cubic-bezier(.22,.68,0,1);
+            box-shadow: 0 -12px 44px rgba(26,31,13,.24);
+            overflow: hidden;
+          }
+          .drawer-overlay.open .drawer-panel { transform: translateY(0); }
+          .drawer-panel .drawer-head { padding-top: 4px; }
+          .drawer-items { min-height: 0; }
+        }
       `}</style>
 
       <div
@@ -409,7 +442,8 @@ export default function CartDrawer() {
         className={`drawer-overlay${isDrawerOpen ? ' open' : ''}`}
         onClick={e => { if (e.target === overlayRef.current) closeDrawer(); }}
       >
-        <div className="drawer-panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+        <div ref={sheetRef as React.RefObject<HTMLDivElement>} className="drawer-panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+          <div className="sheet-grab" {...grabProps} aria-hidden="true"><span /></div>
 
           {/* ── Header ── */}
           <div className="drawer-head">
@@ -425,6 +459,8 @@ export default function CartDrawer() {
               </svg>
             </button>
           </div>
+
+          <CartSaveWarning />
 
           {/* ── Free-shipping progress ── */}
           {items.length > 0 && (
@@ -491,16 +527,16 @@ export default function CartDrawer() {
                       <div className="ci-body">
                         <div className="ci-top">
                           <Link href={href} onClick={closeDrawer} className="ci-name">{item.name}</Link>
-                          <button type="button" className="ci-remove" onClick={() => removeItem(item.id, item.colorHex)} aria-label={`Remove ${item.name}`} title="Remove">
+                          <button type="button" className="ci-remove" onClick={() => removeItem(item.cartItemId ?? item.id, item.colorHex)} aria-label={`Remove ${item.name}`} title="Remove">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
                           </button>
                         </div>
                         {meta.length > 0 && <div className="ci-chips">{meta.map((m) => <span key={m} className="ci-chip">{m}</span>)}</div>}
                         <div className="ci-bottom">
                           <div className="ci-qty">
-                            <button type="button" aria-label="Decrease quantity" onClick={() => item.qty <= 1 ? removeItem(item.id, item.colorHex) : updateQty(item.id, item.colorHex, item.qty - 1)}>−</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => item.qty <= 1 ? removeItem(item.cartItemId ?? item.id, item.colorHex) : updateQty(item.cartItemId ?? item.id, item.colorHex, item.qty - 1)}>−</button>
                             <span>{item.qty}</span>
-                            <button type="button" aria-label="Increase quantity" onClick={() => updateQty(item.id, item.colorHex, item.qty + 1)}>+</button>
+                            <button type="button" aria-label="Increase quantity" onClick={() => updateQty(item.cartItemId ?? item.id, item.colorHex, item.qty + 1)}>+</button>
                           </div>
                           <div className="ci-pricebox">
                             {hasStrikethrough && <s>₹{(item.originalPrice! * item.qty).toLocaleString('en-IN')}</s>}
@@ -542,21 +578,7 @@ export default function CartDrawer() {
                 );
               })}
 
-              {/* Store offers */}
-              {applicableOffers.length > 0 && (
-                <div className="offers">
-                  <span className="offers-h">Store offers</span>
-                  {applicableOffers.map((o) => (
-                    <label key={o.id} className={`offer${o.applied ? ' on' : ''}`}>
-                      <input type="checkbox" checked={o.applied} onChange={() => toggleOfferOptOut(o.id)} />
-                      <span className="offer-t">{o.title}</span>
-                      <span className="offer-a">{o.applied ? `−₹${o.amount.toLocaleString('en-IN')}` : 'Off'}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
+       <CartUpsell items={items} products={catalog} onNavigate={closeDrawer} />
             </div>
           )}
 

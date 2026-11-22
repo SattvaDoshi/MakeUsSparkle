@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cartContext";
 import { useGender } from "@/lib/genderContext";
 import CarouselArrows from "@/components/ui/CarouselArrows";
 import styles from "./WatchAndBuy.module.css";
+import { lockScroll } from '@/lib/scrollLock';
 
 /**
  * Watch & Buy — shoppable vertical videos.
@@ -116,15 +117,14 @@ function Viewer({ items, start, onClose }: { items: CatalogWatchBuyVideo[]; star
 
   /* Lock page scroll, Esc / arrow keys */
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "ArrowRight" || e.key === "ArrowDown") go(1);
       else if (e.key === "ArrowLeft" || e.key === "ArrowUp") go(-1);
     };
     window.addEventListener("keydown", key);
-    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", key); };
+    return () => { unlock(); window.removeEventListener("keydown", key); };
   }, [go, onClose]);
 
   /* New slide: reset UI state */

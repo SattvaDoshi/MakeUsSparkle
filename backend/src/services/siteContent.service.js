@@ -146,6 +146,8 @@ class SiteContentService {
 					},
 				};
 			})
+			// Reviews with a customer photo first (sort is stable, so recency order is kept within each group)
+			.sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0))
 			.slice(0, 12);
 
 		const stats = agg[0] ? { average: Math.round(agg[0].avg * 10) / 10, count: agg[0].count } : { average: 0, count: 0 };

@@ -1,3 +1,4 @@
+import { releaseOrderPerks } from "./orderLifecycle.service.js";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
 import Review from "../models/review.model.js";
@@ -106,7 +107,10 @@ class OrderService {
 			}
 
 			// Every amount comes from the server's own pricing, never from the request body.
+			// Online and partial-COD orders are created by the payment flow (/payment/create-order) and only become
+			// "placed" once the money arrives. This endpoint must never accept them, or an unpaid order could be placed.
 			const priced = await priceOrder(userId, orderData);
+			if (priced.paymentMode !== "COD") throw new Error("Online and partial-COD orders must be paid through the payment flow.");
 			const orderItems = await Promise.all((orderData.items || []).map((item) => normalizeOrderItem(item)));
 
 			// Handle reward points redemption (atomic: only deducts if the balance still covers it)
@@ -209,6 +213,7 @@ class OrderService {
 
 			if (status === "cancelled") {
 				await inventoryService.restoreOrderInventory(order);
+				await releaseOrderPerks(order._id);
 			}
 
 			// When admin marks order delivered, reflect commission in affiliate dashboard!
@@ -241,6 +246,7 @@ class OrderService {
 			await order.save();
 
 			await inventoryService.restoreOrderInventory(order);
+			await releaseOrderPerks(order._id);
 			await affiliateService.onOrderCancelled(order);
 
 			return { success: true, message: "Order cancelled successfully", order };

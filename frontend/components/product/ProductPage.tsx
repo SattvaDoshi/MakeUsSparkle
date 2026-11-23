@@ -558,6 +558,10 @@ export default function ProductsPage({
     return stop;
   }, [isLoading, dynamicProducts.length]);
 
+  // Coming Back before the cards have loaded: keep the page as tall as it was, otherwise the browser clamps the scroll
+  // to the bottom (the footer shows) and the page only jumps up once the cards arrive.
+  const holdSpace = !!restoreRef.current && dynamicProducts.length === 0;
+
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
 
@@ -664,7 +668,7 @@ export default function ProductsPage({
       </div>
 
       {/* Grid */}
-      <div className={styles.body}>
+      <div className={styles.body} style={holdSpace ? { minHeight: `calc(${restoreRef.current!.y}px + 100vh)` } : undefined}>
         <div className={styles.grid}>
           {isLoading ? (
             Array.from({ length: 8 }).map((_, idx) => (
@@ -675,7 +679,7 @@ export default function ProductsPage({
                 <div className={styles.skelLine} style={{ width: '30%' }} />
               </div>
             ))
-          ) : totalItems === 0 ? (
+          ) : holdSpace ? null : totalItems === 0 ? (
             <div className={styles.empty}>
               <h3>Nothing here yet</h3>
               <p>{activeTag !== 'All' ? 'No pieces match this filter.' : 'New pieces are on the way.'}</p>

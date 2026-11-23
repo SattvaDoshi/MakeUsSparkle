@@ -72,7 +72,7 @@ function PaymentStatusContent() {
         .ps-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: #1a3a1a; margin-bottom: 10px; }
         .ps-sub { font-size: 14px; color: rgba(26,58,26,.6); line-height: 1.7; margin-bottom: 28px; }
         .ps-btn { display: inline-block; padding: 14px 40px; background: #2d5a27; color: white; border: none; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; cursor: pointer; text-decoration: none; transition: background .2s; }
-        .ps-btn:hover { background: #3a7a32; }
+        @media(hover:hover){.ps-btn:hover{ background: #3a7a32; }}
         .ps-btn-outline { display: inline-block; padding: 12px 32px; background: transparent; color: #2d5a27; border: 1.5px solid #2d5a27; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; cursor: pointer; text-decoration: none; margin-left: 12px; }
         .ps-spinner { width: 48px; height: 48px; border: 4px solid rgba(45,90,39,.15); border-top-color: #2d5a27; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 24px; }
         @keyframes spin { to { transform: rotate(360deg); } }

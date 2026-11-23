@@ -164,11 +164,11 @@ export default function SortFilter({
           transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
           outline: none;
         }
-        .sf-trigger:hover {
+        @media (hover: hover) { .sf-trigger:hover {
           border-color: var(--sf-bdr-hover, rgba(60,90,35,0.5));
           background: var(--sf-bg-hover, #f4f9ef);
           box-shadow: 0 2px 10px rgba(37,61,24,0.1);
-        }
+        } }
         .sf-trigger.sf-open {
           border-color: var(--sf-accent, #253d18);
           background: var(--sf-bg-hover, #f4f9ef);
@@ -251,10 +251,10 @@ export default function SortFilter({
           letter-spacing: 0.01em;
         }
         .sf-option:last-child { border-bottom: none; }
-        .sf-option:hover {
+        @media (hover: hover) { .sf-option:hover {
           background: #f1f7ec;
           color: #253d18;
-        }
+        } }
         .sf-option.sf-option-active {
           background: #253d18;
           color: #fff;
@@ -274,9 +274,9 @@ export default function SortFilter({
         .sf-option-active .sf-option-icon {
           background: rgba(255,255,255,0.15);
         }
-        .sf-option:hover:not(.sf-option-active) .sf-option-icon {
+        @media (hover: hover) { .sf-option:hover:not(.sf-option-active) .sf-option-icon {
           background: rgba(60,90,35,0.14);
-        }
+        } }
         .sf-option-check {
           margin-left: auto;
           flex-shrink: 0;
@@ -313,10 +313,10 @@ export default function SortFilter({
           color: rgba(255,255,255,0.65);
           border-color: rgba(255,255,255,0.04);
         }
-        .sf-wrap.sf-dark .sf-option:hover {
+        @media (hover: hover) { .sf-wrap.sf-dark .sf-option:hover {
           background: rgba(255,255,255,0.07);
           color: #fff;
-        }
+        } }
         .sf-wrap.sf-dark .sf-option.sf-option-active {
           background: rgba(255,255,255,0.14);
           color: #fff;
@@ -335,10 +335,10 @@ export default function SortFilter({
           --sf-accent:    #000;
           --sf-gold:      #555;
         }
-        .sf-wrap.sf-glam .sf-option:hover {
+        @media (hover: hover) { .sf-wrap.sf-glam .sf-option:hover {
           background: #d8d8d8;
           color: #000;
-        }
+        } }
         .sf-wrap.sf-glam .sf-option.sf-option-active {
           background: #000;
           color: #fff;
@@ -356,7 +356,7 @@ export default function SortFilter({
   background: #68773e; color: #fff; border-color: #68773e;
 }
 .sf-wrap.sf-sage .sf-option.sf-option-active { background: #68773e; color: #fff; }
-.sf-wrap.sf-sage .sf-option:hover:not(.sf-option-active) { background: #edf2dc; color: #49581f; }
+@media (hover: hover) { .sf-wrap.sf-sage .sf-option:hover:not(.sf-option-active) { background: #edf2dc; color: #49581f; } }
         /* ── Responsive label ── */
         .sf-label-full { display: inline; }
         .sf-label-short { display: none; }

@@ -799,13 +799,13 @@ const categoryLabel = (parentCategory ?? '')
         .cpdp-main-img { width:100%; height:100%; object-fit:cover; animation:imgIn .4s ease both; }
         .cpdp-badge { position:absolute; top:16px; left:16px; font-size:9.5px; font-weight:600; letter-spacing:.1em; color:var(--beige); background:var(--olive-600); padding:5px 14px 4px; border-radius:50px; }
         .cpdp-wish { position:absolute; top:14px; right:14px; width:36px; height:36px; border-radius:50%; background:rgba(245,240,232,.9); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .2s,background .2s; }
-        .cpdp-wish:hover { transform:scale(1.1); }
+        @media(hover:hover){.cpdp-wish:hover{ transform:scale(1.1); }}
         .cpdp-wish.on { background:var(--olive-600); }
         .cpdp-thumb-row { display:flex; gap:10px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
         .cpdp-thumb-row::-webkit-scrollbar { height:3px; }
         .cpdp-thumb-row::-webkit-scrollbar-thumb { background:var(--beige-dkr); border-radius:4px; }
         .cpdp-thumb { width:72px; height:72px; border-radius:12px; overflow:hidden; cursor:pointer; flex-shrink:0; border:2px solid transparent; transition:border-color .2s,transform .2s; }
-        .cpdp-thumb:hover { transform:scale(1.06); }
+        @media(hover:hover){.cpdp-thumb:hover{ transform:scale(1.06); }}
         .cpdp-thumb.active { border-color:var(--olive-500); }
         .cpdp-thumb img { width:100%; height:100%; object-fit:cover; }
 
@@ -855,7 +855,7 @@ const categoryLabel = (parentCategory ?? '')
           cursor:pointer; color:var(--olive-600); display:flex; align-items:center; justify-content:center;
           transition:background .15s; line-height:1;
         }
-        .charm-step-btn:hover:not(:disabled) { background:var(--olive-50); }
+        @media(hover:hover){.charm-step-btn:hover:not(:disabled){ background:var(--olive-50); }}
         .charm-step-btn:disabled { opacity:.35; cursor:not-allowed; }
         .charm-step-val { min-width:42px; text-align:center; font-size:16px; font-weight:700; color:var(--ink); font-family:'Cormorant Garamond',serif; }
 
@@ -900,7 +900,7 @@ const categoryLabel = (parentCategory ?? '')
         .charm-slot-preview-name { font-size:12px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .charm-slot-preview-price { font-size:11px; font-weight:600; color:var(--olive-600); }
         .charm-slot-remove { width:24px; height:24px; border-radius:50%; background:rgba(192,57,43,.1); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--red); font-size:16px; line-height:1; flex-shrink:0; transition:background .2s; }
-        .charm-slot-remove:hover { background:var(--red); color:white; }
+        @media(hover:hover){.charm-slot-remove:hover{ background:var(--red); color:white; }}
 
         /* Summary */
         .charm-summary {
@@ -936,26 +936,26 @@ const categoryLabel = (parentCategory ?? '')
         .cpdp-qty-row { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
         .cpdp-qty { display:flex; align-items:center; border:1.5px solid var(--beige-dkr); border-radius:50px; overflow:hidden; }
         .cpdp-qty-btn { width:36px; height:36px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--olive-600); display:flex; align-items:center; justify-content:center; transition:background .15s; }
-        .cpdp-qty-btn:hover { background:var(--olive-50); }
+        @media(hover:hover){.cpdp-qty-btn:hover{ background:var(--olive-50); }}
         .cpdp-qty-val { min-width:36px; text-align:center; font-size:13px; font-weight:600; color:var(--ink); }
 
         /* ── CTA Buttons ── */
         .cpdp-cta-row { display:grid; grid-template-columns:1fr 1.4fr; gap:10px; margin-bottom:24px; }
         .cpdp-btn-wish { display:flex; align-items:center; justify-content:center; gap:7px; font-family:'Jost',sans-serif; font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--olive-600); background:white; border:1.5px solid var(--beige-dkr); border-radius:50px; padding:15px 14px; cursor:pointer; transition:all .22s; }
-        .cpdp-btn-wish:hover { border-color:var(--olive-400); background:var(--olive-50); }
+        @media(hover:hover){.cpdp-btn-wish:hover{ border-color:var(--olive-400); background:var(--olive-50); }}
         .cpdp-btn-wish.on { background:var(--olive-600); color:var(--beige); border-color:var(--olive-600); }
         .cpdp-btn-cart-wrap { position:relative; }
         .cpdp-btn-cart { display:flex; align-items:center; justify-content:center; gap:9px; font-family:'Jost',sans-serif; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--beige); background:var(--olive-900); border:none; border-radius:50px; padding:15px 20px; cursor:pointer; transition:background .22s; width:100%; }
-        .cpdp-btn-cart:hover { background:var(--olive-600); }
+        @media(hover:hover){.cpdp-btn-cart:hover{ background:var(--olive-600); }}
         .cpdp-btn-cart.bounce { animation:cartBounce .55s ease; }
         .cpdp-btn-buy { display:flex; align-items:center; justify-content:center; gap:9px; font-family:'Jost',sans-serif; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--beige); background:var(--gold); border:none; border-radius:50px; padding:15px 20px; cursor:pointer; transition:background .22s,transform .15s; width:100%; grid-column:1/-1; }
-        .cpdp-btn-buy:hover { background:#b8902b; }
+        @media(hover:hover){.cpdp-btn-buy:hover{ background:#b8902b; }}
         .cpdp-btn-buy:active { transform:scale(.98); }
 
         /* ── Trust Badges ── */
         .cpdp-trust { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:28px; }
         .cpdp-trust-item { display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 8px; background:white; border:1px solid rgba(61,74,34,.07); border-radius:14px; transition:transform .2s,box-shadow .2s; }
-        .cpdp-trust-item:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(61,74,34,.1); }
+        @media(hover:hover){.cpdp-trust-item:hover{ transform:translateY(-3px); box-shadow:0 8px 24px rgba(61,74,34,.1); }}
         .cpdp-trust-icon { width:40px; height:40px; color:var(--olive-500); margin-bottom:7px; }
         .cpdp-trust-title { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--olive-600); margin-bottom:2px; }
         .cpdp-trust-sub { font-size:9px; color:#101010; }

@@ -42,14 +42,14 @@ export default function PdpWorn({ photos }: { photos?: WornPhoto[] }) {
         .pw-tile:focus-visible{outline:2px solid #2a4736;outline-offset:3px;border-radius:14px}
         .pw-img{aspect-ratio:4/5;border-radius:14px;overflow:hidden;background:#f1efe6}
         .pw-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}
-        .pw-tile:hover .pw-img img{transform:scale(1.04)}
+        @media(hover:hover){.pw-tile:hover .pw-img img{transform:scale(1.04)}}
         .pw-cap{font-size:12.5px;color:#4a4a40;line-height:1.3;padding:0 2px}
         @media (max-width:767px){.pw{padding:28px 16px 4px}.pw h2{font-size:24px}.pw-tile{width:156px}}
         .pw-lb{position:fixed;inset:0;z-index:9700;background:rgba(10,12,6,.94);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px}
         .pw-lb img{max-width:min(92vw,720px);max-height:78vh;object-fit:contain;border-radius:10px}
         .pw-lb-cap{color:#f1efe6;font-size:14px;min-height:20px;text-align:center}
         .pw-x,.pw-nav{all:unset;box-sizing:border-box;position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
-        .pw-x:hover,.pw-nav:hover{background:rgba(255,255,255,.26)}
+        @media(hover:hover){.pw-x:hover, .pw-nav:hover{background:rgba(255,255,255,.26)}}
         .pw-x:focus-visible,.pw-nav:focus-visible{outline:2px solid #fff}
         .pw-x{top:16px;right:16px}.pw-prev{left:16px;top:50%}.pw-next{right:16px;top:50%}
         .pw-count{position:absolute;top:24px;left:20px;color:#d8d6c8;font-size:12.5px;letter-spacing:.08em}

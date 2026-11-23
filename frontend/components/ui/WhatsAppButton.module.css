@@ -7,7 +7,7 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.2s;
   animation: pulse 2.6s ease-out 1.5s 3;
 }
-.wa:hover { transform: translateY(-3px) scale(1.04); background: #1fbd5b; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+@media(hover:hover){.wa:hover{ transform: translateY(-3px) scale(1.04); background: #1fbd5b; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.18); }}
 .wa:active { transform: scale(0.97); }
 .wa:focus-visible { outline: 3px solid #1a1a14; outline-offset: 3px; }
 .icon { width: 34px; height: 34px; display: block; }

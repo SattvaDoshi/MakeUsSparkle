@@ -195,9 +195,9 @@ export default function CartPage() {
 .cp-item-body { min-width:0; display:flex; flex-direction:column; gap:10px; }
 .cp-item-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .cp-item-name { font-size:17px; font-weight:500; line-height:1.3; color:var(--ink); text-decoration:none; overflow-wrap:anywhere; }
-.cp-item-name:hover { text-decoration:underline; }
+@media(hover:hover){.cp-item-name:hover{ text-decoration:underline; }}
 .cp-item-remove { flex-shrink:0; width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:none; border:0; border-radius:50%; cursor:pointer; color:#8b8b80; transition:color .2s, background .2s; margin:-6px -6px 0 0; }
-.cp-item-remove:hover { color:var(--red); background:#fbeeec; }
+@media(hover:hover){.cp-item-remove:hover{ color:var(--red); background:#fbeeec; }}
 .cp-chips { display:flex; flex-wrap:wrap; gap:6px; }
 .cp-chip { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#3a3a32; background:#f4f3ee; border-radius:999px; padding:4px 11px; line-height:1.3; }
 .cp-chip i { width:11px; height:11px; border-radius:50%; border:1px solid rgba(0,0,0,.15); display:inline-block; }
@@ -207,7 +207,7 @@ export default function CartPage() {
 .cp-item-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:2px; }
 .cp-qty { display:inline-flex; align-items:center; border:1px solid #dcdacf; border-radius:999px; background:#fff; height:42px; }
 .cp-qty-btn { width:40px; height:40px; background:none; border:0; font-size:19px; cursor:pointer; color:var(--ink); border-radius:50%; display:flex; align-items:center; justify-content:center; }
-.cp-qty-btn:hover { background:#f4f3ee; }
+@media(hover:hover){.cp-qty-btn:hover{ background:#f4f3ee; }}
 .cp-qty-btn:disabled { opacity:.35; cursor:not-allowed; }
 .cp-qty-val { min-width:30px; text-align:center; font-size:15px; font-weight:600; }
 .cp-tag { font-size:12.5px; color:var(--mist); }
@@ -217,7 +217,7 @@ export default function CartPage() {
 .cp-item-sub { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color:var(--mist); margin-top:-4px; }
 .cp-save { color:var(--forest); font-weight:500; }
 .cp-details-btn { align-self:flex-start; display:inline-flex; align-items:center; gap:7px; background:none; border:0; padding:4px 0; font:inherit; font-size:13px; font-weight:500; color:var(--forest); cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:rgba(42,71,54,.35); }
-.cp-details-btn:hover { text-decoration-color:var(--forest); }
+@media(hover:hover){.cp-details-btn:hover{ text-decoration-color:var(--forest); }}
 .cp-item-extra { grid-column:1 / -1; display:flex; flex-direction:column; gap:10px; }
 
 /* Included items / charms */
@@ -247,7 +247,7 @@ export default function CartPage() {
 .cp-gift-optional { font-size:12px; color:var(--mist); }
 .cp-gift-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .cp-gift-card { position:relative; display:grid; grid-template-columns:72px minmax(0,1fr); gap:12px; align-items:center; border:1.5px solid var(--line); border-radius:14px; padding:10px; cursor:pointer; background:#fff; transition:border-color .2s, box-shadow .2s; min-width:0; }
-.cp-gift-card:hover { border-color:#cfcbb8; }
+@media(hover:hover){.cp-gift-card:hover{ border-color:#cfcbb8; }}
 .cp-gift-card--selected { border-color:var(--forest); box-shadow:0 0 0 3px rgba(42,71,54,.1); background:#fafcfa; }
 .cp-gift-card-img { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#f4f3ee; }
 .cp-gift-card-title { font-size:14px; font-weight:500; line-height:1.3; }
@@ -292,7 +292,7 @@ export default function CartPage() {
 .cp-coupon-input:focus { border-color:var(--forest); box-shadow:0 0 0 3px rgba(42,71,54,.1); }
 .cp-coupon-input::placeholder { text-transform:none; letter-spacing:normal; color:#9a9a8e; }
 .cp-coupon-btn { height:46px; padding:0 22px; background:var(--ink); color:#fff; border:0; border-radius:999px; font:inherit; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
-.cp-coupon-btn:hover { background:#000; }
+@media(hover:hover){.cp-coupon-btn:hover{ background:#000; }}
 .cp-view-coupons { all:unset; box-sizing:border-box; cursor:pointer; font-size:13px; font-weight:600; color:var(--forest); padding:2px 0 12px; }
 .cp-view-coupons:focus-visible { outline:2px solid var(--forest); outline-offset:2px; }
 .cp-coupon-msg { font-size:12.5px; margin:-6px 0 12px; }
@@ -300,11 +300,11 @@ export default function CartPage() {
 .cp-coupon-msg--success { color:var(--forest); }
 .cp-coupon-applied { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--soft); border:1px solid #cfd8cf; border-radius:12px; padding:10px 14px; font-size:13.5px; color:var(--forest-d); font-weight:500; margin-bottom:14px; }
 .cp-coupon-remove { background:none; border:0; cursor:pointer; font-size:18px; color:var(--mist); line-height:1; }
-.cp-coupon-remove:hover { color:var(--red); }
+@media(hover:hover){.cp-coupon-remove:hover{ color:var(--red); }}
 .cp-pts-bal { font-size:12.5px; color:var(--forest); background:var(--soft); padding:3px 10px; border-radius:999px; font-weight:500; }
 
 .cp-checkout-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; height:56px; margin-top:16px; background:var(--forest); color:#fff; border:0; border-radius:999px; font:inherit; font-size:13px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; text-decoration:none; cursor:pointer; transition:background .2s, transform .15s; }
-.cp-checkout-btn:hover { background:var(--forest-d); }
+@media(hover:hover){.cp-checkout-btn:hover{ background:var(--forest-d); }}
 .cp-checkout-btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed; }
 .cp-stock-issue { margin:0; font-size:13px; font-weight:500; color:#b3261e; }
 .cp-checkout-btn:active { transform:scale(.99); }

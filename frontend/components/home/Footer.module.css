@@ -33,16 +33,16 @@
   font-size: 13px; font-weight: 500; letter-spacing: 0.04em; transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 .contactBtn svg { width: 18px; height: 18px; flex-shrink: 0; }
-.contactBtn:hover { background: #fff; color: #2a4736; border-color: #fff; }
+@media(hover:hover){.contactBtn:hover{ background: #fff; color: #2a4736; border-color: #fff; }}
 .contactWa { background: #25d366; border-color: #25d366; color: #fff; }
-.contactWa:hover { background: #1fbd5b; border-color: #1fbd5b; color: #fff; }
+@media(hover:hover){.contactWa:hover{ background: #1fbd5b; border-color: #1fbd5b; color: #fff; }}
 .contactBtn:focus-visible, .link:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
 
 .linkGroup { display: flex; flex-direction: column; }
 .groupTitle { margin: 0 0 18px; font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); }
 .linkList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .link { display: inline-block; padding: 5px 0; font-size: 15px; color: rgba(255, 255, 255, 0.85); text-decoration: none; transition: color 0.2s, transform 0.2s; }
-.link:hover { color: var(--gold); transform: translateX(3px); }
+@media(hover:hover){.link:hover{ color: var(--gold); transform: translateX(3px); }}
 
 /* Bottom bar */
 .bottom {

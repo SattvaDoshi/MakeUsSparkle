@@ -14,7 +14,8 @@
   opacity: 0; transform: translateY(14px); animation: rise 0.55s ease forwards; }
 @keyframes rise { to { opacity: 1; transform: none; } }
 .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-.card:hover .photo, .card:focus-visible .photo { transform: scale(1.06); }
+.card:focus-visible .photo{ transform: scale(1.06); }
+@media(hover:hover){.card:hover .photo{ transform: scale(1.06); }}
 .card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,18,12,0.78) 0%, rgba(10,18,12,0.2) 45%, transparent 66%); }
 .card:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
 
@@ -27,7 +28,8 @@
 .name { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 2.6vw, 38px); font-weight: 600; line-height: 1.04; text-shadow: 0 1px 10px rgba(0,0,0,0.3); }
 .line { font-size: 14px; color: rgba(255,255,255,0.88); line-height: 1.4; }
 .arrow { width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center; transition: transform 0.3s, background 0.25s, color 0.25s; }
-.card:hover .arrow, .card:focus-visible .arrow { transform: translate(2px, -2px); background: var(--forest); color: #fff; }
+.card:focus-visible .arrow{ transform: translate(2px, -2px); background: var(--forest); color: #fff; }
+@media(hover:hover){.card:hover .arrow{ transform: translate(2px, -2px); background: var(--forest); color: #fff; }}
 
 .skel { background: linear-gradient(90deg, #eeede8 25%, #f8f7f3 50%, #eeede8 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }

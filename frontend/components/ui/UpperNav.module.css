@@ -12,7 +12,7 @@
   width: max-content;
   animation: marquee 32s linear infinite;
 }
-.announce:hover .announceTrack { animation-play-state: paused; }
+@media(hover:hover){.announce:hover .announceTrack{ animation-play-state: paused; }}
 .announceItem {
   font-family: 'Montserrat', sans-serif;
   font-size: 0.66rem;
@@ -69,7 +69,7 @@
   white-space: nowrap;
   transition: color 0.2s;
 }
-.logo:hover { color: #9a7a2e; }
+@media(hover:hover){.logo:hover{ color: #9a7a2e; }}
 
 /* Desktop links (hidden on mobile) */
 .links { display: none; align-items: center; gap: 28px; }
@@ -94,7 +94,8 @@
   transform-origin: left;
   transition: transform 0.25s ease;
 }
-.link:hover::after, .linkActive::after { transform: scaleX(1); }
+.linkActive::after{ transform: scaleX(1); }
+@media(hover:hover){.link:hover::after{ transform: scaleX(1); }}
 
 /* Gender pill */
 .gender {
@@ -136,7 +137,7 @@
   transition: background 0.2s, color 0.2s;
   flex-shrink: 0;
 }
-.iconBtn:hover { background: rgba(201, 168, 76, 0.16); color: #9a7a2e; }
+@media(hover:hover){.iconBtn:hover{ background: rgba(201, 168, 76, 0.16); color: #9a7a2e; }}
 .iconBtn:focus-visible, .link:focus-visible, .genderBtn:focus-visible,
 .drawerLink:focus-visible { outline: 2px solid #c9a84c; outline-offset: 2px; }
 .badge {
@@ -225,7 +226,7 @@
   text-decoration: none;
   transition: background 0.15s;
 }
-.item:hover { background: rgba(201, 168, 76, 0.1); }
+@media(hover:hover){.item:hover{ background: rgba(201, 168, 76, 0.1); }}
 .itemImg {
   width: 46px; height: 46px;
   border-radius: 8px;
@@ -258,7 +259,7 @@
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
 }
-.chip:hover { background: #2a4736; color: #fff; }
+@media(hover:hover){.chip:hover{ background: #2a4736; color: #fff; }}
 
 /* Mobile full-screen search */
 .overlay {
@@ -325,7 +326,7 @@
   text-decoration: none;
   transition: color 0.2s, padding-left 0.2s;
 }
-.drawerLink:hover { color: #9a7a2e; padding-left: 4px; }
+@media(hover:hover){.drawerLink:hover{ color: #9a7a2e; padding-left: 4px; }}
 .drawerLinkSmall { font-family: 'Montserrat', sans-serif; font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .pill {
   font-family: 'Montserrat', sans-serif;

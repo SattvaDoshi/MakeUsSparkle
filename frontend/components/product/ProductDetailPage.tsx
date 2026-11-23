@@ -637,6 +637,15 @@ function GiftMessagePanel({ value, onChange }: { value: { preset: string; custom
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
+// The page no longer scrolls smoothly by default (that made Back glide), so the "reviews" links ask for it.
+const scrollToReviews = (e: React.MouseEvent) => {
+  const el = document.getElementById('reviews');
+  if (!el) return;
+  e.preventDefault();
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  history.replaceState(null, '', '#reviews');
+};
+
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1279,9 +1288,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <div className="pdp-rating" style={{ marginBottom: 8 }}>
                 {dynamicReviewCount > 0 && (
                   <>
-                    <a href="#reviews" className="pdp-stars" style={{ textDecoration: 'none' }} aria-label={`${dynamicRating} out of 5 stars`}>{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</a>
+                    <a href="#reviews" onClick={scrollToReviews} className="pdp-stars" style={{ textDecoration: 'none' }} aria-label={`${dynamicRating} out of 5 stars`}>{'★'.repeat(Math.round(dynamicRating))}{'☆'.repeat(5 - Math.round(dynamicRating))}</a>
                     <span className="pdp-rating-num">{dynamicRating}</span>
-                    <a href="#reviews" className="pdp-review-cnt" style={{ textDecoration: 'underline' }}>({dynamicReviewCount} {dynamicReviewCount === 1 ? 'review' : 'reviews'})</a>
+                    <a href="#reviews" onClick={scrollToReviews} className="pdp-review-cnt" style={{ textDecoration: 'underline' }}>({dynamicReviewCount} {dynamicReviewCount === 1 ? 'review' : 'reviews'})</a>
                   </>
                 )}
                 {gender && <span style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', background: 'rgba(201,168,76,.12)', padding: '2px 8px', borderRadius: 4, marginLeft: dynamicReviewCount > 0 ? 6 : 0 }}>{gender}</span>}

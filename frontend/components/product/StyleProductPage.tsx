@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { FILTER_TABS } from '@/lib/products';
-import { fetchCatalogProducts, fetchCatalogStyles, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchCatalogProducts, peekCatalogProducts, fetchCatalogStyles, slugifyCatalog, type CatalogProduct } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
+import { readPlpSnapshot, usePlpRestore } from '@/lib/usePlpRestore';
 import ProductCard from '@/components/product/ProductCard';
 import { STYLE_LABELS } from '@/lib/styleLabels';
 import styles from './ProductListing.module.css';
@@ -32,11 +33,15 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
   const [label, setLabel] = useState(STYLE_LABELS[sid] ?? DEFAULT_LABEL);
   // Hold back the eyebrow/caption until the admin-set text has loaded so old text never flashes first.
   const [labelReady, setLabelReady] = useState(false);
-  const [sort, setSort] = useState<SortOption>('default');
-  const [filter, setFilter] = useState('all');
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [visible, setVisible] = useState(PAGE);
+  // Back from a product page: pick up filter, sort, loaded count and scroll where the shopper left off.
+  const [initialSnap] = useState(() => readPlpSnapshot<{ count: number; filter: string; sort: SortOption }>());
+  const [sort, setSort] = useState<SortOption>(initialSnap?.sort || 'default');
+  const [filter, setFilter] = useState(initialSnap?.filter || 'all');
+  // The catalogue is usually already in memory when coming Back: show it at once instead of re-loading.
+  const [cached] = useState(() => peekCatalogProducts() as Product[] | undefined);
+  const [allProducts, setAllProducts] = useState<Product[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
+  const [visible, setVisible] = useState(initialSnap ? Math.max(initialSnap.count, PAGE) : PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -62,8 +67,8 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
   useEffect(() => {
     let active = true;
     fetchCatalogProducts()
-      .then((p) => { if (active) { setAllProducts(p); setLoading(false); } })
-      .catch(() => { if (active) { setAllProducts([]); setLoading(false); } });
+      .then((p) => { if (active) { setAllProducts((prev) => (cached && prev.length === p.length && prev.every((x, i) => x.id === p[i].id) ? prev : p)); setLoading(false); } })
+      .catch(() => { if (active && !cached) { setAllProducts([]); setLoading(false); } });
     return () => { active = false; };
   }, []);
 
@@ -79,11 +84,22 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
     return sortProducts(list, sort);
   }, [allStyle, filter, sort]);
 
-  useEffect(() => { setVisible(PAGE); }, [sid, filter, sort]);
+  // Start over at the first page only when the filter really changes (not on mount, so a restored count survives).
+  const filterKey = `${sid}|${filter}|${sort}`;
+  const lastFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (lastFilterKey.current === filterKey) return;
+    lastFilterKey.current = filterKey;
+    setVisible(PAGE);
+  }, [filterKey]);
 
   const total = products.length;
   const shown = products.slice(0, visible);
   const hasMore = visible < total;
+  const { holdStyle, holding } = usePlpRestore(initialSnap, { count: visible, filter, sort }, !loading && allProducts.length > 0, (s) => {
+    lastFilterKey.current = `${sid}|${s.filter}|${s.sort}`;
+    setFilter(s.filter); setSort(s.sort); setVisible(Math.max(s.count, PAGE));
+  });
 
   useEffect(() => {
     const el = sentinel.current;
@@ -125,7 +141,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
         </div>
       </div>
 
-      <div className={styles.body}>
+      <div className={styles.body} style={holdStyle}>
         <div className={styles.grid}>
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
@@ -136,7 +152,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
                 <div className={styles.skelLine} style={{ width: '30%' }} />
               </div>
             ))
-          ) : total === 0 ? (
+          ) : holding ? null : total === 0 ? (
             <div className={styles.empty}>
               <h3>Nothing here yet</h3>
               <p>{filter !== 'all' ? 'No pieces match this filter.' : 'New pieces are on the way.'}</p>
@@ -144,7 +160,7 @@ export default function StyleProductPage({ styleId = 'soft-girl' }: { styleId?: 
             </div>
           ) : (
             shown.map((product, i) => (
-              <div key={product.id} className={styles.item} style={{ animationDelay: `${Math.min((i % PAGE) * 0.035, 0.4)}s` }}>
+              <div key={product.id} className={cached ? `${styles.item} ${styles.itemStatic}` : styles.item} style={cached ? undefined : { animationDelay: `${Math.min((i % PAGE) * 0.035, 0.4)}s` }}>
                 <ProductCard product={product} />
               </div>
             ))

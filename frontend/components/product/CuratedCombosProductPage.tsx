@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
+import { readPlpSnapshot, usePlpRestore } from '@/lib/usePlpRestore';
 import { apiRequest } from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
@@ -1669,6 +1670,13 @@ function CustomBuilderSection({ slot, selectedIds, variants, comboVariant, onCom
 /* ─────────────────────────────────────────────────────────────
    PAGE
 ───────────────────────────────────────────────────────────── */
+type ComboPickState = {
+  presetVariants: Record<string, ProductVariant>;
+  slotSelections: Record<string, string[]>;
+  slotVariants: Record<string, Record<string, ProductVariant>>;
+  comboVariants: Record<string, ProductVariant>;
+};
+
 export default function CuratedCombosPage({ gender = 'women' }: { gender?: string }) {
   const { addItem } = useCart();
   const later = useLater();
@@ -1681,15 +1689,26 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
 
   const [selectedComboId, setSelectedComboId] = useState<string>('');
   const [presetView, setPresetView] = useState<'grid' | 'detail'>('grid');
-  const [presetVariants, setPresetVariants]   = useState<Record<string, ProductVariant>>({});
+  // Back from a piece's page: keep what the shopper already picked (pieces in the box, their options) and the scroll spot.
+  const [initialSnap] = useState(() => readPlpSnapshot<ComboPickState>());
+  const [presetVariants, setPresetVariants]   = useState<Record<string, ProductVariant>>(initialSnap?.presetVariants ?? {});
   const [presetCartAdded, setPresetCartAdded] = useState<Record<string, boolean>>({});
 
   const [selectedSlotId, setSelectedSlotId]   = useState<string>('');
   const [customView, setCustomView] = useState<'grid' | 'detail'>('grid');
-  const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>({});
-  const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>({});
+  const [slotSelections, setSlotSelections] = useState<Record<string, string[]>>(initialSnap?.slotSelections ?? {});
+  const [slotVariants, setSlotVariants] = useState<Record<string, Record<string, ProductVariant>>>(initialSnap?.slotVariants ?? {});
   const [customCartAdded, setCustomCartAdded] = useState<Record<string, boolean>>({});
-  const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>({});
+  const [comboVariants, setComboVariants] = useState<Record<string, ProductVariant>>(initialSnap?.comboVariants ?? {});
+  const { holdStyle } = usePlpRestore(
+    initialSnap,
+    { presetVariants, slotSelections, slotVariants, comboVariants },
+    !loading,
+    (snap) => {
+      setPresetVariants(snap.presetVariants ?? {}); setSlotSelections(snap.slotSelections ?? {});
+      setSlotVariants(snap.slotVariants ?? {}); setComboVariants(snap.comboVariants ?? {});
+    },
+  );
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1828,8 +1847,9 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
             setSelectedSlotId(prev => prev || loadedCustom[0].id);
           }
 
-          setSlotSelections(Object.fromEntries(loadedCustom.map(s => [s.id, []])));
-          setSlotVariants(Object.fromEntries(loadedCustom.map(s => [s.id, {}])));
+          // Empty box per slot, but keep anything already picked (restored when coming Back from a piece's page).
+          setSlotSelections(prev => ({ ...Object.fromEntries(loadedCustom.map(s => [s.id, []])), ...prev }));
+          setSlotVariants(prev => ({ ...Object.fromEntries(loadedCustom.map(s => [s.id, {}])), ...prev }));
         }
       } catch (e) {
         console.error(e);
@@ -2026,7 +2046,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         }
 
         *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+        html { -webkit-text-size-adjust: 100%; }
         body { font-family: var(--ffb); background: var(--bg); color: var(--ink); overflow-x: hidden; }
         button { font-family: var(--ffb); cursor: pointer; background: transparent; border: none; }
         img { display: block; max-width: 100%; }
@@ -2750,7 +2770,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         </div>
         </>)}
 
-        <div className="layout">
+        <div className="layout" style={holdStyle}>
           {loading ? (
             <div className="combo-grid" style={{ minHeight: '50vh', padding: '24px 16px' }} aria-busy="true" role="status" aria-label="Loading combos">
               {Array.from({ length: 4 }).map((_, i) => (

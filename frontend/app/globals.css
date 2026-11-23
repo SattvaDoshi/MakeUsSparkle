@@ -20,6 +20,17 @@
 }
 .home-main > .cat-strip { padding-bottom: var(--home-pad) !important; }              /* category tiles → next section */
 
+/* Phone: every visible gap between homepage sections ≈ 48px (measured content-to-content at 390px). The blocks below
+   carry extra whitespace inside themselves, so their bottom padding is trimmed by that amount. */
+@media (max-width: 639px) {
+  .home-main > section.os-section:not(.hero-banner):not(.cat-strip),
+  .home-main > section.na-section:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
+  .home-main > section[data-home-section="hot"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 8px) !important; } /* was 2× → 80px gap to the shelf below */
+  .home-main > section[data-home-section="shelf"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
+  .home-main > section[data-home-section="shelf"][data-shelf="popular"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) + 8px) !important; } /* leads into the full-bleed marquee bar */
+  .home-main > section[data-home-section="reviews"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 8px) !important; }
+}
+
 /* Banner carousel starts with a full-bleed marquee bar: keep it flush */
 .home-main > section:not(.hero-banner):not(.cat-strip):has(> .bs-marquee-wrap) { padding-top: 0 !important; }
 
@@ -76,7 +87,9 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* No global smooth scrolling: the browser's own restore on Back would glide down from the top instead of jumping.
+     Anything that wants a glide asks for it (behavior: 'smooth'). */
+  scroll-behavior: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -94,7 +107,7 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--olive-fog); }
 ::-webkit-scrollbar-thumb { background: var(--olive-light); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--olive-primary); }
+@media(hover:hover){::-webkit-scrollbar-thumb:hover{ background: var(--olive-primary); }}
 
 /* Selection */
 ::selection { background: var(--gold-pale); color: var(--olive-darkest); }
@@ -137,10 +150,10 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
 }
 
-.btn-luxury:hover {
+@media (hover: hover) { .btn-luxury:hover {
   background: transparent;
   color: var(--olive-primary);
-}
+} }
 
 .btn-outline {
   display: inline-flex;
@@ -160,10 +173,10 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
 }
 
-.btn-outline:hover {
+@media (hover: hover) { .btn-outline:hover {
   background: var(--olive-primary);
   color: var(--gold-pale);
-}
+} }
 
 .btn-gold {
   display: inline-flex;
@@ -183,12 +196,12 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
 }
 
-.btn-gold:hover {
+@media (hover: hover) { .btn-gold:hover {
   background: var(--gold-dark);
   color: var(--white);
   transform: translateY(-1px);
   box-shadow: 0 8px 24px rgba(201, 168, 76, 0.3);
-}
+} }
 
 /* Grain overlay for luxury texture */
 .grain-overlay {
@@ -257,10 +270,10 @@ h1, h2, h3, h4, h5, h6 {
 .product-card {
   transition: var(--transition-mid);
 }
-.product-card:hover {
+@media (hover: hover) { .product-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
-}
+} }
 
 /* Swiper overrides */
 .swiper-pagination-bullet {
@@ -366,9 +379,9 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 0.25rem;
 }
 
-.admin-side-link:hover {
+@media (hover: hover) { .admin-side-link:hover {
   background: rgba(255, 255, 255, 0.09);
-}
+} }
 
 .admin-side-link.active {
   background: rgba(232, 234, 205, 0.14);
@@ -679,9 +692,9 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
-.admin-btn:hover {
+@media (hover: hover) { .admin-btn:hover {
   background: var(--olive-dark);
-}
+} }
 
 .admin-btn-muted {
   background: rgba(45, 51, 24, 0.78);
@@ -691,9 +704,9 @@ h1, h2, h3, h4, h5, h6 {
   background: #943b2a;
 }
 
-.admin-btn-danger:hover {
+@media (hover: hover) { .admin-btn-danger:hover {
   background: #7d2f20;
-}
+} }
 
 
 

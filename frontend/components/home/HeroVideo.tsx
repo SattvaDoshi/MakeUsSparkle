@@ -1002,7 +1002,7 @@ const heroLink = safeHref(content?.link);
           width: max-content;
           animation: bsMarquee 28s linear infinite;
         }
-        .bs-marquee-track:hover { animation-play-state: paused; }
+        @media(hover:hover){.bs-marquee-track:hover{ animation-play-state: paused; }}
         @keyframes bsMarquee {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
@@ -1213,7 +1213,7 @@ const heroLink = safeHref(content?.link);
         }
 
         .cat-img img { object-fit: cover; transition: transform 0.4s ease; }
-        .cat-card:hover .cat-img img { transform: scale(1.06); }
+        @media(hover:hover){.cat-card:hover .cat-img img{ transform: scale(1.06); }}
 
         .cat-name {
           display: block;

@@ -556,7 +556,7 @@ export default function CheckoutPage() {
         }
         @media (min-width: 480px) { .ck-method { gap: 14px; padding: 15px 20px; } }
         .ck-method:last-child { border-bottom: none; }
-        .ck-method:hover { background: #f5f0e8; }
+        @media(hover:hover){.ck-method:hover{ background: #f5f0e8; }}
         .ck-method.active { background: #eaf5ea; }
         .ck-method.ck-method-disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 
@@ -652,7 +652,7 @@ export default function CheckoutPage() {
           position: relative;
           min-width: 0;
         }
-        .ck-delivery-card:hover { border-color: #4a9e40; box-shadow: 0 4px 16px rgba(45,90,39,.1); }
+        @media(hover:hover){.ck-delivery-card:hover{ border-color: #4a9e40; box-shadow: 0 4px 16px rgba(45,90,39,.1); }}
         .ck-delivery-card.active { border-color: #3a7a32; background: #f0f7f0; }
 
         .ck-dc-icon { font-size: 22px; margin-bottom: 4px; }
@@ -714,7 +714,7 @@ export default function CheckoutPage() {
         @media (min-width: 480px) { .ck-gift-cards { padding: 14px 16px 0; } }
         .ck-gift-card { position: relative; border: 2px solid rgba(45,90,39,.15); border-radius: 12px; overflow: hidden; cursor: pointer; background: #ffffff; transition: border-color .2s, box-shadow .2s, transform .15s; min-width: 0; }
         @media (min-width: 480px) { .ck-gift-card { border-radius: 14px; } }
-        .ck-gift-card:hover { border-color: #4a9e40; box-shadow: 0 4px 16px rgba(45,90,39,.12); transform: translateY(-2px); }
+        @media(hover:hover){.ck-gift-card:hover{ border-color: #4a9e40; box-shadow: 0 4px 16px rgba(45,90,39,.12); transform: translateY(-2px); }}
         .ck-gift-card.active { border-color: #3a7a32; box-shadow: 0 6px 22px rgba(45,90,39,.2); }
         .ck-gift-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #ede7d9; }
         .ck-gift-card-body { padding: 8px 10px 10px; }
@@ -815,7 +815,7 @@ export default function CheckoutPage() {
         .ck2-card { background:#fff; border:1px solid #ecebe4; border-radius:18px; padding:18px; }
         .ck2-list { display:flex; flex-direction:column; gap:12px; margin-bottom:14px; }
         .ck2-addr { position:relative; display:flex; gap:14px; align-items:flex-start; padding:16px; border:1.5px solid #e6e4da; border-radius:14px; cursor:pointer; background:#fff; transition:border-color .2s, box-shadow .2s, background .2s; }
-        .ck2-addr:hover { border-color:#cfcbb8; }
+        @media(hover:hover){.ck2-addr:hover{ border-color:#cfcbb8; }}
         .ck2-addr.on { border-color:#2a4736; background:#fafcfa; box-shadow:0 0 0 3px rgba(42,71,54,.09); }
         .ck2-addr input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
         .ck2-addr input:focus-visible + .ck2-dot { box-shadow:0 0 0 3px rgba(42,71,54,.25); }
@@ -828,7 +828,7 @@ export default function CheckoutPage() {
         .ck2-addr-phone { font-size:13px; color:#6f6f64; margin-top:2px; }
         .ck2-empty { margin:0 0 14px; font-size:14px; color:#6f6f64; }
         .ck2-add { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; border:1.5px dashed #b8c6bd; border-radius:14px; background:#fafcfa; color:#2a4736; font:600 14px 'DM Sans',sans-serif; cursor:pointer; transition:background .2s, border-color .2s; }
-        .ck2-add:hover { background:#f1f5f1; border-color:#2a4736; }
+        @media(hover:hover){.ck2-add:hover{ background:#f1f5f1; border-color:#2a4736; }}
         .ck2-add span { font-size:20px; line-height:1; }
         .ck2-form { margin-top:4px; }
         .ck2-form-title { font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:600; margin:2px 0 14px; color:#1a1a14; }
@@ -848,10 +848,10 @@ export default function CheckoutPage() {
         .ck2-phone input { border:0; border-radius:0; box-shadow:none !important; }
         .ck2-actions { display:flex; gap:12px; margin-top:18px; }
         .ck2-btn { flex:1; height:48px; border:0; border-radius:999px; background:#2a4736; color:#fff; font:600 13px 'DM Sans',sans-serif; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:background .2s; }
-        .ck2-btn:hover:not(:disabled) { background:#1f3a2a; }
+        @media(hover:hover){.ck2-btn:hover:not(:disabled){ background:#1f3a2a; }}
         .ck2-btn:disabled { opacity:.6; cursor:wait; }
         .ck2-btn--ghost { background:#fff; color:#1a1a14; border:1px solid #dcdacf; }
-        .ck2-btn--ghost:hover:not(:disabled) { background:#f4f3ee; }
+        @media(hover:hover){.ck2-btn--ghost:hover:not(:disabled){ background:#f4f3ee; }}
         .ck2-check { display:flex; align-items:center; gap:10px; margin-top:16px; padding-top:16px; border-top:1px solid #ecebe4; font-size:14px; color:#1a1a14; cursor:pointer; }
         .ck2-check input { width:18px; height:18px; accent-color:#2a4736; }
         @media (max-width:639px) {
@@ -878,7 +878,7 @@ export default function CheckoutPage() {
         @media (min-width: 1024px) { .ck-pay-btn.ck-cont-right { display:flex; } .ck-step-error--right { display:block; margin-top:12px; } }
         .ck-pay-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px 12px; background: linear-gradient(135deg, #2d5a27, #1a3a1a); color: white; border: none; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 28px rgba(45,90,39,.3); transition: all .22s; margin-top: 4px; flex-wrap: wrap; text-align: center; line-height: 1.4; }
         @media (min-width: 480px) { .ck-pay-btn { font-size: 13px; letter-spacing: .18em; padding: 18px; } }
-        .ck-pay-btn:hover:not(:disabled) { background: linear-gradient(135deg, #3a7a32, #2d5a27); transform: translateY(-1px); box-shadow: 0 8px 32px rgba(45,90,39,.36); }
+        @media(hover:hover){.ck-pay-btn:hover:not(:disabled){ background: linear-gradient(135deg, #3a7a32, #2d5a27); transform: translateY(-1px); box-shadow: 0 8px 32px rgba(45,90,39,.36); }}
         .ck-pay-btn:disabled { opacity: .45; cursor: not-allowed; }
         .ck-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: white; animation: spin .7s linear infinite; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -909,7 +909,7 @@ export default function CheckoutPage() {
         .ck-popup-warn { background: #fdf3f2; border: 1px solid rgba(181,52,28,.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; font-weight: 600; color: #5a1a0e; }
         .ck-popup-warn strong { font-weight: 800; color: #3d0e06; }
         .ck-popup-close { width: 100%; padding: 14px; background: #2d5a27; color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: background .2s; }
-        .ck-popup-close:hover { background: #3a7a32; }
+        @media(hover:hover){.ck-popup-close:hover{ background: #3a7a32; }}
         ${SHEET_GRAB_CSS}
         /* Phones: rises from the bottom as a sheet */
         @media (max-width: 767px) {

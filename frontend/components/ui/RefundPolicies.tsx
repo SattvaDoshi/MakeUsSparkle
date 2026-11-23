@@ -267,7 +267,7 @@ export default function RefundPolicies() {
           padding: 20px 24px 0;
           transition: color .2s;
         }
-        .rp-back:hover { color: var(--rp-green-400); }
+        @media(hover:hover){.rp-back:hover{ color: var(--rp-green-400); }}
 
         /* Content */
         .rp-content {
@@ -330,7 +330,7 @@ export default function RefundPolicies() {
           transition: background .15s;
           gap: 12px;
         }
-        .rp-acc-head:hover { background: var(--rp-green-50); }
+        @media(hover:hover){.rp-acc-head:hover{ background: var(--rp-green-50); }}
         .rp-acc-head-left { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }
         .rp-acc-icon { font-size: 18px; flex-shrink: 0; }
         .rp-acc-label {

@@ -107,7 +107,7 @@ export default function NewArrivals() {
           transition: all 0.22s ease;
           font-size: 18px;
         }
-        .na-btn:hover { background: #3d6b4f; color: #f5f0e8; }
+        @media(hover:hover){.na-btn:hover{ background: #3d6b4f; color: #f5f0e8; }}
 
         .na-view-all {
           font-size: 13px; font-weight: 500;
@@ -118,7 +118,7 @@ export default function NewArrivals() {
           padding-bottom: 2px;
           transition: opacity 0.2s;
         }
-        .na-view-all:hover { opacity: 0.6; }
+        @media(hover:hover){.na-view-all:hover{ opacity: 0.6; }}
 
         /* ══════════════════════════════════════
            TRACK

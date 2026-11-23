@@ -180,7 +180,7 @@ export default function LoginPopup({ autoOpen = true }: { autoOpen?: boolean }) 
           font-size: 1rem;
           transition: background 0.2s;
         }
-        .mu-close:hover { background: rgba(255, 255, 255, 0.8); }
+        @media(hover:hover){.mu-close:hover{ background: rgba(255, 255, 255, 0.8); }}
 
         .mu-brand {
           text-align: center;
@@ -313,7 +313,7 @@ export default function LoginPopup({ autoOpen = true }: { autoOpen?: boolean }) 
           display: block;
           opacity: 0.85;
         }
-        .mu-forgot:hover { opacity: 1; }
+        @media(hover:hover){.mu-forgot:hover{ opacity: 1; }}
 
         .mu-submit {
           width: 100%;
@@ -330,7 +330,7 @@ export default function LoginPopup({ autoOpen = true }: { autoOpen?: boolean }) 
           transition: opacity 0.2s, transform 0.15s;
           font-family: Georgia, serif;
         }
-        .mu-submit:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+        @media(hover:hover){.mu-submit:hover:not(:disabled){ opacity: 0.88; transform: translateY(-1px); }}
         .mu-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
         .mu-feedback {

@@ -192,7 +192,7 @@ export default function ExitIntent() {
           cursor: pointer; margin-bottom: 10px;
           transition: background .22s;
         }
-        .ei-btn-primary:hover { background: #3d4a22; }
+        @media(hover:hover){.ei-btn-primary:hover{ background: #3d4a22; }}
         .ei-btn-secondary {
           display: block; width: 100%; padding: 14px;
           background: transparent; color: rgba(30,35,16,.45);
@@ -201,7 +201,7 @@ export default function ExitIntent() {
           font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase;
           cursor: pointer; transition: all .2s;
         }
-        .ei-btn-secondary:hover { border-color: #7a8e3c; color: #3d4a22; }
+        @media(hover:hover){.ei-btn-secondary:hover{ border-color: #7a8e3c; color: #3d4a22; }}
 
         /* Survey modal */
         .ei-survey-icon { font-size: 48px; margin-bottom: 12px; }
@@ -215,7 +215,7 @@ export default function ExitIntent() {
           font-size: 13px; color: #1e2310;
           transition: color .2s;
         }
-        .ei-survey-option:hover { color: #3d4a22; }
+        @media(hover:hover){.ei-survey-option:hover{ color: #3d4a22; }}
         .ei-survey-option:last-child { border-bottom: none; }
         .ei-radio {
           width: 18px; height: 18px; border-radius: 50%;
@@ -252,7 +252,7 @@ export default function ExitIntent() {
           cursor: pointer; display: flex; align-items: center; justify-content: center;
           color: rgba(30,35,16,.45); transition: all .2s;
         }
-        .ei-close:hover { border-color: #7a8e3c; color: #3d4a22; }
+        @media(hover:hover){.ei-close:hover{ border-color: #7a8e3c; color: #3d4a22; }}
 
         /* Refined look: calmer, on-brand, centred on larger screens */
         .ei-overlay { background: rgba(26,26,20,.55); backdrop-filter: blur(3px); }
@@ -264,10 +264,10 @@ export default function ExitIntent() {
         .ei-sub { color:#6f6f64; font-size:14.5px; font-weight:400; margin-bottom:24px; }
         .ei-sub strong { color:#1a1a14; }
         .ei-btn-primary { background:#2a4736; padding:16px; font-size:12px; letter-spacing:.14em; }
-        .ei-btn-primary:hover:not(:disabled) { background:#1f3a2a; }
+        @media(hover:hover){.ei-btn-primary:hover:not(:disabled){ background:#1f3a2a; }}
         .ei-btn-primary:disabled { opacity:.7; cursor:wait; }
         .ei-btn-secondary { border:0; color:#6f6f64; text-transform:none; letter-spacing:0; font-size:13.5px; padding:10px; text-decoration:underline; text-underline-offset:3px; }
-        .ei-btn-secondary:hover { color:#1a1a14; }
+        @media(hover:hover){.ei-btn-secondary:hover{ color:#1a1a14; }}
         .ei-error { color:#c0392b; font-size:13px; margin:0 0 12px; }
         @media (min-width:640px) {
           .ei-overlay { align-items:center; }

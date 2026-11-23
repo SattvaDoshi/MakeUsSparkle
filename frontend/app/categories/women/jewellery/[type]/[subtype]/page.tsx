@@ -15,10 +15,11 @@
 import { redirect } from 'next/navigation';
 
 interface Props {
-  params: { type: string; subtype: string };
+  params: Promise<{ type: string; subtype: string }>;
 }
 
-export default function OldSubtypePage({ params }: Props) {
+export default async function OldSubtypePage({ params }: Props) {
+  const { type } = await params;
   // Redirect immediately to the parent type page
-  redirect(`/categories/women/jewellery/${params.type}`);
+  redirect(`/categories/women/jewellery/${type}`);
 }

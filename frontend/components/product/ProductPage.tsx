@@ -376,6 +376,7 @@ export default function ProductsPage({
   products,
   productLinkBase,
   loading: propLoading,
+  instant = false,
 }: {
   type: string;
   subtype?: string;
@@ -384,6 +385,8 @@ export default function ProductsPage({
   products?: Product[];
   productLinkBase?: string;
   loading?: boolean;
+  /** The parent already had the list in memory (e.g. Back): show cards without the fade-in. */
+  instant?: boolean;
 }) {
   // Back from a product page: pick up where the shopper left off (filter, sort, how many cards were loaded, scroll).
   const [initialSnap] = useState(() => readPlpSnapshot<{ count: number; tag: string; sort: SortOption }>());
@@ -579,7 +582,7 @@ export default function ProductsPage({
             </div>
           ) : (
             shown.map((product, i) => (
-              <div key={product.id} className={cached ? `${styles.item} ${styles.itemStatic}` : styles.item} style={cached ? undefined : { animationDelay: `${Math.min((i % ITEMS_PER_PAGE) * 0.035, 0.4)}s` }}>
+              <div key={product.id} className={cached || instant ? `${styles.item} ${styles.itemStatic}` : styles.item} style={cached || instant ? undefined : { animationDelay: `${Math.min((i % ITEMS_PER_PAGE) * 0.035, 0.4)}s` }}>
                 <ProductCard product={product} productLinkBase={productLinkBase} />
               </div>
             ))

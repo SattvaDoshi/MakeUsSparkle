@@ -4,7 +4,7 @@ import { cdnImage } from '@/lib/cdn';
 import { CheckoutSkeleton } from '@/components/ui/PageSkeletons';
 import { INDIAN_STATES } from '@/lib/indianStates';
 import Em from "@/components/ui/Em";
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCartStockIssues } from '@/lib/useCartStockIssues';
 import { useSheetSwipe, SHEET_GRAB_CSS } from '@/lib/useSheetSwipe';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { apiRequest } from '@/lib/api';
 
 const PAYMENT_METHODS = [
   { id: 'ONLINE', label: 'Pay Online in Full', sub: 'UPI, Credit/Debit Cards, NetBanking, Wallets via PhonePe', badge: 'Recommended' },
-  { id: 'PARTIAL_COD', label: 'Partial COD (20% Advance)', sub: 'Pay 20% advance online, pay balance on delivery · +₹80 convenience fee', badge: null },
+  { id: 'PARTIAL_COD', label: 'Partial COD (20% Advance)', sub: 'Pay 20% advance online, pay balance on delivery · +₹30 convenience fee', badge: null },
   { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives · +₹80 convenience fee', badge: null },
 ];
 
@@ -50,6 +50,15 @@ export default function CheckoutPage() {
   // Two steps: 1) where it's going and how fast, 2) how you'll pay
   const [step, setStep] = useState<1 | 2>(1);
   const [stepError, setStepError] = useState('');
+  // Every step change starts the shopper at the top of the new step. Done after the new step has rendered and as an
+  // instant jump: a smooth scroll started before the swap gets cancelled on iPhone Safari when the page height
+  // changes, which left shoppers at the bottom (order summary) with the payment options out of view.
+  const firstStep = useRef(true);
+  useEffect(() => {
+    if (firstStep.current) { firstStep.current = false; return; }
+    const id = requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior }));
+    return () => cancelAnimationFrame(id);
+  }, [step]);
   // Problems from placing the order (price changed, out of stock, payment couldn't start…) — shown in the page, not a popup
   const [payError, setPayError] = useState('');
   const stockIssues = useCartStockIssues(items);
@@ -88,7 +97,6 @@ export default function CheckoutPage() {
   const [billingAddressError, setBillingAddressError] = useState('');
 
   const [userRewardPoints, setUserRewardPoints] = useState(0);
-  const [pointsInput, setPointsInput] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -98,17 +106,10 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  // Sync initial input if there's already points redeemed in state
-  useEffect(() => {
-    if (rewardPointsRedeemed > 0 && !pointsInput) {
-      setPointsInput(rewardPointsRedeemed.toString());
-    }
-  }, [rewardPointsRedeemed, pointsInput]);
-
   const activeGift = GIFT_OPTIONS.find(g => g.id === selectedGiftId) ?? null;
   
   const deliveryCharge = deliveryType === 'express' ? 110 : shipping;
-  const codCharge = (selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') ? 80 : 0;
+  const codCharge = selectedMethod === 'COD' ? 80 : selectedMethod === 'PARTIAL_COD' ? 30 : 0; // keep in sync with backend pricing.service
 
   // Derive the strictest payment constraint from all cart items.
   // Priority: prepaid_only > partial_cod > cod_allowed
@@ -135,7 +136,11 @@ export default function CheckoutPage() {
 
   const baseTotal = (total - shipping) + deliveryCharge + codCharge;
   const safeRewardPointsRedeemed = rewardPointsRedeemed || 0;
-  const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, userRewardPoints, baseTotal);
+  // Points are used automatically up to what the order allows. Online and part-COD payments must leave
+  // something to pay (the server rejects a ₹0 online payment), so keep ₹1 / ₹3 back for those.
+  const maxRedeemable = Math.max(0, Math.floor(baseTotal) - (selectedMethod === 'COD' ? 0 : selectedMethod === 'PARTIAL_COD' ? 3 : 1));
+  const pointsUsable = Math.min(userRewardPoints, maxRedeemable);
+  const actualRedeemedPoints = Math.min(safeRewardPointsRedeemed, pointsUsable);
   
   const finalTotal = baseTotal - actualRedeemedPoints;
 
@@ -252,7 +257,6 @@ export default function CheckoutPage() {
     if (stockIssueCount > 0) { setStepError('Some items in your cart are out of stock or over the quantity left. Please update your cart first.'); return; }
     setStepError('');
     setStep(2);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const showPayError = (msg: string) => {
@@ -381,7 +385,7 @@ export default function CheckoutPage() {
         shippingAddress,
         billingAddress,
         isGift, selectedGiftId, giftMessage: state.giftMessage,
-        rewardPointsRedeemed,
+        rewardPointsRedeemed: actualRedeemedPoints,
       };
       if (selectedMethod === 'ONLINE' || selectedMethod === 'PARTIAL_COD') {
         const ppOrder = await apiRequest<{ success: boolean; orderId: string; merchantOrderId: string; redirectUrl: string; amount: number }>('/payment/create-order', { method: 'POST', body: JSON.stringify(orderPayload) });
@@ -1165,14 +1169,14 @@ export default function CheckoutPage() {
                       {(() => { const a = user?.addresses?.[selectedAddressIndex]; return a ? `${a.name || user?.name || 'Customer'} · ${a.addressLine1 || a.fullAddress || ''}${a.city ? ', ' + a.city : ''}${a.pincode ? ' - ' + a.pincode : ''}` : '—'; })()}
                     </div>
                   </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                  <button type="button" className="ck-recap-edit" onClick={() => setStep(1)}>Change</button>
                 </div>
                 <div className="ck-recap-row">
                   <div>
                     <div className="ck-recap-label">Delivery</div>
                     <div className="ck-recap-text">{deliveryType === 'express' ? 'Express' : 'Standard'}</div>
                   </div>
-                  <button type="button" className="ck-recap-edit" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Change</button>
+                  <button type="button" className="ck-recap-edit" onClick={() => setStep(1)}>Change</button>
                 </div>
               </div>
 
@@ -1294,7 +1298,7 @@ export default function CheckoutPage() {
                 {(selectedMethod === 'COD' || selectedMethod === 'PARTIAL_COD') && (
                   <div className="ck-row">
                     <div className="ck-row-label">{selectedMethod === 'COD' ? 'COD Convenience Fee' : 'Partial COD Fee'}</div>
-                    <span className="ck-row-value">+₹80</span>
+                    <span className="ck-row-value">+₹{codCharge}</span>
                   </div>
                 )}
                 {userRewardPoints > 0 && (
@@ -1307,37 +1311,22 @@ export default function CheckoutPage() {
                         Balance: {userRewardPoints}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        max={Math.min(userRewardPoints, baseTotal)}
-                        value={pointsInput} 
-                        onChange={(e) => setPointsInput(e.target.value)}
-                        placeholder={`Up to ${Math.min(userRewardPoints, baseTotal)}`}
-                        style={{ flex: 1, padding: '8px 12px', border: '1.5px solid #d9cdb8', borderRadius: 8, fontSize: 12, outline: 'none' }}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: pointsUsable > 0 ? 'pointer' : 'default', fontSize: 12.5, color: '#0f1a0f' }}>
+                      <input
+                        type="checkbox"
+                        checked={actualRedeemedPoints > 0}
+                        disabled={pointsUsable <= 0}
+                        onChange={(e) => setRewardPointsRedeemed(e.target.checked ? userRewardPoints : 0)}
+                        style={{ width: 18, height: 18, accentColor: '#2d5a27', cursor: 'inherit', flexShrink: 0 }}
                       />
-                      <button 
-                        onClick={() => {
-                          const parsedVal = parseInt(pointsInput, 10);
-                          const val = Math.max(0, Math.min(isNaN(parsedVal) ? 0 : parsedVal, userRewardPoints, baseTotal));
-                          setRewardPointsRedeemed(val);
-                          setPointsInput(val.toString());
-                        }}
-                        style={{ background: '#2d5a27', color: 'white', border: 'none', borderRadius: 8, padding: '0 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    {actualRedeemedPoints > 0 && (
-                      <div style={{ fontSize: 11, color: '#2d5a27', marginTop: 8, fontWeight: 500 }}>
-                        −₹{actualRedeemedPoints} will be deducted from your total.
-                        <button 
-                          onClick={() => { setRewardPointsRedeemed(0); setPointsInput(''); }} 
-                          style={{ background: 'none', border: 'none', color: '#c0392b', marginLeft: 10, cursor: 'pointer', textDecoration: 'underline' }}
-                        >Remove</button>
-                      </div>
-                    )}
+                      <span>
+                        {actualRedeemedPoints > 0
+                          ? <>Using <b>{actualRedeemedPoints}</b> points · <b style={{ color: '#2d5a27' }}>−₹{actualRedeemedPoints}</b> off your total</>
+                          : pointsUsable > 0
+                            ? <>Use <b>{pointsUsable}</b> points and save <b style={{ color: '#2d5a27' }}>₹{pointsUsable}</b></>
+                            : 'Points can’t be used on this order'}
+                      </span>
+                    </label>
                   </div>
                 )}
                 <div className="ck-row total">

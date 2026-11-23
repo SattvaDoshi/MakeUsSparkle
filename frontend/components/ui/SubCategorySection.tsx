@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useGender } from '@/lib/genderContext';
 import ProductsPage from '@/components/product/ProductPage';
-import { fetchCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchCatalogProducts, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import { readPlpSnapshot } from '@/lib/usePlpRestore';
 import { cdnImage } from '@/lib/cdn';
 import { CircleRowSkeleton } from '@/components/home/Skeletons';
 import styles from './SubCategorySection.module.css';
+
+const STYLE_KEY = 'mus_sub:';
 
 interface StyleCircle { name: string; key: string; img: string }
 
@@ -32,26 +35,51 @@ function buildCircles(products: CatalogProduct[]): StyleCircle[] {
 export default function SubcategoryPage({ type = 'necklace' }: { type?: string }) {
   const resolvedType = (type || 'necklace').toLowerCase();
   const { gender } = useGender();
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [circles, setCircles] = useState<StyleCircle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeStyle, setActiveStyle] = useState<string | null>(null);
+  // Coming Back from a product, the list is already in memory: show it at once (no skeleton, no cards fading
+  // in again a few seconds later) and quietly refresh in the background.
+  const [cached] = useState(() => peekCatalogProducts({ subCategorySlug: resolvedType }));
+  const [products, setProducts] = useState<CatalogProduct[]>(cached ?? []);
+  const [circles, setCircles] = useState<StyleCircle[]>(() => (cached ? buildCircles(cached) : []));
+  const [loading, setLoading] = useState(!cached);
+  // The style circle the shopper had picked is restored too (only when coming Back, never on a fresh visit).
+  const [activeStyle, setActiveStyle] = useState<string | null>(() => {
+    if (!readPlpSnapshot()) return null;
+    try { return sessionStorage.getItem(STYLE_KEY + location.pathname) || null; } catch { return null; }
+  });
+  useEffect(() => {
+    try {
+      if (activeStyle) sessionStorage.setItem(STYLE_KEY + location.pathname, activeStyle);
+      else sessionStorage.removeItem(STYLE_KEY + location.pathname);
+    } catch { /* private mode */ }
+  }, [activeStyle]);
 
   const label = resolvedType.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   const words = label.split(' ');
   const lead = words.length > 1 ? words.slice(0, -1).join(' ') : '';
   const last = words[words.length - 1];
 
-  useEffect(() => { setActiveStyle(null); }, [resolvedType]);
+  const firstType = useRef(resolvedType);
+  useEffect(() => {
+    if (firstType.current === resolvedType) return;
+    firstType.current = resolvedType;
+    setActiveStyle(null);
+  }, [resolvedType]);
 
   useEffect(() => {
     let live = true;
-    setLoading(true);
+    const quiet = !!cached && resolvedType === firstType.current && products.length > 0;
+    if (!quiet) setLoading(true);
     fetchCatalogProducts({ subCategorySlug: resolvedType })
-      .then((rows) => { if (live) { setProducts(rows); setCircles(buildCircles(rows)); } })
-      .catch(() => { if (live) { setProducts([]); setCircles([]); } })
+      .then((rows) => {
+        if (!live) return;
+        // Same pieces as on screen: keep the current list so nothing re-renders or re-animates.
+        setProducts((prev) => (prev.length === rows.length && prev.every((p, i) => p.id === rows[i].id) ? prev : rows));
+        setCircles((prev) => (quiet && prev.length ? prev : buildCircles(rows)));
+      })
+      .catch(() => { if (live && !quiet) { setProducts([]); setCircles([]); } })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedType]);
 
   const allImg = products[0]?.mainImage || products[0]?.images?.[0];
@@ -93,6 +121,7 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
         embedded
         products={products}
         loading={loading}
+        instant={!!cached}
         productLinkBase={resolvedType === 'charm-jewellery' || resolvedType === 'custom-charm-jewellery' ? '/custom-charm' : '/products'}
       />
 

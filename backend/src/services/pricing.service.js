@@ -23,6 +23,7 @@ const FREE_SHIPPING_THRESHOLD = 999;
 const STANDARD_SHIPPING = 60;
 const EXPRESS_DELIVERY = 110;
 const COD_FEE = 80;
+const PARTIAL_COD_FEE = 30;
 const PARTIAL_COD_RATE = 0.2;
 const MAX_LINES = 60;
 const MAX_QTY = 99;
@@ -403,7 +404,7 @@ export async function priceOrder(userId, body = {}) {
 	const giftCharge = body.isGift && GIFT_OPTIONS[body.selectedGiftId] ? GIFT_OPTIONS[body.selectedGiftId] : 0;
 	const cartShipping = freeShipping || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING;
 	const deliveryCharge = deliveryType === "express" ? EXPRESS_DELIVERY : cartShipping;
-	const codCharge = paymentMode === "COD" || paymentMode === "PARTIAL_COD" ? COD_FEE : 0;
+	const codCharge = paymentMode === "COD" ? COD_FEE : paymentMode === "PARTIAL_COD" ? PARTIAL_COD_FEE : 0;
 
 	const afterDiscounts = Math.max(0, subtotal + cartShipping + giftCharge - couponDiscount - autoDiscount);
 	const baseTotal = afterDiscounts - cartShipping + deliveryCharge + codCharge;

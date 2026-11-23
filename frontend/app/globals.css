@@ -24,7 +24,7 @@
    carry extra whitespace inside themselves, so their bottom padding is trimmed by that amount. */
 @media (max-width: 639px) {
   .home-main > section.os-section:not(.hero-banner):not(.cat-strip),
-  .home-main > section.na-section:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
+  .home-main > section.na-section:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 24px) !important; } /* ends in text: line-height adds ~8px of visible air */
   .home-main > section[data-home-section="hot"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 8px) !important; } /* was 2× → 80px gap to the shelf below */
   .home-main > section[data-home-section="shelf"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
   .home-main > section[data-home-section="shelf"][data-shelf="popular"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) + 8px) !important; } /* leads into the full-bleed marquee bar */

@@ -86,7 +86,7 @@ export default function ProductShelf({
   if (items && items.length < MIN_ITEMS) return <section ref={ref} aria-hidden="true" />;
 
   return (
-    <section ref={ref} className={`${styles.section}${tint ? ` ${styles.tint}` : ""}`} aria-label={`${eyebrow} ${title}${em ? ` ${em}` : ""}`}>
+    <section ref={ref} className={`${styles.section}${tint ? ` ${styles.tint}` : ""}`} data-home-section="shelf" data-shelf={mode} aria-label={`${eyebrow} ${title}${em ? ` ${em}` : ""}`}>
       {items === null ? (
         <ProductRowSkeleton count={5} />
       ) : (

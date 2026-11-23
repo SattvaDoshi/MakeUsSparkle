@@ -20,6 +20,17 @@
 }
 .home-main > .cat-strip { padding-bottom: var(--home-pad) !important; }              /* category tiles → next section */
 
+/* Phone: every visible gap between homepage sections ≈ 48px (measured content-to-content at 390px). The blocks below
+   carry extra whitespace inside themselves, so their bottom padding is trimmed by that amount. */
+@media (max-width: 639px) {
+  .home-main > section.os-section:not(.hero-banner):not(.cat-strip),
+  .home-main > section.na-section:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
+  .home-main > section[data-home-section="hot"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 8px) !important; } /* was 2× → 80px gap to the shelf below */
+  .home-main > section[data-home-section="shelf"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 16px) !important; }
+  .home-main > section[data-home-section="shelf"][data-shelf="popular"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) + 8px) !important; } /* leads into the full-bleed marquee bar */
+  .home-main > section[data-home-section="reviews"]:not(.hero-banner):not(.cat-strip) { padding-bottom: calc(var(--home-pad) - 8px) !important; }
+}
+
 /* Banner carousel starts with a full-bleed marquee bar: keep it flush */
 .home-main > section:not(.hero-banner):not(.cat-strip):has(> .bs-marquee-wrap) { padding-top: 0 !important; }
 

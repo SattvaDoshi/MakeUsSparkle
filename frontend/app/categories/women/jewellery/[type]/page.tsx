@@ -26,11 +26,14 @@ import SubcategoryPage from '@/components/ui/SubCategorySection'; // ← adjust 
 // import SubcategoryPage from '@/components/SubcategoryPage';   // ← adjust path if needed
 
 interface Props {
-  params: { type: string };
+  params: Promise<{ type: string }>;
 }
 
-export default function Page({ params }: Props) {
-  return <SubcategoryPage type={params.type} />;
+// Route params arrive as a Promise in this Next.js version; reading them directly gave `undefined`,
+// so every URL here fell back to "Necklace".
+export default async function Page({ params }: Props) {
+  const { type } = await params;
+  return <SubcategoryPage type={type} />;
 }
 
 // Pre-render all six known types at build time

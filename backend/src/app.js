@@ -1,3 +1,4 @@
+import { publicCache } from "./middleware/publicCache.js";
 import express from "express";
 import morgan from "morgan";
 import { securityHeaders, rejectOperatorQuery, rejectOperatorBody, hidePrivateFields } from "./middleware/security.middleware.js";
@@ -120,6 +121,7 @@ app.use(globalLimiter);
 app.use(rejectOperatorQuery);
 app.use(rejectOperatorBody);
 app.use(hidePrivateFields);
+app.use(publicCache); // short in-memory cache for public catalogue GETs (see middleware/publicCache.js)
 
 app.get("/", (req, res) => {
 	res.json({

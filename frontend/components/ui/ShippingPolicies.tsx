@@ -290,7 +290,7 @@ export default function ShippingPolicyPage() {
           text-align: left;
           transition: background .15s;
         }
-        .sp-acc-head:hover { background: var(--sp-green-50); }
+        @media(hover:hover){.sp-acc-head:hover{ background: var(--sp-green-50); }}
         .sp-acc-head-left { display: flex; align-items: center; gap: 12px; }
         .sp-acc-icon { font-size: 18px; }
         .sp-acc-label {
@@ -353,7 +353,7 @@ export default function ShippingPolicyPage() {
           font-weight: 400;
         }
         .sp-table tr:last-child td { border-bottom: none; }
-        .sp-table tr:hover td { background-color: rgba(240,245,236,0.4); }
+        @media(hover:hover){.sp-table tr:hover td{ background-color: rgba(240,245,236,0.4); }}
         .sp-table-weight { font-weight: 500 !important; color: var(--sp-ink) !important; }
         
         .sp-badge {
@@ -445,12 +445,12 @@ export default function ShippingPolicyPage() {
           background: #97e2b35a;
           color: black;
         }
-        .sp-contact-btn--wa:hover { background: #659e7c; }
+        @media(hover:hover){.sp-contact-btn--wa:hover{ background: #659e7c; }}
         .sp-contact-btn--email {
           background: var(--sp-green-200);
           color: black;
         }
-        .sp-contact-btn--email:hover { background: var(--sp-green-200); }
+        @media(hover:hover){.sp-contact-btn--email:hover{ background: var(--sp-green-200); }}
 
         .sp-footer-note {
           text-align: center;

@@ -35,7 +35,7 @@
   font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.pill:hover { border-color: var(--ink); }
+@media (hover: hover) { .pill:hover { border-color: var(--ink); } }
 .pillOn, .pillOn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 .pill:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 .toolbarRight { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }

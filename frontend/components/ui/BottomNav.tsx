@@ -35,10 +35,10 @@
             transition: background 0.2s, color 0.2s;
             color: rgb(255, 255, 255);
           }
-          .btab:hover {
+          @media (hover: hover) { .btab:hover {
             background: rgba(201,168,76,0.08);
             color: rgba(255, 255, 255, 0.91);
-          }
+          } }
           .btab.active {
             color: #c9a84c;
           }

@@ -347,7 +347,8 @@ const sortedCharms = useMemo(
           color: var(--mist); text-decoration: none; font-weight: 500;
           transition: color .18s;
         }
-        .nav-links a:hover, .nav-links a.active { color: var(--ol6); }
+        .nav-links a.active{ color: var(--ol6); }
+        @media(hover:hover){.nav-links a:hover{ color: var(--ol6); }}
         .nav-cart-btn {
           display: flex; align-items: center; gap: 6px;
           font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
@@ -356,7 +357,7 @@ const sortedCharms = useMemo(
           padding: 7px 14px; border-radius: 50px;
           transition: all .18s; cursor: pointer;
         }
-        .nav-cart-btn:hover { background: var(--ol1); border-color: var(--ol4); }
+        @media(hover:hover){.nav-cart-btn:hover{ background: var(--ol1); border-color: var(--ol4); }}
 
         /* ── HERO ── */
         .hero {
@@ -427,7 +428,7 @@ const sortedCharms = useMemo(
           cursor: pointer; color: var(--mist);
           transition: all .18s; display: flex; align-items: center; gap: 5px;
         }
-        .cat-tab:hover { border-color: var(--ol4); color: var(--ol6); background: var(--ol0); }
+        @media(hover:hover){.cat-tab:hover{ border-color: var(--ol4); color: var(--ol6); background: var(--ol0); }}
         .cat-tab.on { border-color: var(--ol6); background: var(--ol6); color: var(--bg); }
 
         /* ── CHARM GRID — Compact ── */
@@ -472,7 +473,7 @@ const sortedCharms = useMemo(
           width: 100%; height: 100%; object-fit: cover;
           transition: transform .32s;
         }
-        .cc:hover .cc__img img { transform: scale(1.08); }
+        @media(hover:hover){.cc:hover .cc__img img{ transform: scale(1.08); }}
         .cc__emo {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
@@ -524,7 +525,7 @@ const sortedCharms = useMemo(
           background: var(--ol0); color: var(--ol5);
           transition: border-color .18s; flex-shrink: 0;
         }
-        .cc__upload:hover { border-color: var(--ol4); }
+        @media(hover:hover){.cc__upload:hover{ border-color: var(--ol4); }}
 
         /* Button */
         .cc__btn {
@@ -536,9 +537,9 @@ const sortedCharms = useMemo(
           background: var(--ol0); color: var(--ol6);
           flex-shrink: 0;
         }
-        .cc__btn:hover { background: var(--ol1); }
+        @media(hover:hover){.cc__btn:hover{ background: var(--ol1); }}
         .cc__btn--rm { background: rgba(184,50,40,.07); color: var(--red); }
-        .cc__btn--rm:hover { background: rgba(184,50,40,.13); }
+        @media(hover:hover){.cc__btn--rm:hover{ background: rgba(184,50,40,.13); }}
         .cc__btn:disabled { opacity: .36; cursor: not-allowed; }
 
         /* ── RIGHT — SELECTED PANEL ── */
@@ -614,7 +615,7 @@ const sortedCharms = useMemo(
           cursor: pointer; flex-shrink: 0; padding: 0;
           transition: border-color .16s, color .16s, background .16s;
         }
-        .sel-rm:hover { border-color: var(--red); color: var(--red); background: rgba(184,50,40,.06); }
+        @media(hover:hover){.sel-rm:hover{ border-color: var(--red); color: var(--red); background: rgba(184,50,40,.06); }}
 
         /* ── SUMMARY ── */
         .summary {

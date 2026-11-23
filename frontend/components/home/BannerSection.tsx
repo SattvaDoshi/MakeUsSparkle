@@ -197,7 +197,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
           display: block;
           transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
-        .bs-card:hover .bs-card-img { transform: scale(1.04); }
+        @media(hover:hover){.bs-card:hover .bs-card-img{ transform: scale(1.04); }}
 
         /* Gradient scrim for readability */
         .bs-card-scrim {
@@ -301,7 +301,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
           color: #222;
           transition: background 0.2s, opacity 0.2s, box-shadow 0.2s;
         }
-        .bs-arrow:hover { background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.2); }
+        @media(hover:hover){.bs-arrow:hover{ background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.2); }}
         .bs-arrow:disabled { opacity: 0.28; cursor: default; }
         .bs-arrow-prev { left: 0; }
         .bs-arrow-next { right: 0; }
@@ -378,7 +378,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
           white-space: nowrap;
           transition: border-color 0.2s, color 0.2s;
         }
-        .bs-offer-btn:hover { border-color: var(--gold); color: var(--gold); }
+        @media(hover:hover){.bs-offer-btn:hover{ border-color: var(--gold); color: var(--gold); }}
 
         /* ═══════════════════════════════════════
            MOBILE  ≤ 639px — vertical stack
@@ -462,7 +462,7 @@ const [marqueeItems, setMarqueeItems] = useState<string[]>([
   width: max-content;
   animation: bsMarquee 28s linear infinite;
 }
-.bs-marquee-track:hover { animation-play-state: paused; }
+@media(hover:hover){.bs-marquee-track:hover{ animation-play-state: paused; }}
 @keyframes bsMarquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

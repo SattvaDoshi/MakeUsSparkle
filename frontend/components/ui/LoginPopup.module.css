@@ -46,7 +46,7 @@
   transition: color 0.2s ease;
 }
 
-.close:hover { color: var(--charcoal); }
+@media(hover:hover){.close:hover{ color: var(--charcoal); }}
 
 /* Offer badge */
 .offerBadge {
@@ -213,7 +213,7 @@
   margin-top: -0.25rem;
 }
 
-.forgotLink:hover { color: var(--olive-primary); }
+@media(hover:hover){.forgotLink:hover{ color: var(--olive-primary); }}
 
 /* Submit */
 .submitBtn {
@@ -232,7 +232,7 @@
   margin-top: 0.25rem;
 }
 
-.submitBtn:hover { background: var(--olive-dark); }
+@media(hover:hover){.submitBtn:hover{ background: var(--olive-dark); }}
 
 /* Terms */
 .terms {
@@ -249,7 +249,7 @@
   text-decoration: none;
 }
 
-.terms a:hover { text-decoration: underline; }
+@media(hover:hover){.terms a:hover{ text-decoration: underline; }}
 
 .feedback {
   font-family: var(--font-body);

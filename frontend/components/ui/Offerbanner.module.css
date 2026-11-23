@@ -111,7 +111,7 @@
   margin-top: 0.25rem;
 }
 
-.viewLink:hover { text-decoration: underline; }
+@media(hover:hover){.viewLink:hover{ text-decoration: underline; }}
 
 /* Threshold offers */
 .thresholds {

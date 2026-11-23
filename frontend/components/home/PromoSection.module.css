@@ -96,7 +96,8 @@
   background: #f1f0eb;
 }
 .img { object-fit: cover; object-position: center; transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-.card:hover .img, .card:focus-visible .img { transform: scale(1.05); }
+.card:focus-visible .img{ transform: scale(1.05); }
+@media(hover:hover){.card:hover .img{ transform: scale(1.05); }}
 
 .chip {
   position: absolute;
@@ -126,7 +127,8 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
   transition: transform 0.3s ease, background 0.25s, color 0.25s;
 }
-.card:hover .go, .card:focus-visible .go { background: var(--ink); color: #fff; transform: translate(2px, -2px); }
+.card:focus-visible .go{ background: var(--ink); color: #fff; transform: translate(2px, -2px); }
+@media(hover:hover){.card:hover .go{ background: var(--ink); color: #fff; transform: translate(2px, -2px); }}
 
 .caption { display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
 .cardTitle {
@@ -156,7 +158,8 @@
   background: linear-gradient(currentColor, currentColor) left bottom / 100% 1px no-repeat;
   transition: background-size 0.3s ease, gap 0.3s ease;
 }
-.card:hover .cta, .card:focus-visible .cta { gap: 12px; }
+.card:focus-visible .cta{ gap: 12px; }
+@media(hover:hover){.card:hover .cta{ gap: 12px; }}
 .card:focus-visible { outline: 2px solid var(--forest); outline-offset: 6px; border-radius: 18px; }
 
 /* ───────── Progress dots ───────── */

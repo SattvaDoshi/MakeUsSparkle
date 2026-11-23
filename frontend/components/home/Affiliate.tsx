@@ -404,9 +404,9 @@ export default function AffiliatePage() {
         }
         .aff-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .aff-btn-primary { background: var(--olive); color: #fff; border-color: var(--olive); }
-        .aff-btn-primary:hover { background: var(--olive-soft); }
+        @media(hover:hover){.aff-btn-primary:hover{ background: var(--olive-soft); }}
         .aff-btn-outline { background: var(--surf); color: var(--olive); border-color: var(--bdr-strong); }
-        .aff-btn-outline:hover { background: var(--olive-light); border-color: var(--olive); }
+        @media(hover:hover){.aff-btn-outline:hover{ background: var(--olive-light); border-color: var(--olive); }}
         .aff-btn-success { background: var(--green-bg); color: var(--green); border-color: rgba(31,102,52,0.3); }
 
         /* ── TABS ── */
@@ -421,7 +421,7 @@ export default function AffiliatePage() {
           color: var(--ink-muted); cursor: pointer; display: flex; align-items: center; gap: 8px;
           transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
         }
-        .aff-tab-btn:hover { color: var(--olive); }
+        @media(hover:hover){.aff-tab-btn:hover{ color: var(--olive); }}
         .aff-tab-btn.active { color: var(--olive-dark); border-bottom-color: var(--olive); }
         .aff-tab-count {
           font-size: 10px; padding: 2px 7px; border-radius: 12px; background: var(--bdr); color: var(--ink-muted);
@@ -499,7 +499,7 @@ export default function AffiliatePage() {
           padding: 14px 16px; border-bottom: 1px solid var(--bdr); vertical-align: middle;
         }
         table.aff-data-table tr:last-child td { border-bottom: none; }
-        table.aff-data-table tr:hover td { background: #fafaf5; }
+        @media(hover:hover){table.aff-data-table tr:hover td{ background: #fafaf5; }}
         .td-prod-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
         .td-prod-thumb { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #eae4d8; flex-shrink: 0; }
         .td-prod-title { font-weight: 600; color: var(--ink); line-height: 1.3; }
@@ -561,9 +561,9 @@ export default function AffiliatePage() {
 
         /* Hover lift only on devices that actually hover (no sticky hover on touch) */
         @media (hover: hover) {
-          .aff-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-          .aff-product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--bdr-strong); }
-          .aff-product-card:hover .aff-product-img { transform: scale(1.04); }
+          @media(hover:hover){.aff-card:hover{ transform: translateY(-2px); box-shadow: var(--shadow-md); }}
+          @media(hover:hover){.aff-product-card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--bdr-strong); }}
+          @media(hover:hover){.aff-product-card:hover .aff-product-img{ transform: scale(1.04); }}
         }
 
         /* ── Large desktop ── */
@@ -634,7 +634,7 @@ export default function AffiliatePage() {
           table.aff-data-table thead { display: none; }
           table.aff-data-table tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--bdr); }
           table.aff-data-table tr:last-child { border-bottom: none; }
-          table.aff-data-table tr:hover td { background: transparent; }
+          @media(hover:hover){table.aff-data-table tr:hover td{ background: transparent; }}
           table.aff-data-table td {
             display: flex; justify-content: space-between; align-items: center; gap: 12px;
             padding: 7px 16px; border-bottom: none; text-align: right !important;

@@ -58,7 +58,7 @@
 .card:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
 .poster, .preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .poster { transition: transform 0.6s ease; }
-.card:hover .poster { transform: scale(1.04); }
+@media(hover:hover){.card:hover .poster{ transform: scale(1.04); }}
 .preview { z-index: 1; }
 .scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.0) 42%, rgba(0,0,0,0.18) 100%); }
@@ -150,10 +150,10 @@
   transition: background 0.2s, color 0.2s;
 }
 .btnPrimary { border: 0; background: #1a1a14; color: #fff; }
-.btnPrimary:hover:not(:disabled) { background: #2a4736; }
+@media(hover:hover){.btnPrimary:hover:not(:disabled){ background: #2a4736; }}
 .btnPrimary:disabled { opacity: 0.55; cursor: not-allowed; }
 .btnGhost { border: 1px solid #1a1a14; background: #fff; color: #1a1a14; }
-.btnGhost:hover { background: #f4f3ee; }
+@media(hover:hover){.btnGhost:hover{ background: #f4f3ee; }}
 
 /* ───────── Responsive ───────── */
 @media (max-width: 1279px) { .section { --edge: 32px; --cardW: 214px; } }

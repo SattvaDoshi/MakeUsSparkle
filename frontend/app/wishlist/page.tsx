@@ -64,8 +64,8 @@ export default function WishlistPage() {
           min-width: 0;
         }
         @media (hover: hover) {
-          .wl-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(61,74,34,.13); }
-          .wl-card:hover .wl-img { transform: scale(1.04); }
+          @media(hover:hover){.wl-card:hover{ transform: translateY(-3px); box-shadow: 0 8px 28px rgba(61,74,34,.13); }}
+          @media(hover:hover){.wl-card:hover .wl-img{ transform: scale(1.04); }}
         }
 
         .wl-img-wrap { position: relative; aspect-ratio: 4 / 5; background: var(--beige-dk); overflow: hidden; flex-shrink: 0; }
@@ -81,7 +81,7 @@ export default function WishlistPage() {
           transition: background .18s, color .18s;
           backdrop-filter: blur(4px);
         }
-        .wl-remove:hover { background: var(--red); color: white; }
+        @media(hover:hover){.wl-remove:hover{ background: var(--red); color: white; }}
 
         .wl-badge { position: absolute; top: 8px; left: 8px; font-size: 8px; font-weight: 600; letter-spacing: .1em; color: white; background: var(--olive); padding: 3px 8px; border-radius: 2px; }
 
@@ -115,13 +115,13 @@ export default function WishlistPage() {
           transition: background .2s, color .2s;
         }
         .wl-body > .wl-price-row { margin-top: auto; margin-bottom: 8px; }
-        .wl-btn-cart:hover { background: var(--olive); color: white; }
+        @media(hover:hover){.wl-btn-cart:hover{ background: var(--olive); color: white; }}
 
         .wl-empty { text-align: center; padding: 80px 24px; }
         .wl-empty-icon { font-family: 'Cormorant Garamond', serif; font-size: 64px; font-style: italic; color: rgba(61,74,34,.12); display: block; margin-bottom: 12px; }
         .wl-empty-text { font-size: 13px; color: var(--mist); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 20px; }
         .wl-empty-link { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: white; background: var(--olive); padding: 12px 28px; border-radius: 3px; text-decoration: none; transition: background .2s; }
-        .wl-empty-link:hover { background: var(--olive-md); }
+        @media(hover:hover){.wl-empty-link:hover{ background: var(--olive-md); }}
 
         @media (max-width: 479px) {
           .wl-header { padding: 28px 16px 18px; }

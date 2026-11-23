@@ -1445,7 +1445,8 @@ const CSS = `
   -webkit-tap-highlight-color: transparent; font-family: inherit;
 }
 .pf-item:last-child { border-bottom: none; }
-.pf-item:hover, .pf-item:active { background: #f6f2e9; }
+.pf-item:active{ background: #f6f2e9; }
+@media(hover:hover){.pf-item:hover{ background: #f6f2e9; }}
 .pf-item-icon {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
   background: #e8f0e1; color: #2f4d22; font-size: 16px;
@@ -1465,7 +1466,7 @@ const CSS = `
   font-family: inherit; font-size: 13px; font-weight: 800; letter-spacing: .08em;
   color: #b02a2a; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.pf-logout:hover { background: #fdf0f0; }
+@media(hover:hover){.pf-logout:hover{ background: #fdf0f0; }}
 
 /* ── REWARD CARD ── */
 .pf-reward-card {
@@ -1590,7 +1591,7 @@ const CSS = `
   background: #2f4d22; border: none; color: #fff; padding: 7px 13px; border-radius: 8px;
   cursor: pointer; white-space: nowrap; transition: background .15s; -webkit-tap-highlight-color: transparent;
 }
-.pf-review-btn:hover { background: #3d6a2c; }
+@media(hover:hover){.pf-review-btn:hover{ background: #3d6a2c; }}
 .pf-reviewed-badge { flex-shrink: 0; font-size: 11px; font-weight: 800; color: #2c5a0c; background: #e3f1d8; padding: 6px 10px; border-radius: 8px; white-space: nowrap; }
 
 /* ── REWARD FULL CARD ── */
@@ -1645,7 +1646,7 @@ const CSS = `
   font-family: inherit; font-size: 13px; font-weight: 800; letter-spacing: .08em;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.pf-submit:hover { background: #3d6a2c; }
+@media(hover:hover){.pf-submit:hover{ background: #3d6a2c; }}
 .pf-submit:disabled, .pf-dialog-cancel:disabled, .pf-address-delete:disabled { opacity: .6; cursor: not-allowed; }
 
 /* ── OVERLAYS & DIALOGS ── */
@@ -1664,7 +1665,7 @@ const CSS = `
 .pf-stars-row { display: flex; gap: 6px; margin: 10px 0 14px; }
 .pf-star { font-size: 30px; background: none; border: none; cursor: pointer; color: #cfcfc4; transition: color .12s, transform .12s; padding: 0; line-height: 1; }
 .pf-star.active { color: #d99a00; }
-.pf-star:hover { transform: scale(1.12); }
+@media(hover:hover){.pf-star:hover{ transform: scale(1.12); }}
 .pf-review-textarea {
   width: 100%; padding: 12px; border: 1.5px solid #cfc6aa; border-radius: 10px;
   font-size: 16px; font-family: 'Nunito', sans-serif; color: var(--ink);

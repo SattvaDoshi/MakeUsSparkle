@@ -11,14 +11,14 @@
 .helpTitle { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; }
 .helpText { font-size: 14px; color: var(--muted); }
 .helpLink { margin-top: 8px; align-self: flex-start; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink); text-decoration: none; padding-bottom: 4px; border-bottom: 1px solid currentColor; }
-.helpLink:hover { color: var(--forest); }
+@media(hover:hover){.helpLink:hover{ color: var(--forest); }}
 
 .list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .item { border-bottom: 1px solid var(--line); }
 .q { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 4px;
   font-family: 'Cormorant Garamond', serif; font-size: clamp(20px, 2vw, 25px); font-weight: 600; line-height: 1.25; }
 .q:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; border-radius: 6px; }
-.q:hover .text { color: var(--forest); }
+@media(hover:hover){.q:hover .text{ color: var(--forest); }}
 .icon { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.3s; }
 .icon svg { transition: transform 0.3s; }
 .open .icon { background: var(--ink); color: #fff; border-color: var(--ink); }

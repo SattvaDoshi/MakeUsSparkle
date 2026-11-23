@@ -137,7 +137,7 @@ export default function CartDrawer() {
           cursor: pointer; display: flex; align-items: center; justify-content: center;
           color: var(--mist); transition: all .2s;
         }
-        .drawer-close:hover { border-color: var(--olive-400); color: var(--olive-600); background: var(--olive-50); }
+        @media(hover:hover){.drawer-close:hover{ border-color: var(--olive-400); color: var(--olive-600); background: var(--olive-50); }}
 
         /* ── Progress wrapper ── */
         .dp-section {
@@ -164,7 +164,7 @@ export default function CartDrawer() {
           box-shadow: 0 2px 10px rgba(26,31,13,.03);
           transition: border-color .2s;
         }
-        .di-card:hover { border-color: rgba(201,168,76,.35); }
+        @media(hover:hover){.di-card:hover{ border-color: rgba(201,168,76,.35); }}
         .di-img {
           width: 78px; height: 78px; border-radius: 12px;
           object-fit: cover; flex-shrink: 0; background: var(--beige-dk);
@@ -205,7 +205,7 @@ export default function CartDrawer() {
           color: var(--mist); font-size: 20px; line-height: 1; padding: 2px 4px;
           transition: color .2s, transform .15s; border-radius: 4px;
         }
-        .di-remove:hover { color: var(--red); transform: scale(1.1); }
+        @media(hover:hover){.di-remove:hover{ color: var(--red); transform: scale(1.1); }}
         .di-qty {
           display: flex; align-items: center;
           border: 1.5px solid var(--beige-dkr); border-radius: 50px; overflow: hidden;
@@ -217,7 +217,7 @@ export default function CartDrawer() {
           display: flex; align-items: center; justify-content: center;
           transition: background .15s;
         }
-        .di-qty-btn:hover { background: var(--olive-50); }
+        @media(hover:hover){.di-qty-btn:hover{ background: var(--olive-50); }}
         .di-qty-val {
           min-width: 28px; text-align: center;
           font-size: 12.5px; font-weight: 600; color: var(--ink);
@@ -248,7 +248,7 @@ export default function CartDrawer() {
           border-bottom: 1px solid rgba(61,74,34,.2); padding-bottom: 2px;
           transition: color .2s;
         }
-        .drawer-empty-link:hover { color: var(--olive-500); }
+        @media(hover:hover){.drawer-empty-link:hover{ color: var(--olive-500); }}
 
         /* Footer */
         .drawer-foot {
@@ -270,7 +270,7 @@ export default function CartDrawer() {
           letter-spacing: .22em; text-transform: uppercase;
           text-decoration: none; cursor: pointer; transition: background .22s; width: 100%;
         }
-        .drawer-btn-cart:hover { background: var(--olive-600); }
+        @media(hover:hover){.drawer-btn-cart:hover{ background: var(--olive-600); }}
         .drawer-btn-shop {
           display: flex; align-items: center; justify-content: center;
           padding: 13px; background: transparent; color: var(--olive-600);
@@ -279,7 +279,7 @@ export default function CartDrawer() {
           letter-spacing: .18em; text-transform: uppercase;
           text-decoration: none; cursor: pointer; transition: all .2s;
         }
-        .drawer-btn-shop:hover { border-color: var(--olive-400); background: var(--olive-50); }
+        @media(hover:hover){.drawer-btn-shop:hover{ border-color: var(--olive-400); background: var(--olive-50); }}
 
         @keyframes drawerPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -303,7 +303,7 @@ export default function CartDrawer() {
         .ship-fill { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg,#3d6b4f,#2a4736); transition: width .5s ease; }
         .drawer-items { gap: 14px; padding: 16px 20px 24px; }
         .di-card { border: 1px solid #ecebe4; box-shadow: none; border-radius: 16px; }
-        .di-card:hover { border-color: #dcdacf; }
+        @media(hover:hover){.di-card:hover{ border-color: #dcdacf; }}
         .di-img { width: 84px; height: 84px; }
         .di-name { font-size: 14.5px; }
         .di-low { margin-top: 5px; font-size: 11.5px; font-weight: 600; color: #b4491f; }
@@ -317,7 +317,7 @@ export default function CartDrawer() {
         .foot-save b { font-weight: 700; }
         .foot-note { margin: 8px 0 0; text-align: center; font-size: 11.5px; color: #8b8b80; }
         .drawer-btn-cart { padding: 15px; font-size: 12px; background: #1a1a14; }
-        .drawer-btn-cart:hover { background: #2a4736; }
+        @media(hover:hover){.drawer-btn-cart:hover{ background: #2a4736; }}
         .cu { margin-top: 8px; padding-top: 20px; border-top: 1px solid #ecebe4; }
         .cu-title { margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #1a1a14; }
         .cu-title em { font-style: italic; color: #3d6b4f; }
@@ -333,7 +333,7 @@ export default function CartDrawer() {
         .cu-price b { font-weight: 600; } .cu-price s { font-size: 11px; color: #8b8b80; }
         .cu-low { font-size: 11px; font-weight: 600; color: #b4491f; }
         .cu-btn { margin-top: 4px; display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 99px; border: 1px solid #1a1a14; background: #fff; color: #1a1a14; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; cursor: pointer; transition: background .2s, color .2s; }
-        .cu-btn:hover:not(:disabled) { background: #1a1a14; color: #fff; }
+        @media(hover:hover){.cu-btn:hover:not(:disabled){ background: #1a1a14; color: #fff; }}
         .cu-btn.is-on { background: #2a4736; border-color: #2a4736; color: #fff; cursor: default; }
         @media (max-width: 480px) { .dp-section { padding: 12px 16px 14px; } .drawer-items { padding: 14px 14px 20px; } .cu-row { margin: 0 -14px; padding: 2px 14px 8px; scroll-padding-left: 14px; } }
 
@@ -353,11 +353,11 @@ export default function CartDrawer() {
         .ci-bottom { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; }
         .ci-qty { display: inline-flex; align-items: center; border: 1px solid #dcdacf; border-radius: 99px; height: 30px; }
         .ci-qty button { width: 28px; height: 28px; border: 0; background: none; font-size: 15px; cursor: pointer; color: #1a1a14; border-radius: 99px; }
-        .ci-qty button:hover { background: #f4f3ee; }
+        @media(hover:hover){.ci-qty button:hover{ background: #f4f3ee; }}
         .ci-qty span { min-width: 20px; text-align: center; font-size: 13px; font-weight: 600; }
         .ci-qtyfixed { font-size: 12.5px; color: #6f6f64; }
         .ci-remove { width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: #8b8b80; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s; }
-        .ci-remove:hover { background: #fbeeea; color: #c0392b; }
+        @media(hover:hover){.ci-remove:hover{ background: #fbeeea; color: #c0392b; }}
         .ci-gift { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5c4a14; background: #faf5e6; border-radius: 8px; padding: 7px 10px; }
         .ci-gift span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ci-gift b { font-weight: 600; }

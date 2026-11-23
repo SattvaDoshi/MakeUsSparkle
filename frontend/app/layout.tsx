@@ -1,4 +1,5 @@
 
+import Script from 'next/script';
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -40,6 +41,14 @@ export default function RootLayout({
       </head>
 
       <body>
+        {/* Back to a listing after the browser reloaded it: don't let the browser restore the scroll onto the short, still-loading page (it lands on the footer); the listing puts the page back once its cards are there. */}
+        <Script
+          id="plp-scroll-restoration"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `try{var n=performance.getEntriesByType('navigation')[0];if(n&&n.type==='back_forward'&&sessionStorage.getItem('mus_plp:'+location.pathname+location.search)){history.scrollRestoration='manual';document.documentElement.style.scrollBehavior='auto'}}catch(e){}`,
+          }}
+        />
         <GenderProvider> 
           <Providers>
             <SiteChrome>

@@ -162,7 +162,7 @@ export default function OpenSection() {
           scroll-snap-align: start;
           transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .os-cat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.14); }
+        @media(hover:hover){.os-cat-card:hover{ transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.14); }}
         .os-cat-img {
           position: absolute;
           inset: 0;
@@ -173,7 +173,7 @@ export default function OpenSection() {
           display: block;
           transition: transform 0.6s ease;
         }
-        .os-cat-card:hover .os-cat-img { transform: scale(1.04); }
+        @media(hover:hover){.os-cat-card:hover .os-cat-img{ transform: scale(1.04); }}
         .os-cat-scrim {
           position: absolute;
           inset: 0;
@@ -200,7 +200,7 @@ export default function OpenSection() {
           text-shadow: 0 1px 4px rgba(0,0,0,0.4);
           transition: letter-spacing 0.3s ease;
         }
-        .os-cat-card:hover .os-cat-label span { letter-spacing: 0.18em; }
+        @media(hover:hover){.os-cat-card:hover .os-cat-label span{ letter-spacing: 0.18em; }}
         .os-cat-row.os-single .os-cat-card { flex: 0 0 100%; height: clamp(220px, 32vw, 460px); }
 
         /* Responsive */

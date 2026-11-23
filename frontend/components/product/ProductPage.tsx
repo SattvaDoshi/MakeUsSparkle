@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { readPlpSnapshot, usePlpRestore } from '@/lib/usePlpRestore';
 import ProductCard from '@/components/product/ProductCard';
 import { fetchCatalogProducts, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
@@ -367,28 +368,6 @@ type Product = ((typeof ALL_PRODUCTS)[number] | CatalogProduct) & {
   categorySlug?: string;
 };
 
-// A listing remembers filter/sort/loaded count/scroll (in sessionStorage) when a product is opened, so Back can put
-// the shopper exactly where they were. Clicking any other link (menu, logo, category...) forgets it, so a fresh visit
-// to a listing always starts at the top. `mounted` stays false for the very first render of a page load, which is the
-// hydration render and must match the server.
-type PlpSnapshot = { y: number; count: number; tag: string; sort: SortOption; ts: number };
-const PLP_PREFIX = 'mus_plp:';
-const PLP_MAX_AGE = 30 * 60 * 1000;
-const plpKey = () => `${PLP_PREFIX}${window.location.pathname}${window.location.search}`;
-let plpMounted = false;
-if (typeof window !== 'undefined') {
-  document.addEventListener('click', (e) => {
-    const a = (e.target as Element | null)?.closest?.('a[href]');
-    if (!a) return;
-    const href = a.getAttribute('href') || '';
-    if (/^\/products\//.test(href)) return;
-    document.documentElement.style.removeProperty('scroll-behavior'); // never leave smooth scrolling switched off
-    try {
-      Object.keys(sessionStorage).filter((k) => k.startsWith(PLP_PREFIX)).forEach((k) => sessionStorage.removeItem(k));
-    } catch { /* storage unavailable */ }
-  }, true);
-}
-
 export default function ProductsPage({
   type,
   subtype,
@@ -407,15 +386,7 @@ export default function ProductsPage({
   loading?: boolean;
 }) {
   // Back from a product page: pick up where the shopper left off (filter, sort, how many cards were loaded, scroll).
-  const restoreRef = useRef<PlpSnapshot | null>(null);
-  const [initialSnap] = useState<PlpSnapshot | null>(() => {
-    if (typeof window === 'undefined' || !plpMounted) return null;
-    try {
-      const snap: PlpSnapshot | null = JSON.parse(sessionStorage.getItem(plpKey()) || 'null');
-      return snap && Date.now() - snap.ts < PLP_MAX_AGE ? snap : null;
-    } catch { return null; }
-  });
-  if (initialSnap && restoreRef.current === null) restoreRef.current = initialSnap;
+  const [initialSnap] = useState(() => readPlpSnapshot<{ count: number; tag: string; sort: SortOption }>());
   const [activeTag, setActiveTag] = useState(initialSnap?.tag || 'All');
   // Coming back (Back button) the catalogue is already in memory: show it straight away so the browser can restore
   // the scroll position and the cards don't re-animate, then refresh quietly in the background.
@@ -471,96 +442,15 @@ export default function ProductsPage({
     setVisibleCount(ITEMS_PER_PAGE);
   }, [filterKey]);
 
-  // Keep the latest state, and save it with the scroll position (frozen once a link is clicked, because Next resets
-  // the scroll to 0 while leaving and that must not overwrite the saved position).
-  const restoringRef = useRef(!!initialSnap);
-  const latest = useRef({ count: visibleCount, tag: activeTag, sort });
-  latest.current = { count: visibleCount, tag: activeTag, sort };
-  useEffect(() => {
-    let frozen = false;
-    let raf = 0;
-    let unfreeze: ReturnType<typeof setTimeout> | undefined;
-    plpMounted = true;
-    if (!restoreRef.current) document.documentElement.style.removeProperty('scroll-behavior');
-    const save = () => {
-      if (frozen || restoringRef.current) return;
-      try {
-        const snap: PlpSnapshot = { y: window.scrollY, ...latest.current, ts: Date.now() };
-        sessionStorage.setItem(plpKey(), JSON.stringify(snap));
-      } catch { /* storage unavailable */ }
-    };
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; save(); }); };
-    const onClick = (e: MouseEvent) => {
-      const a = (e.target as Element | null)?.closest?.('a[href]');
-      if (!a) return;
-      if (/^\/products\//.test(a.getAttribute('href') || '')) {
-        save();
-        // No smooth glide while leaving or coming back: the browser would record a mid-glide position and then glide
-        // from the top on Back. Switched back on once the position is restored (or on the next listing visit).
-        document.documentElement.style.scrollBehavior = 'auto';
-      }
-      else { try { sessionStorage.removeItem(plpKey()); } catch { /* ignore */ } }
-      frozen = true;
-      unfreeze = setTimeout(() => { frozen = false; }, 1500);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    document.addEventListener('click', onClick, true);
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      document.removeEventListener('click', onClick, true);
-      if (raf) cancelAnimationFrame(raf);
-      if (unfreeze) clearTimeout(unfreeze);
-    };
-  }, []);
-
-  // Before the first paint: if the cards are already there (cached catalogue), put the page at the saved spot at once.
-  useLayoutEffect(() => {
-    const snap = restoreRef.current;
-    if (snap && !isLoading && dynamicProducts.length > 0) {
-      window.scrollTo({ top: snap.y, behavior: 'instant' as ScrollBehavior });
-    }
-  }, []);
-
-  // Once the cards are on screen, jump back to the saved position. The page uses smooth scrolling and the browser
-  // runs its own (smooth, slightly off) restore, so take over: manual restoration, instant jumps, re-checked while
-  // images settle, and stopped the moment the shopper scrolls themselves.
-  useEffect(() => {
-    const snap = restoreRef.current;
-    if (!snap || isLoading || dynamicProducts.length === 0) return;
-    const prevRestoration = history.scrollRestoration;
-    history.scrollRestoration = 'manual';
-    const jump = () => window.scrollTo({ top: snap.y, behavior: 'instant' as ScrollBehavior });
-    let tries = 0;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const stop = () => {
-      cancelAnimationFrame(raf);
-      if (timer) clearTimeout(timer);
-      history.scrollRestoration = prevRestoration;
-      window.removeEventListener('wheel', finish);
-      window.removeEventListener('touchstart', finish);
-      window.removeEventListener('keydown', finish);
-    };
-    const finish = () => {
-      restoringRef.current = false;
-      restoreRef.current = null;
-      document.documentElement.style.removeProperty('scroll-behavior');
-      stop();
-    };
-    const step = () => {
-      if (Math.abs(window.scrollY - snap.y) > 8) jump();
-      tries += 1;
-      if (tries < 8) timer = setTimeout(step, 150); else finish();
-    };
-    window.addEventListener('wheel', finish, { passive: true });
-    window.addEventListener('touchstart', finish, { passive: true });
-    window.addEventListener('keydown', finish);
-    const raf = requestAnimationFrame(step);
-    return stop;
-  }, [isLoading, dynamicProducts.length]);
-
-  // Coming Back before the cards have loaded: keep the page as tall as it was, otherwise the browser clamps the scroll
-  // to the bottom (the footer shows) and the page only jumps up once the cards arrive.
-  const holdSpace = !!restoreRef.current && dynamicProducts.length === 0;
+  const { holdStyle, holding: holdSpace } = usePlpRestore(
+    initialSnap,
+    { count: visibleCount, tag: activeTag, sort },
+    !isLoading && dynamicProducts.length > 0,
+    (s) => {
+      lastFilterKey.current = `${type}|${subtype}|${gender}|${s.tag}|${s.sort}`;
+      setActiveTag(s.tag); setSort(s.sort); setVisibleCount(Math.max(s.count, ITEMS_PER_PAGE));
+    },
+  );
 
   const filtered = useMemo(() => {
     let list: Product[] = [...dynamicProducts];
@@ -668,7 +558,7 @@ export default function ProductsPage({
       </div>
 
       {/* Grid */}
-      <div className={styles.body} style={holdSpace ? { minHeight: `calc(${restoreRef.current!.y}px + 100vh)` } : undefined}>
+      <div className={styles.body} style={holdStyle}>
         <div className={styles.grid}>
           {isLoading ? (
             Array.from({ length: 8 }).map((_, idx) => (

@@ -120,7 +120,7 @@ export default function CouponSheet({
         .cs-err{font-size:12.5px;font-weight:500;color:#b3261e;margin-top:4px}
         .cs-act{flex:0 0 auto;align-self:center}
         .cs-apply{all:unset;box-sizing:border-box;min-width:76px;height:38px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#1a1a14;color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.06em;cursor:pointer}
-        .cs-apply:hover{background:#000}
+        @media(hover:hover){.cs-apply:hover{background:#000}}
         .cs-apply:focus-visible{outline:2px solid #2a4736;outline-offset:2px}
         .cs-apply[aria-disabled="true"]{background:#e6e4da;color:#9a9a8e;cursor:not-allowed}
         .cs-applied-tag{font-size:12.5px;font-weight:700;color:#2a4736}

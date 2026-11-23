@@ -2,6 +2,7 @@
 
 import Em from "@/components/ui/Em";
 import ProductCard from "@/components/product/ProductCard";
+import { readPlpSnapshot, usePlpRestore } from "@/lib/usePlpRestore";
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -93,6 +94,9 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  // Back from a product page: land at the same scroll position, and keep the page tall until the products are there.
+  const [initialSnap] = useState(() => readPlpSnapshot<Record<string, never>>());
+  const { holdStyle } = usePlpRestore(initialSnap, {}, pageState === 'ready' && !productsLoading && products.length > 0);
 
   const load = useCallback(async () => {
     setPageState('loading');
@@ -140,7 +144,7 @@ export default function OfferDetailsPage({ offerId }: OfferDetailsPageProps) {
   return (
     <>
       <style>{CSS}</style>
-      <div className="odp-root">
+      <div className="odp-root" style={holdStyle}>
 
         {/* Breadcrumb */}
         <div className="odp-breadcrumb">
@@ -283,7 +287,7 @@ const CSS = `
   font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
   color: #4a7535; text-decoration: none; transition: color .18s;
 }
-.odp-back:hover { color: #253d18; }
+@media(hover:hover){.odp-back:hover{ color: #253d18; }}
 
 /* Hero */
 .odp-hero, .odp-hero-skel {
@@ -405,10 +409,10 @@ const CSS = `
   transition: box-shadow .22s, transform .22s;
   display: flex; flex-direction: column;
 }
-.odpc-card:hover { box-shadow: 0 8px 28px rgba(35,60,18,.13); transform: translateY(-3px); }
+@media(hover:hover){.odpc-card:hover{ box-shadow: 0 8px 28px rgba(35,60,18,.13); transform: translateY(-3px); }}
 .odpc-img-wrap { position: relative; width: 100%; aspect-ratio: 3/4; overflow: hidden; background: #ede8dc; }
 .odpc-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .36s ease; }
-.odpc-card:hover .odpc-img { transform: scale(1.04); }
+@media(hover:hover){.odpc-card:hover .odpc-img{ transform: scale(1.04); }}
 .odpc-badge {
   position: absolute; top: 8px; left: 8px;
   font-size: 9px; font-weight: 800; letter-spacing: .14em;
@@ -451,7 +455,7 @@ const CSS = `
   font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
   cursor: pointer; transition: background .2s, transform .1s;
 }
-.odpc-btn:hover:not(:disabled) { background: #365928; transform: scale(1.02); }
+@media(hover:hover){.odpc-btn:hover:not(:disabled){ background: #365928; transform: scale(1.02); }}
 .odpc-btn.added { background: #4a7535; }
 .odpc-btn.oos { background: #c0b9ad; cursor: not-allowed; }
 
@@ -502,5 +506,5 @@ const CSS = `
   border: none; border-radius: 8px; cursor: pointer; text-decoration: none;
   transition: background .2s;
 }
-.odp-cta:hover { background: #365928; }
+@media(hover:hover){.odp-cta:hover{ background: #365928; }}
 `;

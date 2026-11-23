@@ -620,31 +620,35 @@ export async function fetchPromoBanners(gender?: string): Promise<any[]> {
 export async function fetchCatalogProducts(filters: { subCategorySlug?: string } = {}): Promise<CatalogProduct[]> {
   const key = `products_${filters.subCategorySlug || "all"}`;
   return withCatalogCache(key, async () => {
-    const [categories, subCategories, styles] = await Promise.all([
-      fetchCatalogCategories(),
-      fetchCatalogSubCategories(),
-      fetchCatalogStyles(),
-    ]);
+    // Start every request at once. Only a subcategory filter needs the category lists first (to turn the slug into
+    // an id); the full product list no longer waits for them, which saved a whole extra server round trip.
+    const categoriesP = fetchCatalogCategories();
+    const subCategoriesP = fetchCatalogSubCategories();
+    const stylesP = fetchCatalogStyles();
 
-  const params = new URLSearchParams();
-  if (filters.subCategorySlug) {
-    const targetSlug = toSlug(filters.subCategorySlug);
-    const matchedSubCategory = subCategories.find(
-      (subCategory) => subCategory.slug === targetSlug || toSlug(subCategory.name) === targetSlug,
-    );
-    const matchedCategory = categories.find(
-      (cat) => cat.slug === targetSlug || toSlug(cat.name) === targetSlug,
-    );
-    if (matchedSubCategory?.id) {
-      params.set("subCategory", matchedSubCategory.id);
-    } else if (matchedCategory?.id) {
-      params.set("category", matchedCategory.id);
-    }
-  }
+    const productsP = (async () => {
+      const params = new URLSearchParams();
+      if (filters.subCategorySlug) {
+        const [categories, subCategories] = await Promise.all([categoriesP, subCategoriesP]);
+        const targetSlug = toSlug(filters.subCategorySlug);
+        const matchedSubCategory = subCategories.find(
+          (subCategory) => subCategory.slug === targetSlug || toSlug(subCategory.name) === targetSlug,
+        );
+        const matchedCategory = categories.find(
+          (cat) => cat.slug === targetSlug || toSlug(cat.name) === targetSlug,
+        );
+        if (matchedSubCategory?.id) {
+          params.set("subCategory", matchedSubCategory.id);
+        } else if (matchedCategory?.id) {
+          params.set("category", matchedCategory.id);
+        }
+      }
+      return apiRequest<{ success: boolean; products?: BackendProduct[] }>(
+        `/products${params.toString() ? `?${params.toString()}` : ""}`
+      );
+    })();
 
-  const productsResponse = await apiRequest<{ success: boolean; products?: BackendProduct[] }>(
-    `/products${params.toString() ? `?${params.toString()}` : ""}`
-  );
+    const [categories, subCategories, styles, productsResponse] = await Promise.all([categoriesP, subCategoriesP, stylesP, productsP]);
 
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
@@ -1180,6 +1184,10 @@ export async function fetchOfferById(offerId: string): Promise<OfferDetail | nul
  */
 export async function fetchProductsByIds(ids: string[]): Promise<CatalogProduct[]> {
   if (!ids.length) return [];
+  // Product requests go out together with the category lists instead of after them.
+  const productReqs = ids.map((id) =>
+    apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${id}`).catch(() => null)
+  );
   const [categories, subCategories, styles] = await Promise.all([
     fetchCatalogCategories(),
     fetchCatalogSubCategories(),
@@ -1190,10 +1198,8 @@ export async function fetchProductsByIds(ids: string[]): Promise<CatalogProduct[
   const styleMap = new Map(styles.map((st) => [st.id, st]));
 
   const results = await Promise.allSettled(
-    ids.map((id) =>
-      apiRequest<{ success: boolean; product?: BackendProduct }>(`/products/${id}`)
-        .then((res) => (res.product ? normalizeProduct(res.product, catMap, subMap, styleMap) : null))
-        .catch(() => null)
+    productReqs.map((req) =>
+      req.then((res) => (res?.product ? normalizeProduct(res.product, catMap, subMap, styleMap) : null)).catch(() => null)
     )
   );
 

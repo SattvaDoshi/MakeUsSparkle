@@ -7,6 +7,8 @@ const subCategorySchema = new mongoose.Schema({
     ref: "Category",
   },
   image: String,
+  eyebrow: { type: String, trim: true },
+  caption: { type: String, trim: true },
 });
 
 const SubCategory = mongoose.model("SubCategory", subCategorySchema);

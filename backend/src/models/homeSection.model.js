@@ -64,6 +64,16 @@ const homeSectionSchema = new mongoose.Schema(
 		],
 		// Used by the "open-section" key — supports mixed product/category items
 		items: [openSectionItemSchema],
+		collectionType: {
+			type: String,
+			enum: ["auto", "manual", "category", "subcategory", "style"],
+			default: "auto",
+		},
+		collectionId: {
+			type: String,
+			default: "",
+			trim: true,
+		},
 		isActive: {
 			type: Boolean,
 			default: true,

@@ -4,7 +4,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { readPlpSnapshot, usePlpRestore } from '@/lib/usePlpRestore';
 import ProductCard from '@/components/product/ProductCard';
-import { fetchCatalogProducts, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import {
+  fetchCatalogCategories,
+  fetchCatalogProducts,
+  fetchCatalogSubCategories,
+  peekCatalogProducts,
+  type CatalogProduct,
+} from '@/lib/catalogApi';
 import SortFilter, { sortProducts, type SortOption } from '@/components/ui/SortFilter';
 import styles from './ProductListing.module.css';
 export const ALL_PRODUCTS = [
@@ -529,12 +535,47 @@ export default function ProductsPage({
     : '';
   const pageTitle = displaySubtype ? `${displaySubtype} ${displayType}` : displayType || 'All Products';
 
+  const [headerText, setHeaderText] = useState<{ eyebrow: string; caption: string; ready: boolean }>({
+    eyebrow: 'Handcrafted · Ethically Made',
+    caption: '',
+    ready: embedded || !type,
+  });
+
+  useEffect(() => {
+    if (embedded || !type) return;
+    let live = true;
+    const slug = (subtype || type).toLowerCase();
+    Promise.all([fetchCatalogCategories(), fetchCatalogSubCategories()])
+      .then(([cats, subs]) => {
+        if (!live) return;
+        const match =
+          (subtype ? subs.find((s) => s.slug === slug) : undefined) ||
+          cats.find((c) => c.slug === slug && (!gender || !c.genderSlug || c.genderSlug === gender.toLowerCase())) ||
+          cats.find((c) => c.slug === slug) ||
+          subs.find((s) => s.slug === slug);
+        setHeaderText({
+          eyebrow: match?.eyebrow ?? 'Handcrafted · Ethically Made',
+          caption: match?.caption ?? '',
+          ready: true,
+        });
+      })
+      .catch(() => { if (live) setHeaderText((prev) => ({ ...prev, ready: true })); });
+    return () => { live = false; };
+  }, [embedded, type, subtype, gender]);
+
   return (
     <div className={`${styles.root}${embedded ? ` ${styles.embedded}` : ''}`}>
       {!embedded && (
         <header className={styles.pageHeader}>
-          <span className={styles.eyebrow}>Handcrafted · Ethically Made</span>
+          {(headerText.eyebrow || !headerText.ready) && (
+            <span className={styles.eyebrow} style={{ visibility: headerText.ready ? 'visible' : 'hidden' }}>
+              {headerText.eyebrow || '\u00A0'}
+            </span>
+          )}
           <h1 className={styles.pageTitle}>{displaySubtype ? <><em>{displaySubtype}</em> {displayType}</> : <em>{pageTitle}</em>}</h1>
+          {headerText.ready && headerText.caption && (
+            <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 15 }}>{headerText.caption}</p>
+          )}
         </header>
       )}
 

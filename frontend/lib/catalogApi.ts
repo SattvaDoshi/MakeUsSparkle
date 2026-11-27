@@ -8,6 +8,8 @@ export interface CatalogCategory {
   image?: string;
   slug: string;
   genderSlug?: string;
+  eyebrow?: string;
+  caption?: string;
 }
 
 export interface CatalogSubCategory {
@@ -16,6 +18,8 @@ export interface CatalogSubCategory {
   image?: string;
   categoryId?: string;
   slug: string;
+  eyebrow?: string;
+  caption?: string;
 }
 
 export interface CatalogStyle {
@@ -141,6 +145,8 @@ interface BackendCategory {
   description?: string;
   image?: string;
   gender?: BackendGender | BackendMaybeRef;
+  eyebrow?: string;
+  caption?: string;
 }
 
 interface BackendSubCategory {
@@ -148,6 +154,8 @@ interface BackendSubCategory {
   name?: string;
   image?: string;
   category?: BackendMaybeRef;
+  eyebrow?: string;
+  caption?: string;
 }
 
 interface BackendStyle {
@@ -306,6 +314,8 @@ function toCategory(item: BackendCategory): CatalogCategory {
     image: item.image,
     slug: toSlug(name),
     genderSlug,
+    eyebrow: typeof item.eyebrow === "string" ? item.eyebrow : undefined,
+    caption: typeof item.caption === "string" ? item.caption : undefined,
   };
 }
 
@@ -317,6 +327,8 @@ function toSubCategory(item: BackendSubCategory): CatalogSubCategory {
     image: item.image,
     categoryId: getRefId(item.category),
     slug: toSlug(name),
+    eyebrow: typeof item.eyebrow === "string" ? item.eyebrow : undefined,
+    caption: typeof item.caption === "string" ? item.caption : undefined,
   };
 }
 
@@ -686,6 +698,37 @@ export async function fetchNewArrivalsSection(gender?: string): Promise<CatalogH
       normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
     ),
     isActive: true,
+  };
+}
+
+export async function fetchShelfSection(mode: string, gender?: string): Promise<{
+  eyebrow: string;
+  title: string;
+  products: CatalogProduct[];
+  collectionType?: string;
+  isActive: boolean;
+} | null> {
+  const g = gender ? String(gender).toLowerCase() : "";
+  const query = g ? `?gender=${encodeURIComponent(g)}` : "";
+  const [categories, subCategories, styles, sectionResponse] = await Promise.all([
+    fetchCatalogCategories(),
+    fetchCatalogSubCategories(),
+    fetchCatalogStyles(),
+    apiRequest<{ success: boolean; section?: BackendHomeSection & { collectionType?: string } }>(`/home-sections/shelf/${encodeURIComponent(mode)}${query}`),
+  ]);
+  const section = sectionResponse.section;
+  if (!section) return null;
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
+  const subCategoryMap = new Map(subCategories.map((item) => [item.id, item]));
+  const styleMap = new Map(styles.map((item) => [item.id, item]));
+  return {
+    eyebrow: section.eyebrow || "",
+    title: section.title || "",
+    products: (section.products || []).map((item) =>
+      normalizeProduct(item, categoryMap, subCategoryMap, styleMap)
+    ),
+    collectionType: section.collectionType,
+    isActive: section.isActive !== false,
   };
 }
 

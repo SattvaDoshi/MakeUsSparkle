@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useGender } from '@/lib/genderContext';
 import ProductsPage from '@/components/product/ProductPage';
-import { fetchCatalogProducts, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
+import { fetchCatalogProducts, fetchCatalogSubCategories, peekCatalogProducts, type CatalogProduct } from '@/lib/catalogApi';
 import { readPlpSnapshot } from '@/lib/usePlpRestore';
 import { cdnImage } from '@/lib/cdn';
 import { CircleRowSkeleton } from '@/components/home/Skeletons';
@@ -82,6 +82,28 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedType]);
 
+  const [headerText, setHeaderText] = useState<{ eyebrow: string; caption: string; ready: boolean }>({
+    eyebrow: '',
+    caption: 'Handcrafted pieces, curated fresh from our latest collection.',
+    ready: false,
+  });
+
+  useEffect(() => {
+    let live = true;
+    fetchCatalogSubCategories()
+      .then((subs) => {
+        if (!live) return;
+        const found = subs.find((s) => s.slug === resolvedType);
+        setHeaderText({
+          eyebrow: found?.eyebrow ?? '',
+          caption: found?.caption ?? 'Handcrafted pieces, curated fresh from our latest collection.',
+          ready: true,
+        });
+      })
+      .catch(() => { if (live) setHeaderText((prev) => ({ ...prev, ready: true })); });
+    return () => { live = false; };
+  }, [resolvedType]);
+
   const allImg = products[0]?.mainImage || products[0]?.images?.[0];
 
   return (
@@ -93,8 +115,15 @@ export default function SubcategoryPage({ type = 'necklace' }: { type?: string }
           <Link href={`/categories/${gender || 'women'}/jewellery`}>Jewellery</Link><span aria-hidden>›</span>
           <span aria-current="page">{label}</span>
         </nav>
+        {headerText.eyebrow && (
+          <span className={styles.eyebrow}>{headerText.eyebrow}</span>
+        )}
         <h1 className={styles.title}>{lead && <>{lead} </>}<em>{last}</em></h1>
-        <p className={styles.desc}>Handcrafted pieces, curated fresh from our latest collection.</p>
+        {(headerText.caption || !headerText.ready) && (
+          <p className={styles.desc} style={{ visibility: headerText.ready ? 'visible' : 'hidden' }}>
+            {headerText.caption || '\u00A0'}
+          </p>
+        )}
       </header>
 
       {(loading || circles.length > 0) && (

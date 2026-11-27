@@ -6,6 +6,27 @@ import productService from "../services/product.service.js";
 const NEW_ARRIVALS_KEY = "new-arrivals";
 const OPEN_SECTION_KEY = "open-section";
 
+const SHELF_DEFAULTS = {
+	popular: { eyebrow: "Most loved", title: "Customer favourites" },
+	gifts: { eyebrow: "Made to gift", title: "Gifts & charm picks" },
+	deals: { eyebrow: "Best value", title: "Top deals" },
+};
+
+function getShelfKey(mode, gender) {
+	const m = String(mode || "").trim().toLowerCase();
+	const g = String(gender || "").trim().toLowerCase();
+	if (["women", "men", "kids"].includes(g)) return `shelf-${m}-${g}`;
+	return `shelf-${m}`;
+}
+
+async function resolveCollectionProducts(collectionType, collectionId) {
+	if (!collectionId || !["category", "subcategory", "style"].includes(collectionType)) return null;
+	const field = collectionType === "category" ? "category" : collectionType === "subcategory" ? "subCategory" : "style";
+	const docs = await Product.find({ [field]: collectionId }).limit(12).lean();
+	await productService.attachOfferTags(docs);
+	return docs;
+}
+
 function getNewArrivalsKey(gender) {
 	const g = String(gender || "").trim().toLowerCase();
 	if (["women", "men", "kids"].includes(g)) return `new-arrivals-${g}`;
@@ -86,7 +107,10 @@ export async function getNewArrivalsSection(req, res) {
 		const gender = req.query.gender;
 		const sectionDoc = await getOrCreateNewArrivals(gender);
 		const section = sectionDoc ? sectionDoc.toObject() : null;
-		if (section && Array.isArray(section.products)) {
+		if (section && ["category", "subcategory", "style"].includes(section.collectionType) && section.collectionId) {
+			const colProducts = await resolveCollectionProducts(section.collectionType, section.collectionId);
+			if (colProducts) section.products = colProducts;
+		} else if (section && Array.isArray(section.products)) {
 			await productService.attachOfferTags(section.products);
 		}
 		res.json({ success: true, section });
@@ -106,6 +130,10 @@ export async function updateNewArrivalsSection(req, res) {
 			: [];
 		const existingIdSet = new Set(existingProducts.map((product) => String(product._id)));
 		const orderedProductIds = productIds.filter((id) => existingIdSet.has(id));
+		const collectionType = ["auto", "manual", "category", "subcategory", "style"].includes(req.body.collectionType)
+			? req.body.collectionType
+			: "manual";
+		const collectionId = String(req.body.collectionId || "").trim();
 
 		const section = await HomeSection.findOneAndUpdate(
 			{ key },
@@ -115,6 +143,8 @@ export async function updateNewArrivalsSection(req, res) {
 					eyebrow: String(req.body.eyebrow || "").trim(),
 					title: String(req.body.title || "").trim(),
 					products: orderedProductIds,
+					collectionType,
+					collectionId,
 					isActive: req.body.isActive !== false,
 				},
 			},
@@ -124,6 +154,84 @@ export async function updateNewArrivalsSection(req, res) {
 		res.json({ success: true, section });
 	} catch (error) {
 		console.error("Update new arrivals section error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function getShelfSection(req, res) {
+	try {
+		res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+		const mode = String(req.params.mode || "").trim().toLowerCase();
+		if (!SHELF_DEFAULTS[mode]) {
+			return res.status(400).json({ success: false, message: "Invalid shelf mode" });
+		}
+		const gender = req.query.gender;
+		const key = getShelfKey(mode, gender);
+		let sectionDoc = await HomeSection.findOne({ key }).populate("products");
+		if (!sectionDoc) {
+			const defaults = SHELF_DEFAULTS[mode];
+			sectionDoc = await HomeSection.create({
+				key,
+				eyebrow: defaults.eyebrow,
+				title: defaults.title,
+				products: [],
+				collectionType: "auto",
+				collectionId: "",
+				isActive: true,
+			});
+		}
+		const section = sectionDoc.toObject();
+		if (["category", "subcategory", "style"].includes(section.collectionType) && section.collectionId) {
+			const colProducts = await resolveCollectionProducts(section.collectionType, section.collectionId);
+			if (colProducts) section.products = colProducts;
+		} else if (Array.isArray(section.products) && section.products.length > 0) {
+			await productService.attachOfferTags(section.products);
+		}
+		res.json({ success: true, section });
+	} catch (error) {
+		console.error("Get shelf section error:", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+}
+
+export async function updateShelfSection(req, res) {
+	try {
+		const mode = String(req.params.mode || "").trim().toLowerCase();
+		if (!SHELF_DEFAULTS[mode]) {
+			return res.status(400).json({ success: false, message: "Invalid shelf mode" });
+		}
+		const gender = req.body.gender || req.query.gender;
+		const key = getShelfKey(mode, gender);
+		const productIds = normalizeProductIds(req.body.products);
+		const existingProducts = productIds.length
+			? await Product.find({ _id: { $in: productIds } }).select("_id")
+			: [];
+		const existingIdSet = new Set(existingProducts.map((product) => String(product._id)));
+		const orderedProductIds = productIds.filter((id) => existingIdSet.has(id));
+		const collectionType = ["auto", "manual", "category", "subcategory", "style"].includes(req.body.collectionType)
+			? req.body.collectionType
+			: "auto";
+		const collectionId = String(req.body.collectionId || "").trim();
+
+		const section = await HomeSection.findOneAndUpdate(
+			{ key },
+			{
+				$set: {
+					key,
+					eyebrow: String(req.body.eyebrow || "").trim(),
+					title: String(req.body.title || "").trim(),
+					products: orderedProductIds,
+					collectionType,
+					collectionId,
+					isActive: req.body.isActive !== false,
+				},
+			},
+			{ new: true, upsert: true, runValidators: true }
+		).populate("products");
+
+		res.json({ success: true, section });
+	} catch (error) {
+		console.error("Update shelf section error:", error);
 		res.status(400).json({ success: false, message: error.message });
 	}
 }

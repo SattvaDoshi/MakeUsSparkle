@@ -19,7 +19,7 @@ import AdminBannersTab from "./_components/tabs/AdminBannersTab";
 import AdminReviewsTab from "./_components/tabs/AdminReviewsTab";
 import AdminCharmsTab from "./_components/tabs/AdminCharmsTab";
 import AdminCategoriesTab from "./_components/tabs/AdminCategoriesTab";
-import AdminNewArrivalsTab from "./_components/tabs/AdminNewArrivalsTab";
+import AdminHomepageSectionsTab from "./_components/tabs/AdminHomepageSectionsTab";
 import AdminWatchBuyTab from "./_components/tabs/AdminWatchBuyTab";
 import AdminFounderTab from "./_components/tabs/AdminFounderTab";
 import AdminFaqTab from "./_components/tabs/AdminFaqTab";
@@ -286,13 +286,12 @@ type PagedResponse<T, K extends string> = {
 	};
 } & Record<K, T[]>;
 
-type TabKey = "home" | "products" | "categories" | "newArrivals" | "users" | "orders" | "payments" | "coupons" | "affiliate" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "openSection" | "watchBuy" | "founder" | "faq";
+type TabKey = "home" | "products" | "categories" | "homeSections" | "users" | "orders" | "payments" | "coupons" | "affiliate" | "banners" | "reviews" | "charms" | "combos" | "surveys" | "shipping" | "watchBuy" | "founder" | "faq";
 const tabs: Array<{ key: TabKey; label: string }> = [
 	{ key: "home", label: "Home" },
 	{ key: "products", label: "Products" },
 	{ key: "categories", label: "Categories" },
-	{ key: "newArrivals", label: "New Arrivals" },
-	{ key: "openSection", label: "Open Section" },
+	{ key: "homeSections", label: "Homepage Sections" },
 	{ key: "watchBuy", label: "Watch & Buy" },
 	{ key: "founder", label: "Founder Message" },
 	{ key: "faq", label: "FAQs" },
@@ -798,8 +797,7 @@ export default function AdminDashboardPage() {
 			if (tab === "reviews") await loadReviews();
 			if (tab === "charms") await loadCharms();
 			if (tab === "categories") await Promise.all([loadCategories(), loadSubCategories(), loadStyles(), loadGenders()]);
-		if (tab === "newArrivals") await Promise.all([loadProducts(), loadNewArrivals()]);
-		if (tab === "openSection") await Promise.all([loadProducts(), loadOpenSection()]);
+		if (tab === "homeSections") await Promise.all([loadProducts(), loadCategories(), loadSubCategories(), loadStyles(), loadOpenSection()]);
 		if (tab === "watchBuy") await loadProducts();
 			if (tab === "combos") await Promise.all([loadCombos(), loadProducts(), loadCategories(), loadStyles()]);
 			if (tab === "surveys") await loadSurveys();
@@ -1566,28 +1564,22 @@ export default function AdminDashboardPage() {
 	if (activeTab === "founder") return <AdminFounderTab onError={setError} onNotice={setNotice} />;
 	if (activeTab === "faq") return <AdminFaqTab onError={setError} onNotice={setNotice} />;
 	if (activeTab === "watchBuy") return <AdminWatchBuyTab products={products} onError={setError} onNotice={setNotice} />;
-	if (activeTab === "newArrivals") return <AdminNewArrivalsTab
-		form={newArrivalsForm}
+	if (activeTab === "homeSections") return <AdminHomepageSectionsTab
 		products={products}
-		selectedGender={newArrivalsGender}
-		onGenderChange={(g) => {
-			setNewArrivalsGender(g);
-			void loadNewArrivals(g);
-		}}
-		onChange={setNewArrivalsForm}
-		onSubmit={handleNewArrivalsSubmit}
-	/>;
-	if (activeTab === "openSection") return <AdminOpenSectionTab
-		form={openSectionForm}
-		products={products}
+		categories={categories}
+		subcategories={subcategories}
+		styles={styles}
+		openSectionForm={openSectionForm}
+		openSectionSaving={openSectionSaving}
 		selectedGender={openSectionGender}
 		onGenderChange={(g) => {
 			setOpenSectionGender(g);
 			void loadOpenSection(g);
 		}}
-		onChange={setOpenSectionForm}
-		onSubmit={handleOpenSectionSubmit}
-		saving={openSectionSaving}
+		onOpenSectionChange={setOpenSectionForm}
+		onOpenSectionSubmit={handleOpenSectionSubmit}
+		onNotice={setNotice}
+		onError={setError}
 	/>;
 	if (activeTab === "categories") return <AdminCategoriesTab
 		categories={categories}

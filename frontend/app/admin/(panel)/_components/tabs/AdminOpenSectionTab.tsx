@@ -35,6 +35,7 @@ type AdminOpenSectionTabProps = {
   saving?: boolean;
   selectedGender?: "women" | "men" | "kids";
   onGenderChange?: (gender: "women" | "men" | "kids") => void;
+  hideGenderSwitcher?: boolean;
 };
 
 export default function AdminOpenSectionTab({
@@ -45,6 +46,7 @@ export default function AdminOpenSectionTab({
   saving,
   selectedGender = "women",
   onGenderChange,
+  hideGenderSwitcher = false,
 }: AdminOpenSectionTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [addType, setAddType] = useState<"product" | "category">("product");
@@ -103,7 +105,8 @@ export default function AdminOpenSectionTab({
   return (
     <section className="admin-content">
       {/* ── Gender Switcher ── */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
+      {!hideGenderSwitcher && (
+        <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
         {(["women", "men", "kids"] as const).map((g) => (
           <button
             key={g}
@@ -115,7 +118,8 @@ export default function AdminOpenSectionTab({
             {g === "women" ? "👩 Women" : g === "men" ? "👨 Men" : "🧒 Kids"} Section
           </button>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* ── Section Settings ── */}
       <div className="admin-panel" style={{ marginBottom: "2rem" }}>

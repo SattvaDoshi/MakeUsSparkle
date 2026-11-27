@@ -4,8 +4,8 @@ import { STYLE_LABELS } from "@/lib/styleLabels";
 import { slugifyCatalog } from "@/lib/catalogApi";
 
 type GenderRef = { _id?: string; name?: string } | string;
-type Category = { _id: string; name?: string; description?: string; image?: string; gender?: GenderRef };
-type SubCategory = { _id: string; name?: string; category?: { _id?: string; name?: string; gender?: GenderRef } | string; image?: string };
+type Category = { _id: string; name?: string; description?: string; image?: string; gender?: GenderRef; eyebrow?: string; caption?: string };
+type SubCategory = { _id: string; name?: string; category?: { _id?: string; name?: string; gender?: GenderRef } | string; image?: string; eyebrow?: string; caption?: string };
 type Style = { _id: string; name?: string; image?: string; gender?: GenderRef; eyebrow?: string; caption?: string };
 type Gender = { _id: string; name?: string; slug?: string; image?: string; isActive?: boolean };
 
@@ -119,13 +119,19 @@ export default function AdminCategoriesTab({
             ? ((item as SubCategory).category as string)
             : ((item as SubCategory).category as any)?._id || ""
           : "",
-      // Styles: pre-fill with what the page currently shows (saved text, else the built-in text)
-      eyebrow: kind === "styles"
-        ? ((item as Style).eyebrow ?? STYLE_LABELS[slugifyCatalog((item as Style).name || "")]?.eyebrow ?? "")
-        : "",
-      caption: kind === "styles"
-        ? ((item as Style).caption ?? STYLE_LABELS[slugifyCatalog((item as Style).name || "")]?.caption ?? "")
-        : "",
+      // Pre-fill with what the page currently shows (saved text, else the built-in text)
+      eyebrow:
+        kind === "styles"
+          ? ((item as Style).eyebrow ?? STYLE_LABELS[slugifyCatalog((item as Style).name || "")]?.eyebrow ?? "")
+          : kind === "categories"
+            ? ((item as Category).eyebrow ?? "Handcrafted · Ethically Made")
+            : ((item as SubCategory).eyebrow ?? ""),
+      caption:
+        kind === "styles"
+          ? ((item as Style).caption ?? STYLE_LABELS[slugifyCatalog((item as Style).name || "")]?.caption ?? "")
+          : kind === "subcategories"
+            ? ((item as SubCategory).caption ?? "Handcrafted pieces, curated fresh from our latest collection.")
+            : ((item as Category).caption ?? ""),
       imageFile: null,
       existingImage: item.image,
     };
@@ -157,8 +163,8 @@ export default function AdminCategoriesTab({
     if (modal.slug) fd.append("slug", modal.slug.trim());
     if ((modal.kind === "category" || modal.kind === "style") && modal.genderId) fd.append("gender", modal.genderId);
     if (modal.kind === "subcategory" && modal.parentCategoryId) fd.append("category", modal.parentCategoryId);
-    // Always sent for styles so an admin can also clear them
-    if (modal.kind === "style") {
+    // Always sent so an admin can also clear them
+    if (modal.kind === "style" || modal.kind === "category" || modal.kind === "subcategory") {
       fd.append("eyebrow", modal.eyebrow.trim());
       fd.append("caption", modal.caption.trim());
     }
@@ -543,8 +549,8 @@ export default function AdminCategoriesTab({
                   />
                 </div>
 
-                {/* Style page text */}
-                {modal.kind === "style" && (
+                {/* Page heading text (Sub heading & Caption) */}
+                {(modal.kind === "style" || modal.kind === "category" || modal.kind === "subcategory") && (
                   <>
                     <div style={{ display: "grid", gap: "0.35rem" }}>
                       <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Sub heading</label>
@@ -555,7 +561,7 @@ export default function AdminCategoriesTab({
                         onChange={(e) => setModal((prev) => prev ? { ...prev, eyebrow: e.target.value } : prev)}
                         style={{ padding: "0.65rem 0.8rem", border: "1px solid #d4d4c8", borderRadius: 6, fontSize: "0.95rem" }}
                       />
-                      <span style={{ fontSize: "0.78rem", color: "#888" }}>Small line shown above the heading on the style page. The heading is the Name above.</span>
+                      <span style={{ fontSize: "0.78rem", color: "#888" }}>Small line shown above the heading on the page. The heading is the Name above.</span>
                     </div>
                     <div style={{ display: "grid", gap: "0.35rem" }}>
                       <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#3d4a20" }}>Caption</label>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/product/ProductCard";
 import CarouselArrows from "@/components/ui/CarouselArrows";
-import { fetchCatalogProducts, type CatalogProduct } from "@/lib/catalogApi";
+import { fetchCatalogProducts, fetchShelfSection, type CatalogProduct } from "@/lib/catalogApi";
 import { useGender } from "@/lib/genderContext";
 import { useNearViewport } from "./useNearViewport";
 import { ProductRowSkeleton } from "./Skeletons";
@@ -67,34 +67,64 @@ export default function ProductShelf({
   const { gender } = useGender();
   const trackRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<CatalogProduct[] | null>(null);
+  const [heading, setHeading] = useState<{ eyebrow: string; title: string; customTitle: boolean; hidden: boolean }>({
+    eyebrow,
+    title: em ? `${title} ${em}` : title,
+    customTitle: false,
+    hidden: false,
+  });
 
   useEffect(() => {
     if (!near) return;
     let alive = true;
-    fetchCatalogProducts()
-      .then((all) => {
+    const defaultTitle = em ? `${title} ${em}` : title;
+    Promise.all([
+      fetchShelfSection(mode, gender).catch(() => null),
+      fetchCatalogProducts(),
+    ])
+      .then(([section, all]) => {
         if (!alive) return;
+        if (section && !section.isActive) {
+          setHeading({ eyebrow: "", title: "", customTitle: false, hidden: true });
+          setItems([]);
+          return;
+        }
+        const nextEyebrow = section?.eyebrow !== undefined ? section.eyebrow : eyebrow;
+        const nextTitle = section?.title || defaultTitle;
+        setHeading({
+          eyebrow: nextEyebrow,
+          title: nextTitle,
+          customTitle: Boolean(section?.title && section.title !== defaultTitle),
+          hidden: false,
+        });
+        if (section && section.products.length > 0 && section.collectionType !== "auto") {
+          setItems(section.products);
+          return;
+        }
         const g = String(gender || "").toLowerCase();
         const forGender = g ? all.filter((p) => !p.gender || p.gender === g || p.gender === "unisex") : all;
         setItems(pick(forGender, mode, new Set()));
       })
       .catch(() => alive && setItems([]));
     return () => { alive = false; };
-  }, [near, gender, mode]);
+  }, [near, gender, mode, eyebrow, title, em]);
 
-  // Reserve the spot until we know, but disappear cleanly if there's nothing worth showing.
+  // Reserve the spot until we know, but disappear cleanly if hidden or nothing worth showing.
+  if (heading.hidden) return null;
   if (items && items.length < MIN_ITEMS) return <section ref={ref} aria-hidden="true" />;
 
   return (
-    <section ref={ref} className={`${styles.section}${tint ? ` ${styles.tint}` : ""}`} data-home-section="shelf" data-shelf={mode} aria-label={`${eyebrow} ${title}${em ? ` ${em}` : ""}`}>
+    <section ref={ref} className={`${styles.section}${tint ? ` ${styles.tint}` : ""}`} data-home-section="shelf" data-shelf={mode} aria-label={`${heading.eyebrow} ${heading.title}`}>
       {items === null ? (
         <ProductRowSkeleton count={5} />
       ) : (
         <div className={styles.inner}>
           <div className={styles.header}>
             <div className={styles.titleGroup}>
-              <span className={styles.eyebrow}>{eyebrow}</span>
-              <h2 className={styles.title}>{title}{em ? <> <em>{em}</em></> : null}</h2>
+              {heading.eyebrow && <span className={styles.eyebrow}>{heading.eyebrow}</span>}
+              <h2 className={styles.title}>
+                {heading.customTitle ? heading.title : <>{title}{em ? <> <em>{em}</em></> : null}</>}
+              </h2>
             </div>
             <div className={styles.headRight}>
               {href && <Link href={href} className={styles.viewAll}>{linkLabel}</Link>}

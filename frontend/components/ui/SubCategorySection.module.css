@@ -7,6 +7,7 @@
 .crumbs a { color: inherit; text-decoration: none; }
 @media(hover:hover){.crumbs a:hover{ color: var(--ink); }}
 .crumbs span[aria-current] { color: var(--ink); }
+.eyebrow { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
 .title { margin: 0; font-family: 'Cormorant Garamond', serif; font-size: clamp(38px, 5vw, 64px); font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
 .title em { font-style: italic; color: #3d6b4f; }
 .desc { margin: 12px 0 0; font-size: 16px; line-height: 1.6; color: var(--muted); max-width: 52ch; }

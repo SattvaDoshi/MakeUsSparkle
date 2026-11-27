@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/cartContext';
+import { useWishlist } from '@/lib/wishlistContext';
 import { readPlpSnapshot, usePlpRestore } from '@/lib/usePlpRestore';
 import { apiRequest } from '@/lib/api';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ import PdpReviews from './pdp/PdpReviews';
 import PdpShelves from './pdp/PdpShelves';
 import PdpStickyBar from './pdp/PdpStickyBar';
 import { useStickyColumns } from './pdp/useStickyColumns';
+import pdpStyles from './pdp/pdp.module.css';
 import pc from './ProductCard.module.css';
 
 const PRESET_MESSAGES = [
@@ -915,6 +917,7 @@ const TAG_ICON = (
 );
 
 function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChange, onVariantChange, onAddToCart, cartAdded, onBack }: PresetHamperSectionProps) {
+  const { toggleItem, isWished } = useWishlist();
   const [showValidation, setShowValidation] = useState(false);
   const [activeComboImgIdx, setActiveComboImgIdx] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -1000,6 +1003,30 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
 
   const comboUploaded = comboVariant.uploadedImagesBase64 || (comboVariant.uploadedImageBase64 ? [comboVariant.uploadedImageBase64] : []);
 
+  const comboNumericId = useMemo(() => {
+    const s = `combo:${combo.id}`;
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+      hash = (hash << 5) - hash + s.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash) || 1;
+  }, [combo.id]);
+  const wished = isWished(comboNumericId);
+  const handleWishToggle = () => {
+    toggleItem({
+      id: comboNumericId,
+      name: combo.name,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice > currentPrice ? currentOriginalPrice : null,
+      image: (allComboImages[0] as string) || safeImageSrc(combo.image) || '',
+      category: 'Curated Combos',
+      href: `/categories/women/curated-combos?combo=${combo.id}`,
+      colors: [],
+      badge: combo.badge ?? null,
+    });
+  };
+
   return (
     <div className="hamper-page">
       <nav className="hp-crumbs" aria-label="Breadcrumb">
@@ -1017,6 +1044,11 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
             alt={combo.name}
             chip={combo.badge || undefined}
             fallback={safeImageSrc(combo.image) || ''}
+            wish={(
+              <button type="button" className={`${pdpStyles.wishBtn}${wished ? ` ${pdpStyles.wishOn}` : ''}`} onClick={handleWishToggle} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={wished}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+              </button>
+            )}
           />
         </div>
 
@@ -1026,9 +1058,16 @@ function PresetHamperSection({ combo, variants, comboVariant, onComboVariantChan
           <p className="hamper-tagline">{combo.tagline}</p>
           <div className="hamper-price-row">
             <span className="hamper-price">₹{currentPrice.toLocaleString('en-IN')}</span>
-            {pct > 0 && <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>}
-            {pct > 0 && <span className="hamper-save-tag">Save {pct}%</span>}
+            {currentOriginalPrice > currentPrice && (
+              <>
+                <span className="hamper-original">₹{currentOriginalPrice.toLocaleString('en-IN')}</span>
+                <span className="hamper-save-tag">
+                  Save ₹{Math.round(currentOriginalPrice - currentPrice).toLocaleString('en-IN')}{pct > 0 ? ` · ${pct}% off` : ''}
+                </span>
+              </>
+            )}
           </div>
+          <p className="hp-tax">Inclusive of all taxes</p>
 
           {combo.pricingVariants && combo.pricingVariants.length > 0 && (
             <PricingTierSelector
@@ -2032,7 +2071,7 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
           --sage:     #8a9e6a;
           --red:      #c0392b;
           --ffd:      'Cormorant Garamond', Georgia, serif;
-          --ffb:      'DM Sans', system-ui, sans-serif;
+          --ffb:      'Jost', sans-serif;
           --shadow:   0 4px 24px rgba(26,29,13,.10);
           --shadow-lg:0 8px 40px rgba(26,29,13,.16);
 
@@ -2598,8 +2637,10 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-eyebrow { display:inline-block; font-size:10px; font-weight:600; letter-spacing:.16em; color:#9a7a2e; background:rgba(201,168,76,.14); padding:4px 10px; border-radius:6px; margin-bottom:10px; }
         .hamper-title { font-family:'Cormorant Garamond',serif; font-size:clamp(2rem,5vw,3rem); font-weight:600; line-height:1.05; color:#1a1a14; margin:0 0 8px; }
         .hamper-tagline { color:#6f6f64; font-size:14.5px; }
-        .hamper-price { font-size:2rem; font-weight:700; color:#1a1a14; }
-        .hamper-save-tag { color:#2a4736; background:#eaf2ec; }
+        .hamper-price-row { margin-bottom:2px; gap:10px; }
+        .hamper-price { font-size:2rem; font-weight:700; color:#1a1a14; line-height:1.1; }
+        .hamper-save-tag { display:inline-flex; align-items:center; background:#e8f3ec; color:#1f5a38; border:1px solid #cfe3d6; border-radius:99px; padding:4px 11px; font-size:12px; font-weight:600; letter-spacing:.01em; text-transform:none; white-space:nowrap; }
+        .hp-tax { font-size:12px; color:#8b8b80; margin:0 0 8px; line-height:1.3; }
         .hamper-description { font-size:14.5px; color:#3a3a32; line-height:1.7; }
         .hp-block { margin-top:22px; padding-top:22px; border-top:1px solid #ecebe4; display:flex; flex-direction:column; gap:16px; }
         .hp-block .hamper-section-label-row { margin:0; }
@@ -2617,8 +2658,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hamper-colour-swatch.on .hamper-colour-swatch-label { color:#2a4736; }
         .hamper-piece-field-label em { color:#2a4736; }
         .hp-cta { margin-top:22px; }
-        .hp-cta-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:17px; border:0; border-radius:999px; background:#2a4736; color:#fff; font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:background .2s, transform .15s; }
+        .hp-cta-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:9px; padding:17px 14px; border:0; border-radius:999px; background:#2a4736; color:#fff; font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; cursor:pointer; transition:background .2s, transform .15s; }
         @media(hover:hover){.hp-cta-btn:hover{ background:#1f3a2a; }}
+        @media(max-width:420px){
+          .hp-cta-btn { gap:6px; padding-left:10px; padding-right:10px; letter-spacing:.05em; }
+          .hp-cta-btn svg { display:none; }
+        }
         .hp-cta-btn:active { transform:scale(.99); }
         .hp-cta-btn.done { background:#1a1a14; }
         .hp-cta-btn-off { background:#1a1a14; }
@@ -2632,45 +2677,65 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         .hp-cta-hint { margin:8px 0 0; text-align:center; font-size:12px; color:#8b8b80; }
         .combo-extras { margin-top:22px; }
         .combo-extras-grid { display:flex; flex-direction:column; gap:0; }
-        .combo-trust { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid #ecebe4; border-radius:14px; overflow:hidden; background:#fafaf6; margin:0 0 20px; }
-        .combo-trust-item { display:grid; grid-template-columns:28px 1fr; column-gap:10px; align-items:center; text-align:left; padding:14px; border:0; border-right:1px solid #ecebe4; background:none; border-radius:0; box-shadow:none; }
+        .combo-trust { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid #ecebe4; border-radius:14px; overflow:hidden; background:#fff; margin:0 0 20px; }
+        .combo-trust-item { display:grid; grid-template-columns:30px 1fr; column-gap:10px; align-items:center; text-align:left; padding:14px; border:0; border-right:1px solid #ecebe4; background:#fff; border-radius:0; box-shadow:none; }
         .combo-trust-item:last-child { border-right:0; }
-        .combo-trust-icon { grid-row:1 / span 2; width:28px; height:28px; margin:0; color:#2a4736; }
+        @media(hover:hover){.combo-trust-item:hover{ transform:none; box-shadow:none; }}
+        .combo-trust-icon { grid-row:1 / span 2; width:30px; height:30px; margin:0; color:#2a4736; }
         .combo-trust-title { font-size:11px; letter-spacing:.06em; margin:0; color:#1a1a14; }
         .combo-trust-sub { font-size:11.5px; color:#6f6f64; }
         .combo-accordion { display:flex; flex-direction:column; gap:10px; }
-        .combo-acc-item { border:1px solid #ecebe4; border-radius:14px; background:#fff; overflow:hidden; transition:border-color .2s, box-shadow .2s; }
-        .combo-acc-item--open { border-color:#cfd8cf; box-shadow:0 6px 22px rgba(26,26,20,.05); }
+        .combo-acc-item { border:1px solid #ece5cf; border-radius:14px; background:#fdfbf5; overflow:hidden; transition:border-color .2s, box-shadow .2s; }
+        @media(hover:hover){.combo-acc-item:hover{ border-color:#ddd0a4; }}
+        .combo-acc-item--open { background:#fffdf6; border-color:#d9c27a; box-shadow:0 6px 22px rgba(154,122,46,.10); }
         .combo-acc-head { padding:14px 16px; background:none; }
-        @media(hover:hover){.combo-acc-head:hover{ background:#fafaf6; }}
+        @media(hover:hover){.combo-acc-head:hover{ background:#faf6e8; }}
         .combo-acc-head-left { font-size:15px; font-weight:500; gap:14px; color:#1a1a14; }
         .combo-acc-emoji { width:36px; height:36px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .combo-acc-item:nth-of-type(4n+1) .combo-acc-emoji { background:#e4efe7; color:#2a4736; }
+        .combo-acc-item:nth-of-type(4n+2) .combo-acc-emoji { background:#f7edcc; color:#8a6a1c; }
+        .combo-acc-item:nth-of-type(4n+3) .combo-acc-emoji { background:#f6e3df; color:#9a4a42; }
+        .combo-acc-item:nth-of-type(4n+4) .combo-acc-emoji { background:#e8e4f3; color:#5a4a8c; }
         .combo-acc-item--open .combo-acc-emoji { background:#2a4736; color:#fff; }
-        .combo-acc-chevron { width:28px; height:28px; border-radius:50%; background:#f4f3ee; color:#1a1a14; display:flex; align-items:center; justify-content:center; transform:none !important; }
-        .combo-acc-item--open .combo-acc-chevron { background:#1a1a14; color:#fff; }
+        .combo-acc-chevron { width:28px; height:28px; border-radius:50%; background:#e4efe7; color:#2a4736; display:flex; align-items:center; justify-content:center; transform:none !important; }
+        .combo-acc-item--open .combo-acc-chevron { background:#2a4736; color:#fff; }
         .combo-acc-chevron .acc-v { transition:opacity .25s, transform .25s; transform-origin:center; }
         .combo-acc-item--open .combo-acc-chevron .acc-v { opacity:0; transform:scaleY(0); }
         .combo-acc-body { padding:2px 18px 20px 66px; font-size:14px; line-height:1.75; color:#3a3a32; }
         .dlv { margin-top:22px; }
         .dlv-title { margin:0 0 12px; font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:#1a1a14; }
-        .dlv-table { border:1px solid #ecebe4; border-radius:14px; overflow:hidden; background:#fff; }
-        .dlv-row { display:grid; grid-template-columns:1.25fr 1fr 1fr .7fr; align-items:center; gap:8px; padding:14px 16px; border-top:1px solid #ecebe4; font-size:14px; color:#1a1a14; }
-        .dlv-row:first-child { border-top:0; }
-        .dlv-head { background:#fafaf6; padding:10px 16px; font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#6f6f64; }
-        .dlv-name { display:flex; align-items:center; gap:10px; font-weight:600; }
-        .est-ico { width:32px; height:32px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .dlv-rate { font-weight:600; color:#2a4736; text-align:right; }
-        .dlv-head span:last-child { text-align:right; }
-        .dlv-free { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:12px 14px; border-radius:12px; background:#f1f5f1; color:#1f3a2a; font-size:13.5px; }
+        .dlv-table { display:grid; grid-template-columns:1fr 1fr; gap:10px; border:0; background:transparent; border-radius:0; overflow:visible; }
+        .dlv-row { display:grid; grid-template-columns:1fr auto; grid-template-areas:"name rate" "metro metro" "rest rest"; align-items:center; gap:4px 8px; padding:12px; border:1px solid #ece5cf; border-radius:14px; background:#fdfbf5; font-size:13px; color:#1a1a14; }
+        .dlv-row:first-child { border-top:1px solid #ece5cf; }
+        .dlv-row.dlv-head { display:none; }
+        .dlv-name { display:flex; align-items:center; gap:8px; font-weight:600; grid-area:name; font-size:14px; min-width:0; }
+        .est-ico { width:26px; height:26px; border-radius:50%; background:#f1f5f1; color:#2a4736; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; }
+        .dlv-row:nth-of-type(2) .est-ico { background:#e4efe7; color:#2a4736; }
+        .dlv-row:nth-of-type(3) .est-ico { background:#f7edcc; color:#8a6a1c; }
+        .dlv-rate { grid-area:rate; font-weight:600; color:#2a4736; text-align:right; font-size:14px; }
+        .dlv-cell { display:flex; justify-content:space-between; align-items:baseline; gap:6px; font-size:13px; color:#1a1a14; font-weight:500; }
+        .dlv-cell::before { content:attr(data-l); font-size:11px; font-weight:400; color:#6f6f64; letter-spacing:.01em; }
+        .dlv-cell[data-l="Metro cities"] { grid-area:metro; margin-top:6px; padding-top:8px; border-top:1px dashed #e6dcb8; }
+        .dlv-cell[data-l="Rest of India"] { grid-area:rest; }
+        .dlv-free { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:12px 14px; border-radius:12px; background:#e4efe7; border:1px solid #cfe0d3; color:#1f3a2a; font-size:13.5px; }
         @media (max-width:639px) {
-          .dlv { margin-top:14px; }
+          .combo-acc-head { padding:11px 12px; }
+          .combo-acc-emoji { width:30px; height:30px; font-size:14px; }
+          .combo-acc-head-left { font-size:14px; gap:10px; }
+          .combo-acc-chevron { width:24px; height:24px; }
+          .combo-acc-item { margin-bottom:0; }
+          .dlv { margin-top:16px; }
           .dlv-title { font-size:19px; margin-bottom:8px; }
-          .dlv-row { grid-template-columns:1.2fr 1fr 1fr .62fr; gap:6px; padding:9px 10px; font-size:12px; }
-          .dlv-head { padding:8px 10px; font-size:8.5px; letter-spacing:.05em; line-height:1.2; }
-          .dlv-name { gap:6px; font-size:12px; }
-          .est-ico { width:22px; height:22px; font-size:12px; }
-          .dlv-cell { font-size:12px; color:#4a4a40; }
           .dlv-free { margin-top:8px; padding:9px 11px; font-size:12px; gap:8px; }
+        }
+        @media (max-width:480px) {
+          .dlv-table { gap:8px; }
+          .dlv-row { padding:10px; }
+          .dlv-name { font-size:13px; gap:6px; }
+          .est-ico { width:22px; height:22px; font-size:12px; }
+          .dlv-rate { font-size:13px; }
+          .dlv-cell { font-size:12px; flex-wrap:wrap; gap:0 6px; }
+          .dlv-cell::before { font-size:10.5px; }
         }
         body.hide-bnav .bnav { display:none !important; }
         body.hide-bnav .has-bottom-nav { padding-bottom:0 !important; }
@@ -2727,6 +2792,12 @@ export default function CuratedCombosPage({ gender = 'women' }: { gender?: strin
         @media (min-width:1024px) {
           .hamper-page, .builder-page { padding:8px 40px 0; }
           .hamper-main-block { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:48px; align-items:start; }
+        }
+        @media (max-width:1023px) {
+          .hamper-page { padding:0; }
+          .hamper-page .hp-crumbs { padding:10px 16px; }
+          .hamper-gallery { position:static; padding:0; }
+          .hamper-main-info { padding:0 16px; }
         }
         @media (max-width:639px) {
           .combo-acc-body { padding-left:18px; }

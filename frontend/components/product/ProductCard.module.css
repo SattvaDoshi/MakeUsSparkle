@@ -221,10 +221,9 @@
   .chip { font-size: 9px; padding: 5px 8px; letter-spacing: 0.08em; }
   .wish { width: 32px; height: 32px; top: 6px; right: 6px; }
   .ratingBadge { right: 8px; bottom: 8px; padding: 5px 8px; font-size: 11.5px; }
-  .priceRow { padding-right: 40px; }
   .body { padding: 10px 8px 8px; gap: 4px; }
   .eyebrow { font-size: 9px; letter-spacing: 0.14em; }
-  .name { font-size: 13px; padding-right: 40px; }
+  .name { font-size: 13px; }
   .price { font-size: 14.5px; }
   .was { font-size: 11.5px; }
   .off { font-size: 11px; }
